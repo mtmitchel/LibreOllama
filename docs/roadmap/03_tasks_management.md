@@ -68,7 +68,10 @@ The Tasks page provides a **unified task management system** with local Kanban f
 **Google Tasks Integration:**
 - Robust Google Tasks API integration with proper error handling
 - Multi-account Google Tasks support with OAuth 2.0 PKCE flow
-- Timezone-correct date handling and normalization
+- **CRITICAL: Date-only handling** - Google Tasks API only stores DATE information (not DATETIME)
+  - Dates are parsed as YYYY-MM-DD in local timezone to prevent shifting
+  - Never treat Google Tasks dates as datetime values
+  - All update handlers only send changed fields to prevent unintended date updates
 - Intelligent sync reconciliation preventing duplication and data loss
 
 **Performance & UX:**
@@ -84,6 +87,20 @@ The Tasks page provides a **unified task management system** with local Kanban f
 - **Testing Coverage:** Limited test coverage with testing audit score of 45/100, indicating gaps in reliability testing for the unified store.
 - **Component Migration:** Some components still use the legacy store APIs and need migration to the unified store.
 - **Edge Case Handling:** While the unified architecture solves major issues, some edge cases in sync conflict resolution need refinement.
+
+### Critical Implementation Notes
+
+**Date Handling (Timezone Bug Prevention):**
+- Google Tasks API stores dates as RFC3339 at midnight UTC (e.g., "2025-08-04T00:00:00.000Z")
+- JavaScript Date parsing converts this to previous day in negative timezones
+- Solution: Always extract date part (YYYY-MM-DD) and create dates in local timezone
+- Use `parseGoogleTaskDate()` utility for consistent date handling
+- Update handlers must only send changed fields to prevent accidental date shifts
+
+**Priority System:**
+- Uses 3-tier system with "None" option: High/Medium/Low/None
+- "None" must convert to undefined when sending to API (not the string "none")
+- All priority selectors must include the "None" option for clearing priority
 
 ## Unified Architecture Implementation
 

@@ -4,6 +4,7 @@ import { InlineTaskCreator } from '../../../../components/kanban/InlineTaskCreat
 import { UnifiedTask } from '../../../../stores/unifiedTaskStore.types';
 import type { TaskColumn } from '../../../../stores/unifiedTaskStore.types';
 import { useUnifiedTaskStore } from '../../../../stores/unifiedTaskStore';
+import { parseGoogleTaskDate, formatTaskDate } from '../../../../utils/dateUtils';
 
 interface CalendarTaskSidebarProps {
   taskLists: TaskColumn[];
@@ -73,9 +74,9 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
         if (!a.due && !b.due) return 0;
         if (!a.due) return 1;
         if (!b.due) return -1;
-        return new Date(a.due).getTime() - new Date(b.due).getTime();
+        return parseGoogleTaskDate(a.due).getTime() - parseGoogleTaskDate(b.due).getTime();
       case 'priority':
-        const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
+        const priorityOrder = { high: 0, medium: 1, low: 2, none: 3 };
         const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 2;
         const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 2;
         return aPriority - bPriority;
@@ -164,7 +165,7 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
                     fontSize: '12px',
                   }}
                 >
-                  {new Date(task.due).toLocaleDateString()}
+                  {formatTaskDate(parseGoogleTaskDate(task.due))}
                 </span>
               )}
               

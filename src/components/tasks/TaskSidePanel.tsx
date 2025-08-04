@@ -24,7 +24,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
     title: '',
     notes: '',
     due: '',
-    priority: 'low' as 'low' | 'normal' | 'high' | 'urgent',
+    priority: 'none' as 'high' | 'medium' | 'low' | 'none',
     labels: [] as Array<{ name: string; color: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray' }>,
   });
   const [newLabel, setNewLabel] = useState('');
@@ -53,13 +53,59 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
   const handleSubmit = async () => {
     if (!task) return;
     
-    await onUpdate(task.id, {
-      title: formData.title.trim(),
-      notes: formData.notes.trim(),
-      due: formData.due || undefined,
-      priority: formData.priority,
-      labels: formData.labels,
+    // Only send changed fields to avoid timezone shifts
+    const updatePayload: any = {};
+    
+    // Always include title to prevent Google from clearing it
+    updatePayload.title = formData.title.trim();
+    
+    // Only include other fields if they changed
+    if (formData.notes.trim() !== (task.notes || '')) {
+      updatePayload.notes = formData.notes.trim();
+    }
+    
+    // CRITICAL: Only update due date if it actually changed
+    const currentDue = task.due_date_only || task.due?.split('T')[0] || '';
+    const newDue = formData.due ? formData.due.split('T')[0] : '';
+    if (newDue !== currentDue) {
+      updatePayload.due = formData.due || undefined;
+      if (formData.due) {
+        updatePayload.due_date_only = formData.due.split('T')[0];
+      }
+    }
+    
+    if (formData.priority !== task.priority) {
+      updatePayload.priority = formData.priority;
+    }
+    
+    // Check if labels changed
+    const labelsChanged = JSON.stringify(formData.labels) !== JSON.stringify(task.labels || []);
+    if (labelsChanged) {
+      updatePayload.labels = formData.labels;
+    }
+    
+    console.log('🔵 TaskSidePanel update - Only sending changed fields:', {
+      taskId: task.id,
+      original: {
+        title: task.title,
+        notes: task.notes || '',
+        due: task.due,
+        due_date_only: task.due_date_only,
+        priority: task.priority,
+        labels: task.labels
+      },
+      formData: {
+        title: formData.title.trim(),
+        notes: formData.notes.trim(),
+        due: formData.due,
+        priority: formData.priority,
+        labels: formData.labels
+      },
+      updatePayload,
+      changedFields: Object.keys(updatePayload)
     });
+    
+    await onUpdate(task.id, updatePayload);
   };
 
   const handleDelete = async () => {
@@ -88,8 +134,8 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
 
   const priorityOptions = [
     { 
-      value: 'urgent', 
-      label: 'Urgent',
+      value: 'high', 
+      label: 'High',
       style: {
         backgroundColor: 'var(--red-50)',
         color: 'var(--red-600)',
@@ -97,8 +143,8 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
       }
     },
     { 
-      value: 'high', 
-      label: 'High',
+      value: 'medium', 
+      label: 'Medium',
       style: {
         backgroundColor: 'var(--amber-50)',
         color: 'var(--amber-600)',
@@ -108,6 +154,15 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
     { 
       value: 'low', 
       label: 'Low',
+      style: {
+        backgroundColor: '#e0f2fe',
+        color: '#0369a1',
+        borderColor: '#e0f2fe'
+      }
+    },
+    { 
+      value: 'none', 
+      label: 'None',
       style: {
         backgroundColor: 'var(--bg-secondary)',
         color: 'var(--text-secondary)',
@@ -215,9 +270,25 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                 {priorityOptions.map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, priority: option.value as any }));
-                      setTimeout(handleSubmit, 100);
+                    onClick={async () => {
+                      // Only update if priority actually changed
+                      if (formData.priority !== option.value) {
+                        setFormData(prev => ({ ...prev, priority: option.value as any }));
+                        
+                        // Send ONLY priority update to avoid timezone shifts
+                        console.log('🔵 Priority-only update:', {
+                          taskId: task?.id,
+                          oldPriority: formData.priority,
+                          newPriority: option.value
+                        });
+                        
+                        if (task) {
+                          await onUpdate(task.id, {
+                            title: task.title, // Always include title
+                            priority: option.value !== 'none' ? option.value as any : undefined
+                          });
+                        }
+                      }
                     }}
                     className="px-4 py-2 rounded-lg text-sm font-medium transition-all border-2"
                     style={

@@ -10,42 +10,7 @@ import { InlineTaskCreator } from '../../../../components/kanban/InlineTaskCreat
 import { ContextMenu } from '../../../../components/ui';
 import type { GoogleTask } from '../../../../types/google';
 import { useUnifiedTaskStore } from '../../../../stores/unifiedTaskStore';
-
-// Helper function to parse task due dates correctly
-// Google Tasks API returns dates in RFC3339 format (e.g., "2025-08-02T00:00:00.000Z")
-// When parsed with new Date(), UTC midnight shows as previous day in negative UTC offset timezones
-function parseTaskDueDate(dateString: string | undefined): Date {
-  if (!dateString) {
-    return new Date(); // Return current date as fallback
-  }
-  
-  // Check if it's an ISO/RFC3339 date string with time (e.g., "2025-08-02T00:00:00.000Z")
-  if (dateString.includes('T')) {
-    const date = new Date(dateString);
-    
-    // If the time is midnight UTC (00:00:00.000Z), treat it as a date-only value
-    // and create a local date to avoid timezone offset issues
-    if (dateString.includes('T00:00:00.000Z') || dateString.includes('T00:00:00Z')) {
-      const [datePart] = dateString.split('T');
-      const [year, month, day] = datePart.split('-').map(Number);
-      return new Date(year, month - 1, day);
-    }
-    
-    // Otherwise, return the parsed date as-is
-    return isNaN(date.getTime()) ? new Date() : date;
-  }
-  
-  // Check if it's a simple date format (YYYY-MM-DD)
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (dateRegex.test(dateString)) {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  }
-  
-  // Try to parse as regular date string
-  const parsed = new Date(dateString);
-  return isNaN(parsed.getTime()) ? new Date() : parsed;
-}
+import { parseGoogleTaskDate, formatTaskDate } from '../../../../utils/dateUtils';
 
 interface CalendarTaskSidebarEnhancedProps {
   taskLists: Array<{ id: string; title: string; googleTaskListId?: string }>;
@@ -128,8 +93,8 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
           if (!a.due && !b.due) return 0;
           if (!a.due) return 1;
           if (!b.due) return -1;
-          const aDate = parseTaskDueDate(a.due);
-          const bDate = parseTaskDueDate(b.due);
+          const aDate = parseGoogleTaskDate(a.due);
+          const bDate = parseGoogleTaskDate(b.due);
           return aDate.getTime() - bDate.getTime();
         case 'title':
           return a.title.localeCompare(b.title);
@@ -168,7 +133,7 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
         // Tasks without due dates go to "all others"
         groups.allOthers.push(task);
       } else {
-        const dueDate = parseTaskDueDate(task.due);
+        const dueDate = parseGoogleTaskDate(task.due);
         dueDate.setHours(0, 0, 0, 0);
         
         if (dueDate < today) {
@@ -326,7 +291,7 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
                           {task.due && (
                             <div className="flex items-center gap-1 text-xs text-gray-500">
                               <Calendar size={12} />
-                              <span>{format(parseTaskDueDate(task.due), 'MMM d')}</span>
+                              <span>{format(parseGoogleTaskDate(task.due), 'MMM d')}</span>
                             </div>
                           )}
                           
@@ -587,28 +552,56 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
                           {task.title}
                         </div>
                         
-                        {(task.due || task.notes) && (
-                          <div className="flex items-center gap-3 mt-1">
-                            {task.due && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <Calendar size={12} />
-                                <span>{(() => {
-                                  console.log('🔴 SIDEBAR DATE DEBUG:', {
-                                    taskId: task.id,
-                                    taskTitle: task.title,
-                                    rawDue: task.due,
-                                    parsedDate: parseTaskDueDate(task.due),
-                                    formatted: format(parseTaskDueDate(task.due), 'MMM d')
-                                  });
-                                  return format(parseTaskDueDate(task.due), 'MMM d');
-                                })()}</span>
+                        {(task.due || task.notes || (task.priority && task.priority !== 'none') || (task.labels && task.labels.length > 0)) && (
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {/* Priority Badge */}
+                            {task.priority && task.priority !== 'none' && (
+                              <span 
+                                className="text-xs px-1.5 py-0.5 rounded font-medium"
+                                style={{
+                                  backgroundColor: task.priority === 'high' ? '#fee2e2' : task.priority === 'medium' ? '#fef3c7' : '#dbeafe',
+                                  color: task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#2563eb',
+                                  fontSize: '11px'
+                                }}
+                              >
+                                {task.priority === 'high' ? 'High' : task.priority === 'medium' ? 'Medium' : 'Low'}
+                              </span>
+                            )}
+                            
+                            {/* Labels */}
+                            {task.labels && task.labels.length > 0 && (
+                              <div className="flex gap-1">
+                                {task.labels.slice(0, 2).map((label, index) => (
+                                  <span
+                                    key={index}
+                                    className="text-xs px-1.5 py-0.5 rounded"
+                                    style={{
+                                      backgroundColor: '#f3f4f6',
+                                      color: '#6b7280',
+                                      fontSize: '11px'
+                                    }}
+                                  >
+                                    {label.name || label}
+                                  </span>
+                                ))}
+                                {task.labels.length > 2 && (
+                                  <span className="text-xs text-gray-500">+{task.labels.length - 2}</span>
+                                )}
                               </div>
                             )}
                             
+                            {/* Due Date */}
+                            {task.due && (
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <Calendar size={12} />
+                                <span>{format(parseGoogleTaskDate(task.due), 'MMM d')}</span>
+                              </div>
+                            )}
+                            
+                            {/* Notes indicator */}
                             {task.notes && (
                               <div className="flex items-center gap-1 text-xs text-gray-500">
                                 <Hash size={12} />
-                                <span className="truncate max-w-[100px]">{task.notes}</span>
                               </div>
                             )}
                           </div>

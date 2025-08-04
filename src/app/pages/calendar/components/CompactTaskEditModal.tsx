@@ -2,42 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, Flag, Hash, Clock } from 'lucide-react';
 import { GoogleTask } from '../../../../types/google';
 import { format } from 'date-fns';
-
-// Helper function to parse task due dates correctly
-// Google Tasks API returns dates in RFC3339 format (e.g., "2025-08-02T00:00:00.000Z")
-// When parsed with new Date(), UTC midnight shows as previous day in negative UTC offset timezones
-function parseTaskDueDate(dateString: string | undefined): Date {
-  if (!dateString) {
-    return new Date();
-  }
-  
-  // Check if it's an ISO/RFC3339 date string with time (e.g., "2025-08-02T00:00:00.000Z")
-  if (dateString.includes('T')) {
-    const date = new Date(dateString);
-    
-    // If the time is midnight UTC (00:00:00.000Z), treat it as a date-only value
-    // and create a local date to avoid timezone offset issues
-    if (dateString.includes('T00:00:00.000Z') || dateString.includes('T00:00:00Z')) {
-      const [datePart] = dateString.split('T');
-      const [year, month, day] = datePart.split('-').map(Number);
-      return new Date(year, month - 1, day);
-    }
-    
-    // Otherwise, return the parsed date as-is
-    return isNaN(date.getTime()) ? new Date() : date;
-  }
-  
-  // Check if it's a simple date format (YYYY-MM-DD)
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (dateRegex.test(dateString)) {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  }
-  
-  // Try to parse as regular date string
-  const parsed = new Date(dateString);
-  return isNaN(parsed.getTime()) ? new Date() : parsed;
-}
+import { parseGoogleTaskDate, formatTaskDate } from '../../../../utils/dateUtils';
 
 interface CompactTaskEditModalProps {
   isOpen: boolean;
@@ -47,7 +12,7 @@ interface CompactTaskEditModalProps {
     title: string; 
     notes?: string; 
     due?: string;
-    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    priority?: 'high' | 'medium' | 'low' | 'none';
     timeBlock?: {
       startTime: string;
       endTime: string;
@@ -67,7 +32,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
     title: '',
     notes: '',
     due: '',
-    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+    priority: 'none' as 'high' | 'medium' | 'low' | 'none',
     startTime: '',
     endTime: '',
   });
@@ -93,8 +58,8 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
       setFormData({
         title: task.title,
         notes: task.notes || '',
-        due: task.due ? format(parseTaskDueDate(task.due), 'yyyy-MM-dd') : '',
-        priority: task.priority || 'normal',
+        due: task.due ? format(parseGoogleTaskDate(task.due), 'yyyy-MM-dd') : '',
+        priority: task.priority || 'none',
         startTime,
         endTime,
       });
@@ -103,7 +68,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
         title: '',
         notes: '',
         due: '',
-        priority: 'normal',
+        priority: 'none',
         startTime: '',
         endTime: '',
       });
@@ -121,7 +86,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
       console.log('🔴 DATE FORMAT DEBUG:', {
         input: formData.due,
         formattedDue: formattedDue,
-        willDisplayAs: format(parseTaskDueDate(formData.due), 'yyyy-MM-dd')
+        willDisplayAs: format(parseGoogleTaskDate(formData.due), 'yyyy-MM-dd')
       });
     }
     
@@ -153,7 +118,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
       title: formData.title,
       notes: formData.notes,
       due: formattedDue,
-      priority: formData.priority,
+      priority: formData.priority !== 'none' ? formData.priority : undefined,
       timeBlock,
     };
     
@@ -174,10 +139,10 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
   if (!isOpen) return null;
 
   const priorityColors = {
-    low: 'bg-gray-100 text-gray-600',
-    normal: 'bg-blue-100 text-blue-600',
-    high: 'bg-orange-100 text-orange-600',
-    urgent: 'bg-red-100 text-red-600'
+    high: 'bg-red-100 text-red-600',
+    medium: 'bg-orange-100 text-orange-600',
+    low: 'bg-sky-100 text-sky-700',
+    none: 'bg-gray-100 text-gray-600'
   };
 
   return (
@@ -250,13 +215,13 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
                 <Flag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <select
                   value={formData.priority}
-                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent' }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'high' | 'medium' | 'low' | 'none' }))}
                   className="pl-9 pr-8 py-2 text-sm bg-gray-50 rounded-lg border border-transparent focus:border-purple-300 focus:bg-white focus:outline-none transition-colors appearance-none cursor-pointer"
                 >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
+                  <option value="none">None</option>
                   <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
                 </select>
               </div>
             </div>
@@ -293,12 +258,12 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
             )}
 
             {/* Current values display */}
-            {(formData.due || formData.priority !== 'normal' || (formData.startTime && formData.endTime)) && (
+            {(formData.due || (formData.priority && formData.priority !== 'none') || (formData.startTime && formData.endTime)) && (
               <div className="flex flex-wrap gap-2">
                 {formData.due && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 rounded-md text-xs">
                     <Calendar size={12} />
-                    {format(parseTaskDueDate(formData.due), 'MMM d, yyyy')}
+                    {format(parseGoogleTaskDate(formData.due), 'MMM d, yyyy')}
                   </span>
                 )}
                 {formData.startTime && formData.endTime && (
@@ -307,7 +272,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
                     {formData.startTime} - {formData.endTime}
                   </span>
                 )}
-                {formData.priority !== 'normal' && (
+                {formData.priority && formData.priority !== 'none' && (
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs ${priorityColors[formData.priority]}`}>
                     <Flag size={12} />
                     {formData.priority.charAt(0).toUpperCase() + formData.priority.slice(1)}

@@ -13,6 +13,7 @@ import { UnifiedTaskCard } from '../tasks/UnifiedTaskCard';
 import { InlineTaskCreator } from './InlineTaskCreator';
 import { Card, ConfirmDialog } from '../ui';
 import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3, Flag, Eye, EyeOff } from 'lucide-react';
+import { parseGoogleTaskDate } from '../../utils/dateUtils';
 
 interface KanbanColumnProps {
   column: KanbanColumnType;
@@ -137,7 +138,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           if (!a.due && !b.due) return 0;
           if (!a.due) return 1;
           if (!b.due) return -1;
-          return new Date(a.due).getTime() - new Date(b.due).getTime();
+          return parseGoogleTaskDate(a.due).getTime() - parseGoogleTaskDate(b.due).getTime();
         });
       
       case 'title':
@@ -146,10 +147,10 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       
       case 'priority':
         // Sort by priority (urgent first, then high, normal, low)
-        const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
+        const priorityOrder = { high: 0, medium: 1, low: 2, none: 3 };
         return tasks.sort((a, b) => {
-          const aPriority = priorityOrder[a.priority || 'normal'];
-          const bPriority = priorityOrder[b.priority || 'normal'];
+          const aPriority = priorityOrder[a.priority || 'none'];
+          const bPriority = priorityOrder[b.priority || 'none'];
           return aPriority - bPriority;
         });
       
@@ -163,7 +164,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     title: string;
     notes?: string;
     due?: string;
-    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    priority?: 'high' | 'medium' | 'low' | 'none';
     labels?: string[];
   }) => {
     try {
@@ -173,7 +174,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         due: data.due,
         columnId: column.id,
         googleTaskListId: column.googleTaskListId,
-        priority: data.priority || 'normal',
+        priority: data.priority || 'none',
         labels: data.labels || []
       });
       setShowInlineCreator(false);

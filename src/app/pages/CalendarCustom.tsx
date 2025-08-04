@@ -558,13 +558,45 @@ export default function CalendarCustom() {
                   }
                 });
                 
-                await updateGoogleTask(listId, selectedTask.id, {
-                  title: data.title,
-                  notes: data.notes,
-                  due: data.due,
-                  priority: data.priority,
-                  timeBlock: data.timeBlock
+                // Only send changed fields to avoid timezone shifts
+                const updatePayload: any = {};
+                
+                // Always include title to prevent Google from clearing it
+                updatePayload.title = data.title;
+                
+                // Only include other fields if they changed
+                if (data.notes !== selectedTask.notes) updatePayload.notes = data.notes;
+                
+                // CRITICAL: Only update due date if it actually changed
+                if (data.due !== (selectedTask.due_date_only || selectedTask.due?.split('T')[0])) {
+                  updatePayload.due = data.due;
+                  updatePayload.due_date_only = data.due;
+                }
+                
+                if (data.priority !== selectedTask.priority) updatePayload.priority = data.priority;
+                
+                // Handle timeBlock changes
+                const hasTimeBlockChanged = (
+                  JSON.stringify(data.timeBlock) !== JSON.stringify(selectedTask.timeBlock)
+                );
+                if (hasTimeBlockChanged) updatePayload.timeBlock = data.timeBlock;
+                
+                console.log('🔵 Task update - Only sending changed fields:', {
+                  taskId: selectedTask.id,
+                  original: {
+                    title: selectedTask.title,
+                    priority: selectedTask.priority,
+                    due: selectedTask.due,
+                    due_date_only: selectedTask.due_date_only,
+                    notes: selectedTask.notes,
+                    timeBlock: selectedTask.timeBlock
+                  },
+                  newData: data,
+                  updatePayload,
+                  changedFields: Object.keys(updatePayload)
                 });
+                
+                await updateGoogleTask(listId, selectedTask.id, updatePayload);
                 
                 await refreshData();
                 setShowTaskModal(false);

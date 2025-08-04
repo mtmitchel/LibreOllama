@@ -8,7 +8,7 @@ interface InlineTaskCreatorProps {
     title: string; 
     notes?: string; 
     due?: string;
-    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    priority?: 'high' | 'medium' | 'low' | 'none';
     labels?: string[];
   }) => Promise<void>;
   onCancel: () => void;
@@ -25,7 +25,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [dueDate, setDueDate] = useState<string>('');
-  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low' | 'none'>('none');
   const [error, setError] = useState<string | null>(null);
   
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -83,16 +83,16 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
       console.log('Calling onSubmit with:', { 
         title: title.trim(),
         due: dueDate || undefined,
-        priority: priority || 'normal',
+        priority: priority || 'none',
       });
       await onSubmit({ 
         title: title.trim(),
         due: dueDate || undefined,
-        priority: priority || 'normal',
+        priority: priority || 'none',
       });
       setTitle('');
       setDueDate('');
-      setPriority('normal');
+      setPriority('none');
       setIsExpanded(false);
       setShowDatePicker(false);
       setShowPriorityMenu(false);
@@ -237,15 +237,13 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                   ref={priorityButtonRef}
                   type="button"
                   className={`p-1 transition-colors ${
-                    priority === 'urgent' 
+                    priority === 'high' 
                       ? 'text-red-500' 
-                      : priority === 'high' 
+                      : priority === 'medium' 
                         ? 'text-orange-500' 
-                        : priority === 'normal'
-                          ? 'text-green-500'
-                          : priority === 'low'
-                            ? 'text-blue-500'
-                            : 'text-gray-400 hover:text-gray-600'
+                        : priority === 'low'
+                          ? 'text-sky-600'
+                          : 'text-gray-400 hover:text-gray-600'
                   }`}
                   aria-label="Set priority"
                   onClick={() => {
@@ -259,10 +257,9 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                 {showPriorityMenu && (
                   <div className="inline-priority-menu absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 py-1" style={{ minWidth: '140px', zIndex: 9999 }}>
                     {[
-                      { value: 'urgent', label: 'Urgent', color: 'text-red-500' },
-                      { value: 'high', label: 'High', color: 'text-orange-500' },
-                      { value: 'normal', label: 'Normal', color: 'text-green-500' },
-                      { value: 'low', label: 'Low', color: 'text-blue-500' }
+                      { value: 'high', label: 'High', color: 'text-red-500' },
+                      { value: 'medium', label: 'Medium', color: 'text-orange-500' },
+                      { value: 'low', label: 'Low', color: 'text-sky-600' }
                     ].map(option => (
                       <button
                         key={option.value}
@@ -283,12 +280,13 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          setPriority('normal');
+                          setPriority('none');
                           setShowPriorityMenu(false);
                         }}
-                        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 text-gray-500"
+                        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 text-gray-600 flex items-center gap-2"
                       >
-                        Clear
+                        <span className="w-[14px]"></span>
+                        <span>None</span>
                       </button>
                     </div>
                   </div>

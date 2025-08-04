@@ -132,18 +132,26 @@ class RealtimeSync {
           endTime: task.time_block.end_time
         } : undefined;
         
+        // Extract date-only for UI to prevent timezone issues
+        let due_date_only: string | undefined;
+        if (task.due) {
+          // Extract just the date part from RFC3339
+          due_date_only = task.due.split('T')[0];
+        }
+        
         tasks[id] = {
           id: task.id,
           googleTaskId: task.google_task_id,
           googleTaskListId: task.google_task_list_id,
           title: task.title,
           notes: task.notes,
-          due: task.due,
+          due: task.due, // Keep raw RFC3339 for API
+          due_date_only: due_date_only, // Add date-only for UI
           status: task.status as 'needsAction' | 'completed',
           updated: task.updated,
           position: task.position,
           labels: labels,
-          priority: priority as 'low' | 'normal' | 'high' | 'urgent',
+          priority: priority as 'high' | 'medium' | 'low' | 'none',
           columnId: task.column_id,
           timeBlock: timeBlock,
           syncState: 'synced',

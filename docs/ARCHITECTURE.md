@@ -18,6 +18,57 @@ This guide provides comprehensive implementation patterns, testing strategies, a
 
 ## Feature Implementation Patterns
 
+### Google Tasks Integration Pattern
+
+#### Critical Date Handling Requirements
+
+**LESSON LEARNED**: Google Tasks API only stores DATE information, not DATETIME. Treating dates as datetime values causes timezone shifts.
+
+1. **Date Storage Format**:
+   - Google Tasks stores dates as RFC3339 at midnight UTC (e.g., "2025-08-04T00:00:00.000Z")
+   - The time portion is completely discarded by the API
+   - JavaScript Date parsing converts UTC midnight to previous day in negative timezones
+
+2. **Correct Date Handling**:
+   ```typescript
+   // CORRECT: Parse Google Tasks date without timezone shifts
+   export function parseGoogleTaskDate(dateString: string | undefined): Date {
+     if (!dateString) return new Date();
+     
+     // Extract just the date part (YYYY-MM-DD)
+     const datePart = dateString.split('T')[0];
+     const [year, month, day] = datePart.split('-').map(Number);
+     
+     // Create date in LOCAL timezone at midnight
+     return new Date(year, month - 1, day, 0, 0, 0, 0);
+   }
+   ```
+
+3. **Update Handler Pattern**:
+   ```typescript
+   // CORRECT: Only send changed fields to prevent date shifts
+   const updatePayload: any = {};
+   
+   // Always include title to prevent Google from clearing it
+   updatePayload.title = formData.title;
+   
+   // Only include date if it actually changed
+   if (newDate !== originalDate) {
+     updatePayload.due = formData.due;
+     updatePayload.due_date_only = formData.due.split('T')[0];
+   }
+   
+   // Only include priority if it changed
+   if (formData.priority !== task.priority) {
+     updatePayload.priority = formData.priority !== 'none' ? formData.priority : undefined;
+   }
+   ```
+
+4. **Priority System Design**:
+   - Use 3-tier system with clear option: High/Medium/Low/None
+   - "None" must convert to `undefined` when sending to API
+   - All priority selectors must include the "None" option
+
 ### Notes Feature Implementation
 
 #### Critical Database Integration Requirements

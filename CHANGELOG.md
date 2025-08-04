@@ -5,7 +5,7 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-01-27
+## [Unreleased] - 2025-01-28
 
 ### 🚀 New Features
 
@@ -20,6 +20,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Location: `src/features/notes/components/LinkPreviewModal.tsx`
 
 ### 🔧 Recent Fixes
+
+#### Critical Date Shifting Bug Fix ✅
+- **Fixed timezone-related date shifting bug affecting task updates** ✅
+  - Root Cause: Google Tasks API only stores DATE information (not DATETIME)
+  - JavaScript Date parsing was converting RFC3339 midnight UTC to previous day in negative timezones
+  - Fixed by implementing date-only handling throughout the system
+  - Key Learning: NEVER treat Google Tasks dates as datetime values
+  - Solution: Extract date part (YYYY-MM-DD) and create dates in local timezone
+  - Fixed all update handlers to only send changed fields (prevents unintended date updates)
+  - Affected components: CalendarCustom, TaskSidePanel, CompactTaskEditModal
+  - Location: `src/utils/dateUtils.ts`, task update components
+
+#### Priority System Improvements ✅
+- **Fixed priority clearing functionality** ✅
+  - Added "None" option to all priority selectors
+  - Fixed TaskSidePanel to include all priority options (High/Medium/Low/None)
+  - Ensured selecting "None" properly clears priority (converts to undefined)
+  - Fixed immediate priority updates to only send priority field (prevents date shifts)
+  - Location: `src/components/tasks/TaskSidePanel.tsx`, `src/app/pages/calendar/components/CompactTaskEditModal.tsx`
 
 #### AI Writing Tools Context Menu Positioning ✅
 - **Fixed context menu positioning issues** ✅

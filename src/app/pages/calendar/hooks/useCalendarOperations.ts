@@ -6,6 +6,7 @@ import { useActiveGoogleAccount } from '../../../../stores/settingsStore';
 import { CalendarEvent } from '../types';
 import { realtimeSync } from '../../../../services/realtimeSync';
 import { addDays, format } from 'date-fns';
+import { parseGoogleTaskDate } from '../../../../utils/dateUtils';
 
 export const useCalendarOperations = () => {
   const {
@@ -206,7 +207,7 @@ export const useCalendarOperations = () => {
     getVisibleTasks().forEach(task => {
       if (task.due) {
         const isCompleted = task.status === 'completed';
-        const taskDueDate = new Date(task.due);
+        const taskDueDate = parseGoogleTaskDate(task.due);
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
@@ -244,7 +245,7 @@ export const useCalendarOperations = () => {
           });
         } else {
           // For other formats or Date objects
-          taskDate = new Date(task.due);
+          taskDate = parseGoogleTaskDate(task.due);
           if (task.title.includes('TZTEST')) console.log('🔴 TIMEZONE DEBUG - Parsed ISO date:', {
             title: task.title,
             originalDue: task.due,

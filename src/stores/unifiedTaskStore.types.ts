@@ -14,7 +14,8 @@ export interface UnifiedTask {
   googleTaskListId?: string;
   title: string;
   notes?: string;
-  due?: string;
+  due?: string; // Raw RFC3339 from Google (for API calls)
+  due_date_only?: string; // YYYY-MM-DD format (for UI - prevents timezone issues)
   status: 'needsAction' | 'completed';
   updated: string; // ISO timestamp
   position: string;
@@ -25,7 +26,7 @@ export interface UnifiedTask {
     name: string;
     color: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray';
   }>;
-  priority: 'low' | 'normal' | 'high' | 'urgent';
+  priority: 'high' | 'medium' | 'low' | 'none';
   attachments?: Array<{
     name: string;
     url: string;

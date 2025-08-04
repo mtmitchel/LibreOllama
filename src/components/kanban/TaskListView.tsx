@@ -2,21 +2,13 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 import { useFilteredTasks } from '../../hooks/useFilteredTasks';
+import { parseGoogleTaskDate, formatTaskDate } from '../../utils/dateUtils';
 
 type KanbanTask = UnifiedTask;
 import { TaskSidebar } from './TaskSidebar';
 import { Card, Button, Input } from '../ui';
 import { Plus, Search, Filter, Calendar, CheckSquare, Square, Tag, MoreHorizontal, RotateCcw, ArrowUpDown, GripVertical, Type, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
-
-// Helper to parse Google Tasks date (midnight UTC) for display
-const parseTaskDate = (dateStr: string): Date => {
-  // Google Tasks stores dates as YYYY-MM-DDT00:00:00.000Z
-  // We parse just the date part to avoid timezone shifts
-  const datePart = dateStr.split('T')[0];
-  // Create date at noon to avoid any timezone edge cases
-  return new Date(datePart + 'T12:00:00');
-};
 
 interface TaskListViewProps {
   className?: string;
@@ -90,7 +82,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
           if (!a.due && !b.due) return 0;
           if (!a.due) return 1;
           if (!b.due) return -1;
-          return new Date(a.due).getTime() - new Date(b.due).getTime();
+          return parseGoogleTaskDate(a.due).getTime() - parseGoogleTaskDate(b.due).getTime();
         case 'created':
         default:
           return new Date(b.updated).getTime() - new Date(a.updated).getTime();
@@ -122,7 +114,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     title: string;
     notes?: string;
     due?: string;
-    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    priority?: 'high' | 'medium' | 'low' | 'none';
     labels?: string[];
     recurring?: {
       enabled: boolean;
@@ -175,7 +167,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
           columnId: firstColumn.id,
           googleTaskListId: firstColumn.googleTaskListId,
           labels: data.metadata?.labels || [],
-          priority: data.metadata?.priority || 'normal'
+          priority: data.metadata?.priority || 'none'
         });
         setIsCreateModalOpen(false);
       }
@@ -296,7 +288,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
             <div className="space-y-2">
               {filteredTasks.map((task) => {
                 const isCompleted = task.status === 'completed';
-                const isOverdue = task.due && parseTaskDate(task.due) < new Date() && !isCompleted;
+                const isOverdue = task.due && parseGoogleTaskDate(task.due) < new Date() && !isCompleted;
                 const completedSubtasks = task.metadata?.subtasks?.filter(st => st.completed).length || 0;
                 const totalSubtasks = task.metadata?.subtasks?.length || 0;
 
@@ -340,16 +332,16 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                               <span className="rounded-full bg-tertiary px-2 py-1 text-xs text-secondary">
                                 {task.columnTitle}
                               </span>
-                              {task.priority && task.priority !== 'normal' && (
+                              {task.priority && task.priority !== 'none' && (
                                 <span style={{
                                   fontSize: '11px',
                                   fontWeight: 500,
                                   padding: '2px 8px',
                                   borderRadius: '12px',
-                                  backgroundColor: task.priority === 'high' ? 'var(--amber-50)' : task.priority === 'urgent' ? 'var(--red-50)' : 'var(--bg-secondary)',
-                                  color: task.priority === 'high' ? 'var(--amber-600)' : task.priority === 'urgent' ? 'var(--red-600)' : 'var(--text-secondary)'
+                                  backgroundColor: task.priority === 'high' ? 'var(--red-50)' : task.priority === 'medium' ? 'var(--amber-50)' : '#e0f2fe',
+                                  color: task.priority === 'high' ? 'var(--red-600)' : task.priority === 'medium' ? 'var(--amber-600)' : '#0369a1'
                                 }}>
-                                  {task.priority === 'urgent' ? 'Urgent' : task.priority === 'high' ? 'High' : 'Low'}
+                                  {task.priority === 'high' ? 'High' : task.priority === 'medium' ? 'Medium' : 'Low'}
                                 </span>
                               )}
                             </div>
@@ -384,7 +376,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                                 color: isOverdue ? 'var(--red-600)' : 'var(--text-secondary)'
                               }}>
                                 <Calendar size={12} />
-                                <span>{format(parseTaskDate(task.due), 'MMM d')}</span>
+                                <span>{formatTaskDate(parseGoogleTaskDate(task.due))}</span>
                               </div>
                             )}
 

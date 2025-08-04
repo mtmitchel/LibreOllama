@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, Calendar as CalendarIcon, Flag } from 'lucide-rea
 import { GoogleTask } from '../../../../types/google';
 import { useUnifiedTaskStore } from '../../../../stores/unifiedTaskStore';
 import { asanaTypography, priorityConfig } from '../config';
+import { parseGoogleTaskDate, formatTaskDate } from '../../../../utils/dateUtils';
 
 interface AsanaTaskItemProps {
   task: GoogleTask;
@@ -81,7 +82,7 @@ export const AsanaTaskItem: React.FC<AsanaTaskItemProps> = ({
               <div className="flex items-center gap-1.5">
                 <CalendarIcon size={12} style={{ color: '#9CA6AF' }} />
                 <span style={asanaTypography.small}>
-                  {new Date(task.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {formatTaskDate(parseGoogleTaskDate(task.due))}
                 </span>
               </div>
             )}

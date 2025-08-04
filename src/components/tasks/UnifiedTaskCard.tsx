@@ -2,18 +2,9 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { ContextMenu } from '../ui';
 import { Calendar, CheckSquare, Flag, Tag, RotateCcw, Edit3, Copy, Trash2, User, RefreshCw } from 'lucide-react';
-import { format } from 'date-fns';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
+import { parseGoogleTaskDate, formatTaskDate } from '../../utils/dateUtils';
 import '../../styles/asana-design-system.css';
-
-// Helper to parse Google Tasks date (midnight UTC) for display
-const parseTaskDate = (dateStr: string): Date => {
-  // Google Tasks stores dates as YYYY-MM-DDT00:00:00.000Z
-  // We parse just the date part to avoid timezone shifts
-  const datePart = dateStr.split('T')[0];
-  // Create date at noon to avoid any timezone edge cases
-  return new Date(datePart + 'T12:00:00');
-};
 
 interface UnifiedTaskCardProps {
   task: UnifiedTask;
@@ -53,9 +44,11 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
   } : undefined;
 
   const isCompleted = task.status === 'completed';
-  const isOverdue = task.due && parseTaskDate(task.due) < new Date() && !isCompleted;
+  // Use date_date_only if available to prevent timezone issues
+  const dueDateString = task.due_date_only || task.due;
+  const isOverdue = dueDateString && parseGoogleTaskDate(dueDateString) < new Date() && !isCompleted;
   
-  const priority = task.priority || 'normal';
+  const priority = task.priority || 'none';
   
   // Context menu items
   const contextMenuItems = [
@@ -136,7 +129,7 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
         </div>
         
         {/* Metadata Row */}
-        {showMetadata && (task.due || task.priority !== 'normal' || task.metadata?.assignee || (task.labels && task.labels.length > 0)) && (
+        {showMetadata && (task.due || (task.priority && task.priority !== 'none') || task.metadata?.assignee || (task.labels && task.labels.length > 0)) && (
           <div className="flex items-center gap-2 flex-wrap" style={{ marginLeft: '30px' }}>
             {/* Labels */}
             {task.labels && task.labels.length > 0 && (
@@ -153,7 +146,7 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
             )}
             
             {/* Due Date */}
-            {task.due && (
+            {(task.due_date_only || task.due) && (
               <div className="flex items-center gap-1" style={{
                 fontSize: '12px',
                 color: isOverdue ? 'var(--red-600)' : 'var(--text-muted)',
@@ -164,22 +157,22 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
               }}>
                 <Calendar size={12} />
                 <span>
-                  {format(parseTaskDate(task.due), 'MMM d')}
+                  {formatTaskDate(parseGoogleTaskDate(task.due_date_only || task.due))}
                 </span>
               </div>
             )}
             
             {/* Priority */}
-            {task.priority && task.priority !== 'normal' && (
+            {task.priority && task.priority !== 'none' && (
               <span style={{
                 fontSize: '12px',
                 fontWeight: 500,
                 padding: '2px 8px',
                 borderRadius: '12px',
-                backgroundColor: task.priority === 'high' ? 'var(--amber-50)' : task.priority === 'urgent' ? 'var(--red-50)' : 'var(--bg-secondary)',
-                color: task.priority === 'high' ? 'var(--amber-600)' : task.priority === 'urgent' ? 'var(--red-600)' : 'var(--text-secondary)'
+                backgroundColor: task.priority === 'high' ? 'var(--red-50)' : task.priority === 'medium' ? 'var(--amber-50)' : '#e0f2fe',
+                color: task.priority === 'high' ? 'var(--red-600)' : task.priority === 'medium' ? 'var(--amber-600)' : '#0369a1'
               }}>
-                {task.priority === 'urgent' ? 'Urgent' : task.priority === 'high' ? 'High' : 'Low'}
+                {task.priority === 'high' ? 'High' : task.priority === 'medium' ? 'Medium' : 'Low'}
               </span>
             )}
             

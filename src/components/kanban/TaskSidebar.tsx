@@ -14,7 +14,7 @@ interface TaskSidebarProps {
     title: string; 
     notes?: string; 
     due?: string;
-    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    priority?: 'high' | 'medium' | 'low' | 'none';
     labels?: string[];
     recurring?: {
       enabled: boolean;
@@ -38,7 +38,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
     notes: '',
     due: '',
   });
-  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low' | 'none'>('none');
   const [labels, setLabels] = useState<string[]>([]);
   const [newLabel, setNewLabel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +63,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         notes: task.notes || '',
         due: task.due ? task.due.split('T')[0] : '',
       });
-      setPriority(task.priority || 'normal');
+      setPriority(task.priority || 'none');
       setLabels(task.labels || []);
       setRecurring(task.recurring || {
         enabled: false,
@@ -89,7 +89,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         title: formData.title.trim(),
         notes: formData.notes.trim() || undefined,
         due: formData.due || undefined,
-        priority: priority !== 'normal' ? priority : undefined,
+        priority: priority !== 'none' ? priority : undefined,
         labels: labels.length > 0 ? labels : undefined,
         recurring: recurring.enabled ? recurring : undefined,
       });
@@ -234,18 +234,29 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                     <label className="text-[12px] text-neutral-500">Priority</label>
                     <select
                       value={priority}
-                      onChange={(e) => {
-                        setPriority(e.target.value as any);
-                        handleSubmit();
+                      onChange={async (e) => {
+                        const newPriority = e.target.value as 'high' | 'medium' | 'low' | 'none';
+                        setPriority(newPriority);
+                        setIsSubmitting(true);
+                        try {
+                          await onSubmit({
+                            title: formData.title.trim(),
+                            priority: newPriority !== 'none' ? newPriority : undefined,
+                          });
+                        } catch (error) {
+                          setError('Failed to update priority');
+                        } finally {
+                          setIsSubmitting(false);
+                        }
                       }}
                       disabled={isSubmitting}
                       className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-sm text-neutral-900 focus:border-blue-500 focus:outline-none"
                       aria-label="Task priority"
                     >
-                      <option value="low">Low</option>
-                      <option value="normal">Normal</option>
+                      <option value="none">None</option>
                       <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
                     </select>
                   </div>
 

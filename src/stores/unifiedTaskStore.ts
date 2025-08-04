@@ -98,7 +98,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             updated: now,
             position: '0',
             labels: input.labels || [],
-            priority: input.priority || 'low',
+            priority: input.priority || 'none',
             notes: input.notes || '',
             due: input.due,
             columnId: input.columnId,
@@ -263,19 +263,19 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             // Only include fields that have values and are supported by Google Tasks
             if (updates.title !== undefined) googleUpdates.title = updates.title;
             if (updates.notes !== undefined) googleUpdates.notes = updates.notes;
+            // CRITICAL: Handle date updates carefully to prevent timezone shifts
             if (updates.due !== undefined) {
-              // Google Tasks only stores the date portion
-              // Always convert to YYYY-MM-DD format in user's local timezone
-              if (updates.due.length === 10) {
-                // Already in YYYY-MM-DD format
-                googleUpdates.due = updates.due;
+              // Check if we're getting a date-only update
+              if (updates.due_date_only) {
+                // Use the date-only value and format for Google
+                googleUpdates.due = `${updates.due_date_only}T00:00:00.000Z`;
+              } else if (updates.due) {
+                // If we have a full RFC3339 date, extract date part only
+                const datePart = updates.due.split('T')[0];
+                googleUpdates.due = `${datePart}T00:00:00.000Z`;
               } else {
-                // Parse the date and format as YYYY-MM-DD in local timezone
-                const dueDate = new Date(updates.due);
-                const year = dueDate.getFullYear();
-                const month = String(dueDate.getMonth() + 1).padStart(2, '0');
-                const day = String(dueDate.getDate()).padStart(2, '0');
-                googleUpdates.due = `${year}-${month}-${day}`;
+                // Clear the due date
+                googleUpdates.due = null;
               }
             }
             if (updates.status !== undefined) googleUpdates.status = updates.status;

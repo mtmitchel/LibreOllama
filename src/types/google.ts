@@ -77,7 +77,7 @@ export interface GoogleTask {
     link: string;
   }>;
   // Extended properties for our app
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  priority?: 'high' | 'medium' | 'low' | 'none';
   googleTaskListId?: string;
   timeBlock?: {
     startTime: string;
@@ -101,7 +101,7 @@ interface RecurringConfig {
 
 export interface EnhancedGoogleTask extends GoogleTask {
   labels?: string[];
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  priority?: 'high' | 'medium' | 'low' | 'none';
   subtasks?: SubTask[];
   recurring?: RecurringConfig;
 }
@@ -119,7 +119,7 @@ export interface TaskCreateData {
   due?: string;
   parent?: string;
   position?: string;
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  priority?: 'high' | 'medium' | 'low' | 'none';
   subtasks?: Array<{
     id: string;
     title: string;
