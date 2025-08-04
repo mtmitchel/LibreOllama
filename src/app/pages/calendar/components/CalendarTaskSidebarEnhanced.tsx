@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ChevronDown, Plus, ArrowUpDown, CheckCircle2, Circle, 
   Calendar, Flag, Clock, Hash, GripVertical, Type,
-  Edit3, Copy, Trash2, RefreshCw
+  Edit3, Copy, Trash2, RefreshCw, MoreHorizontal, Eye, EyeOff
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { DraggableTask } from './dnd/DraggableTask';
 import { InlineTaskCreator } from '../../../../components/kanban/InlineTaskCreator';
 import { ContextMenu } from '../../../../components/ui';
 import type { GoogleTask } from '../../../../types/google';
+import { useUnifiedTaskStore } from '../../../../stores/unifiedTaskStore';
 
 // Helper function to parse task due dates correctly
 // Google Tasks API returns dates in RFC3339 format (e.g., "2025-08-02T00:00:00.000Z")
@@ -71,9 +72,33 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [sortBy, setSortBy] = useState<'title' | 'due' | 'priority' | 'created'>('created');
-  const [showCompleted, setShowCompleted] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const optionsMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Get showCompleted state from Zustand store
+  const setShowCompleted = useUnifiedTaskStore(state => state.setShowCompleted);
+  const showCompleted = useUnifiedTaskStore(state => 
+    state.showCompletedByList['calendar-sidebar'] ?? state.showCompleted
+  );
+  
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setShowSortMenu(false);
+      }
+      if (optionsMenuRef.current && !optionsMenuRef.current.contains(event.target as Node)) {
+        setShowOptionsMenu(false);
+      }
+    };
+
+    if (showSortMenu || showOptionsMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSortMenu, showOptionsMenu]);
   
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {
@@ -182,13 +207,22 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
       throw new Error('No task list available. Please create a task list first.');
     }
     
-    await onTaskCreate({
-      title: data.title,
-      notes: data.notes,
-      due: data.due,
-      priority: data.priority,
-      googleTaskListId: targetListId
-    });
+    try {
+      await onTaskCreate({
+        title: data.title,
+        notes: data.notes,
+        due: data.due,
+        priority: data.priority,
+        googleTaskListId: targetListId
+      });
+      
+      console.log('✅ Task created successfully, closing inline creator');
+      // Successfully created - close the inline creator
+      setIsCreating(false);
+    } catch (error) {
+      // Let the error bubble up so InlineTaskCreator can handle it
+      throw error;
+    }
   };
   
   // Remove section rendering - not needed anymore
@@ -338,7 +372,107 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
     <div className="w-80 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Tasks</h3>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900">Tasks</h3>
+            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+              {filteredTasks.length}
+            </span>
+          </div>
+          
+          {/* Controls */}
+          <div className="flex items-center gap-1">
+            {/* Sort Menu Button */}
+            <div className="relative" ref={sortMenuRef}>
+              <button
+                className="flex items-center justify-center p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                onClick={() => setShowSortMenu(!showSortMenu)}
+                title="Sort"
+              >
+                <ArrowUpDown size={14} />
+              </button>
+              
+              {showSortMenu && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+                  <button
+                    onClick={() => {
+                      setSortBy('created');
+                      setShowSortMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50 ${
+                      sortBy === 'created' ? 'bg-purple-50 text-purple-600' : ''
+                    }`}
+                  >
+                    <GripVertical size={14} className="mr-2" />
+                    Date created
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortBy('due');
+                      setShowSortMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
+                      sortBy === 'due' ? 'bg-purple-50 text-purple-600' : ''
+                    }`}
+                  >
+                    <Calendar size={14} className="mr-2" />
+                    Due date
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortBy('title');
+                      setShowSortMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
+                      sortBy === 'title' ? 'bg-purple-50 text-purple-600' : ''
+                    }`}
+                  >
+                    <Type size={14} className="mr-2" />
+                    Title
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortBy('priority');
+                      setShowSortMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-gray-50 ${
+                      sortBy === 'priority' ? 'bg-purple-50 text-purple-600' : ''
+                    }`}
+                  >
+                    <Flag size={14} className="mr-2" />
+                    Priority
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Options Menu */}
+            <div className="relative" ref={optionsMenuRef}>
+              <button
+                className="flex items-center justify-center p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                title="More options"
+              >
+                <MoreHorizontal size={14} />
+              </button>
+              
+              {showOptionsMenu && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+                  <button
+                    onClick={() => {
+                      setShowCompleted(!showCompleted, 'calendar-sidebar');
+                      setShowOptionsMenu(false);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                  >
+                    {showCompleted ? <EyeOff size={14} /> : <Eye size={14} />}
+                    <span>{showCompleted ? 'Hide completed' : 'Show completed'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
         
         {/* List selector */}
         <select
@@ -369,80 +503,6 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
               <span>Add task</span>
             </button>
           )}
-        </div>
-        
-        {/* Controls */}
-        <div className="flex items-center justify-between mt-3">
-          {/* Sort Menu Button */}
-          <div className="relative" ref={sortMenuRef}>
-            <button
-              className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-              onClick={() => setShowSortMenu(!showSortMenu)}
-            >
-              <ArrowUpDown size={14} />
-              <span>Sort</span>
-            </button>
-            
-            {showSortMenu && (
-              <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
-                <button
-                  onClick={() => {
-                    setSortBy('created');
-                    setShowSortMenu(false);
-                  }}
-                  className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50 ${
-                    sortBy === 'created' ? 'bg-purple-50 text-purple-600' : ''
-                  }`}
-                >
-                  <GripVertical size={14} className="mr-2" />
-                  Date created
-                </button>
-                <button
-                  onClick={() => {
-                    setSortBy('due');
-                    setShowSortMenu(false);
-                  }}
-                  className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
-                    sortBy === 'due' ? 'bg-purple-50 text-purple-600' : ''
-                  }`}
-                >
-                  <Calendar size={14} className="mr-2" />
-                  Due date
-                </button>
-                <button
-                  onClick={() => {
-                    setSortBy('title');
-                    setShowSortMenu(false);
-                  }}
-                  className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
-                    sortBy === 'title' ? 'bg-purple-50 text-purple-600' : ''
-                  }`}
-                >
-                  <Type size={14} className="mr-2" />
-                  Title
-                </button>
-                <button
-                  onClick={() => {
-                    setSortBy('priority');
-                    setShowSortMenu(false);
-                  }}
-                  className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-gray-50 ${
-                    sortBy === 'priority' ? 'bg-purple-50 text-purple-600' : ''
-                  }`}
-                >
-                  <Flag size={14} className="mr-2" />
-                  Priority
-                </button>
-              </div>
-            )}
-          </div>
-          
-          <button
-            className="text-sm text-gray-600 hover:text-gray-900"
-            onClick={() => setShowCompleted(!showCompleted)}
-          >
-            {showCompleted ? 'Hide' : 'Show'} completed
-          </button>
         </div>
       </div>
       

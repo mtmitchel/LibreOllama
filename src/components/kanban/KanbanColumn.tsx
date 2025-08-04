@@ -12,7 +12,7 @@ type KanbanColumnType = TaskColumn & {
 import { UnifiedTaskCard } from '../tasks/UnifiedTaskCard';
 import { InlineTaskCreator } from './InlineTaskCreator';
 import { Card, ConfirmDialog } from '../ui';
-import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3, Flag } from 'lucide-react';
+import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3, Flag, Eye, EyeOff } from 'lucide-react';
 
 interface KanbanColumnProps {
   column: KanbanColumnType;
@@ -36,7 +36,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onEditTask,
   selectedTaskId
 }) => {
-  const { createTask } = useUnifiedTaskStore();
+  const { createTask, setShowCompleted } = useUnifiedTaskStore();
+  const showCompleted = useUnifiedTaskStore(state => 
+    state.showCompletedByList[column.id] ?? state.showCompleted
+  );
+  
+  console.log('🔍 KanbanColumn - Column:', column.id, 'showCompleted:', showCompleted);
+  
+  console.log('🔄 KanbanColumn render for column:', column.id, 'showCompleted:', showCompleted, 'tasks:', column.tasks.length);
   const [showInlineCreator, setShowInlineCreator] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -273,7 +280,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                     }`}
                   >
                     <GripVertical size={14} className="mr-2" />
-                    My order
+                    Date created
                   </button>
                   <button
                     onClick={() => {
@@ -341,13 +348,24 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   role="menu" 
                   aria-label="List options"
                 >
+                  <button
+                    onClick={() => {
+                      console.log('🎯 Toggle button clicked! Current showCompleted:', showCompleted, 'for column:', column.id);
+                      setShowCompleted(!showCompleted, column.id);
+                      setShowOptionsMenu(false);
+                    }}
+                    className="flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50"
+                  >
+                    {showCompleted ? <EyeOff size={14} className="mr-2" /> : <Eye size={14} className="mr-2" />}
+                    {showCompleted ? 'Hide completed' : 'Show completed'}
+                  </button>
                   {onRename && (
                     <button
                       onClick={() => {
                         setIsRenaming(true);
                         setShowOptionsMenu(false);
                       }}
-                      className="flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50"
+                      className="flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50"
                     >
                       <Edit3 size={14} className="mr-2" />
                       Rename list

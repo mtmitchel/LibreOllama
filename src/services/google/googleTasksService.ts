@@ -43,7 +43,7 @@ class GoogleTasksService {
   async getTasks(
     account: GoogleAccount,
     taskListId: string,
-    showCompleted: boolean = false,
+    showCompleted: boolean = true, // Always fetch all tasks for client-side filtering
     showDeleted: boolean = false,
     maxResults: number = 100
   ): Promise<ApiResponse<PaginatedResponse<GoogleTask>>> {

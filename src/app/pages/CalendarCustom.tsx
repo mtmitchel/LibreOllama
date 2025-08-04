@@ -443,7 +443,17 @@ export default function CalendarCustom() {
                   alert('Failed to update task status');
                 }
               }}
-              onTaskCreate={createGoogleTask}
+              onTaskCreate={async (taskData) => {
+                try {
+                  await createGoogleTask(taskData);
+                  // Refresh data in the background without blocking the UI
+                  refreshData().catch(err => console.error('Failed to refresh after task creation:', err));
+                } catch (error) {
+                  console.error('Failed to create task:', error);
+                  alert('Failed to create task');
+                  throw error; // Re-throw so the inline creator knows it failed
+                }
+              }}
               onTaskDelete={async (listId, taskId) => {
                 try {
                   await deleteGoogleTask(listId, taskId);

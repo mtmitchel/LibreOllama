@@ -133,7 +133,9 @@ pub async fn get_tasks(
     max_results: Option<u32>,
     auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
 ) -> Result<TasksResponse, String> {
-    let show_completed = show_completed.unwrap_or(false);
+    // Always fetch ALL tasks including completed ones for client-side filtering
+    // This follows the "Always Fetch All + Client-Side Filtering" pattern
+    let show_completed = show_completed.unwrap_or(true);
     let show_deleted = show_deleted.unwrap_or(false);
     let max_results = max_results.unwrap_or(100);
 
@@ -159,8 +161,12 @@ pub async fn get_tasks(
     
     println!("📋 [TASKS-API] Fetching tasks with date range: {} to {}", due_min, due_max);
     
-    url.push_str(&format!("?showCompleted={}&showDeleted={}&maxResults={}&dueMin={}&dueMax={}", 
-                         show_completed, show_deleted, max_results, due_min, due_max));
+    // CRITICAL: Include showHidden=true to get completed tasks
+    // Tasks completed in Gmail, Google Calendar, or mobile apps are marked as "hidden"
+    url.push_str(&format!("?showCompleted={}&showHidden={}&showDeleted={}&maxResults={}&dueMin={}&dueMax={}", 
+                         show_completed, true, show_deleted, max_results, due_min, due_max));
+    
+    println!("🔗 [TASKS-API] API URL: {}", url);
 
     let response = client
         .get(&url)
@@ -200,6 +206,11 @@ pub async fn get_tasks(
     }
 
     println!("✅ [TASKS-API] Retrieved {} tasks", tasks.len());
+    
+    // Debug: Count completed vs incomplete tasks
+    let completed_count = tasks.iter().filter(|t| t.status == "completed").count();
+    let hidden_count = tasks.iter().filter(|t| t.hidden.unwrap_or(false)).count();
+    println!("📊 [TASKS-API] Completed tasks: {}, Hidden tasks: {}", completed_count, hidden_count);
     
     // Log tasks in August 2025
     let august_tasks: Vec<_> = tasks.iter()

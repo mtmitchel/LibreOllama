@@ -38,11 +38,11 @@
       "Bash(git checkout:*)",
       "Bash(git add:*)",
       "Bash(touch:*)",
-      "mcp__sequential-thinking__sequentialthinking",
       "Bash(claude mcp add:*)",
       "Bash(move:*)",
       "mcp__exa-search__web_search_exa",
-      "mcp__exa-search__crawling_exa"
+      "mcp__exa-search__crawling_exa",
+      "mcp__sequential-thinking__sequentialthinking"
     ],
     "deny": []
   },
@@ -50,7 +50,6 @@
   "enabledMcpjsonServers": [
     "sequential-thinking",
     "ref-mcp",
-    "semgrep",
     "exa-search",
     "playwright-mcp"
   ]

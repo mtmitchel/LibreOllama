@@ -67,7 +67,7 @@ export async function listTasks(tasklistId: string): Promise<tasks_v1.Schema$Tas
   const response = await (gapi.client as any).tasks.tasks.list({ 
     tasklist: tasklistId,
     maxResults: 100,
-    showCompleted: false,
+    showCompleted: true, // Always fetch all tasks for client-side filtering
     showDeleted: false
   });
   return response.result.items || [];

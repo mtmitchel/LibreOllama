@@ -19,15 +19,6 @@
       ],
       "env": {}
     },
-    "semgrep": {
-      "command": "uvx",
-      "args": [
-        "semgrep-mcp"
-      ],
-      "env": {
-        "SEMGREP_APP_TOKEN": "<optional-token>"
-      }
-    },
     "exa-search": {
       "command": "cmd",
       "args": [
@@ -37,7 +28,7 @@
         "exa-mcp-server"
       ],
       "env": {
-        "EXA_API_KEY": "8c348630-04d0-4e19-b73b-61d0677979a9"
+        "EXA_API_KEY": "<optional-key>"
       }
     },
     "playwright-mcp": {
@@ -46,11 +37,8 @@
         "/c",
         "npx",
         "-y",
-        "@playwright/mcp@latest",
-        "--output-dir",
-        "./"
-      ],
-      "env": {}
+        "playwright-mcp"
+      ]
     }
   }
 }

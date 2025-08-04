@@ -77,6 +77,10 @@ export interface UnifiedTaskState {
   lastSyncTime?: string;
   isSyncing: boolean;
   syncErrors: Record<string, string>; // taskId -> error message
+
+  // UI state
+  showCompleted: boolean; // Global default
+  showCompletedByList: Record<string, boolean>; // Per-list overrides
 }
 
 // Helper type for task creation

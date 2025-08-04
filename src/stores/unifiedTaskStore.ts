@@ -30,6 +30,12 @@ interface UnifiedTaskActions {
   // Query helpers
   getTasksByColumn: (columnId: string) => UnifiedTask[];
   getTaskByGoogleId: (googleTaskId: string) => UnifiedTask | undefined;
+  getVisibleTasks: () => UnifiedTask[];
+  getVisibleTasksByColumn: (columnId: string) => UnifiedTask[];
+
+  // UI state
+  setShowCompleted: (show: boolean, listId?: string) => void;
+  getShowCompletedForList: (listId: string) => boolean;
 }
 
 type UnifiedTaskStore = UnifiedTaskState & UnifiedTaskActions;
@@ -63,6 +69,10 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
         // Initial state
         tasks: {},
         columns: [],
+        showCompleted: true,
+        showCompletedByList: {},
+        isSyncing: false,
+        syncErrors: {},
         
         // Create a new task
         createTask: async (input) => {
@@ -739,12 +749,65 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           const state = get();
           return Object.values(state.tasks).find(t => t.googleTaskId === googleTaskId);
         },
+
+        // Get all visible tasks (respecting showCompleted filter)
+        getVisibleTasks: () => {
+          const state = get();
+          const allTasks = Object.values(state.tasks);
+          
+          if (state.showCompleted) {
+            return allTasks;
+          }
+          
+          return allTasks.filter(task => task.status !== 'completed');
+        },
+
+        // Get visible tasks for a specific column
+        getVisibleTasksByColumn: (columnId) => {
+          const state = get();
+          const column = state.columns.find(c => c.id === columnId);
+          if (!column) {
+            return [];
+          }
+          
+          const tasks = column.taskIds.map(id => state.tasks[id]).filter(Boolean);
+          
+          if (state.showCompleted) {
+            return tasks;
+          }
+          
+          return tasks.filter(task => task.status !== 'completed');
+        },
+
+        // Toggle show completed state
+        setShowCompleted: (show, listId) => {
+          console.log('🎛️ setShowCompleted called with:', show, 'for list:', listId);
+          set(state => {
+            if (listId) {
+              // Set per-list preference
+              state.showCompletedByList[listId] = show;
+            } else {
+              // Set global default
+              state.showCompleted = show;
+            }
+          });
+          
+          logger.debug('[UnifiedStore] Show completed toggled', { showCompleted: show, listId });
+        },
+        
+        // Get show completed state for a specific list
+        getShowCompletedForList: (listId) => {
+          const state = get();
+          // Use list-specific setting if available, otherwise use global default
+          return state.showCompletedByList[listId] ?? state.showCompleted;
+        },
       })),
       {
         name: 'unified-task-store',
         partialize: (state) => ({
           tasks: state.tasks,
           columns: state.columns,
+          showCompleted: state.showCompleted,
         }),
       }
     )

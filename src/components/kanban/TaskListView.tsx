@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
+import { useFilteredTasks } from '../../hooks/useFilteredTasks';
 
 type KanbanTask = UnifiedTask;
 import { TaskSidebar } from './TaskSidebar';
@@ -39,7 +40,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     updateTask,
     deleteTask,
     createTask,
-    getTasksByColumn,
   } = useUnifiedTaskStore();
   
   const toggleComplete = (columnId: string, taskId: string, completed: boolean) => {
@@ -60,12 +60,8 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   const selectedListId = parentSelectedListId ?? localSelectedListId;
   const sortBy = parentSortBy ?? localSortBy;
 
-  // Get all tasks from all columns or filtered by list
-  const allTasks = columns
-    .filter(column => selectedListId === 'all' || column.id === selectedListId)
-    .flatMap(column => 
-      getTasksByColumn(column.id).map(task => ({ ...task, columnId: column.id, columnTitle: column.title }))
-    );
+  // Get all tasks using memoized hook
+  const allTasks = useFilteredTasks(selectedListId);
 
   // Filter and sort tasks
   const filteredTasks = allTasks

@@ -23,7 +23,7 @@ The Notes feature has comprehensive backend services and a rich frontend UI, but
 
 - **Editor Engine:** Complete **BlockNote** implementation with rich block-based editing capabilities.
 - **Component Structure:** Full component suite in `src/features/notes/components/`:
-    - `BlockNoteEditor.tsx`: Main BlockNote editor component with rich text editing
+    - `BlockNoteEditor.tsx`: Main BlockNote editor component with rich text editing and custom link handling
     - `NotesPage.tsx`: Main notes page with folder navigation and editor integration
     - `Sidebar.tsx`: Sidebar with folder tree, search, and note management
     - `FormattingToolbar.tsx`: Rich text formatting toolbar
@@ -33,6 +33,7 @@ The Notes feature has comprehensive backend services and a rich frontend UI, but
     - `BlockNotePopover.tsx`: AI writing tools integration popover
     - `ImageUploadModal.tsx`: Image upload functionality
     - `LinkModal.tsx`: Link insertion and editing
+    - `LinkPreviewModal.tsx`: Arc browser-inspired link preview with navigation controls
     - `AlignmentMenu.tsx`: Text alignment options
     - `ContextualToolbar.tsx`: Context-aware toolbar
     - `NotesContextSidebar.tsx`: Contextual sidebar for notes
@@ -59,6 +60,8 @@ The Notes feature has comprehensive backend services and a rich frontend UI, but
 - ✅ Image upload with modal interface
 - ✅ Link insertion and editing
 - ✅ AI writing tools integration via popover
+- ✅ Browser-esque link preview modal (Arc browser-inspired)
+- ✅ Custom TipTap Link extension to intercept external links
 - ✅ Hierarchical folder navigation
 - ✅ Note and folder state management with Zustand
 - ✅ Basic backend integration for notes CRUD

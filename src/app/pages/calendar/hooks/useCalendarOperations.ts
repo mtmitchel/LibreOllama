@@ -21,7 +21,7 @@ export const useCalendarOperations = () => {
     isAuthenticated: isCalendarAuthenticated
   } = useGoogleCalendarStore();
 
-  const { tasks: unifiedTasks, columns, createTask, updateTask, deleteTask } = useUnifiedTaskStore();
+  const { tasks: unifiedTasks, columns, createTask, updateTask, deleteTask, getVisibleTasks, showCompleted } = useUnifiedTaskStore();
   const activeAccount = useActiveGoogleAccount();
   
   // Wrapper functions to adapt unified task store to the expected interface
@@ -202,8 +202,8 @@ export const useCalendarOperations = () => {
       events.push(processedEvent);
     });
     
-    // Add unified tasks with due dates
-    Object.values(unifiedTasks).forEach(task => {
+    // Add unified tasks with due dates (filtered based on showCompleted)
+    getVisibleTasks().forEach(task => {
       if (task.due) {
         const isCompleted = task.status === 'completed';
         const taskDueDate = new Date(task.due);
@@ -330,7 +330,7 @@ export const useCalendarOperations = () => {
     } as CalendarEvent);
     
     return events;
-  }, [calendarEvents, unifiedTasks]);
+  }, [calendarEvents, getVisibleTasks, showCompleted]);
 
   // Task sync using realtimeSync
   const syncAllTasks = useCallback(async () => {
@@ -373,12 +373,22 @@ export const useCalendarOperations = () => {
 
   // Task lists and active account are available for debugging if needed
 
+  // Convert filtered tasks back to object format for compatibility
+  const visibleTasksObject = useMemo(() => {
+    const visibleTasks = getVisibleTasks();
+    const tasksObject: Record<string, any> = {};
+    visibleTasks.forEach(task => {
+      tasksObject[task.id] = task;
+    });
+    return tasksObject;
+  }, [getVisibleTasks, showCompleted, unifiedTasks]);
+
   return {
     // Data
     calendarEvents,
     calendars,
     taskLists: columns, // Use columns as task lists
-    googleTasks: unifiedTasks, // Use unified tasks
+    googleTasks: visibleTasksObject, // Use filtered tasks
     calendarEventsWithTasks,
     
     // Loading states

@@ -20,6 +20,7 @@ import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import '../../styles/asana-design-system.css';
 import { createTaskList } from "../../api/googleTasksApi";
 import { realtimeSync } from "../../services/realtimeSync";
+import { useFilteredColumns } from "../../hooks/useFilteredColumns";
 
 type KanbanTask = UnifiedTask;
 
@@ -43,20 +44,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   isSidePanelOpen = false
 }) => {
   const {
-    columns: taskColumns,
     moveTask,
     isSyncing,
-    getTasksByColumn,
   } = useUnifiedTaskStore();
   
-  // Transform columns to old format
-  const columns = taskColumns.map(col => ({
-    id: col.id,
-    title: col.title,
-    tasks: getTasksByColumn(col.id),
-    isLoading: false,
-    error: undefined,
-  }));
+  // Use memoized hook to get filtered columns
+  const columns = useFilteredColumns();
   
   const isInitialized = true;
   const error = null;

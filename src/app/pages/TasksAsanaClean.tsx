@@ -9,13 +9,14 @@ import '../../styles/asana-tokens.css';
 import '../../styles/asana-design-system.css';
 import { 
   LayoutGrid, List, RefreshCw, Plus, Search, X, ArrowUpDown, ChevronDown, 
-  GripVertical, Calendar, Type, RotateCcw, Filter, MoreHorizontal
+  GripVertical, Calendar, Type, RotateCcw, Filter, MoreHorizontal, Eye, EyeOff
 } from 'lucide-react';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { realtimeSync } from '../../services/realtimeSync';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 import '../../tests/persistence-test';
+import '../../tests/create-completed-task';
 
 type ViewMode = 'kanban' | 'list';
 
@@ -380,14 +381,20 @@ export default function TasksAsanaClean() {
           </button>
           
           {/* Debug buttons - remove in production */}
-          {false && (
+          {true && (
             <>
               <button
-                onClick={() => (window as any).testPersistence()}
+                onClick={() => {
+                  const state = useUnifiedTaskStore.getState();
+                  console.log('🔍 Full state:', state);
+                  console.log('🔍 Show completed:', state.showCompleted);
+                  console.log('🔍 Total tasks:', Object.keys(state.tasks).length);
+                  console.log('🔍 Completed tasks:', Object.values(state.tasks).filter(t => t.status === 'completed').length);
+                }}
                 className="text-xs px-2 py-1 rounded"
                 style={{ backgroundColor: '#F6F7F8' }}
               >
-                Debug
+                Debug State
               </button>
               <button
                 onClick={() => (window as any).testCreateTaskWithPriority()}
@@ -395,6 +402,20 @@ export default function TasksAsanaClean() {
                 style={{ backgroundColor: '#F6F7F8' }}
               >
                 Test Priority
+              </button>
+              <button
+                onClick={() => (window as any).testCreateCompletedTask()}
+                className="text-xs px-2 py-1 rounded"
+                style={{ backgroundColor: '#F6F7F8' }}
+              >
+                Create Completed
+              </button>
+              <button
+                onClick={() => (window as any).testMarkFirstTaskCompleted()}
+                className="text-xs px-2 py-1 rounded"
+                style={{ backgroundColor: '#F6F7F8' }}
+              >
+                Mark First Complete
               </button>
             </>
           )}

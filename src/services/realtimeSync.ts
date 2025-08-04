@@ -60,6 +60,18 @@ class RealtimeSync {
       
       logger.debug('[RealtimeSync] Raw backend response:', remoteData);
       
+      // Debug completed tasks
+      const allTasks = (remoteData as any).tasks;
+      const taskArray = Object.values(allTasks || {});
+      const completedCount = taskArray.filter((t: any) => t.status === 'completed').length;
+      console.log('🔍 [RealtimeSync] Total tasks from backend:', taskArray.length);
+      console.log('🔍 [RealtimeSync] Completed tasks from backend:', completedCount);
+      console.log('🔍 [RealtimeSync] Sample task statuses:', taskArray.slice(0, 5).map((t: any) => ({ 
+        title: t.title, 
+        status: t.status,
+        google_task_id: t.google_task_id
+      })));
+      
       const { tasks: taskData, columns } = remoteData as { 
         tasks: Record<string, {
           id: string;
@@ -162,6 +174,14 @@ class RealtimeSync {
 
       useUnifiedTaskStore.getState().setTasks(tasks);
       useUnifiedTaskStore.getState().setColumns(columns);
+      
+      // Debug: Check what's in the store after sync
+      const storeState = useUnifiedTaskStore.getState();
+      const storeTasks = Object.values(storeState.tasks);
+      const storeCompletedCount = storeTasks.filter(t => t.status === 'completed').length;
+      console.log('🔍 [RealtimeSync] After sync - Total tasks in store:', storeTasks.length);
+      console.log('🔍 [RealtimeSync] After sync - Completed tasks in store:', storeCompletedCount);
+      console.log('🔍 [RealtimeSync] After sync - showCompleted state:', storeState.showCompleted);
 
       logger.info('[RealtimeSync] Sync completed successfully');
     } catch (error) {

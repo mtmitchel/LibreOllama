@@ -7,7 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2025-01-27
 
+### 🚀 New Features
+
+#### Browser-esque Link Preview Modal ✅
+- **Added Arc browser-inspired link preview for Notes** ✅
+  - Implemented custom TipTap Link extension to intercept external link clicks
+  - Created browser-style modal with navigation controls (back, forward, refresh)
+  - Added iframe-based preview with security sandbox attributes
+  - Includes error handling for sites that block embedding
+  - Prevents links from opening in new tabs while preserving editor functionality
+  - Only intercepts external HTTP/HTTPS links, internal links work normally
+  - Location: `src/features/notes/components/LinkPreviewModal.tsx`
+
 ### 🔧 Recent Fixes
+
+#### AI Writing Tools Context Menu Positioning ✅
+- **Fixed context menu positioning issues** ✅
+  - Added viewport boundary detection to prevent menu cutoff
+  - Implemented smart repositioning logic for edge cases
+  - Fixed menu appearing at incorrect positions (far corners)
+  - Ensured menu opens at mouse cursor location
+  - Location: `src/components/ai/AIWritingToolsContextMenu.tsx`
 
 #### Calendar Timezone & Date Handling Fixes ✅
 - **Fixed timezone-related date rollback issues** ✅

@@ -139,8 +139,9 @@ impl GoogleTasksService {
         loop {
             let mut endpoint = format!("lists/{}/tasks?maxResults=100", task_list_id);
             
-            // Include completed tasks to show them faded on calendar
-            endpoint.push_str("&showCompleted=false");
+            // CRITICAL: Always fetch completed tasks for client-side filtering
+            // Include showHidden=true to get tasks marked as completed in Gmail/Calendar/mobile
+            endpoint.push_str("&showCompleted=true&showHidden=true");
             
             if let Some(token) = &page_token {
                 endpoint.push_str(&format!("&pageToken={}", token));

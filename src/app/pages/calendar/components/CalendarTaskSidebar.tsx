@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ArrowUpDown, CheckCircle2, Circle, MoreHorizontal } from 'lucide-react';
+import { ChevronDown, ArrowUpDown, CheckCircle2, Circle, MoreHorizontal, Eye, EyeOff } from 'lucide-react';
 import { InlineTaskCreator } from '../../../../components/kanban/InlineTaskCreator';
 import { UnifiedTask } from '../../../../stores/unifiedTaskStore.types';
 import type { TaskColumn } from '../../../../stores/unifiedTaskStore.types';
+import { useUnifiedTaskStore } from '../../../../stores/unifiedTaskStore';
 
 interface CalendarTaskSidebarProps {
   taskLists: TaskColumn[];
@@ -32,24 +33,33 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'title' | 'due' | 'priority' | 'created'>('title');
+  const [menuDropdownOpen, setMenuDropdownOpen] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
+  
+  const { showCompleted, setShowCompleted } = useUnifiedTaskStore();
 
-  // Close sort dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
         setSortDropdownOpen(false);
       }
+      if (menuDropdownRef.current && !menuDropdownRef.current.contains(event.target as Node)) {
+        setMenuDropdownOpen(false);
+      }
     };
 
-    if (sortDropdownOpen) {
+    if (sortDropdownOpen || menuDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [sortDropdownOpen]);
+  }, [sortDropdownOpen, menuDropdownOpen]);
 
   const selectedList = taskLists.find(l => l.id === selectedTaskListId);
-  const allTasks = Object.values(googleTasks).filter(task => task.status !== 'completed');
+  const allTasks = Object.values(googleTasks).filter(task => 
+    showCompleted ? true : task.status !== 'completed'
+  );
   const filteredTasks = selectedTaskListId === 'all' 
     ? allTasks 
     : allTasks.filter(task => task.columnId === selectedTaskListId);
@@ -224,30 +234,31 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
                 </span>
               </div>
               
-              {/* Sort button */}
-              <div className="relative" ref={sortDropdownRef}>
-                <button
-                  className="flex items-center justify-center"
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F3F4F6';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                  onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-                  title="Sort tasks"
-                >
-                  <ArrowUpDown size={14} style={{ color: '#6B6F76' }} />
-                </button>
+              <div className="flex items-center gap-1">
+                {/* Sort button */}
+                <div className="relative" ref={sortDropdownRef}>
+                  <button
+                    className="flex items-center justify-center"
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F3F4F6';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                    title="Sort"
+                  >
+                    <ArrowUpDown size={14} style={{ color: '#6B6F76' }} />
+                  </button>
                 
                 {sortDropdownOpen && (
                   <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
@@ -272,6 +283,48 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Three-dot menu */}
+              <div className="relative" ref={menuDropdownRef}>
+                <button
+                  className="flex items-center justify-center"
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F3F4F6';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  onClick={() => setMenuDropdownOpen(!menuDropdownOpen)}
+                  title="More options"
+                >
+                  <MoreHorizontal size={14} style={{ color: '#6B6F76' }} />
+                </button>
+                
+                {menuDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[160px]">
+                    <button
+                      onClick={() => {
+                        setShowCompleted(!showCompleted);
+                        setMenuDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 text-gray-700 flex items-center gap-2"
+                    >
+                      {showCompleted ? <EyeOff size={14} /> : <Eye size={14} />}
+                      <span>{showCompleted ? 'Hide completed' : 'Show completed'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
               </div>
             </div>
 
