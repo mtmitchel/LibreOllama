@@ -40,6 +40,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed immediate priority updates to only send priority field (prevents date shifts)
   - Location: `src/components/tasks/TaskSidePanel.tsx`, `src/app/pages/calendar/components/CompactTaskEditModal.tsx`
 
+#### Calendar Sidebar Enhancements ✅
+- **Fixed show/hide completed tasks functionality** ✅
+  - Root Cause: Calendar operations hook was pre-filtering tasks before passing to sidebar
+  - Fixed by passing all tasks to sidebar, allowing it to handle its own filtering
+  - Show/hide completed now works correctly with per-list preferences
+  - Location: `src/app/pages/calendar/hooks/useCalendarOperations.ts`
+- **Added priority and labels display to task cards** ✅
+  - Task cards in calendar sidebar now show priority badges (High/Medium/Low)
+  - Labels are displayed with overflow indicator (+N for additional labels)
+  - Improved visual hierarchy and information density
+  - Location: `src/app/pages/calendar/components/CalendarTaskSidebarEnhanced.tsx`
+
 #### AI Writing Tools Context Menu Positioning ✅
 - **Fixed context menu positioning issues** ✅
   - Added viewport boundary detection to prevent menu cutoff

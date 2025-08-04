@@ -56,14 +56,25 @@ The Calendar page provides comprehensive calendar functionality with Google Cale
 - **Edge Cases:** Limited handling of complex calendar scenarios (recurring events, etc.).
 - **Undo Functionality:** No undo feature for accidentally marked tasks.
 
-### Recent Improvements (2025-01-27)
+### Recent Improvements (2025-01-28)
 
-- **Timezone Handling:** Fixed timezone-related date rollback issues where tasks would show one day behind after drag-and-drop
-- **Date Parsing:** Implemented `parseTaskDueDate` helper to correctly handle RFC3339 dates from Google Tasks API
+- **Critical Date Shifting Bug Fix:** 
+  - Fixed timezone-related bug where dates would shift backward by one day on reload or update
+  - Root cause: Google Tasks API only stores DATE information (not DATETIME)
+  - Solution: Implemented date-only handling throughout the system using `parseGoogleTaskDate()`
+  - All update handlers now only send changed fields to prevent unintended date updates
+- **Calendar Sidebar Enhancements:**
+  - Fixed show/hide completed tasks functionality by passing all tasks to sidebar (not pre-filtered)
+  - Added priority badges (High/Medium/Low) to task cards
+  - Added label display with overflow indicator
+  - Improved visual information density
+- **Priority System Improvements:**
+  - Standardized to 3-tier system with "None" option: High/Medium/Low/None
+  - Fixed priority clearing - selecting "None" properly converts to undefined
+  - Enhanced Low priority visibility with better color contrast
 - **TimeBlock Preservation:** Fixed issue where editing task titles would lose time-block information
 - **Compact Task Edit Modal:** Added streamlined modal for quick task editing from calendar view
 - **Calendar Quick View Modal:** Implemented quick view popup for calendar events with edit/delete actions
-- **Date Consistency:** Simplified date handling to use YYYY-MM-DD format throughout the system, avoiding complex timezone conversions
 
 ## Future Work & Todos
 

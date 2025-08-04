@@ -374,22 +374,22 @@ export const useCalendarOperations = () => {
 
   // Task lists and active account are available for debugging if needed
 
-  // Convert filtered tasks back to object format for compatibility
-  const visibleTasksObject = useMemo(() => {
-    const visibleTasks = getVisibleTasks();
+  // Convert ALL tasks to object format for compatibility
+  // IMPORTANT: Don't pre-filter tasks here - let the sidebar handle its own filtering
+  const allTasksObject = useMemo(() => {
     const tasksObject: Record<string, any> = {};
-    visibleTasks.forEach(task => {
+    Object.values(unifiedTasks).forEach(task => {
       tasksObject[task.id] = task;
     });
     return tasksObject;
-  }, [getVisibleTasks, showCompleted, unifiedTasks]);
+  }, [unifiedTasks]);
 
   return {
     // Data
     calendarEvents,
     calendars,
     taskLists: columns, // Use columns as task lists
-    googleTasks: visibleTasksObject, // Use filtered tasks
+    googleTasks: allTasksObject, // Use ALL tasks (sidebar will filter)
     calendarEventsWithTasks,
     
     // Loading states

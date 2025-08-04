@@ -69,6 +69,20 @@ This guide provides comprehensive implementation patterns, testing strategies, a
    - "None" must convert to `undefined` when sending to API
    - All priority selectors must include the "None" option
 
+5. **Show/Hide Completed Tasks Pattern**:
+   ```typescript
+   // WRONG: Pre-filtering tasks before passing to components
+   const visibleTasks = getVisibleTasks(); // Already filtered
+   return { tasks: visibleTasks }; // Component can't show/hide
+   
+   // CORRECT: Pass all tasks, let components filter
+   const allTasks = Object.values(unifiedTasks);
+   return { tasks: allTasks }; // Component controls filtering
+   ```
+   - Components should receive ALL data and handle their own filtering
+   - Prevents double-filtering issues that break toggle functionality
+   - Enables per-view show/hide preferences
+
 ### Notes Feature Implementation
 
 #### Critical Database Integration Requirements

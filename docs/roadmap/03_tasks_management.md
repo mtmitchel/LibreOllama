@@ -101,6 +101,13 @@ The Tasks page provides a **unified task management system** with local Kanban f
 - Uses 3-tier system with "None" option: High/Medium/Low/None
 - "None" must convert to undefined when sending to API (not the string "none")
 - All priority selectors must include the "None" option for clearing priority
+- Priority updates must only send the priority field to prevent date shifts
+
+**Show/Hide Completed Tasks:**
+- Implemented per-list show/hide preferences (not just global)
+- Calendar sidebar must receive ALL tasks, not pre-filtered
+- Each view handles its own filtering based on showCompleted state
+- Prevents double-filtering issues that break the toggle functionality
 
 ## Unified Architecture Implementation
 
