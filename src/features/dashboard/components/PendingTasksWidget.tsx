@@ -137,7 +137,7 @@ export const PendingTasksWidget: React.FC = () => {
           {pendingTasks.map((task) => {
             const dueDate = formatDueDate(task.due);
             const isOverdue = task.due && isPast(new Date(task.due));
-            const priority = task.metadata?.priority;
+            const priority = task.priority;
             
             return (
               <li key={task.id} className="flex items-start gap-2 py-1">

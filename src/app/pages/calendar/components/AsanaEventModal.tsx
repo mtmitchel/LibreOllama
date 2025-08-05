@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, MapPin, Users, Link, FileText, Trash2, Repeat } from 'lucide-react';
-import { AsanaEventModalProps } from '../types';
+import { AsanaEventModalProps } from '../types/calendar';
 
 // Asana-style typography
 const asanaTypography = {
@@ -68,8 +68,8 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
         start = event.start;
         end = event.end instanceof Date ? event.end : new Date();
       } else if (event.start?.dateTime || event.start?.date) {
-        start = new Date(event.start.dateTime || event.start.date);
-        end = event.end ? new Date(event.end.dateTime || event.end.date) : new Date();
+        start = new Date(event.start.dateTime || event.start.date || '');
+        end = event.end ? new Date(event.end.dateTime || event.end.date || '') : new Date();
       } else {
         start = new Date();
         end = new Date();
@@ -101,7 +101,7 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
   // Set default calendar to mtmitchel@gmail.com when calendars are available
   useEffect(() => {
     if (calendars && calendars.length > 0 && !event) {
-      const defaultCalendar = calendars.find(cal => cal.id.includes('mtmitchel@gmail.com')) || calendars[0];
+      const defaultCalendar = calendars.find((cal: any) => cal.id.includes('mtmitchel@gmail.com')) || calendars[0];
       setSelectedCalendar(defaultCalendar.id);
     }
   }, [calendars, event]);
@@ -251,7 +251,7 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
                 e.currentTarget.style.borderColor = 'transparent';
               }}
             >
-              {[...calendars]
+              {calendars && [...calendars]
                 .sort((a, b) => {
                   // mtmitchel@gmail.com first, then others
                   if (a.id.includes('mtmitchel@gmail.com')) return -1;

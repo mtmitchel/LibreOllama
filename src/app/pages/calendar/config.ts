@@ -27,6 +27,14 @@ export const asanaTypography = {
     letterSpacing: '0',
     lineHeight: 1.5,
     color: '#9CA6AF'
+  },
+  label: {
+    fontSize: '12px',
+    fontWeight: 500,
+    letterSpacing: '0',
+    lineHeight: 1.5,
+    color: '#6B6F76',
+    textTransform: 'uppercase' as const
   }
 };
 

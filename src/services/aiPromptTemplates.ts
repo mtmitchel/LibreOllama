@@ -118,6 +118,7 @@ EXPLANATION:`,
     
     'create-task': '',
     'create-note': '',
+    'ask-custom': '',
     'ask-ai': ''
   },
   
@@ -169,6 +170,7 @@ Key points:`,
     
     'create-task': '',
     'create-note': '',
+    'ask-custom': '',
     'ask-ai': ''
   }
 };

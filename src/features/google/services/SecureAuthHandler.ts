@@ -164,7 +164,7 @@ export class SecureAuthHandler {
       }
       
       // Check if token expires in the next 10 minutes
-      const expiresInMs = tokens.expiresAt - Date.now();
+      const expiresInMs = (tokens.expiresAt || 0) - Date.now();
       const tenMinutesInMs = 10 * 60 * 1000;
       
       if (expiresInMs < tenMinutesInMs) {

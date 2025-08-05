@@ -14,6 +14,12 @@ export default defineConfig({
       './vitest.hoisted.setup.ts',   // Hoisted mocks run first
       './src/tests/setup.ts',        // Manual setup and additional mocks
     ],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/src/__archive__/**',       // Exclude archived tests
+    ],
     testTimeout: 20000,
     mockReset: true,
     hookTimeout: 10000,

@@ -45,8 +45,8 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
       columnId: taskListId,
       title: title.trim(),
       due: dueDate ? new Date(dueDate).toISOString() : undefined,
-      labels,
-      priority,
+      labels: labels.map(label => ({ name: label, color: 'gray' as const })),
+      priority: (priority === 'normal' ? 'none' : priority === 'urgent' ? 'high' : priority) as 'high' | 'medium' | 'low' | 'none',
     });
     
     // Then sync with Google

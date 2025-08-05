@@ -4,85 +4,91 @@ import { useUnifiedTaskStore } from '../../../stores/unifiedTaskStore';
 describe('TasksAsanaClean - Metadata Updates', () => {
   beforeEach(() => {
     localStorage.clear();
-    const store = useUnifiedTaskStore.getState();
-    store.tasks = [];
-    store.columns = [];
+    // Reset the store to initial state
+    useUnifiedTaskStore.setState({
+      tasks: {},
+      columns: []
+    });
   });
 
-  it('should only pass changed fields when updating priority', () => {
+  it('should only pass changed fields when updating priority', async () => {
     const store = useUnifiedTaskStore.getState();
     const taskId = 'test-task';
     
-    // Create task with initial metadata
-    const task = {
-      id: taskId,
-      title: 'Test Task',
-      columnId: 'column-1',
-      metadata: {
-        labels: ['bug', 'frontend'],
-        priority: 'normal' as const
-      },
-      syncState: 'synced' as const
-    };
+    // Create column first
+    const columnId = 'column-1';
+    store.addColumn(columnId,
+ 'Test Column', 'list-1');
     
-    store.tasks.push(task as any);
+    // Create task with initial metadata
+    const createdTaskId = await store.createTask({
+      title: 'Test Task',
+      columnId,
+      labels: [
+        { name: 'bug', color: 'red' },
+        { name: 'frontend', color: 'blue' }
+      ],
+      priority: 'low'
+    });
+    
+    // Override with our test ID
+    const task = store.tasks[createdTaskId];
+    store.tasks[taskId] = { ...task, id: taskId };
+    delete store.tasks[createdTaskId];
     
     // Spy on updateTask
     const updateTaskSpy = vi.spyOn(store, 'updateTask');
     
     // Update priority from context menu
     store.updateTask(taskId, {
-      metadata: {
-        ...task.metadata,
-        priority: 'high' as const
-      }
+      priority: 'high'
     });
     
-    // Verify the call included all metadata fields
+    // Verify the call was made with only priority
     expect(updateTaskSpy).toHaveBeenCalledWith(taskId, {
-      metadata: {
-        labels: ['bug', 'frontend'],
-        priority: 'high'
-      }
+      priority: 'high'
     });
     
     // Verify metadata was preserved
-    const updatedTask = store.tasks.find(t => t.id === taskId);
-    expect(updatedTask?.metadata?.labels).toEqual(['bug', 'frontend']);
-    expect(updatedTask?.metadata?.priority).toBe('high');
+    const updatedTask = store.tasks[taskId];
+    expect(updatedTask?.labels).toHaveLength(2);
+    expect(updatedTask?.labels[0].name).toBe('bug');
+    expect(updatedTask?.labels[1].name).toBe('frontend');
+    expect(updatedTask?.priority).toBe('high');
   });
 
-  it('should handle metadata updates correctly from task modal', () => {
+  it('should handle metadata updates correctly from task modal', async () => {
     const store = useUnifiedTaskStore.getState();
-    const taskId = 'modal-test';
+    
+    // Create column first
+    const columnId = 'column-1';
+    store.addColumn(columnId,
+ 'Test Column', 'list-1');
     
     // Create task
-    const task = {
-      id: taskId,
+    const taskId = await store.createTask({
       title: 'Modal Test',
-      columnId: 'column-1',
-      metadata: {
-        labels: ['urgent'],
-        priority: 'high' as const
-      },
-      syncState: 'synced' as const
-    };
-    
-    store.tasks.push(task as any);
+      columnId,
+      labels: [{ name: 'urgent', color: 'red' }],
+      priority: 'high'
+    });
     
     // Update from modal with new labels
     store.updateTask(taskId, {
       title: 'Updated Title',
-      metadata: {
-        ...task.metadata,
-        labels: ['urgent', 'backend', 'database']
-      }
+      labels: [
+        { name: 'urgent', color: 'red' },
+        { name: 'backend', color: 'blue' },
+        { name: 'database', color: 'green' }
+      ]
     });
     
     // Verify all fields were updated correctly
-    const updatedTask = store.tasks.find(t => t.id === taskId);
+    const updatedTask = store.tasks[taskId];
     expect(updatedTask?.title).toBe('Updated Title');
-    expect(updatedTask?.metadata?.labels).toEqual(['urgent', 'backend', 'database']);
-    expect(updatedTask?.metadata?.priority).toBe('high'); // Priority preserved
+    expect(updatedTask?.labels).toHaveLength(3);
+    expect(updatedTask?.labels[1].name).toBe('backend');
+    expect(updatedTask?.labels[2].name).toBe('database');
+    expect(updatedTask?.priority).toBe('high'); // Priority preserved
   });
 });

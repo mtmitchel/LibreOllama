@@ -77,6 +77,7 @@ const ACTION_CONFIG: Record<AIAction, { title: string; icon: React.ReactNode; co
   'key-points': { title: 'Extract key points', icon: <Hash />, color: 'text-amber-600' },
   'create-task': { title: 'Create task', icon: <Check />, color: 'text-emerald-600' },
   'create-note': { title: 'Create note', icon: <FileText />, color: 'text-violet-600' },
+  'ask-custom': { title: 'Ask AI', icon: <Sparkles />, color: 'text-rose-600' },
   'ask-ai': { title: 'Ask AI', icon: <Sparkles />, color: 'text-rose-600' },
 };
 
@@ -222,8 +223,8 @@ export function AIOutputModalPro({
         const language = LANGUAGES.find(l => l.value === targetLanguage)?.label || 'Spanish';
         console.log('Regenerating translation for language:', language);
         setCurrentTranslatedLanguage(targetLanguage);
-        onRegenerate && onRegenerate({ language });
-      } else {
+        if (onRegenerate) onRegenerate({ language });
+      } else if (onRegenerate) {
         onRegenerate();
       }
     }, 50);
@@ -291,7 +292,7 @@ export function AIOutputModalPro({
                   actionConfig?.color || 'text-blue-600'
                 )}>
                   {actionConfig?.icon && React.isValidElement(actionConfig.icon) 
-                    ? React.cloneElement(actionConfig.icon as React.ReactElement, { size: 20 })
+                    ? React.cloneElement(actionConfig.icon as React.ReactElement<any>, { size: 20 })
                     : <Type size={20} />
                   }
                 </div>
@@ -596,7 +597,7 @@ export function AIOutputModalPro({
                     } else {
                       setTimeout(() => {
                         setIsProcessing(true);
-                        onRegenerate();
+                        if (onRegenerate) onRegenerate();
                       }, 50);
                     }
                   }}

@@ -37,10 +37,10 @@ export function PopoverTrigger({ children, asChild }: { children: React.ReactNod
   
   if (asChild) {
     const child = React.Children.only(children) as React.ReactElement;
-    return React.cloneElement(child, {
+    return React.cloneElement(child as React.ReactElement<any>, {
       ref: triggerRef,
       onClick: (e: React.MouseEvent) => {
-        child.props.onClick?.(e);
+        (child.props as any).onClick?.(e);
         onOpenChange(true);
       },
     });

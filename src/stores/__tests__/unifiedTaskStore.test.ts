@@ -9,6 +9,8 @@ const createTestStore = () => {
     immer((set, get) => ({
       tasks: {},
       columns: [],
+      showCompleted: true,
+      showCompletedByList: {},
       isSyncing: false,
       syncErrors: {},
     }))
@@ -64,7 +66,7 @@ describe('UnifiedTaskStore - batchUpdateFromGoogle', () => {
             syncState: 'synced',
             lastSyncTime: new Date().toISOString(),
             labels: [],
-            priority: 'normal',
+            priority: 'none',
             position: '0',
             updated: update.data.updated || new Date().toISOString(),
             title: update.data.title || '',
@@ -111,7 +113,10 @@ describe('UnifiedTaskStore - batchUpdateFromGoogle', () => {
         status: 'needsAction',
         updated: '2025-01-09T10:00:00Z',
         position: '0',
-        labels: ['important', 'work'],
+        labels: [
+          { name: 'important', color: 'red' },
+          { name: 'work', color: 'blue' }
+        ],
         priority: 'high',
         syncState: 'synced',
         lastSyncTime: '2025-01-09T10:00:00Z',
@@ -155,7 +160,10 @@ describe('UnifiedTaskStore - batchUpdateFromGoogle', () => {
     expect(updatedTask.title).toBe('Updated Title');
     expect(updatedTask.notes).toBe('Updated notes');
     expect(updatedTask.status).toBe('completed');
-    expect(updatedTask.labels).toEqual(['important', 'work']); // Preserved
+    expect(updatedTask.labels).toEqual([
+      { name: 'important', color: 'red' },
+      { name: 'work', color: 'blue' }
+    ]); // Preserved
     expect(updatedTask.priority).toBe('high'); // Preserved
   });
 
@@ -213,7 +221,7 @@ describe('UnifiedTaskStore - batchUpdateFromGoogle', () => {
         updated: '2025-01-09T10:00:00Z',
         position: '0',
         labels: [],
-        priority: 'normal',
+        priority: 'none',
         syncState: 'synced',
       };
     });

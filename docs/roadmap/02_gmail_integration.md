@@ -36,9 +36,11 @@ The Gmail integration connects directly to the Google API, providing real email 
 **Authentication & Security:**
 - ✅ Secure OAuth2 authentication with PKCE flow
 - ✅ Multi-account management with account switching
+- ✅ Robust account removal with backend OAuth token revocation
 - ✅ Token storage in OS keyring (secure)
 - ✅ Automatic token refresh mechanism
 - ✅ XSS protection with DOMPurify sanitization
+- ✅ Automatic message loading after authentication
 
 **Core Email Functionality:**
 - ✅ Fetching, displaying, and parsing of email messages

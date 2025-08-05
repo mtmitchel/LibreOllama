@@ -11,7 +11,7 @@ interface ConfirmationModalProps {
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'warning' | 'info';
-  confirmButtonVariant?: 'primary' | 'danger' | 'outline';
+  confirmButtonVariant?: 'primary' | 'destructive' | 'outline';
   icon?: React.ReactNode;
 }
 
@@ -24,7 +24,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   variant = 'warning',
-  confirmButtonVariant = 'danger',
+  confirmButtonVariant = 'destructive',
   icon
 }) => {
   if (!isOpen) return null;

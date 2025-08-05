@@ -81,7 +81,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
     if (newLabel.trim()) {
       console.log('Adding label:', newLabel.trim(), 'to task:', taskId);
       updateTask(taskId, {
-        labels: [...metadata.labels, newLabel.trim()]
+        labels: [...metadata.labels, { name: newLabel.trim(), color: 'gray' as const }]
       });
       setNewLabel('');
     }
@@ -176,7 +176,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
               value={metadata.priority}
               onValueChange={(value) => {
                 updateTask(taskId, {
-                  priority: value as 'low' | 'normal' | 'high' | 'urgent'
+                  priority: (value === 'normal' ? 'none' : value === 'urgent' ? 'high' : value) as 'high' | 'medium' | 'low' | 'none'
                 });
               }}
             >
@@ -210,7 +210,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                     });
                   }}
                 >
-                  {label}
+                  {typeof label === 'string' ? label : label.name}
                   <X className="h-3 w-3 ml-1" />
                 </Badge>
               ))}

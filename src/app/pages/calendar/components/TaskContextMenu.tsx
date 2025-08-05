@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Edit2, Calendar, Copy, Flag, Trash2 } from 'lucide-react';
 import { GoogleTask } from '../../../../types/google';
-import { CalendarContextMenu } from '../types';
+import { CalendarContextMenu } from '../types/calendar';
 import { priorityConfig } from '../config';
 
 interface TaskContextMenuProps {
@@ -68,8 +68,10 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       <button
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
         onClick={() => {
-          onEdit(contextMenu.task);
-          onClose();
+          if (contextMenu.task) {
+            onEdit(contextMenu.task);
+            onClose();
+          }
         }}
       >
         <Edit2 size={14} />
@@ -79,8 +81,10 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       <button
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
         onClick={() => {
-          onSchedule(contextMenu.task);
-          onClose();
+          if (contextMenu.task) {
+            onSchedule(contextMenu.task);
+            onClose();
+          }
         }}
       >
         <Calendar size={14} />
@@ -90,8 +94,10 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       <button
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
         onClick={() => {
-          onDuplicate(contextMenu.task);
-          onClose();
+          if (contextMenu.task) {
+            onDuplicate(contextMenu.task);
+            onClose();
+          }
         }}
       >
         <Copy size={14} />
@@ -106,8 +112,10 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
           key={priority}
           className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
           onClick={() => {
-            onUpdatePriority(contextMenu.task, priority);
-            onClose();
+            if (contextMenu.task) {
+              onUpdatePriority(contextMenu.task, priority);
+              onClose();
+            }
           }}
         >
           <Flag size={14} className={
@@ -126,8 +134,10 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       <button
         className="w-full px-3 py-1.5 text-left text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
         onClick={() => {
-          onDelete(contextMenu.task);
-          onClose();
+          if (contextMenu.task) {
+            onDelete(contextMenu.task);
+            onClose();
+          }
         }}
       >
         <Trash2 size={14} />

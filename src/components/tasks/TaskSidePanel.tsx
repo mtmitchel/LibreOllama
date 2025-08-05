@@ -350,7 +350,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                 />
                 <LabelColorPicker
                   selectedColor={newLabelColor}
-                  onColorSelect={setNewLabelColor}
+                  onColorSelect={(color: string) => setNewLabelColor(color as any)}
                   compact={true}
                 />
                 <Button

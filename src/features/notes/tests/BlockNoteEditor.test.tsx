@@ -15,6 +15,10 @@ vi.mock('@blocknote/react', () => ({
       replaceBlocks: vi.fn(), // Added missing method
       focus: vi.fn(), // For focus operations
       destroy: vi.fn(), // For editor cleanup
+      getSelectedText: vi.fn(() => ''), // Mock for getting selected text
+      getSelection: vi.fn(() => null), // Mock for getting selection
+      createLink: vi.fn(), // Mock for creating links
+      getActiveStyles: vi.fn(() => ({})), // Mock for getting active styles
       // Add other necessary editor properties/methods as needed for tests
     };
   }),

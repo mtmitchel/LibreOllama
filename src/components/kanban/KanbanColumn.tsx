@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import type { TaskColumn } from '../../stores/unifiedTaskStore.types';
+import { realtimeSync } from '../../services/realtimeSync';
 import '../../styles/asana-design-system.css';
 
 type KanbanColumnType = TaskColumn & {
@@ -116,7 +117,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       tasks = tasks.filter(task => {
         const matchesTitle = task.title.toLowerCase().includes(query);
         const matchesNotes = task.notes?.toLowerCase().includes(query);
-        const matchesLabels = task.metadata?.labels?.some(label => 
+        const matchesLabels = task.metadata?.labels?.some((label: any) => 
           label.toLowerCase().includes(query)
         );
         return matchesTitle || matchesNotes || matchesLabels;
@@ -149,8 +150,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         // Sort by priority (urgent first, then high, normal, low)
         const priorityOrder = { high: 0, medium: 1, low: 2, none: 3 };
         return tasks.sort((a, b) => {
-          const aPriority = priorityOrder[a.priority || 'none'];
-          const bPriority = priorityOrder[b.priority || 'none'];
+          const aPriority = priorityOrder[(a.priority || 'none') as keyof typeof priorityOrder];
+          const bPriority = priorityOrder[(b.priority || 'none') as keyof typeof priorityOrder];
           return aPriority - bPriority;
         });
       
@@ -175,7 +176,10 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         columnId: column.id,
         googleTaskListId: column.googleTaskListId,
         priority: data.priority || 'none',
-        labels: data.labels || []
+        labels: (data.labels || []).map(label => ({ 
+          name: label, 
+          color: 'gray' as const 
+        }))
       });
       setShowInlineCreator(false);
       

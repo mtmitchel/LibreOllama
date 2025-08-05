@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
 import { useUnifiedTaskStore } from '../stores/unifiedTaskStore';
-import type { UnifiedTask } from '../stores/unifiedTaskStore.types';
+import type { UnifiedTask, TaskColumn } from '../stores/unifiedTaskStore.types';
 
-interface FilteredColumn {
-  id: string;
-  title: string;
+interface FilteredColumn extends TaskColumn {
   tasks: UnifiedTask[];
   isLoading: boolean;
   error: undefined;
@@ -37,8 +35,7 @@ export function useFilteredColumns(): FilteredColumn[] {
       console.log('📊 Column', col.id, 'has', colTasks.length, 'total tasks,', completedTasks.length, 'completed,', incompleteTasks.length, 'incomplete,', visibleTasks.length, 'visible');
         
       return {
-        id: col.id,
-        title: col.title,
+        ...col,
         tasks: visibleTasks,
         isLoading: false,
         error: undefined,

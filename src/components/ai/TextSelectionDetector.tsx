@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { useTextSelection } from '../../core/hooks/useTextSelection';
+import { useTextSelection, type TextSelection } from '../../core/hooks/useTextSelection';
 import { AIWritingToolsContextMenu, type AIAction } from './AIWritingToolsContextMenu';
 import { AIOutputModalPro } from './AIOutputModalPro';
 import { useChatStore } from '../../features/chat/stores/chatStore';
@@ -30,6 +30,7 @@ const SYSTEM_PROMPTS: Record<AIAction, string> = {
   'rewrite-expanded': 'You are an elaborate writer. Your ONLY job is to expand text with more detail. Output ONLY the expanded text, nothing else.',
   'create-task': '',
   'create-note': '',
+  'ask-custom': '',
   'ask-ai': ''
 };
 
@@ -65,7 +66,7 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   }, []);
   
   const { selection, clearSelection, replaceSelection } = useTextSelection({
-    onSelectionChange: useCallback((sel) => {
+    onSelectionChange: useCallback((sel: TextSelection | null) => {
       // Don't show menu on selection change, only on right-click
       if (!sel) {
         setShowMenu(false);
@@ -113,7 +114,8 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     return () => document.removeEventListener('contextmenu', handleContextMenu);
   }, [disabled, isNotesPage]);
 
-  const handleAIAction = useCallback(async (action: AIAction, text: string) => {
+  const handleAIAction = useCallback(async (action: AIAction, customQuestion?: string) => {
+    const text = customQuestion || selection?.text || '';
     
     // Close the menu first
     setShowMenu(false);
@@ -173,6 +175,10 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
         await processWithAI(text, action);
         break;
       
+      case 'ask-custom':
+        await processWithAI(text, action, { question: customQuestion });
+        break;
+        
       case 'ask-ai':
         // Navigate to chat with the text as context
         navigateToChatWithContext(text);
@@ -481,7 +487,7 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
             clearSelection();
           }}
           position={menuPosition}
-          selectedText={selection.text}
+          selectedText={selection?.text || ''}
           onAIAction={handleAIAction}
         />
       )}

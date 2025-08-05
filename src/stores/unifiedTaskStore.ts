@@ -9,6 +9,7 @@ import type {
   UpdateTaskInput,
   TaskColumn
 } from './unifiedTaskStore.types';
+import type { GoogleTask } from '../types/google';
 import { logger } from '../core/lib/logger';
 import { invoke } from '@tauri-apps/api/core';
 import { useSettingsStore } from './settingsStore';
@@ -36,6 +37,10 @@ interface UnifiedTaskActions {
   // UI state
   setShowCompleted: (show: boolean, listId?: string) => void;
   getShowCompletedForList: (listId: string) => boolean;
+
+  // Sync operations
+  batchUpdateFromGoogle: (updates: Array<{ taskListId: string; tasks: GoogleTask[] }>) => void;
+  markTaskSynced: (tempId: string, googleId: string, taskListId: string) => void;
 }
 
 type UnifiedTaskStore = UnifiedTaskState & UnifiedTaskActions;
@@ -83,11 +88,11 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           const column = state.columns.find(c => c.id === input.columnId);
           const googleTaskListId = column?.googleTaskListId;
           
-          // Get active account
+          // Get active account - allow local-only tasks without Google account
           const activeAccount = useSettingsStore.getState().integrations.googleAccounts.find(acc => acc.isActive);
-          if (!activeAccount || !googleTaskListId) {
-            logger.warn('[UnifiedStore] Cannot create task - no active account or list ID');
-            throw new Error('No active Google account or task list');
+          if (!activeAccount && googleTaskListId) {
+            logger.warn('[UnifiedStore] Cannot create task - no active account but task list ID provided');
+            throw new Error('No active Google account for synced task list');
           }
           
           // Optimistically add to local store
@@ -104,7 +109,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             columnId: input.columnId,
             googleTaskListId: googleTaskListId,
             timeBlock: input.timeBlock,
-            syncState: 'pending_create',
+            syncState: googleTaskListId ? 'pending_create' : 'local_only',
           };
           
           set(state => {
@@ -123,9 +128,11 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             labels: newTask.labels
           });
           
-          try {
-            // Create in Google Tasks via backend
-            const response = await invoke<{
+          // Only sync to Google if we have an account and task list
+          if (activeAccount && googleTaskListId) {
+            try {
+              // Create in Google Tasks via backend
+              const response = await invoke<{
               id: string;
               title: string;
               notes?: string;
@@ -173,8 +180,8 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 // Preserve the local metadata - backend may not return these
                 // Map 'normal' from backend to 'none' for frontend consistency
                 const backendPriority = response.priority || task.priority;
-                task.priority = (backendPriority === 'normal' || !backendPriority) ? 'none' : backendPriority;
-                task.labels = response.labels || task.labels || [];
+                task.priority = (backendPriority === 'normal' || !backendPriority) ? 'none' : backendPriority as UnifiedTask['priority'];
+                task.labels = response.labels ? migrateLabelFormat(response.labels) : task.labels || [];
                 state.tasks[response.id] = task;
                 
                 logger.debug('[UnifiedStore] Task after create response', {
@@ -200,19 +207,27 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               googleTaskListId,
             });
             
-            return response.id;
-          } catch (error) {
-            // Remove optimistic update on failure
-            set(state => {
-              delete state.tasks[tempId];
-              const column = state.columns.find(c => c.id === input.columnId);
-              if (column) {
-                column.taskIds = column.taskIds.filter(id => id !== tempId);
-              }
+              return response.id;
+            } catch (error) {
+              // Remove optimistic update on failure
+              set(state => {
+                delete state.tasks[tempId];
+                const column = state.columns.find(c => c.id === input.columnId);
+                if (column) {
+                  column.taskIds = column.taskIds.filter(id => id !== tempId);
+                }
+              });
+              
+              logger.error('[UnifiedStore] Failed to create task', error);
+              throw error;
+            }
+          } else {
+            // Local-only task, no Google sync needed
+            logger.info('[UnifiedStore] Created local-only task', { 
+              taskId: tempId, 
+              title: input.title 
             });
-            
-            logger.error('[UnifiedStore] Failed to create task', error);
-            throw error;
+            return tempId;
           }
         },
         
@@ -240,8 +255,9 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             
             // Only assign defined values to avoid overwriting with undefined
             Object.keys(updates).forEach(key => {
-              if (updates[key] !== undefined) {
-                task[key] = updates[key];
+              const updateKey = key as keyof typeof updates;
+              if (updates[updateKey] !== undefined) {
+                (task as any)[key] = updates[updateKey];
               }
             });
             task.updated = new Date().toISOString();
@@ -334,9 +350,19 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 await invoke('force_run_migrations');
                 console.log('Migrations completed. Retrying task update...');
                 
-                // Retry the update
+                // Retry the update - need to re-declare googleUpdates here
+                const retryUpdates: any = {
+                  account_id: activeAccount.id,
+                  task_list_id: task.googleTaskListId,
+                  task_id: taskId,
+                };
+                if (updates.title !== undefined) retryUpdates.title = updates.title;
+                if (updates.notes !== undefined) retryUpdates.notes = updates.notes;
+                if (updates.due !== undefined) retryUpdates.due = updates.due;
+                if (updates.status !== undefined) retryUpdates.status = updates.status;
+                
                 await invoke('update_google_task', {
-                  request: googleUpdates
+                  request: retryUpdates
                 });
                 
                 logger.debug('[UnifiedStore] Updated task in Google after migration', { taskId, updates });
@@ -710,13 +736,12 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   ...incomingTask,
                   // Preserve local metadata if incoming doesn't have it, and migrate format
                   labels: incomingTask.labels?.length ? migrateLabelFormat(incomingTask.labels) : migrateLabelFormat(existingTask.labels),
-                  // Only override priority if incoming has a non-normal value
-                  // Otherwise, keep existing priority
-                  priority: (incomingTask.priority && incomingTask.priority !== 'normal') 
-                    ? incomingTask.priority 
-                    : existingTask.priority || 'normal',
+                  // Only override priority if incoming has a value
+                  // Map 'normal' to 'none' for consistency
+                  priority: incomingTask.priority 
+                    ? ((incomingTask as any).priority === 'normal' ? 'none' : incomingTask.priority as UnifiedTask['priority'])
+                    : existingTask.priority || 'none',
                   recurring: incomingTask.recurring || existingTask.recurring,
-                  metadata: incomingTask.metadata || existingTask.metadata,
                 };
                 
                 // Log if priority changed
@@ -819,6 +844,89 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           const state = get();
           // Use list-specific setting if available, otherwise use global default
           return state.showCompletedByList[listId] ?? state.showCompleted;
+        },
+
+        // Batch update tasks from Google sync
+        batchUpdateFromGoogle: (updates) => {
+          set(state => {
+            updates.forEach(({ taskListId, tasks }) => {
+              // Find column with matching googleTaskListId
+              const column = state.columns.find(c => c.googleTaskListId === taskListId);
+              if (!column) {
+                logger.warn('[UnifiedStore] No column found for task list', { taskListId });
+                return;
+              }
+
+              // Clear existing tasks for this column
+              const oldTaskIds = column.taskIds;
+              oldTaskIds.forEach(id => {
+                delete state.tasks[id];
+              });
+              column.taskIds = [];
+
+              // Add new tasks
+              tasks.forEach(googleTask => {
+                const task: UnifiedTask = {
+                  id: googleTask.id,
+                  googleTaskId: googleTask.id,
+                  title: googleTask.title,
+                  status: googleTask.status,
+                  updated: googleTask.updated,
+                  position: googleTask.position,
+                  labels: googleTask.labels || [],
+                  priority: googleTask.priority || 'none',
+                  notes: googleTask.notes || '',
+                  due: googleTask.due,
+                  columnId: column.id,
+                  googleTaskListId: taskListId,
+                  timeBlock: googleTask.timeBlock,
+                  syncState: 'synced',
+                };
+                
+                state.tasks[googleTask.id] = task;
+                column.taskIds.push(googleTask.id);
+              });
+
+              logger.debug('[UnifiedStore] Batch updated tasks', { 
+                taskListId, 
+                count: tasks.length,
+                columnId: column.id 
+              });
+            });
+          });
+        },
+
+        // Mark a temporary task as synced with Google
+        markTaskSynced: (tempId, googleId, taskListId) => {
+          set(state => {
+            const task = state.tasks[tempId];
+            if (!task) {
+              logger.warn('[UnifiedStore] Task not found for markTaskSynced', { tempId });
+              return;
+            }
+
+            // Update task with Google ID
+            delete state.tasks[tempId];
+            task.id = googleId;
+            task.googleTaskId = googleId;
+            task.syncState = 'synced';
+            state.tasks[googleId] = task;
+
+            // Update column taskIds
+            const column = state.columns.find(c => c.id === task.columnId);
+            if (column) {
+              const index = column.taskIds.indexOf(tempId);
+              if (index !== -1) {
+                column.taskIds[index] = googleId;
+              }
+            }
+
+            logger.debug('[UnifiedStore] Marked task as synced', { 
+              tempId, 
+              googleId, 
+              taskListId 
+            });
+          });
         },
       })),
       {

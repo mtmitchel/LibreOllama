@@ -324,28 +324,28 @@ export async function handleError(
   return errorHandler.handleError(error, source, options);
 }
 
-export function handleGmailError(error: unknown): ErrorContext {
+export async function handleGmailError(error: unknown): Promise<ErrorContext> {
   return errorHandler.handleError(error, 'GmailService', {
     showNotification: true,
     reportToBackend: true,
   });
 }
 
-export function handleCalendarError(error: unknown): ErrorContext {
+export async function handleCalendarError(error: unknown): Promise<ErrorContext> {
   return errorHandler.handleError(error, 'CalendarService', {
     showNotification: true,
     reportToBackend: true,
   });
 }
 
-export function handleTasksError(error: unknown): ErrorContext {
+export async function handleTasksError(error: unknown): Promise<ErrorContext> {
   return errorHandler.handleError(error, 'TasksService', {
     showNotification: true,
     reportToBackend: true,
   });
 }
 
-export function handleAuthError(error: unknown): ErrorContext {
+export async function handleAuthError(error: unknown): Promise<ErrorContext> {
   return errorHandler.handleError(error, 'AuthService', {
     showNotification: true,
     reportToBackend: true,
@@ -353,7 +353,7 @@ export function handleAuthError(error: unknown): ErrorContext {
   });
 }
 
-export function handleStorageError(error: unknown): ErrorContext {
+export async function handleStorageError(error: unknown): Promise<ErrorContext> {
   return errorHandler.handleError(error, 'StorageService', {
     showNotification: true,
     logToFile: true,

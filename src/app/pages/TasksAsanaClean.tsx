@@ -415,12 +415,11 @@ export default function TasksAsanaClean() {
         marginRight: isTaskPanelOpen ? '512px' : '0', // 480px panel + 32px gap
         transition: 'margin-right 300ms cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
-        {console.log('Current view mode:', viewMode)}
         {viewMode === 'kanban' ? (
           <KanbanBoard
             className="h-full"
             searchQuery={searchQuery}
-            onDeleteList={openDeleteListDialog}
+            onDeleteList={(listId: string) => openDeleteListDialog(listId, '')}
             onRenameList={handleRenameList}
             onEditTask={handleEditTask}
             selectedTaskId={selectedTask?.id}
@@ -433,7 +432,7 @@ export default function TasksAsanaClean() {
             showHeader={false}
             selectedListId={selectedListId}
             sortBy={sortBy}
-            onEditTask={handleEditTask}
+            onEditTask={(task: UnifiedTask, columnId: string) => handleEditTask(task.id)}
           />
         )}
       </div>
@@ -531,7 +530,7 @@ export default function TasksAsanaClean() {
                   Cancel
                 </Button>
                 <Button
-                  variant="danger"
+                  variant="destructive"
                   className="flex-1"
                   onClick={handleDeleteList}
                 >

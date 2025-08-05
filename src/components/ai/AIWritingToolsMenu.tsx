@@ -35,6 +35,7 @@ export type AIAction =
   | 'key-points'
   | 'create-task'
   | 'create-note'
+  | 'ask-custom'
   | 'ask-ai';
 
 interface MenuItem {

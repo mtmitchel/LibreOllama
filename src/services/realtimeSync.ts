@@ -128,7 +128,13 @@ class RealtimeSync {
         // Handle potential undefined or null values
         // Map 'normal' priority from backend to 'none' for frontend
         const priority = task.priority === 'normal' || !task.priority ? 'none' : task.priority;
-        const labels = Array.isArray(task.labels) ? task.labels : [];
+        const labels = Array.isArray(task.labels) 
+          ? task.labels.map((label: any, index: number) => 
+              typeof label === 'string' 
+                ? { name: label, color: (['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'] as const)[index % 10] }
+                : label
+            )
+          : [];
         const timeBlock = task.time_block ? {
           startTime: task.time_block.start_time,
           endTime: task.time_block.end_time

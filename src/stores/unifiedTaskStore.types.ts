@@ -3,6 +3,7 @@ export type TaskSyncState =
   | 'pending_create'  // Created locally, waiting for Google ID
   | 'pending_update'  // Updated locally, waiting to sync
   | 'pending_delete'  // Deleted locally, waiting to sync
+  | 'local_only'      // Local task, no Google sync needed
   | 'error';          // Sync failed
 
 export interface UnifiedTask {

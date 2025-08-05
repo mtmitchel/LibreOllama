@@ -3,7 +3,7 @@ import { useGoogleCalendarStore } from '../../../../stores/googleCalendarStore';
 import { useUnifiedTaskStore } from '../../../../stores/unifiedTaskStore';
 import { GoogleCalendarEvent, GoogleTask, GoogleTaskList } from '../../../../types/google';
 import { useActiveGoogleAccount } from '../../../../stores/settingsStore';
-import { CalendarEvent } from '../types';
+import { CalendarEvent } from '../types/calendar';
 import { realtimeSync } from '../../../../services/realtimeSync';
 import { addDays, format } from 'date-fns';
 import { parseGoogleTaskDate } from '../../../../utils/dateUtils';
@@ -85,10 +85,7 @@ export const useCalendarOperations = () => {
           return { isAllDay: true, reason: 'date-only format' };
         }
         
-        // Check for explicit all-day marker (only if no dateTime present)
-        if (event.allDay === true) {
-          return { isAllDay: true, reason: 'explicit allDay property (no dateTime)' };
-        }
+        // For Google Calendar events, all-day is determined by the presence of 'date' vs 'dateTime'
         
         // Log malformed events for debugging
         // console.warn('⚠️ Malformed event detected:', { id: event.id, summary: event.summary });
@@ -98,9 +95,9 @@ export const useCalendarOperations = () => {
       };
       
       const { isAllDay, reason } = classifyEvent();
-      const isRecurringInstance = event.id.includes('_') || !!event.recurringEventId;
-      let startDate = event.start?.dateTime || event.start?.date || '';
-      let endDate = event.end?.dateTime || event.end?.date || '';
+      const isRecurringInstance = event.id.includes('_') || !!(event as any).recurringEventId;
+      let startDate: Date;
+      let endDate: Date;
       
       
       // Safe date parsing with validation
@@ -171,7 +168,7 @@ export const useCalendarOperations = () => {
       // For all-day events from date strings, keep as is
       // For all-day events from Date objects, they're already handled above
       
-      const processedEvent = {
+      const processedEvent: CalendarEvent = {
         ...event,
         id: event.id,
         title: event.summary || 'Untitled Event',
@@ -181,20 +178,22 @@ export const useCalendarOperations = () => {
         backgroundColor: isTrueMultiDay ? '#d8d0ff' : '#796EFF',
         borderColor: isTrueMultiDay ? '#c7bbff' : '#796EFF',
         textColor: isTrueMultiDay ? '#4a3f99' : '#FFFFFF',
+        type: isTrueMultiDay ? 'multiday' : (isRecurringInstance ? 'recurring_instance' : 'event'),
+        source: 'google',
         // Remove display property - let FullCalendar handle it naturally
         extendedProps: {
           // Preserve the private and shared properties from Google Calendar
           private: event.extendedProperties?.private || {},
           shared: event.extendedProperties?.shared || {},
           // Add our custom properties
-          type: isTrueMultiDay ? 'multiday' : (isRecurringInstance ? 'recurring_instance' : 'event') as const,
+          type: isTrueMultiDay ? 'multiday' : (isRecurringInstance ? 'recurring_instance' : 'event'),
           isRecurring: isRecurringInstance,
           isTrueMultiDay,
           description: event.description,
           location: event.location,
           attendees: event.attendees,
           calendarId: event.calendarId,
-          calendarName: event.calendarName,
+          calendarName: (event as any).calendarName,
           // Add original start/end for debugging
           originalStart: event.start,
           originalEnd: event.end
@@ -287,6 +286,8 @@ export const useCalendarOperations = () => {
             backgroundColor: isCompleted ? '#F5F5F5' : '#E3F2FD',
             borderColor: isCompleted ? '#E0E0E0' : '#2196F3',
             textColor: isCompleted ? '#9E9E9E' : '#1565C0',
+            type: 'task',
+            source: 'google',
             extendedProps: {
               type: 'task' as const,
               taskId: task.id,
@@ -314,6 +315,8 @@ export const useCalendarOperations = () => {
             backgroundColor: isCompleted ? '#F5F5F5' : '#FFF3E0',
             borderColor: isCompleted ? '#E0E0E0' : '#FFB74D',
             textColor: isCompleted ? '#9E9E9E' : '#E65100',
+            type: 'task',
+            source: 'google',
             extendedProps: {
               type: 'task' as const,
               taskId: task.id,
@@ -336,6 +339,8 @@ export const useCalendarOperations = () => {
       backgroundColor: '#FF0000',
       borderColor: '#FF0000',
       textColor: '#FFFFFF',
+      type: 'event',
+      source: 'local',
       extendedProps: {
         type: 'test' as const
       }

@@ -9,6 +9,9 @@ export interface CalendarEvent {
   end: Date;
   allDay: boolean;
   color?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  textColor?: string;
   calendarId?: string;
   calendarName?: string;
   location?: string;
@@ -40,6 +43,16 @@ export interface CalendarViewport {
 }
 
 export type CalendarView = 'month' | 'week' | 'day' | 'multiday' | 'agenda';
+
+// Modal Props Types
+export interface AsanaEventModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  event?: GoogleCalendarEvent | null;
+  onSave: (eventData: Partial<GoogleCalendarEvent>) => void;
+  onDelete?: (eventId: string) => void;
+  calendars?: Array<{ id: string; summary: string; primary?: boolean }>;
+}
 
 export interface TimeSlot {
   date: Date;

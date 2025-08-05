@@ -387,7 +387,6 @@ export function Projects() {
         message={`Are you sure you want to delete "${projectToDelete?.name}"? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
-        isDestructive={true}
       />
     </div>
   );

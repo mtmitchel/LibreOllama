@@ -99,8 +99,8 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
         case 'title':
           return a.title.localeCompare(b.title);
         case 'priority':
-          const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
-          return (priorityOrder[a.priority || 'normal'] || 2) - (priorityOrder[b.priority || 'normal'] || 2);
+          const priorityOrder = { high: 0, medium: 1, low: 2, none: 3 };
+          return (priorityOrder[a.priority || 'none'] || 3) - (priorityOrder[b.priority || 'none'] || 3);
         case 'created':
           return new Date(b.updated || 0).getTime() - new Date(a.updated || 0).getTime();
         default:
@@ -161,7 +161,7 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
     title: string; 
     notes?: string; 
     due?: string;
-    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    priority?: 'high' | 'medium' | 'low' | 'none';
     labels?: string[];
   }) => {
     const targetListId = selectedListId === 'all' 
@@ -581,7 +581,7 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
                                       fontSize: '11px'
                                     }}
                                   >
-                                    {label.name || label}
+                                    {typeof label === 'string' ? label : label.name}
                                   </span>
                                 ))}
                                 {task.labels.length > 2 && (

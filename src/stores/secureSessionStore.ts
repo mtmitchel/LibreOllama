@@ -10,7 +10,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { invoke } from '@tauri-apps/api/core';
-import { logger } from '../utils/logger';
+import { logger } from '../core/lib/logger';
 
 export interface SessionState {
   // Non-sensitive session data

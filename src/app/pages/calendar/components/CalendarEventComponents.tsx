@@ -1,6 +1,5 @@
 import React from 'react';
 import moment from 'moment';
-import { CalendarEventContentWrapper } from './CalendarEventContentWrapper';
 
 interface EventComponentProps {
   event: any;
@@ -20,8 +19,22 @@ export const EventComponent: React.FC<EventComponentProps> = ({ event, view = 'm
     );
   }
   
-  // For other events, use the custom component wrapper
-  return <CalendarEventContentWrapper event={event} view={{ type: view }} />;
+  // For single-day events, render based on type
+  const isTask = event.resource?.type === 'task' || event.extendedProps?.type === 'task';
+  const taskData = event.resource?.taskData || event.extendedProps?.taskData;
+  
+  return (
+    <div className={`fc-event-content ${isTask ? 'task-event' : 'calendar-event'}`}>
+      <div className="fc-event-title">
+        {event.title}
+      </div>
+      {taskData?.priority && taskData.priority !== 'none' && (
+        <span className={`priority-badge priority-${taskData.priority}`}>
+          {taskData.priority}
+        </span>
+      )}
+    </div>
+  );
 };
 
 interface EventWrapperProps {

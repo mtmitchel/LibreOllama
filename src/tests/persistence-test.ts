@@ -10,10 +10,10 @@ export async function testPersistence() {
   console.log('Current tasks:', Object.keys(tasks).length);
   
   // Log all tasks with their priority
-  const priorityStats = { low: 0, normal: 0, high: 0, urgent: 0 };
+  const priorityStats = { low: 0, medium: 0, high: 0, none: 0 };
   Object.values(tasks).forEach(task => {
     priorityStats[task.priority]++;
-    if (task.priority !== 'normal') {
+    if (task.priority !== 'none') {
       console.log('Task with priority:', {
         id: task.id,
         title: task.title,
@@ -36,10 +36,10 @@ export async function testPersistence() {
     
     // Check tasks with priority in localStorage
     const storedTasks = parsed.state?.tasks || {};
-    const storedPriorityStats = { low: 0, normal: 0, high: 0, urgent: 0 };
+    const storedPriorityStats = { low: 0, medium: 0, high: 0, none: 0 };
     Object.values(storedTasks).forEach((task: any) => {
-      if (task.priority) {
-        storedPriorityStats[task.priority]++;
+      if (task.priority && task.priority in storedPriorityStats) {
+        storedPriorityStats[task.priority as keyof typeof storedPriorityStats]++;
       }
     });
     console.log('Priority distribution in localStorage:', storedPriorityStats);
@@ -65,7 +65,7 @@ export async function testCreateTaskWithPriority() {
   const testTaskId = await store.createTask({
     title: 'Test Task with High Priority',
     priority: 'high',
-    labels: ['test-label'],
+    labels: [{ name: 'test-label', color: 'blue' }],
     columnId: firstColumn.id
   });
   

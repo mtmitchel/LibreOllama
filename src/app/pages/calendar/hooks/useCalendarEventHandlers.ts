@@ -130,7 +130,7 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
       googleTask = task as GoogleTask;
     } else {
       googleTask = {
-        id: task.googleId || task.id,
+        id: task.googleTaskId || task.id,
         title: task.title,
         notes: task.notes,
         due: task.due,
@@ -140,7 +140,7 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
       } as GoogleTask;
     }
     
-    setContextMenu({ x: e.clientX, y: e.clientY, task: googleTask, listId });
+    setContextMenu({ x: e.clientX, y: e.clientY, task: googleTask });
     return false;
   }, [setContextMenu]);
 
@@ -169,7 +169,7 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
     } else {
       // It's a UnifiedTask, convert to GoogleTask format
       setEditingTask({
-        id: task.googleId || task.id,
+        id: task.googleTaskId || task.id,
         title: task.title,
         notes: task.notes,
         due: task.due,
@@ -188,7 +188,7 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
       googleTask = task as GoogleTask;
     } else {
       googleTask = {
-        id: task.googleId || task.id,
+        id: task.googleTaskId || task.id,
         title: task.title,
         notes: task.notes,
         due: task.due,
@@ -203,7 +203,7 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
 
   const handleTaskDuplicate = useCallback(async (task: UnifiedTask | GoogleTask) => {
     const { getTaskByGoogleId } = useUnifiedTaskStore.getState();
-    const taskId = 'selfLink' in task ? task.id : (task.googleId || task.id);
+    const taskId = 'selfLink' in task ? task.id : (task.googleTaskId || task.id);
     const unifiedTask = getTaskByGoogleId(taskId);
     if (unifiedTask) {
       await createGoogleTask({
@@ -219,10 +219,10 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
 
   const handleUpdatePriority = useCallback((task: UnifiedTask | GoogleTask, priority: string) => {
     const { updateTask, getTaskByGoogleId } = useUnifiedTaskStore.getState();
-    const taskId = 'selfLink' in task ? task.id : (task.googleId || task.id);
+    const taskId = 'selfLink' in task ? task.id : (task.googleTaskId || task.id);
     const unifiedTask = getTaskByGoogleId(taskId);
     if (unifiedTask) {
-      updateTask(unifiedTask.id, { priority });
+      updateTask(unifiedTask.id, { priority: priority as 'high' | 'medium' | 'low' | 'none' });
     }
   }, []);
 

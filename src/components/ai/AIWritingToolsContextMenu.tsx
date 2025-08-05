@@ -29,6 +29,9 @@ export type AIAction =
   | 'explain'
   | 'create-list'
   | 'key-points'
+  | 'create-task'
+  | 'create-note'
+  | 'ask-custom'
   | 'ask-ai';
 
 interface AIWritingToolsContextMenuProps {
@@ -104,7 +107,7 @@ export function AIWritingToolsContextMenu({
     left: position.left,
     visibility: 'hidden' as const
   });
-  const closeTimeoutRef = useRef<NodeJS.Timeout>();
+  const closeTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const hasSelection = selectedText && selectedText.trim().length > 0;
 
@@ -157,15 +160,15 @@ export function AIWritingToolsContextMenu({
     }},
     { id: 'rewrite-concise', label: 'Make concise', icon: <RefreshCw size={14} />, action: () => onAIAction('rewrite-concise') },
     { id: 'rewrite-expanded', label: 'Expand', icon: <RefreshCw size={14} />, action: () => onAIAction('rewrite-expanded') },
-    { id: 'separator-1', separator: true },
+    { id: 'separator-1', label: '', separator: true },
     { id: 'proofread', label: 'Proofread', icon: <CheckCircle size={14} />, action: () => onAIAction('proofread') },
     { id: 'summarize', label: 'Summarize', icon: <FileText size={14} />, action: () => onAIAction('summarize') },
     { id: 'translate', label: 'Translate...', icon: <Languages size={14} />, action: () => onAIAction('translate') },
     { id: 'explain', label: 'Explain', icon: <Lightbulb size={14} />, action: () => onAIAction('explain') },
-    { id: 'separator-2', separator: true },
+    { id: 'separator-2', label: '', separator: true },
     { id: 'create-list', label: 'Create list', icon: <List size={14} />, action: () => onAIAction('create-list') },
     { id: 'key-points', label: 'Extract key points', icon: <Key size={14} />, action: () => onAIAction('key-points') },
-    { id: 'separator-3', separator: true },
+    { id: 'separator-3', label: '', separator: true },
     { id: 'ask-ai', label: 'Ask AI...', icon: <MessageSquare size={14} />, action: () => onAIAction('ask-ai') }
   ];
 
@@ -174,9 +177,9 @@ export function AIWritingToolsContextMenu({
     { id: 'cut', label: 'Cut', icon: <Scissors size={14} />, shortcut: 'Ctrl+X', disabled: !hasSelection, action: onCut },
     { id: 'copy', label: 'Copy', icon: <Copy size={14} />, shortcut: 'Ctrl+C', disabled: !hasSelection, action: onCopy },
     { id: 'paste', label: 'Paste', icon: <Clipboard size={14} />, shortcut: 'Ctrl+V', action: onPaste },
-    { id: 'separator-1', separator: true },
+    { id: 'separator-1', label: '', separator: true },
     { id: 'writing-tools', label: 'Writing tools', icon: <Sparkles size={14} />, submenu: aiWritingTools, disabled: !hasSelection },
-    { id: 'separator-2', separator: true },
+    { id: 'separator-2', label: '', separator: true },
     { id: 'search', label: 'Search with Google...', icon: <Search size={14} />, disabled: !hasSelection, action: () => {
       if (selectedText) {
         window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');

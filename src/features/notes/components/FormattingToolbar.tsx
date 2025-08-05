@@ -108,7 +108,7 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor, cl
       if (position.block) {
         setCurrentBlockType(position.block.type);
         // Get text alignment from block props
-        const alignment = position.block.props?.textAlignment || 'left';
+        const alignment = (position.block.props as any)?.textAlignment || 'left';
         setCurrentAlignment(alignment as any);
       }
 

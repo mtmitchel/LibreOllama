@@ -25,6 +25,7 @@ import { CompactTaskEditModal } from './calendar/components/CompactTaskEditModal
 
 // Import utilities and types
 import { CalendarView, CalendarEvent, DraggedItem } from './calendar/types/calendar';
+import type { GoogleCalendarEvent } from '../../types/google';
 import { navigateDate, getDateRange, getWeekDays } from './calendar/utils/dateUtils';
 import { useCalendarOperations } from './calendar/hooks/useCalendarOperations';
 
@@ -179,7 +180,7 @@ export default function CalendarCustom() {
         });
       } else {
         // Regular calendar event
-        await updateCalendarEvent({
+        await updateCalendarEvent(event.id, {
           ...event,
           start: event.allDay 
             ? { date: format(newStart, 'yyyy-MM-dd') }
@@ -475,7 +476,7 @@ export default function CalendarCustom() {
                     due: task.due,
                     priority: task.priority,
                     labels: task.labels,
-                    columnId: task.columnId,
+                    columnId: (task as any).columnId || task.googleTaskListId,
                     googleTaskListId: task.googleTaskListId
                   };
                   console.log('Duplicating task:', duplicateData);
@@ -497,14 +498,29 @@ export default function CalendarCustom() {
             setShowEventModal(false);
             setSelectedEvent(null);
           }}
-          event={selectedEvent}
+          event={selectedEvent ? {
+            ...selectedEvent,
+            summary: selectedEvent.title,
+            id: selectedEvent.id,
+            start: selectedEvent.start instanceof Date 
+              ? { dateTime: selectedEvent.start.toISOString() }
+              : selectedEvent.start,
+            end: selectedEvent.end instanceof Date
+              ? { dateTime: selectedEvent.end.toISOString() }
+              : selectedEvent.end,
+          } as GoogleCalendarEvent : null}
           onSave={async (eventData) => {
             try {
               if (selectedEvent?.id) {
                 await updateCalendarEvent(selectedEvent.id, eventData);
                 alert('Event updated successfully!');
               } else {
-                await createCalendarEvent(eventData);
+                await createCalendarEvent({
+                  ...eventData,
+                  summary: eventData.summary || 'Untitled Event',
+                  start: eventData.start || { dateTime: new Date().toISOString() },
+                  end: eventData.end || { dateTime: new Date(Date.now() + 3600000).toISOString() }
+                });
                 alert('Event created successfully!');
               }
               // Force a complete refresh of all calendar data

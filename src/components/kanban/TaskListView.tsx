@@ -44,6 +44,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string>('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const searchQuery = parentSearchQuery || localSearchQuery;
   const [localSelectedListId, setLocalSelectedListId] = useState<string>('all');
@@ -131,6 +132,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     try {
       await updateTask(selectedTask.id, {
         ...updates,
+        labels: updates.labels?.map(label => ({
+          name: label,
+          color: 'gray' as const
+        })),
         recurring: updates.recurring
       });
       setIsEditModalOpen(false);
@@ -304,8 +309,8 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               {filteredTasks.map((task) => {
                 const isCompleted = task.status === 'completed';
                 const isOverdue = task.due && parseGoogleTaskDate(task.due) < new Date() && !isCompleted;
-                const completedSubtasks = task.metadata?.subtasks?.filter(st => st.completed).length || 0;
-                const totalSubtasks = task.metadata?.subtasks?.length || 0;
+                const completedSubtasks = 0;
+                const totalSubtasks = 0;
 
                 return (
                   <Card
@@ -404,20 +409,20 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                             )}
 
                             {/* Recurring Indicator */}
-                            {task.metadata?.recurring?.enabled && (
+                            {task.recurring?.enabled && (
                               <div className="flex items-center gap-1 text-accent-primary">
                                 <RotateCcw size={12} />
-                                <span className="capitalize">{task.metadata.recurring.frequency}</span>
+                                <span className="capitalize">{task.recurring?.frequency}</span>
                               </div>
                             )}
                           </div>
 
                           {/* Labels */}
-                          {task.metadata?.labels && task.metadata.labels.length > 0 && (
+                          {task.labels && task.labels.length > 0 && (
                             <div className="flex items-center gap-1">
                               <Tag size={12} className="text-secondary" />
                               <span className="text-xs text-secondary">
-                                {task.metadata.labels.length}
+                                {task.labels.length}
                               </span>
                             </div>
                           )}

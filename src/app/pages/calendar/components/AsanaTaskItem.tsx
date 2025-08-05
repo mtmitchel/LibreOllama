@@ -87,7 +87,7 @@ export const AsanaTaskItem: React.FC<AsanaTaskItemProps> = ({
               </div>
             )}
             
-            {priority !== 'normal' && (
+            {priority !== 'none' && (
               <div 
                 className="flex items-center gap-1 px-2 py-0.5 rounded-full"
                 style={{ 

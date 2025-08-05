@@ -64,11 +64,11 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
         due: task.due ? task.due.split('T')[0] : '',
       });
       setPriority(task.priority || 'none');
-      setLabels(task.labels || []);
-      setRecurring(task.recurring || {
-        enabled: false,
-        frequency: 'weekly',
-        interval: 1
+      setLabels((task.labels || []).map(label => label.name));
+      setRecurring({
+        enabled: task.recurring?.enabled || false,
+        frequency: task.recurring?.frequency || 'weekly',
+        interval: task.recurring?.interval || 1
       });
       setError(null);
     }
@@ -170,7 +170,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                     const isCompleted = task?.status === 'completed';
                     handleSubmit().then(() => {
                       if (task) {
-                        onSubmit({ ...formData, status: isCompleted ? 'needsAction' : 'completed' });
+                        onSubmit(formData);
                       }
                     });
                   }}

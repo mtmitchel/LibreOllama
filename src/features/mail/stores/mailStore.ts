@@ -1789,7 +1789,7 @@ const useMailStore = create<EnhancedMailStore>()(
           try {
             const accounts = await getGmailAccounts('default_user');
             logger.debug('🔄 [STORE] Received accounts from backend:', accounts);
-            if (accounts.length > 0) {
+            if (accounts && accounts.length > 0) {
               logger.debug(`✅ [STORE] Found ${accounts.length} stored accounts`);
               
               set((state) => {

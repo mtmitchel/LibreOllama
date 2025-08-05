@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import type { GoogleTask } from '../../../../types/google';
-import type { CalendarContextMenu } from '../types';
+import type { CalendarContextMenu } from '../types/calendar';
 
-type CalendarView = 'month' | 'week' | 'day' | 'agenda';
+type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'work_week';
 
 export interface CalendarState {
   // Refs

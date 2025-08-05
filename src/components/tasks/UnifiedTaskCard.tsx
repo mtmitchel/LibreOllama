@@ -129,7 +129,7 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
         </div>
         
         {/* Metadata Row */}
-        {showMetadata && (task.due || (task.priority && task.priority !== 'none') || task.metadata?.assignee || (task.labels && task.labels.length > 0)) && (
+        {showMetadata && (task.due || (task.priority && task.priority !== 'none') || (task.labels && task.labels.length > 0)) && (
           <div className="flex items-center gap-2 flex-wrap" style={{ marginLeft: '30px' }}>
             {/* Labels */}
             {task.labels && task.labels.length > 0 && (
@@ -191,15 +191,6 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
               </div>
             )}
             
-            {/* Assignee */}
-            {task.metadata?.assignee && (
-              <div className="asana-metadata-item">
-                <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
-                  <User size={10} className="text-gray-600" />
-                </div>
-                <span className="truncate max-w-[100px]">{task.metadata.assignee}</span>
-              </div>
-            )}
           </div>
         )}
       </div>

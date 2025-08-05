@@ -16,6 +16,7 @@ import {
   Sparkles,
   CheckCircle,
   UserMinus,
+  Trash2,
 } from 'lucide-react';
 import { Card, Button, Input, Heading, Text, Checkbox } from '../../components/ui';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
@@ -210,7 +211,7 @@ const Settings: React.FC = () => {
         await removeGoogleAccount(testAccount.id);
         
         // Also clean from Gmail store
-        const testGmailAccount = gmailAccounts.find(acc => acc.email === 'test@gmail.com');
+        const testGmailAccount = Object.values(gmailAccounts).find((acc) => acc.email === 'test@gmail.com');
         if (testGmailAccount) {
           await removeGmailAccount(testGmailAccount.id);
         }
@@ -698,8 +699,6 @@ const Settings: React.FC = () => {
                          chatStore.availableModels.filter((model: any) => model.provider === aiWritingSettings.defaultProvider).length === 0 && (
                           <option disabled>No models available for {aiWritingSettings.defaultProvider}</option>
                         )}
-                        {console.log('[AI Writing] Available models for', aiWritingSettings.defaultProvider + ':', 
-                          chatStore.availableModels.filter((model: any) => model.provider === aiWritingSettings.defaultProvider))}
                       </select>
                       {!chatStore.isLoadingModels && 
                        aiWritingSettings.defaultProvider === 'ollama' &&
@@ -1237,7 +1236,7 @@ const Settings: React.FC = () => {
           await removeGoogleAccount(testAccount.id);
           
           // Also clean from Gmail store
-          const testGmailAccount = gmailAccounts.find(acc => acc.email === 'test@gmail.com');
+          const testGmailAccount = Object.values(gmailAccounts).find((acc) => acc.email === 'test@gmail.com');
           if (testGmailAccount) {
             await removeGmailAccount(testGmailAccount.id);
           }
@@ -1343,7 +1342,7 @@ const Settings: React.FC = () => {
           confirmText="Remove account"
           cancelText="Keep account"
           variant="warning"
-          confirmButtonVariant="danger"
+          confirmButtonVariant="destructive"
           icon={<UserMinus size={24} className="text-warning" />}
         />
       </div>

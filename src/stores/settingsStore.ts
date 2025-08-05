@@ -388,7 +388,7 @@ export const useSettingsStore = create<SettingsStore>()(
               refreshAccount(accountId), // From mailStore
               fetchCalendars(accountId),       // From googleCalendarStore
               fetchEvents(undefined, undefined, accountId), // From googleCalendarStore
-              fetchTaskLists(accountId),      // From googleTasksStore
+              fetchTaskLists(),      // From googleTasksStore - no argument needed
               // syncAllTasks(), // This might be too broad, let's stick to list-based for now
             ]);
 

@@ -23,6 +23,13 @@
     }
   },
   "include": ["src", "src/tests", "src/vite-env.d.ts"],
-  "exclude": ["src/**/_legacy_archive/**", "src/**/_archive/**"],
+  "exclude": [
+    "node_modules",
+    "**/__archive__/**",
+    "src/__archive__/**",
+    "src/**/_legacy_archive/**",
+    "src/**/_archive/**",
+    "src/archived/**"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

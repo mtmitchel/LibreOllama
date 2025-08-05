@@ -1,3 +1,5 @@
+// Using the mail feature's GmailAccount type temporarily
+// TODO: Extract shared account type to prevent feature coupling
 import type { GmailAccount as GoogleAccount } from '../../mail/types';
 import { logger } from '../../../core/lib/logger';
 

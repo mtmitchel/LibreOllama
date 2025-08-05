@@ -4,41 +4,42 @@ import { useUnifiedTaskStore } from '../stores/unifiedTaskStore';
 describe('Task Deletion Integration', () => {
   beforeEach(() => {
     localStorage.clear();
-    // Clear unified store state
-    const store = useUnifiedTaskStore.getState();
-    store.tasks = [];
-    store.columns = [];
+    // Reset the store to initial state
+    useUnifiedTaskStore.setState({
+      tasks: {},
+      columns: []
+    });
   });
 
-  it('should demonstrate the complete delete flow', () => {
+  it('should demonstrate the complete delete flow', async () => {
     const store = useUnifiedTaskStore.getState();
     
-    // 1. Create a task with metadata
-    const taskId = 'task-123';
-    const task = {
-      id: taskId,
-      title: 'Test Task',
-      googleId: 'google-task-123',
-      metadata: {
-        labels: ['important', 'work'],
-        priority: 'high' as const
-      },
-      syncState: 'synced' as const
-    };
+    // 1. Create a task using the store method
+    const columnId = 'column-1';
+    store.addColumn(columnId, 'Test Column', 'list-1');
     
-    // Add task to store
-    store.tasks.push(task as any);
+    const taskId = await store.createTask({
+      title: 'Test Task',
+      columnId,
+      labels: [
+        { name: 'important', color: 'red' },
+        { name: 'work', color: 'blue' }
+      ],
+      priority: 'high'
+    });
     
     // 2. Delete task
     store.deleteTask(taskId);
     
     // 3. Verify task is marked for deletion
-    const deletedTask = store.tasks.find(t => t.id === taskId);
+    const deletedTask = store.tasks[taskId];
     expect(deletedTask?.syncState).toBe('pending_delete');
     
     // 4. Verify metadata is preserved during deletion
-    expect(deletedTask?.metadata?.labels).toEqual(['important', 'work']);
-    expect(deletedTask?.metadata?.priority).toBe('high');
+    expect(deletedTask?.labels).toHaveLength(2);
+    expect(deletedTask?.labels[0].name).toBe('important');
+    expect(deletedTask?.labels[1].name).toBe('work');
+    expect(deletedTask?.priority).toBe('high');
     
     // This demonstrates that:
     // - Delete from Google happens first (in handleDeleteTask)
@@ -47,48 +48,49 @@ describe('Task Deletion Integration', () => {
     // - Labels and priority are preserved during the delete process
   });
   
-  it('should show that metadata updates preserve all fields', () => {
+  it('should show that metadata updates preserve all fields', async () => {
     const store = useUnifiedTaskStore.getState();
-    const taskId = 'metadata-test';
+    
+    // Create column first
+    const columnId = 'column-1';
+    store.addColumn(columnId, 'Test Column', 'list-1');
     
     // Create task with initial metadata
-    const task = {
-      id: taskId,
+    const taskId = await store.createTask({
       title: 'Test Task',
-      columnId: 'column-1',
-      metadata: {
-        labels: ['bug', 'frontend'],
-        priority: 'normal' as const
-      },
-      syncState: 'synced' as const
-    };
-    
-    store.tasks.push(task as any);
+      columnId,
+      labels: [
+        { name: 'bug', color: 'red' },
+        { name: 'frontend', color: 'blue' }
+      ],
+      priority: 'low'
+    });
     
     // Update only priority (like from context menu)
     store.updateTask(taskId, {
-      metadata: {
-        ...task.metadata,
-        priority: 'high' as const
-      }
+      priority: 'high'
     });
     
     // Verify labels weren't lost
-    const afterPriorityUpdate = store.tasks.find(t => t.id === taskId);
-    expect(afterPriorityUpdate?.metadata?.priority).toBe('high');
-    expect(afterPriorityUpdate?.metadata?.labels).toEqual(['bug', 'frontend']);
+    const afterPriorityUpdate = store.tasks[taskId];
+    expect(afterPriorityUpdate?.priority).toBe('high');
+    expect(afterPriorityUpdate?.labels).toHaveLength(2);
+    expect(afterPriorityUpdate?.labels[0].name).toBe('bug');
+    expect(afterPriorityUpdate?.labels[1].name).toBe('frontend');
     
     // Update only labels (like from task modal)
     store.updateTask(taskId, {
-      metadata: {
-        ...afterPriorityUpdate!.metadata!,
-        labels: ['bug', 'frontend', 'urgent']
-      }
+      labels: [
+        { name: 'bug', color: 'red' },
+        { name: 'frontend', color: 'blue' },
+        { name: 'urgent', color: 'orange' }
+      ]
     });
     
     // Verify priority wasn't lost
-    const afterLabelsUpdate = store.tasks.find(t => t.id === taskId);
-    expect(afterLabelsUpdate?.metadata?.priority).toBe('high');
-    expect(afterLabelsUpdate?.metadata?.labels).toEqual(['bug', 'frontend', 'urgent']);
+    const afterLabelsUpdate = store.tasks[taskId];
+    expect(afterLabelsUpdate?.priority).toBe('high');
+    expect(afterLabelsUpdate?.labels).toHaveLength(3);
+    expect(afterLabelsUpdate?.labels[2].name).toBe('urgent');
   });
 });

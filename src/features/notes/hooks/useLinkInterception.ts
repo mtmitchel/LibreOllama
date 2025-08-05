@@ -11,7 +11,7 @@ export function createLinkInterceptPlugin(onLinkClick: (url: string) => void) {
           
           // Walk up the DOM tree to find a link element
           while (target && target !== view.dom) {
-            if (target.tagName === 'A' && target.href) {
+            if (target.tagName === 'A' && (target as HTMLAnchorElement).href) {
               linkElement = target as HTMLAnchorElement;
               break;
             }

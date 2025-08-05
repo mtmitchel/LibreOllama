@@ -43,6 +43,7 @@ export interface GoogleCalendarEvent {
   created?: string;
   updated?: string;
   etag?: string;
+  calendarId?: string;
   extendedProperties?: {
     private?: Record<string, string>;
     shared?: Record<string, string>;
@@ -83,6 +84,10 @@ export interface GoogleTask {
     startTime: string;
     endTime: string;
   };
+  labels?: Array<{
+    name: string;
+    color: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray';
+  }>;
 }
 
 interface SubTask {
@@ -100,8 +105,6 @@ interface RecurringConfig {
 }
 
 export interface EnhancedGoogleTask extends GoogleTask {
-  labels?: string[];
-  priority?: 'high' | 'medium' | 'low' | 'none';
   subtasks?: SubTask[];
   recurring?: RecurringConfig;
 }

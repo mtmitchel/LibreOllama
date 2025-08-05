@@ -733,7 +733,9 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
             }}
             position={contextMenuPosition}
             editor={editor}
-            onAIAction={handleAIAction}
+            onAIAction={(action: string, customQuestion?: string) => {
+              handleAIAction(action as AIAction, customQuestion);
+            }}
             onCut={handleCut}
             onCopy={handleCopy}
             onPaste={handlePaste}

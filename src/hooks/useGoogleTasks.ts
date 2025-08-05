@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/googleTasksApi';
 import { useUnifiedTaskStore } from '../stores/unifiedTaskStore';
 import type { tasks_v1 } from '../api/googleTasksApi';
+import type { GoogleTask } from '../types/google';
 
 // Query keys
 const taskKeys = {
@@ -21,8 +22,10 @@ export function useTaskLists() {
       const lists = await api.listTaskLists();
       // Update unified store columns
       lists.forEach(list => {
-        addColumn(list.id, list.title, list.id);
-        updateColumn(list.id, { googleTaskListId: list.id });
+        if (list.id) {
+          addColumn(list.id, list.title || 'Untitled', list.id);
+          updateColumn(list.id, { googleTaskListId: list.id });
+        }
       });
       return lists;
     },
@@ -39,19 +42,24 @@ export function useTasks(tasklistId: string) {
     queryFn: async () => {
       const tasks = await api.listTasks(tasklistId);
       // Update unified store with tasks
-      const updates = tasks.map(task => ({
-        googleTaskId: task.id!,
+      // Convert tasks to GoogleTask format for batchUpdateFromGoogle
+      const googleTasks: GoogleTask[] = tasks.map(task => ({
+        id: task.id!,
+        title: task.title || '',
+        notes: task.notes,
+        status: task.status as 'needsAction' | 'completed',
+        due: task.due,
+        completed: task.completed,
+        deleted: task.deleted,
+        hidden: task.hidden,
+        parent: task.parent,
+        position: task.position || '0',
+        updated: task.updated || new Date().toISOString(),
+        selfLink: task.selfLink || '',
+        etag: task.etag || '',
         googleTaskListId: tasklistId,
-        data: {
-          title: task.title || '',
-          notes: task.notes,
-          due: task.due,
-          status: task.status as 'needsAction' | 'completed',
-          position: task.position || '0',
-          updated: task.updated || new Date().toISOString(),
-        },
       }));
-      batchUpdateFromGoogle(updates);
+      batchUpdateFromGoogle([{ taskListId: tasklistId, tasks: googleTasks }]);
       return tasks;
     },
     enabled: !!tasklistId,
@@ -69,10 +77,10 @@ export function useCreateTask() {
       const createdTask = await api.createTask(tasklistId, task);
       return { tasklistId, task: createdTask };
     },
-    onSuccess: ({ tasklistId, task }) => {
+    onSuccess: async ({ tasklistId, task }) => {
       if (task.id) {
         // Create in unified store and mark as synced
-        const taskId = createTask({
+        const taskId = await createTask({
           columnId: tasklistId,
           title: task.title || '',
           notes: task.notes,
@@ -240,10 +248,17 @@ export function useTaskWithMetadata(tasklistId: string, taskId: string) {
 export function useUpdateTaskMetadata() {
   const { getTaskByGoogleId, updateTask } = useUnifiedTaskStore();
   
-  const setTaskMetadata = (googleTaskId: string, metadata: { labels?: string[]; priority?: 'low' | 'normal' | 'high' | 'urgent' }) => {
+  const setTaskMetadata = (googleTaskId: string, metadata: { labels?: string[]; priority?: 'high' | 'medium' | 'low' | 'none' }) => {
     const task = getTaskByGoogleId(googleTaskId);
     if (task) {
-      updateTask(task.id, metadata);
+      const labelObjects = metadata.labels?.map((label, index) => ({
+        name: label,
+        color: (['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'] as const)[index % 10]
+      }));
+      updateTask(task.id, {
+        ...metadata,
+        labels: labelObjects
+      });
     }
   };
   
@@ -268,7 +283,7 @@ export function useAllLabels() {
   
   const labelSet = new Set<string>();
   Object.values(tasks).forEach((task) => {
-    task.labels?.forEach(label => labelSet.add(label));
+    task.labels?.forEach(label => labelSet.add(typeof label === 'string' ? label : label.name));
   });
   
   return Array.from(labelSet).sort();
