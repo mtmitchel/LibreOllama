@@ -232,7 +232,17 @@ pub async fn get_gmail_accounts_secure(
         .map_err(|e| e.to_string())
 }
 
-// Removed unused remove_gmail_tokens_secure function - not registered in Tauri handler
+/// Remove a Gmail account from the database
+#[tauri::command]
+pub async fn remove_gmail_account_secure(
+    account_id: String,
+    auth_service: State<'_, Arc<GmailAuthService>>,
+) -> Result<(), String> {
+    auth_service
+        .remove_account(&account_id)
+        .await
+        .map_err(|e| e.to_string())
+}
 
 /// Debug command to check secure table existence and contents
 #[tauri::command]

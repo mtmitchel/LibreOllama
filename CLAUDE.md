@@ -36,8 +36,6 @@ npm test                 # Run all tests
 npm run test:watch       # Run tests in watch mode
 npm run test:coverage    # Run tests with coverage
 npm run test:ui          # Run tests with UI
-npm run test:canvas      # Run canvas-specific tests
-npm run test:windows     # Run Windows-optimized tests
 
 # Building
 npm run build            # Build for production

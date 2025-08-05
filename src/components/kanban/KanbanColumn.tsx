@@ -179,7 +179,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       });
       setShowInlineCreator(false);
       
-      // The sync will be triggered automatically by the subscription in realtimeSync
+      // Trigger sync to ensure the new task appears in Google immediately
+      await realtimeSync.requestSync(500); // Small delay to ensure Google has processed the task
     } catch (error) {
       console.error('Failed to create task:', error);
       throw error; // Re-throw to let InlineTaskCreator handle it
@@ -474,11 +475,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 task={task}
                 columnId={column.id}
                 isSelected={task.id === selectedTaskId}
-                onToggle={() => {
+                onToggle={async () => {
                   const { updateTask } = useUnifiedTaskStore.getState();
-                  updateTask(task.id, { 
+                  await updateTask(task.id, { 
                     status: task.status === 'completed' ? 'needsAction' : 'completed' 
                   });
+                  
+                  // Trigger sync to ensure completion status appears in Google immediately
+                  await realtimeSync.requestSync(500);
                 }}
                 onEdit={() => {
                   if (onEditTask) {
@@ -519,6 +523,9 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               await deleteTask(deleteConfirm.taskId);
               console.log('Task deleted successfully');
               setDeleteConfirm(null);
+              
+              // Trigger sync to ensure deletion appears in Google immediately
+              await realtimeSync.requestSync(500);
             } catch (error) {
               console.error('Failed to delete task:', error);
               // TODO: Show error notification

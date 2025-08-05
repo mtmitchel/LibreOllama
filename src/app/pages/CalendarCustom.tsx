@@ -170,7 +170,8 @@ export default function CalendarCustom() {
       if (event.extendedProps?.isTimeBlock && event.extendedProps?.taskData) {
         // Update the task's time block
         const task = event.extendedProps.taskData;
-        await updateGoogleTask(task.googleTaskListId, task.id, {
+        await updateTask(task.id, {
+          title: task.title, // Must include title or Google will clear it
           timeBlock: {
             startTime: newStart.toISOString(),
             endTime: newEnd.toISOString()
@@ -436,7 +437,8 @@ export default function CalendarCustom() {
               onTaskComplete={async (listId, taskId, completed) => {
                 try {
                   console.log('Completing task:', { listId, taskId, completed });
-                  await updateGoogleTask(listId, taskId, {
+                  // Use updateTask to ensure metadata is preserved
+                  await updateTask(taskId, {
                     status: completed ? 'completed' : 'needsAction'
                   });
                   await refreshData();
@@ -575,11 +577,24 @@ export default function CalendarCustom() {
                 
                 if (data.priority !== selectedTask.priority) updatePayload.priority = data.priority;
                 
-                // Handle timeBlock changes
-                const hasTimeBlockChanged = (
-                  JSON.stringify(data.timeBlock) !== JSON.stringify(selectedTask.timeBlock)
-                );
-                if (hasTimeBlockChanged) updatePayload.timeBlock = data.timeBlock;
+                // Handle timeBlock changes - CRITICAL: Always preserve timeBlock
+                // If data.timeBlock is undefined, it means the user didn't modify time fields
+                // and we should preserve the existing timeBlock
+                if ('timeBlock' in data) {
+                  // timeBlock is explicitly included in the data
+                  if (data.timeBlock === null) {
+                    // User wants to clear the timeBlock
+                    updatePayload.timeBlock = null;
+                  } else if (data.timeBlock !== undefined) {
+                    // Always include timeBlock in updatePayload to ensure it's preserved
+                    // The unifiedTaskStore needs this to maintain the timeBlock
+                    updatePayload.timeBlock = data.timeBlock;
+                  }
+                } else if (selectedTask.timeBlock) {
+                  // If timeBlock is not in data but task has timeBlock, preserve it
+                  // This handles cases where the modal might not include timeBlock in data
+                  updatePayload.timeBlock = selectedTask.timeBlock;
+                }
                 
                 console.log('🔵 Task update - Only sending changed fields:', {
                   taskId: selectedTask.id,
@@ -593,10 +608,34 @@ export default function CalendarCustom() {
                   },
                   newData: data,
                   updatePayload,
-                  changedFields: Object.keys(updatePayload)
+                  changedFields: Object.keys(updatePayload),
+                  timeBlockStatus: {
+                    originalHasTimeBlock: !!selectedTask.timeBlock,
+                    dataTimeBlockValue: data.timeBlock,
+                    isTimeBlockIncludedInUpdate: 'timeBlock' in updatePayload,
+                    updatePayloadTimeBlock: updatePayload.timeBlock
+                  }
                 });
                 
-                await updateGoogleTask(listId, selectedTask.id, updatePayload);
+                // CRITICAL FIX: For tasks with timeBlocks, follow the same pattern as drag-and-drop
+                // The working commit always sends title, due, and timeBlock together
+                if (selectedTask.timeBlock && 'timeBlock' in updatePayload) {
+                  // Ensure we always have a due date for time-blocked tasks
+                  if (!updatePayload.due) {
+                    updatePayload.due = selectedTask.due_date_only || selectedTask.due || data.due;
+                  }
+                  
+                  console.log('🔴 CRITICAL FIX - Ensuring complete data for time-blocked task:', {
+                    taskId: selectedTask.id,
+                    hasTitle: !!updatePayload.title,
+                    hasDue: !!updatePayload.due,
+                    hasTimeBlock: !!updatePayload.timeBlock,
+                    updatePayload
+                  });
+                }
+                
+                // Use updateTask from unified store to ensure metadata like timeBlock is preserved
+                await updateTask(selectedTask.id, updatePayload);
                 
                 await refreshData();
                 setShowTaskModal(false);
@@ -675,7 +714,8 @@ export default function CalendarCustom() {
               const listId = taskData.googleTaskListId || (selectedTaskListId === 'all' ? taskLists[0]?.googleTaskListId : selectedTaskListId);
               if (listId && taskData.id) {
                 const isCompleted = event.extendedProps?.isCompleted || event.isCompleted;
-                await updateGoogleTask(listId, taskData.id, {
+                // Use updateTask to ensure metadata is preserved
+                await updateTask(taskData.id, {
                   status: isCompleted ? 'needsAction' : 'completed'
                 });
                 await refreshData();

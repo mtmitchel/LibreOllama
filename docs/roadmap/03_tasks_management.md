@@ -116,9 +116,9 @@ The Tasks page provides a **unified task management system** with local Kanban f
 The task system has been completely refactored from a problematic three-store architecture to a single unified store:
 
 **Previous Architecture (Problems):**
-- `useKanbanStore.ts` - Local task data
-- `googleTasksStore.ts` - Google sync state  
-- `taskMetadataStore.ts` - Labels, priority, etc.
+- `useKanbanStore.ts` - Local task data (archived in `src/archived/stores/old-task-system/`)
+- `googleTasksStore.ts` - Google sync state (archived in `src/archived/stores/old-task-system/`)
+- `taskMetadataStore.ts` - Labels, priority, etc. (archived in `src/__archive__/2025-02-cleanup/tasks/`)
 - **Issues**: Metadata loss, task duplication, deletion failures, ID race conditions
 
 **Current Architecture (Solutions):**

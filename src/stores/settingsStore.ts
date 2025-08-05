@@ -4,25 +4,12 @@ import { immer } from 'zustand/middleware/immer';
 import { useMailStore } from '../features/mail/stores/mailStore';
 import { logger } from '../core/lib/logger';
 import { useGoogleCalendarStore } from './googleCalendarStore';
+import { useUnifiedTaskStore } from './unifiedTaskStore';
 // Google Tasks now managed through unified task store
 import { LLMProviderManager, type LLMProvider, LLMModel } from '../services/llmProviders';
 import { invoke } from '@tauri-apps/api/core';
 
-// Forward declaration for type
-interface GoogleAccountSettings {
-  id: string;
-  email: string;
-  name?: string;
-  picture?: string;
-  isActive: boolean;
-  connectedAt: string;
-  scopes: string[];
-  services: {
-    gmail: boolean;
-    calendar: boolean;
-    tasks: boolean;
-  };
-}
+// Forward declaration removed - use the main interface below
 
 // Helper function to load Google accounts from secure storage
 async function loadGoogleAccountsFromSecureStorage(): Promise<GoogleAccountSettings[]> {
@@ -169,7 +156,7 @@ export interface SettingsActions {
   setOllamaEndpoint: (endpoint: string) => void;
   setStartupView: (view: string) => void;
   addGoogleAccount: (account: GoogleAccountSettings) => void;
-  removeGoogleAccount: (accountId: string) => void;
+  removeGoogleAccount: (accountId: string) => Promise<void>;
   setActiveGoogleAccount: (accountId: string) => void;
   refreshGoogleAccount: (accountId: string) => Promise<void>;
   setApiKey: (service: keyof IntegrationSettings['apiKeys'], key: string, baseUrl?: string) => Promise<void>;
@@ -326,19 +313,45 @@ export const useSettingsStore = create<SettingsStore>()(
           });
         },
 
-        removeGoogleAccount: (accountId) => {
-          set((state) => {
-            const index = state.integrations.googleAccounts.findIndex(acc => acc.id === accountId);
-            if (index !== -1) {
-              const wasActive = state.integrations.googleAccounts[index].isActive;
-              state.integrations.googleAccounts.splice(index, 1);
-              
-              // If we removed the active account, make the first remaining account active
-              if (wasActive && state.integrations.googleAccounts.length > 0) {
-                state.integrations.googleAccounts[0].isActive = true;
+        removeGoogleAccount: async (accountId) => {
+          set({ isLoading: true });
+          try {
+            // Call backend to remove account from database
+            await invoke('remove_gmail_account_secure', { accountId });
+            
+            // Get the account details before removal for cleanup
+            const account = get().integrations.googleAccounts.find(acc => acc.id === accountId);
+            const wasActive = account?.isActive || false;
+            
+            // Remove from local state
+            set((state) => {
+              const index = state.integrations.googleAccounts.findIndex(acc => acc.id === accountId);
+              if (index !== -1) {
+                state.integrations.googleAccounts.splice(index, 1);
+                
+                // If we removed the active account, make the first remaining account active
+                if (wasActive && state.integrations.googleAccounts.length > 0) {
+                  state.integrations.googleAccounts[0].isActive = true;
+                }
               }
+            });
+            
+            // TODO: Clean up other stores if this was the active account
+            // For now, let's just log that cleanup should happen
+            if (wasActive) {
+              logger.info(`[Settings] Active account removed, stores should be cleared for: ${accountId}`);
+              // In a future update, we can add proper cleanup methods to each store
             }
-          });
+            
+            logger.info(`[Settings] Successfully removed Google account: ${accountId}`);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to remove account';
+            logger.error(`[Settings] Failed to remove account ${accountId}:`, error);
+            set({ error: errorMessage });
+            throw error;
+          } finally {
+            set({ isLoading: false });
+          }
         },
 
         setActiveGoogleAccount: (accountId) => {

@@ -16,7 +16,8 @@ class RealtimeSync {
   }
 
   requestSync(delay = 1000) {
-    if (this.isSyncing) {
+    // For immediate sync (delay <= 500ms), bypass the syncing check to ensure quick updates
+    if (this.isSyncing && delay > 500) {
       return;
     }
     setTimeout(() => {
@@ -125,7 +126,8 @@ class RealtimeSync {
       
       for (const [id, task] of Object.entries(taskData)) {
         // Handle potential undefined or null values
-        const priority = task.priority || 'normal';
+        // Map 'normal' priority from backend to 'none' for frontend
+        const priority = task.priority === 'normal' || !task.priority ? 'none' : task.priority;
         const labels = Array.isArray(task.labels) ? task.labels : [];
         const timeBlock = task.time_block ? {
           startTime: task.time_block.start_time,
@@ -206,9 +208,9 @@ class RealtimeSync {
     this.syncInterval = setInterval(() => {
       logger.debug('[RealtimeSync] Running periodic sync');
       this.syncNow();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 60 * 1000); // 1 minute for more responsive updates
 
-    logger.info('[RealtimeSync] Started periodic sync (every 5 minutes)');
+    logger.info('[RealtimeSync] Started periodic sync (every 1 minute)');
   }
 
   stop() {

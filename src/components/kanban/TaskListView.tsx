@@ -34,8 +34,11 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     createTask,
   } = useUnifiedTaskStore();
   
-  const toggleComplete = (columnId: string, taskId: string, completed: boolean) => {
-    updateTask(taskId, { status: completed ? 'completed' : 'needsAction' });
+  const toggleComplete = async (columnId: string, taskId: string, completed: boolean) => {
+    await updateTask(taskId, { status: completed ? 'completed' : 'needsAction' });
+    // Trigger sync to ensure completion status appears in Google immediately
+    const { realtimeSync } = await import('../../services/realtimeSync');
+    realtimeSync.requestSync(500);
   };
 
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
@@ -131,6 +134,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
         recurring: updates.recurring
       });
       setIsEditModalOpen(false);
+      
+      // Trigger sync to ensure changes appear in Google immediately
+      const { realtimeSync } = await import('../../services/realtimeSync');
+      realtimeSync.requestSync(500);
     } catch (error) {
       // Failed to update task
       throw error;
@@ -144,6 +151,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     try {
       await deleteTask(selectedTask.id);
       setIsEditModalOpen(false);
+      
+      // Trigger sync to ensure deletion appears in Google immediately
+      const { realtimeSync } = await import('../../services/realtimeSync');
+      realtimeSync.requestSync(500);
     } catch (error) {
       // Failed to delete task
     }
@@ -160,7 +171,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
       // Create in the first column by default
       const firstColumn = columns[0];
       if (firstColumn) {
-        createTask({
+        await createTask({
           title: data.title,
           notes: data.notes,
           due: data.due,
@@ -170,6 +181,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
           priority: data.metadata?.priority || 'none'
         });
         setIsCreateModalOpen(false);
+        
+        // Trigger sync to ensure new task appears in Google immediately
+        const { realtimeSync } = await import('../../services/realtimeSync');
+        realtimeSync.requestSync(500);
       }
     } catch (error) {
       console.error('Failed to create task:', error);

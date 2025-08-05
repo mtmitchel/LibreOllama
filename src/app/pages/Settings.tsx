@@ -11,12 +11,14 @@ import {
   Link as LinkIcon,
   Download,
   RefreshCw,
-  Trash2,
   Check,
   X,
   Sparkles,
+  CheckCircle,
+  UserMinus,
 } from 'lucide-react';
 import { Card, Button, Input, Heading, Text, Checkbox } from '../../components/ui';
+import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 import { useHeader } from '../contexts/HeaderContext';
 import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModal';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
@@ -153,6 +155,7 @@ const Settings: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('general');
   const [showGoogleAuthModal, setShowGoogleAuthModal] = useState(false);
+  const [accountToRemove, setAccountToRemove] = useState<{ id: string; email: string } | null>(null);
   
   // Handle URL parameters for direct navigation
   useEffect(() => {
@@ -222,6 +225,34 @@ const Settings: React.FC = () => {
       }
     } catch (error) {
       console.error('[DEBUG] Failed to check/clean database:', error);
+    }
+  };
+
+  // Handler to set active account with confirmation
+  const handleSetActiveAccount = async (accountId: string) => {
+    try {
+      await setActiveGoogleAccount(accountId);
+      console.log('[Settings] Account set as active:', accountId);
+    } catch (error) {
+      console.error('[Settings] Failed to set active account:', error);
+    }
+  };
+
+  // Handler to show remove account confirmation
+  const handleRemoveAccount = (accountId: string, email: string) => {
+    setAccountToRemove({ id: accountId, email });
+  };
+
+  // Handler to confirm account removal
+  const confirmRemoveAccount = async () => {
+    if (!accountToRemove) return;
+    
+    try {
+      await removeGoogleAccount(accountToRemove.id);
+      console.log('[Settings] Account removed:', accountToRemove.email);
+    } catch (error) {
+      console.error('[Settings] Failed to remove account:', error);
+      alert(`Failed to remove account: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -1001,7 +1032,7 @@ const Settings: React.FC = () => {
                 <Card className="p-6">
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <Heading level={2}>Google Accounts</Heading>
+                      <Heading level={2}>Google accounts</Heading>
                       <Text variant="muted" size="sm">
                         Manage your Google accounts for Gmail, Calendar, and Tasks integration.
                       </Text>
@@ -1012,20 +1043,20 @@ const Settings: React.FC = () => {
                       onClick={() => setShowGoogleAuthModal(true)}
                     >
                       <LinkIcon size={16} className="mr-2" />
-                      Add Account
+                      Add account
                     </Button>
                   </div>
                   
                   {accounts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <User size={48} className="mb-4 text-muted opacity-50" />
-                      <Heading level={3} className="mb-2">No Google Account Connected</Heading>
+                      <Heading level={3} className="mb-2">No Google account connected</Heading>
                       <Text variant="muted" className="mb-4">
                         Connect a Google account to sync your Gmail, Calendar, and Tasks.
                       </Text>
                       <Button onClick={() => setShowGoogleAuthModal(true)}>
                         <LinkIcon size={16} className="mr-2" />
-                        Connect Google Account
+                        Connect Google account
                       </Button>
                     </div>
                   ) : (
@@ -1033,7 +1064,11 @@ const Settings: React.FC = () => {
                       {accounts.map((account) => (
                         <div
                           key={account.id}
-                          className="border-border-default flex items-center justify-between rounded-lg border bg-background-secondary p-4"
+                          className={`border-border-default flex items-center justify-between rounded-lg border p-4 transition-all ${
+                            account.isActive 
+                              ? 'bg-primary/5 border-primary/20 ring-2 ring-primary/10' 
+                              : 'bg-background-secondary hover:bg-background-secondary/80'
+                          }`}
                         >
                           <div className="flex items-center gap-3">
                             <UserAvatar src={account.picture} alt={account.name || account.email} />
@@ -1041,9 +1076,9 @@ const Settings: React.FC = () => {
                               <Text weight="medium">{account.name || account.email}</Text>
                               <Text variant="muted" size="sm">{account.email}</Text>
                               {account.isActive && (
-                                <div className="mt-1 flex items-center gap-1">
-                                  <div className="size-2 rounded-full bg-success" />
-                                  <Text size="xs" className="text-success">Active</Text>
+                                <div className="mt-1 flex items-center gap-2">
+                                  <div className="size-2.5 rounded-full bg-primary animate-pulse" />
+                                  <Text size="xs" className="text-primary font-medium">Active account</Text>
                                 </div>
                               )}
                             </div>
@@ -1053,36 +1088,24 @@ const Settings: React.FC = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setActiveGoogleAccount(account.id)}
+                                onClick={() => handleSetActiveAccount(account.id)}
                               >
-                                Set Active
+                                <CheckCircle size={14} className="mr-1" />
+                                Set active
                               </Button>
                             )}
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={() => removeGoogleAccount(account.id)}
-                              className="text-error hover:text-error"
+                              onClick={() => handleRemoveAccount(account.id, account.email)}
+                              className="text-error hover:text-error hover:border-error"
                             >
-                              <X size={16} />
+                              <UserMinus size={14} className="mr-1" />
+                              Remove
                             </Button>
                           </div>
                         </div>
                       ))}
-                    </div>
-                  )}
-                  
-                  {accounts.length > 0 && (
-                    <div className="mt-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={debugAndCleanDatabase}
-                        className="w-full"
-                      >
-                        <RefreshCw size={16} className="mr-2" />
-                        Debug & Clean Accounts
-                      </Button>
                     </div>
                   )}
                 </Card>
@@ -1306,6 +1329,23 @@ const Settings: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Account Removal Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={!!accountToRemove}
+          onClose={() => setAccountToRemove(null)}
+          onConfirm={confirmRemoveAccount}
+          title="Remove Google account"
+          message={accountToRemove ? 
+            `Are you sure you want to remove ${accountToRemove.email} from LibreOllama?\n\nThis will:\n• Remove the account from this app\n• Revoke LibreOllama's access to Google services\n• Clear all cached data for this account\n\nYou can always reconnect this account later if needed.` 
+            : ''
+          }
+          confirmText="Remove account"
+          cancelText="Keep account"
+          variant="warning"
+          confirmButtonVariant="danger"
+          icon={<UserMinus size={24} className="text-warning" />}
+        />
       </div>
     </div>
   );

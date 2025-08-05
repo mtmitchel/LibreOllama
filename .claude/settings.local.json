@@ -42,7 +42,10 @@
       "Bash(move:*)",
       "mcp__exa-search__web_search_exa",
       "mcp__exa-search__crawling_exa",
-      "mcp__sequential-thinking__sequentialthinking"
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(claude mcp:*)",
+      "Bash(git log:*)",
+      "mcp__exa__web_search_exa"
     ],
     "deny": []
   },

@@ -38,6 +38,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [initialTimeValues, setInitialTimeValues] = useState({ startTime: '', endTime: '' });
 
   useEffect(() => {
     // Reset delete confirmation when modal opens/closes
@@ -54,6 +55,9 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
         startTime = format(start, 'HH:mm');
         endTime = format(end, 'HH:mm');
       }
+      
+      // Store initial time values to detect changes
+      setInitialTimeValues({ startTime, endTime });
       
       setFormData({
         title: task.title,
@@ -91,45 +95,71 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
     }
     
     let timeBlock;
+    const userModifiedTimes = formData.startTime !== initialTimeValues.startTime || 
+                            formData.endTime !== initialTimeValues.endTime;
+    
     if (formData.startTime && formData.endTime && formData.due) {
-      // Create base date in local timezone from YYYY-MM-DD
-      const [year, month, day] = formData.due.split('-').map(Number);
-      const baseDate = new Date(year, month - 1, day);
-      
-      const [startHour, startMin] = formData.startTime.split(':').map(Number);
-      const [endHour, endMin] = formData.endTime.split(':').map(Number);
-      
-      const startTime = new Date(baseDate);
-      startTime.setHours(startHour, startMin, 0, 0);
-      
-      const endTime = new Date(baseDate);
-      endTime.setHours(endHour, endMin, 0, 0);
-      
-      timeBlock = {
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString()
-      };
-    } else if (task?.timeBlock && formData.startTime === '' && formData.endTime === '') {
-      // Preserve existing timeBlock if no new times were set
+      // User has time values set - check if they were modified
+      if (userModifiedTimes) {
+        // User modified the times - create new timeBlock
+        const [year, month, day] = formData.due.split('-').map(Number);
+        const baseDate = new Date(year, month - 1, day);
+        
+        const [startHour, startMin] = formData.startTime.split(':').map(Number);
+        const [endHour, endMin] = formData.endTime.split(':').map(Number);
+        
+        const startTime = new Date(baseDate);
+        startTime.setHours(startHour, startMin, 0, 0);
+        
+        const endTime = new Date(baseDate);
+        endTime.setHours(endHour, endMin, 0, 0);
+        
+        timeBlock = {
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString()
+        };
+      } else if (task?.timeBlock) {
+        // Times weren't modified and task has timeBlock - preserve it
+        timeBlock = task.timeBlock;
+      }
+    } else if (formData.startTime === '' && formData.endTime === '' && userModifiedTimes) {
+      // User explicitly cleared the time fields - remove timeBlock
+      timeBlock = null;
+    } else if (task?.timeBlock && !userModifiedTimes) {
+      // User didn't modify times and task has timeBlock - preserve it
       timeBlock = task.timeBlock;
     }
+    // If none of the above, timeBlock remains undefined (don't update it)
       
-    const submitData = {
+    const submitData: any = {
       title: formData.title,
       notes: formData.notes,
       due: formattedDue,
       priority: formData.priority !== 'none' ? formData.priority : undefined,
-      timeBlock,
     };
+    
+    // CRITICAL FIX: Always include timeBlock in submitData when it's defined
+    // This ensures that the CalendarCustom.tsx check for 'timeBlock' in data works correctly
+    if (timeBlock !== undefined) {
+      submitData.timeBlock = timeBlock;
+    } else if (task?.timeBlock && !userModifiedTimes) {
+      // If timeBlock is undefined but task has timeBlock and user didn't modify times,
+      // explicitly preserve the existing timeBlock
+      submitData.timeBlock = task.timeBlock;
+    }
     
     console.log('🔴 TASK UPDATE DEBUG - Submitting data:', {
       taskId: task?.id,
-      originalDue: task?.due,
-      formDue: formData.due,
-      formattedDue: formattedDue,
+      taskHasTimeBlock: !!task?.timeBlock,
       originalTimeBlock: task?.timeBlock,
-      newTimeBlock: timeBlock,
-      fullSubmitData: submitData
+      computedTimeBlock: timeBlock,
+      timeBlockType: typeof timeBlock,
+      userModifiedTimes,
+      initialTimeValues,
+      currentTimeValues: { startTime: formData.startTime, endTime: formData.endTime },
+      timeBlockIncludedInSubmit: 'timeBlock' in submitData,
+      submitDataTimeBlock: submitData.timeBlock,
+      allSubmitKeys: Object.keys(submitData)
     });
     
     onSubmit(submitData);

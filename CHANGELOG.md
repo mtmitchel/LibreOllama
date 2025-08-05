@@ -5,7 +5,7 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-01-28
+## [Unreleased] - 2025-02-05
 
 ### 🚀 New Features
 
@@ -18,6 +18,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents links from opening in new tabs while preserving editor functionality
   - Only intercepts external HTTP/HTTPS links, internal links work normally
   - Location: `src/features/notes/components/LinkPreviewModal.tsx`
+
+### 🔧 Recent Fixes
+
+#### Time-Blocked Tasks Preservation Fix ✅
+- **Fixed time-blocked tasks disappearing when editing title** ✅
+  - Root Cause: CompactTaskEditModal was including timeBlock:undefined in submitData when user didn't modify time fields
+  - This caused the update logic to think timeBlock should be updated to undefined
+  - Time-blocked tasks are NOT converted to events - they remain tasks with timeBlock metadata
+  - Fixed by:
+    - Only including timeBlock in submitData when it's explicitly defined
+    - Track initial time values to detect actual user modifications
+    - Modified Object.assign to skip undefined values
+    - Enhanced update logic to handle null vs undefined timeBlock
+    - Added comprehensive logging for timeBlock preservation tracking
+  - Key insight: Time-blocked tasks stay as tasks with timeBlock property for display in calendar
+  - Location: `CompactTaskEditModal.tsx`, `CalendarCustom.tsx`, `unifiedTaskStore.ts`
+
+### 🧹 Maintenance
+
+#### Real-time Task Sync Fix ✅
+- **Fixed immediate sync for task operations** ✅
+  - Root Cause: Tasks page relied on 5-minute periodic sync interval
+  - Calendar page worked correctly due to explicit `syncAllTasks()` calls
+  - Fixed by adding `realtimeSync.requestSync(500)` after all CRUD operations
+  - Fixed priority mapping: Backend 'normal' now maps to frontend 'none'
+  - Reduced periodic sync interval from 5 minutes to 1 minute for faster updates
+  - Improved sync debouncing to allow immediate syncs (≤500ms delay)
+  - Affected components:
+    - `KanbanColumn.tsx`: Task creation, toggle complete, delete
+    - `TaskListView.tsx`: Toggle complete, update, delete, create
+    - `TasksAsanaClean.tsx`: Update and delete via TaskSidePanel
+    - `unifiedTaskStore.ts`: Priority mapping in create/update operations
+    - `realtimeSync.ts`: Priority normalization and sync timing
+  - Now both pages sync immediately with Google Tasks in both directions
+  - Tasks from Google no longer incorrectly show as 'low' priority
+  - Location: Task components with sync integration
+
+#### Systematic Codebase Cleanup ✅
+- **Comprehensive dead code removal across all modules** ✅
+  - Analyzed all 10 major modules with senior engineering standards
+  - Identified and archived 8 dead/unused files
+  - Removed 2 empty directories
+  - Key findings:
+    - Canvas: Removed duplicate utilities (throttling, feature flags)
+    - Tasks: Archived files missed during January 2025 unification
+    - Calendar: Removed duplicate types.ts and unused experiment CSS
+  - Created detailed archive with restoration instructions
+  - Location: `src/__archive__/2025-02-cleanup/`
+  - Impact: ~50KB reduction, improved code clarity
 
 ### 🔧 Recent Fixes
 

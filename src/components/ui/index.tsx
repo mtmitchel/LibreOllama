@@ -1130,3 +1130,4 @@ export { ContextMenu } from './ContextMenu';
 export { ConfirmDialog } from './ConfirmDialog';
 export { SyncStatus } from '../SyncStatus';
 export { FloatingActionButton, FloatingActionMenu } from './FloatingActionButton';
+export { ConfirmationModal } from './ConfirmationModal';

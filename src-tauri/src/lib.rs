@@ -158,6 +158,7 @@ pub fn run() {
             commands::gmail::auth::get_gmail_user_info,
             commands::gmail::auth::store_gmail_tokens_secure,
             commands::gmail::auth::get_gmail_tokens_secure,
+            commands::gmail::auth::remove_gmail_account_secure,
             // Gmail API commands
             commands::gmail::api::search_gmail_messages,
             commands::gmail::api::get_gmail_labels,

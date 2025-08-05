@@ -205,6 +205,17 @@ export const useCalendarOperations = () => {
     
     // Add unified tasks with due dates (filtered based on showCompleted)
     getVisibleTasks().forEach(task => {
+      // Debug log for tasks with timeBlocks but no due date
+      if (task.timeBlock && !task.due) {
+        console.log('🔴 WARNING - Task with timeBlock but NO due date (will not show on calendar):', {
+          taskId: task.id,
+          title: task.title,
+          timeBlock: task.timeBlock,
+          due: task.due,
+          fullTask: task
+        });
+      }
+      
       if (task.due) {
         const isCompleted = task.status === 'completed';
         const taskDueDate = parseGoogleTaskDate(task.due);

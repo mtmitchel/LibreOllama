@@ -552,11 +552,17 @@ export default function TasksAsanaClean() {
             setIsTaskPanelOpen(false);
             setSelectedTask(null);
           }}
-          onUpdate={updateTask}
+          onUpdate={async (taskId, updates) => {
+            await updateTask(taskId, updates);
+            // Trigger sync to ensure changes appear in Google immediately
+            realtimeSync.requestSync(500);
+          }}
           onDelete={async (taskId) => {
             await deleteTask(taskId);
             setIsTaskPanelOpen(false);
             setSelectedTask(null);
+            // Trigger sync to ensure deletion appears in Google immediately
+            realtimeSync.requestSync(500);
           }}
         />
       )}

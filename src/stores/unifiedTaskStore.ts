@@ -151,7 +151,8 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   const day = String(date.getDate()).padStart(2, '0');
                   return `${year}-${month}-${day}`;
                 })() : undefined,
-                priority: input.priority,
+                // Convert 'none' to 'normal' for backend compatibility
+                priority: input.priority === 'none' ? 'normal' : input.priority,
                 labels: input.labels,
                 time_block: input.timeBlock ? {
                   start_time: input.timeBlock.startTime,
@@ -170,7 +171,9 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 task.updated = response.updated || now;
                 task.position = response.position || '0';
                 // Preserve the local metadata - backend may not return these
-                task.priority = response.priority || task.priority || 'normal';
+                // Map 'normal' from backend to 'none' for frontend consistency
+                const backendPriority = response.priority || task.priority;
+                task.priority = (backendPriority === 'normal' || !backendPriority) ? 'none' : backendPriority;
                 task.labels = response.labels || task.labels || [];
                 state.tasks[response.id] = task;
                 
@@ -235,7 +238,12 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             const task = state.tasks[taskId];
             if (!task) return;
             
-            Object.assign(task, updates);
+            // Only assign defined values to avoid overwriting with undefined
+            Object.keys(updates).forEach(key => {
+              if (updates[key] !== undefined) {
+                task[key] = updates[key];
+              }
+            });
             task.updated = new Date().toISOString();
             
             if (updates.columnId && updates.columnId !== task.columnId) {
@@ -281,13 +289,24 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             if (updates.status !== undefined) googleUpdates.status = updates.status;
             
             // Add custom fields to request - they'll be stored in backend metadata
-            if (updates.priority !== undefined) googleUpdates.priority = updates.priority;
+            // Convert 'none' to 'normal' for backend compatibility
+            if (updates.priority !== undefined) {
+              googleUpdates.priority = updates.priority === 'none' ? 'normal' : updates.priority;
+            }
             if (updates.labels !== undefined) googleUpdates.labels = updates.labels;
-            if (updates.timeBlock !== undefined) {
-              googleUpdates.time_block = {
-                start_time: updates.timeBlock.startTime,
-                end_time: updates.timeBlock.endTime
-              };
+            if ('timeBlock' in updates) {
+              // timeBlock is explicitly included in updates
+              if (updates.timeBlock === null) {
+                // User wants to clear the timeBlock
+                googleUpdates.time_block = null;
+              } else if (updates.timeBlock) {
+                // User provided a timeBlock object
+                googleUpdates.time_block = {
+                  start_time: updates.timeBlock.startTime,
+                  end_time: updates.timeBlock.endTime
+                };
+              }
+              // If updates.timeBlock is undefined but key exists, don't send time_block
             }
             
             logger.debug('[UnifiedStore] Sending to Google Tasks API:', googleUpdates);
