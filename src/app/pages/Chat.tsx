@@ -43,6 +43,8 @@ function Chat() {
   const [isContextOpen, setIsContextOpen] = useState(false);
   const [hoveredConversationId, setHoveredConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
+  const previousConversationIdRef = useRef<string | null>(null);
 
   // --- DATA LOADING & SYNC ---
   useEffect(() => {
@@ -56,8 +58,18 @@ function Chat() {
   }, [clearError]);
 
   useEffect(() => {
-    // Scroll to bottom when messages change
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Determine if we should scroll instantly or smoothly
+    const isConversationChange = previousConversationIdRef.current !== selectedConversationId;
+    const scrollBehavior = isInitialLoadRef.current || isConversationChange ? 'instant' : 'smooth';
+    
+    // Scroll to bottom
+    messagesEndRef.current?.scrollIntoView({ behavior: scrollBehavior as ScrollBehavior });
+    
+    // Update refs after scrolling
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+    }
+    previousConversationIdRef.current = selectedConversationId;
   }, [messages, selectedConversationId]);
   
   // --- EVENT HANDLERS ---

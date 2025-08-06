@@ -112,7 +112,8 @@ pub async fn create_task_metadata(
         let tx = conn.transaction().map_err(|e| format!("Failed to start transaction: {}", e))?;
         
         // Insert task metadata (or update if it exists)
-        let priority = data.priority.unwrap_or_else(|| "normal".to_string());
+        // Use "none" as default to match frontend expectations (not "normal")
+        let priority = data.priority.unwrap_or_else(|| "none".to_string());
         let time_block_json = data.time_block.as_ref().map(|tb| {
             serde_json::to_string(tb).unwrap_or_else(|_| "null".to_string())
         });

@@ -2,7 +2,8 @@ use crate::{
     database::DatabaseManager,
     services::google::tasks_service::{GoogleTasksService, CreateTaskInput, UpdateTaskInput},
     models::task_metadata::{CreateTaskMetadata, UpdateTaskMetadata, TimeBlock},
-    commands::tasks::metadata,
+    models::task_id_map::{CreateTaskIdMap},
+    commands::tasks::{metadata, id_map},
 };
 use std::sync::Arc;
 use tauri::State;
@@ -12,6 +13,7 @@ use serde::{Deserialize, Serialize};
 pub struct CreateTaskRequest {
     pub account_id: String,
     pub task_list_id: String,
+    pub local_id: Option<String>, // Frontend can provide a local ID, or we generate one
     pub title: String,
     pub notes: Option<String>,
     pub due: Option<String>,
@@ -24,7 +26,7 @@ pub struct CreateTaskRequest {
 pub struct UpdateTaskRequest {
     pub account_id: String,
     pub task_list_id: String,
-    pub task_id: String,
+    pub task_id: String,  // This should be the stable local ID
     pub title: Option<String>,
     pub notes: Option<String>,
     pub due: Option<String>,
@@ -43,7 +45,8 @@ pub struct DeleteTaskRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskResponse {
-    pub id: String,
+    pub id: String,          // This will be the stable local ID
+    pub google_id: String,   // The Google Task ID (can change when moved)
     pub title: String,
     pub notes: Option<String>,
     pub due: Option<String>,
@@ -60,28 +63,50 @@ pub async fn create_google_task(
     google_tasks_service: State<'_, GoogleTasksService>,
     db_manager: State<'_, Arc<DatabaseManager>>,
 ) -> Result<TaskResponse, String> {
+    // Generate stable local ID if not provided
+    let local_id = request.local_id.unwrap_or_else(|| id_map::generate_local_id());
+    
     // Create task in Google Tasks
     let google_task = google_tasks_service
         .create_task(
             &request.account_id,
             &request.task_list_id,
             CreateTaskInput {
-                title: request.title,
-                notes: request.notes,
-                due: request.due,
+                title: request.title.clone(),
+                notes: request.notes.clone(),
+                due: request.due.clone(),
                 status: Some("needsAction".to_string()),
             },
         )
         .await
         .map_err(|e| format!("Failed to create Google Task: {}", e))?;
 
+    // Create mapping between local ID and Google ID
+    let mapping = CreateTaskIdMap {
+        local_id: local_id.clone(),
+        google_task_id: google_task.id.clone(),
+        task_list_id: request.task_list_id.clone(),
+    };
+    
+    // Call the function directly since it's in the same crate
+    crate::commands::tasks::id_map::create_task_id_mapping(
+        mapping,
+        db_manager.clone(),
+    )
+    .await
+    .map_err(|e| format!("Failed to create ID mapping: {}", e))?;
+
     // Debug log to check if time_block is received
     eprintln!("🔵 TIMEBLOCK DEBUG - Create request received: has_time_block={}, time_block={:?}", 
         request.time_block.is_some(), request.time_block);
     
-    // Store metadata in local DB
+    // Store metadata in local DB linked to the stable local ID
     if request.priority.is_some() || request.labels.is_some() || request.time_block.is_some() {
-        let _ = crate::commands::tasks::metadata::create_task_metadata(
+        // Log what we're storing
+        eprintln!("📝 Storing metadata for new task {} (local: {}): priority={:?}, labels={:?}", 
+            google_task.id, local_id, request.priority, request.labels);
+            
+        match crate::commands::tasks::metadata::create_task_metadata(
             CreateTaskMetadata {
                 google_task_id: google_task.id.clone(),
                 task_list_id: request.task_list_id.clone(),
@@ -92,18 +117,22 @@ pub async fn create_google_task(
             },
             db_manager.clone(),
         )
-        .await;
+        .await {
+            Ok(_) => eprintln!("✅ Metadata stored successfully for task {} (local: {})", google_task.id, local_id),
+            Err(e) => eprintln!("❌ Failed to store metadata for task {}: {}", google_task.id, e),
+        }
     }
 
     Ok(TaskResponse {
-        id: google_task.id,
+        id: local_id,  // Return the stable local ID as the primary ID
+        google_id: google_task.id,  // Also return the Google ID for reference
         title: google_task.title,
         notes: google_task.notes,
         due: google_task.due,
         status: google_task.status,
         position: google_task.position,
         updated: google_task.updated,
-        priority: request.priority.unwrap_or_else(|| "normal".to_string()),
+        priority: request.priority.unwrap_or_else(|| "none".to_string()),
         labels: request.labels.unwrap_or_default(),
     })
 }
@@ -114,18 +143,42 @@ pub async fn update_google_task(
     google_tasks_service: State<'_, GoogleTasksService>,
     db_manager: State<'_, Arc<DatabaseManager>>,
 ) -> Result<TaskResponse, String> {
-    // Update task in Google Tasks
+    // Look up the current Google ID from the local ID
+    let id_mapping = crate::commands::tasks::id_map::get_task_id_mapping_by_local(
+        request.task_id.clone(),
+        db_manager.clone(),
+    )
+    .await?
+    .ok_or_else(|| format!("No ID mapping found for local ID: {}", request.task_id))?;
+    
+    let google_task_id = id_mapping.google_task_id;
+    let local_id = id_mapping.local_id.clone();
+    
+    // CRITICAL: Fetch current task state from Google to merge with updates
+    let current_task = google_tasks_service
+        .get_single_task(
+            &request.account_id,
+            &request.task_list_id,
+            &google_task_id,
+        )
+        .await
+        .map_err(|e| format!("Failed to fetch current task state: {}", e))?;
+    
+    // Merge updates with current state - ALWAYS send complete object
+    let merged_input = UpdateTaskInput {
+        title: request.title.or(Some(current_task.title)),
+        notes: request.notes.or(current_task.notes),
+        due: request.due.or(current_task.due),
+        status: request.status.or(Some(current_task.status)),
+    };
+    
+    // Update task in Google Tasks with COMPLETE merged data
     let google_task = google_tasks_service
         .update_task(
             &request.account_id,
             &request.task_list_id,
-            &request.task_id,
-            UpdateTaskInput {
-                title: request.title,
-                notes: request.notes,
-                due: request.due,
-                status: request.status,
-            },
+            &google_task_id,
+            merged_input,
         )
         .await
         .map_err(|e| format!("Failed to update Google Task: {}", e))?;
@@ -140,9 +193,9 @@ pub async fn update_google_task(
     
     // Update or create metadata in local DB if needed
     if request.priority.is_some() || request.labels.is_some() || request.time_block.is_some() {
-        // First check if metadata exists
+        // First check if metadata exists (using Google ID)
         let existing_metadata = crate::commands::tasks::metadata::get_task_metadata(
-            request.task_id.clone(),
+            google_task_id.clone(),
             db_manager.clone(),
         )
         .await
@@ -150,10 +203,10 @@ pub async fn update_google_task(
         .flatten();
         
         if existing_metadata.is_some() {
-            eprintln!("🔵 TIMEBLOCK DEBUG - Updating existing metadata for task {}", request.task_id);
+            eprintln!("🔵 TIMEBLOCK DEBUG - Updating existing metadata for task {} (local: {})", google_task_id, local_id);
             // Update existing metadata
             match crate::commands::tasks::metadata::update_task_metadata(
-                request.task_id.clone(),
+                google_task_id.clone(),
                 UpdateTaskMetadata {
                     priority: request.priority.clone(),
                     labels: request.labels.clone(),
@@ -167,11 +220,11 @@ pub async fn update_google_task(
                 Err(e) => eprintln!("❌ TIMEBLOCK DEBUG - Failed to update metadata: {}", e),
             }
         } else {
-            eprintln!("🔵 TIMEBLOCK DEBUG - Creating new metadata for task {}", request.task_id);
+            eprintln!("🔵 TIMEBLOCK DEBUG - Creating new metadata for task {} (local: {})", google_task_id, local_id);
             // Create new metadata
             match crate::commands::tasks::metadata::create_task_metadata(
                 CreateTaskMetadata {
-                    google_task_id: request.task_id.clone(),
+                    google_task_id: google_task_id.clone(),
                     task_list_id: request.task_list_id.clone(),
                     priority: request.priority.clone(),
                     labels: request.labels.clone(),
@@ -189,7 +242,7 @@ pub async fn update_google_task(
 
     // Get metadata from DB
     let metadata = crate::commands::tasks::metadata::get_task_metadata(
-        request.task_id.clone(),
+        google_task_id.clone(),
         db_manager.clone(),
     )
     .await
@@ -197,7 +250,8 @@ pub async fn update_google_task(
     .flatten();
 
     Ok(TaskResponse {
-        id: google_task.id,
+        id: local_id,  // Return the stable local ID as the primary ID
+        google_id: google_task.id,  // Also return the Google ID for reference
         title: google_task.title,
         notes: google_task.notes,
         due: google_task.due,
@@ -207,7 +261,7 @@ pub async fn update_google_task(
         priority: metadata
             .as_ref()
             .map(|m| m.metadata.priority.clone())
-            .unwrap_or_else(|| "normal".to_string()),
+            .unwrap_or_else(|| "none".to_string()),
         labels: metadata
             .as_ref()
             .map(|m| m.labels.iter().map(|l| l.name.clone()).collect())

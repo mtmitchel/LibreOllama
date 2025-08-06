@@ -24,19 +24,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText = 'Cancel',
   confirmVariant = 'destructive',
 }) => {
-  const [isLoading, setIsLoading] = React.useState(false);
-  
   if (!isOpen) return null;
 
-  const handleConfirm = async () => {
-    setIsLoading(true);
-    try {
-      await onConfirm();
-      onClose();
-    } catch (error) {
-      console.error('Confirm action failed:', error);
-      setIsLoading(false);
-    }
+  const handleConfirm = () => {
+    // Close immediately for better UX
+    onClose();
+    // Fire the confirm action without waiting
+    onConfirm();
   };
 
   return createPortal(
@@ -72,15 +66,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <Button
             variant="ghost"
             onClick={onClose}
-            disabled={isLoading}
           >
             {cancelText}
           </Button>
           <Button
             variant={confirmVariant}
             onClick={handleConfirm}
-            isLoading={isLoading}
-            disabled={isLoading}
           >
             {confirmText}
           </Button>

@@ -89,6 +89,20 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         record_migration(conn, 12)?;
         println!("Migration v12 completed successfully");
     }
+    
+    if current_version < 13 {
+        println!("Running migration v13 to add task_id_map for stable local IDs...");
+        crate::database::schema_v13::run_migration_v13(conn)?;
+        record_migration(conn, 13)?;
+        println!("Migration v13 completed successfully");
+    }
+    
+    if current_version < 14 {
+        println!("Running migration v14 to simplify labels storage as JSON...");
+        crate::database::schema_v14::run_migration_v14(conn)?;
+        record_migration(conn, 14)?;
+        println!("Migration v14 completed successfully");
+    }
 
     Ok(())
 }

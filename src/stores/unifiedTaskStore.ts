@@ -141,7 +141,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               position?: string;
               updated?: string;
               priority?: string;
-              labels?: string[];
+              labels?: Array<{ name: string; color: string }>;
             }>('create_google_task', {
               request: {
                 account_id: activeAccount.id,
@@ -158,9 +158,18 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   const day = String(date.getDate()).padStart(2, '0');
                   return `${year}-${month}-${day}`;
                 })() : undefined,
-                // Convert 'none' to 'normal' for backend compatibility
-                priority: input.priority === 'none' ? 'normal' : input.priority,
-                labels: input.labels,
+                // Keep priority as-is - backend handles 'none' correctly
+                priority: input.priority,
+                // Send labels as objects with name and color for backend
+                labels: input.labels ? input.labels.map(label => {
+                  if (typeof label === 'string') {
+                    // If it's a string, assign a default color
+                    const colors: Array<'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray'> = 
+                      ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
+                    return { name: label, color: colors[0] };
+                  }
+                  return label; // Already in correct format
+                }) : undefined,
                 time_block: input.timeBlock ? {
                   start_time: input.timeBlock.startTime,
                   end_time: input.timeBlock.endTime
@@ -305,11 +314,22 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             if (updates.status !== undefined) googleUpdates.status = updates.status;
             
             // Add custom fields to request - they'll be stored in backend metadata
-            // Convert 'none' to 'normal' for backend compatibility
+            // Keep priority as-is - backend handles 'none' correctly
             if (updates.priority !== undefined) {
-              googleUpdates.priority = updates.priority === 'none' ? 'normal' : updates.priority;
+              googleUpdates.priority = updates.priority;
             }
-            if (updates.labels !== undefined) googleUpdates.labels = updates.labels;
+            if (updates.labels !== undefined) {
+              // Send labels as objects with name and color for backend
+              googleUpdates.labels = updates.labels.map(label => {
+                if (typeof label === 'string') {
+                  // If it's a string, assign a default color
+                  const colors: Array<'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray'> = 
+                    ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
+                  return { name: label, color: colors[0] };
+                }
+                return label; // Already in correct format
+              });
+            }
             if ('timeBlock' in updates) {
               // timeBlock is explicitly included in updates
               if (updates.timeBlock === null) {
@@ -527,7 +547,9 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               logger.info('[UnifiedStore] Moving task between lists using delete-recreate pattern', {
                 taskId,
                 sourceList: task.googleTaskListId,
-                targetList: targetColumn.googleTaskListId
+                targetList: targetColumn.googleTaskListId,
+                priority: task.priority,
+                labels: task.labels
               });
               
               // 1. Create new task in target list
@@ -540,7 +562,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 position?: string;
                 updated?: string;
                 priority: string;
-                labels: string[];
+                labels: Array<{ name: string; color: string }>;
               }>('create_google_task', {
                 request: {
                   account_id: activeAccount.id,
@@ -548,9 +570,25 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   title: task.title,
                   notes: task.notes,
                   due: task.due,
+                  // Keep priority as-is, including 'none' - backend will handle it correctly
                   priority: task.priority,
-                  labels: task.labels,
+                  // Send labels as objects with name and color for backend
+                  labels: task.labels ? task.labels.map(label => {
+                    if (typeof label === 'string') {
+                      // If it's a string, assign a default color
+                      const colors: Array<'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray'> = 
+                        ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
+                      return { name: label, color: colors[0] };
+                    }
+                    return label; // Already in correct format
+                  }) : undefined,
                 }
+              });
+              
+              logger.info('[UnifiedStore] Task created in new list, response:', {
+                newId: createResponse.id,
+                priority: createResponse.priority,
+                labels: createResponse.labels
               });
               
               // 2. Delete original task from source list
@@ -567,14 +605,27 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 // Remove old task
                 delete state.tasks[taskId];
                 
-                // Add new task with new ID
+                // Add new task with new ID, preserving all metadata
                 const newTask = {
                   ...task,
                   id: createResponse.id,
                   googleTaskId: createResponse.id,
                   updated: createResponse.updated || new Date().toISOString(),
                   position: createResponse.position || '0',
+                  // Preserve priority and labels from original task
+                  priority: task.priority,
+                  labels: task.labels,
+                  columnId: targetColumnId,
+                  googleTaskListId: targetColumn.googleTaskListId,
                 };
+                
+                logger.info('[UnifiedStore] New task after move:', {
+                  id: newTask.id,
+                  title: newTask.title,
+                  priority: newTask.priority,
+                  labels: newTask.labels
+                });
+                
                 state.tasks[createResponse.id] = newTask;
                 
                 // Update column taskIds with new ID
@@ -731,32 +782,32 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               const existingTask = state.tasks[id];
               
               if (existingTask) {
-                // Merge: preserve local-only fields if they exist
+                // Merge: ALWAYS trust backend completely for all fields
+                // The backend is the authoritative source of truth
                 mergedTasks[id] = {
                   ...incomingTask,
-                  // Preserve local metadata if incoming doesn't have it, and migrate format
-                  labels: incomingTask.labels?.length ? migrateLabelFormat(incomingTask.labels) : migrateLabelFormat(existingTask.labels),
-                  // Only override priority if incoming has a value
-                  // Map 'normal' to 'none' for consistency
-                  priority: incomingTask.priority 
-                    ? ((incomingTask as any).priority === 'normal' ? 'none' : incomingTask.priority as UnifiedTask['priority'])
-                    : existingTask.priority || 'none',
-                  recurring: incomingTask.recurring || existingTask.recurring,
+                  // Use backend labels exactly as provided
+                  labels: migrateLabelFormat(incomingTask.labels || []),
+                  // Use backend priority exactly as provided
+                  priority: (!incomingTask.priority || incomingTask.priority === 'normal')
+                    ? 'none'
+                    : incomingTask.priority as UnifiedTask['priority'],
+                  // Use backend recurring exactly as provided  
+                  recurring: incomingTask.recurring,
                 };
                 
-                // Log if priority changed
-                if (existingTask.priority !== mergedTasks[id].priority) {
-                  logger.debug('[UnifiedStore] Priority changed during merge', {
-                    id: id,
-                    title: incomingTask.title,
-                    oldPriority: existingTask.priority,
-                    newPriority: mergedTasks[id].priority,
-                    incomingPriority: incomingTask.priority
-                  });
-                }
               } else {
-                // New task, use as-is
-                mergedTasks[id] = incomingTask;
+                // New task - trust backend completely
+                // This happens after a task is moved (gets new ID)
+                mergedTasks[id] = {
+                  ...incomingTask,
+                  // Use backend labels exactly as provided
+                  labels: migrateLabelFormat(incomingTask.labels || []),
+                  // Use backend priority exactly as provided
+                  priority: (!incomingTask.priority || incomingTask.priority === 'normal')
+                    ? 'none'
+                    : incomingTask.priority as UnifiedTask['priority'],
+                };
               }
             }
             

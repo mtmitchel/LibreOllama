@@ -123,7 +123,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
       style={{ 
         marginBottom: '6px', 
         position: 'relative', 
-        zIndex: (showDatePicker || showPriorityMenu) ? 9997 : 10 
+        zIndex: (showDatePicker || showPriorityMenu) ? 10000 : 100 
       }}
     >
       <div className="flex items-center gap-2">
@@ -186,7 +186,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
             </div>
             
             <div className="flex items-center gap-1">
-              <div className="relative" style={{ zIndex: showDatePicker ? 9998 : 'auto' }}>
+              <div className="relative" style={{ zIndex: showDatePicker ? 10001 : 'auto' }}>
                 <button
                   ref={dateButtonRef}
                   type="button"
@@ -201,7 +201,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                 </button>
                 
                 {showDatePicker && (
-                  <div className="inline-date-picker absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 p-3" style={{ minWidth: '200px', zIndex: 9999 }}>
+                  <div className="inline-date-picker absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 p-3" style={{ minWidth: '200px', zIndex: 10002 }}>
                     <div className="text-xs font-medium text-gray-600 mb-2">Due Date</div>
                     <input
                       type="date"
@@ -232,7 +232,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                 )}
               </div>
               
-              <div className="relative" style={{ zIndex: showPriorityMenu ? 9998 : 'auto' }}>
+              <div className="relative" style={{ zIndex: showPriorityMenu ? 10001 : 'auto' }}>
                 <button
                   ref={priorityButtonRef}
                   type="button"
@@ -255,7 +255,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                 </button>
                 
                 {showPriorityMenu && (
-                  <div className="inline-priority-menu absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 py-1" style={{ minWidth: '140px', zIndex: 9999 }}>
+                  <div className="inline-priority-menu absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 py-1" style={{ minWidth: '140px', zIndex: 10002 }}>
                     {[
                       { value: 'high', label: 'High', color: 'text-red-500' },
                       { value: 'medium', label: 'Medium', color: 'text-orange-500' },

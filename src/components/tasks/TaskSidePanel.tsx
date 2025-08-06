@@ -53,59 +53,39 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
   const handleSubmit = async () => {
     if (!task) return;
     
-    // Only send changed fields to avoid timezone shifts
-    const updatePayload: any = {};
-    
-    // Always include title to prevent Google from clearing it
-    updatePayload.title = formData.title.trim();
-    
-    // Only include other fields if they changed
-    if (formData.notes.trim() !== (task.notes || '')) {
-      updatePayload.notes = formData.notes.trim();
+    // CRITICAL: Send COMPLETE task object to prevent Google Tasks API from clearing fields
+    // The API interprets missing fields as a request to clear them
+    const completeUpdate: any = {
+      // Always include ALL fields from the current task state
+      title: formData.title.trim(),
+      notes: formData.notes.trim(),
+      priority: formData.priority,
+      labels: formData.labels,
+      // Include all task fields that might not be in the form
+      status: task.status || 'needsAction',
+      columnId: task.columnId,
+      googleTaskListId: task.googleTaskListId,
+      position: task.position,
+      recurring: task.recurring,
+      timeBlock: task.timeBlock,
+      // Handle due date - use form value if set, otherwise preserve existing
+      due: formData.due || task.due || undefined,
+    };
+
+    // If due_date_only is present in task, include it
+    if (formData.due) {
+      completeUpdate.due_date_only = formData.due.split('T')[0];
+    } else if (task.due_date_only) {
+      completeUpdate.due_date_only = task.due_date_only;
     }
     
-    // CRITICAL: Only update due date if it actually changed
-    const currentDue = task.due_date_only || task.due?.split('T')[0] || '';
-    const newDue = formData.due ? formData.due.split('T')[0] : '';
-    if (newDue !== currentDue) {
-      updatePayload.due = formData.due || undefined;
-      if (formData.due) {
-        updatePayload.due_date_only = formData.due.split('T')[0];
-      }
-    }
-    
-    if (formData.priority !== task.priority) {
-      updatePayload.priority = formData.priority;
-    }
-    
-    // Check if labels changed
-    const labelsChanged = JSON.stringify(formData.labels) !== JSON.stringify(task.labels || []);
-    if (labelsChanged) {
-      updatePayload.labels = formData.labels;
-    }
-    
-    console.log('🔵 TaskSidePanel update - Only sending changed fields:', {
+    console.log('🔵 TaskSidePanel update - Sending COMPLETE task object:', {
       taskId: task.id,
-      original: {
-        title: task.title,
-        notes: task.notes || '',
-        due: task.due,
-        due_date_only: task.due_date_only,
-        priority: task.priority,
-        labels: task.labels
-      },
-      formData: {
-        title: formData.title.trim(),
-        notes: formData.notes.trim(),
-        due: formData.due,
-        priority: formData.priority,
-        labels: formData.labels
-      },
-      updatePayload,
-      changedFields: Object.keys(updatePayload)
+      completeUpdate,
+      originalTask: task
     });
     
-    await onUpdate(task.id, updatePayload);
+    await onUpdate(task.id, completeUpdate);
   };
 
   const handleDelete = async () => {
@@ -283,10 +263,26 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                         });
                         
                         if (task) {
-                          await onUpdate(task.id, {
-                            title: task.title, // Always include title
-                            priority: option.value !== 'none' ? option.value as any : undefined
-                          });
+                          // Include ALL current form data to prevent clearing other fields
+                          const updates: any = {
+                            title: formData.title.trim() || task.title,
+                            priority: option.value !== 'none' ? option.value as any : undefined,
+                          };
+                          // Only include notes if they have a value
+                          if (formData.notes.trim() || task.notes) {
+                            updates.notes = formData.notes.trim() || task.notes;
+                          }
+                          // Only include due date if it has a non-empty value
+                          // Check for non-empty string to avoid sending empty string which clears the date
+                          const dueToUse = formData.due && formData.due.trim() ? formData.due : task.due;
+                          if (dueToUse && dueToUse.trim()) {
+                            updates.due = dueToUse;
+                          }
+                          // Only include labels if there are any
+                          if (formData.labels.length > 0 || (task.labels && task.labels.length > 0)) {
+                            updates.labels = formData.labels.length > 0 ? formData.labels : task.labels;
+                          }
+                          await onUpdate(task.id, updates);
                         }
                       }
                     }}

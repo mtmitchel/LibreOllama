@@ -20,7 +20,8 @@ mod setup;
 // Re-export commands for easy access
 use commands::tasks::all_task_data::*;
 use commands::tasks::metadata::*;
-use commands::tasks::sync::*;
+// Use the fixed sync functions instead of the broken ones
+use commands::tasks::{create_google_task, update_google_task, delete_google_task, update_google_task_list};
 
 // Database imports
 use std::sync::Arc;

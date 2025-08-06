@@ -235,6 +235,11 @@ impl GoogleTasksService {
         self.make_api_request_with_body(account_id, &endpoint, Method::POST, Some(body)).await
     }
 
+    pub async fn get_single_task(&self, account_id: &str, task_list_id: &str, task_id: &str) -> Result<GoogleTask> {
+        let endpoint = format!("lists/{}/tasks/{}", task_list_id, task_id);
+        self.make_api_request(account_id, &endpoint).await
+    }
+
     pub async fn update_task(&self, account_id: &str, task_list_id: &str, task_id: &str, input: UpdateTaskInput) -> Result<GoogleTask> {
         let endpoint = format!("lists/{}/tasks/{}", task_list_id, task_id);
         
@@ -254,13 +259,25 @@ impl GoogleTasksService {
             None
         };
         
-        let body = serde_json::json!({
-            "id": task_id,
-            "title": input.title,
-            "notes": input.notes,
-            "due": due_rfc3339,
-            "status": input.status
-        });
+        // Build body dynamically to only include non-None fields
+        // This prevents sending null values that would clear existing data
+        let mut body = serde_json::Map::new();
+        body.insert("id".to_string(), serde_json::json!(task_id));
+        
+        if let Some(title) = input.title {
+            body.insert("title".to_string(), serde_json::json!(title));
+        }
+        if let Some(notes) = input.notes {
+            body.insert("notes".to_string(), serde_json::json!(notes));
+        }
+        if let Some(due) = due_rfc3339 {
+            body.insert("due".to_string(), serde_json::json!(due));
+        }
+        if let Some(status) = input.status {
+            body.insert("status".to_string(), serde_json::json!(status));
+        }
+        
+        let body = serde_json::Value::Object(body);
 
         self.make_api_request_with_body(account_id, &endpoint, Method::PATCH, Some(body)).await
     }

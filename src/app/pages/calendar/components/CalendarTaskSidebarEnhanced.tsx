@@ -574,10 +574,8 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
                                 {task.labels.slice(0, 2).map((label, index) => (
                                   <span
                                     key={index}
-                                    className="text-xs px-1.5 py-0.5 rounded"
+                                    className={`label label-${typeof label === 'string' ? 'gray' : label.color} text-xs px-1.5 py-0.5 rounded`}
                                     style={{
-                                      backgroundColor: '#f3f4f6',
-                                      color: '#6b7280',
                                       fontSize: '11px'
                                     }}
                                   >

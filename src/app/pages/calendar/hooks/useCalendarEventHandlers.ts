@@ -149,7 +149,22 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
     const { updateTask, getTaskByGoogleId } = useUnifiedTaskStore.getState();
     const unifiedTask = getTaskByGoogleId(taskId);
     if (unifiedTask) {
-      await updateTask(unifiedTask.id, { status: completed ? 'completed' : 'needsAction' });
+      // CRITICAL: Send COMPLETE task object to prevent Google Tasks API from clearing fields
+      const completeUpdate: any = {
+        title: unifiedTask.title,
+        notes: unifiedTask.notes || '',
+        status: completed ? 'completed' : 'needsAction',
+        due: unifiedTask.due,
+        priority: unifiedTask.priority || 'none',
+        labels: unifiedTask.labels || [],
+        timeBlock: unifiedTask.timeBlock,
+        recurring: unifiedTask.recurring,
+        columnId: unifiedTask.columnId,
+        googleTaskListId: unifiedTask.googleTaskListId,
+        position: unifiedTask.position,
+      };
+      
+      await updateTask(unifiedTask.id, completeUpdate);
     }
   }, []);
 
@@ -222,7 +237,22 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
     const taskId = 'selfLink' in task ? task.id : (task.googleTaskId || task.id);
     const unifiedTask = getTaskByGoogleId(taskId);
     if (unifiedTask) {
-      updateTask(unifiedTask.id, { priority: priority as 'high' | 'medium' | 'low' | 'none' });
+      // CRITICAL: Send COMPLETE task object to prevent Google Tasks API from clearing fields
+      const completeUpdate: any = {
+        title: unifiedTask.title,
+        notes: unifiedTask.notes || '',
+        priority: priority as 'high' | 'medium' | 'low' | 'none',
+        status: unifiedTask.status || 'needsAction',
+        due: unifiedTask.due,
+        labels: unifiedTask.labels || [],
+        timeBlock: unifiedTask.timeBlock,
+        recurring: unifiedTask.recurring,
+        columnId: unifiedTask.columnId,
+        googleTaskListId: unifiedTask.googleTaskListId,
+        position: unifiedTask.position,
+      };
+      
+      updateTask(unifiedTask.id, completeUpdate);
     }
   }, []);
 

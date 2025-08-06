@@ -7,6 +7,8 @@ use anyhow::Result;
 
 pub mod models;
 pub mod schema;
+pub mod schema_v13;
+pub mod schema_v14;
 pub mod operations;
 pub mod connection;
 #[cfg(test)]

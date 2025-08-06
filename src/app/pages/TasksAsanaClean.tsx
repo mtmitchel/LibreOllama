@@ -37,6 +37,7 @@ export default function TasksAsanaClean() {
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const [selectedTask, setSelectedTask] = useState<UnifiedTask | null>(null);
   const [isTaskPanelOpen, setIsTaskPanelOpen] = useState(false);
+  const [showQuickTaskCreator, setShowQuickTaskCreator] = useState(false);
 
   const activeAccount = useActiveGoogleAccount();
   const isAuthenticated = !!activeAccount;
@@ -152,10 +153,37 @@ export default function TasksAsanaClean() {
     setShowDeleteListDialog(true);
   };
 
+  const handleQuickCreateTask = async (title: string) => {
+    try {
+      // Use the first column or the selected list
+      const targetColumn = selectedListId !== 'all' 
+        ? columns.find(c => c.id === selectedListId) 
+        : columns[0];
+      
+      if (!targetColumn) {
+        alert('Please create a task list first.');
+        return;
+      }
+
+      await createTask({
+        title,
+        columnId: targetColumn.id,
+        priority: 'none',
+        labels: []
+      });
+      
+      setShowQuickTaskCreator(false);
+      await handleSync(); // Sync to show the new task
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      alert('Failed to create task. Please try again.');
+    }
+  };
+
   return (
     <>
       {/* Header - matching UnifiedHeader style */}
-      <header className="flex items-center justify-between px-8 py-4" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E8E9' }}>
+      <header className="flex items-center justify-between px-8 py-4" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E8E9', position: 'relative', zIndex: 10 }}>
         {/* Left side - View toggle and title */}
         <div className="flex items-center gap-4">
           {/* View toggle buttons */}
@@ -251,7 +279,7 @@ export default function TasksAsanaClean() {
         </div>
         
         {/* Right side controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" style={{ position: 'relative', zIndex: 200 }}>
           
           {/* List View Controls */}
           {viewMode === 'list' && (
@@ -259,7 +287,9 @@ export default function TasksAsanaClean() {
               <div className="relative">
                 <select
                   value={selectedListId}
-                  onChange={(e) => setSelectedListId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedListId(e.target.value);
+                  }}
                   className="h-8 cursor-pointer appearance-none rounded-lg border pl-3 pr-8 text-sm transition-colors"
                   style={{
                     backgroundColor: '#F6F7F8',
@@ -296,7 +326,7 @@ export default function TasksAsanaClean() {
                 </button>
                 
                 {showSortMenu && (
-                  <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-white shadow-lg" style={{ borderColor: '#E8E8E9' }}>
+                  <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border bg-white shadow-lg" style={{ borderColor: '#E8E8E9', zIndex: 1000 }}>
                     <button
                       onClick={() => {
                         setSortBy('created');
@@ -342,10 +372,13 @@ export default function TasksAsanaClean() {
           {/* Filter Button */}
           <button 
             className="px-4 py-2 text-sm rounded-xl flex items-center gap-2 transition-colors"
+            onClick={() => console.log('Filter clicked')}
             style={{
               backgroundColor: '#F6F7F8',
               color: '#6B6F76',
-              fontWeight: 500
+              fontWeight: 500,
+              position: 'relative',
+              zIndex: 10
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#E8E9EA';
@@ -383,11 +416,14 @@ export default function TasksAsanaClean() {
             size="sm"
             onClick={() => {
               if (!isAuthenticated) {
-                alert('Please connect your Google account in Settings to create task lists.');
+                alert('Please connect your Google account in Settings to create tasks.');
                 return;
               }
-              // TODO: This should create a task, not a list
-              setShowNewListDialog(true);
+              if (columns.length === 0) {
+                alert('Please create a task list first. You can do this from the Kanban view.');
+                return;
+              }
+              setShowQuickTaskCreator(true);
             }}
             disabled={!isAuthenticated}
             style={{
@@ -409,11 +445,12 @@ export default function TasksAsanaClean() {
       </header>
 
       {/* Main Content */}
-      <div className="flex h-full flex-col bg-sidebar">
+      <div className="flex h-full flex-col bg-sidebar" style={{ position: 'relative', zIndex: 1 }}>
         {/* View Content */}
         <div className="flex-1 overflow-hidden" style={{ 
         marginRight: isTaskPanelOpen ? '512px' : '0', // 480px panel + 32px gap
-        transition: 'margin-right 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'margin-right 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative'
       }}>
         {viewMode === 'kanban' ? (
           <KanbanBoard
@@ -566,6 +603,59 @@ export default function TasksAsanaClean() {
         />
       )}
       </div>
+
+      {/* Quick Task Creator Modal */}
+      {showQuickTaskCreator && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => setShowQuickTaskCreator(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-4">Create new task</h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const title = formData.get('title') as string;
+                if (title?.trim()) {
+                  handleQuickCreateTask(title.trim());
+                }
+              }}
+            >
+              <input
+                type="text"
+                name="title"
+                placeholder="Task title..."
+                autoFocus
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setShowQuickTaskCreator(false);
+                  }
+                }}
+              />
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowQuickTaskCreator(false)}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  type="submit"
+                >
+                  Create task
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

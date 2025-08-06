@@ -522,18 +522,19 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         onConfirm={async () => {
           if (deleteConfirm) {
             console.log('Deleting task:', deleteConfirm);
-            try {
-              const { deleteTask } = useUnifiedTaskStore.getState();
-              await deleteTask(deleteConfirm.taskId);
+            const { deleteTask } = useUnifiedTaskStore.getState();
+            
+            // Fire and forget - task is optimistically removed so UI can close immediately
+            deleteTask(deleteConfirm.taskId).then(() => {
               console.log('Task deleted successfully');
-              setDeleteConfirm(null);
-              
               // Trigger sync to ensure deletion appears in Google immediately
-              await realtimeSync.requestSync(500);
-            } catch (error) {
+              realtimeSync.requestSync(500);
+            }).catch(error => {
               console.error('Failed to delete task:', error);
-              // TODO: Show error notification
-            }
+              // TODO: Show error notification and possibly restore the task
+            });
+            
+            setDeleteConfirm(null);
           }
         }}
         title="Delete Task"

@@ -85,20 +85,32 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
     setError(null);
 
     try {
-      await onSubmit({
+      // CRITICAL: Send COMPLETE task object to prevent Google Tasks API from clearing fields
+      // The API interprets missing fields as a request to clear them
+      const completeUpdate: any = {
+        // Always include all fields from the current task state
         title: formData.title.trim(),
-        notes: formData.notes.trim() || undefined,
-        due: formData.due || undefined,
-        priority: priority !== 'none' ? priority : undefined,
-        labels: labels.length > 0 ? labels : undefined,
-        recurring: recurring.enabled ? recurring : undefined,
-      });
+        notes: formData.notes.trim() || task?.notes || '',
+        priority: priority,
+        labels: labels,
+        recurring: recurring.enabled ? recurring : task?.recurring,
+        // Include task status from the original task
+        status: task?.status || 'needsAction',
+        // Include other task fields that might not be in the form
+        columnId: task?.columnId,
+        googleTaskListId: task?.googleTaskListId,
+        position: task?.position,
+        // Handle due date carefully - send existing if not changed
+        due: formData.due || task?.due || undefined,
+      };
+
+      await onSubmit(completeUpdate);
     } catch (error) {
       setError('Failed to update task. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, priority, labels, recurring, onSubmit]);
+  }, [formData, priority, labels, recurring, task, onSubmit]);
 
   // Handle input changes
   const handleInputChange = useCallback((field: keyof typeof formData) => 
@@ -121,12 +133,35 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
   }, [onDelete, onClose]);
 
   // Handle label addition
-  const handleAddLabel = useCallback(() => {
+  const handleAddLabel = useCallback(async () => {
     if (newLabel.trim() && !labels.includes(newLabel.trim())) {
-      setLabels(prev => [...prev, newLabel.trim()]);
+      const newLabels = [...labels, newLabel.trim()];
+      setLabels(newLabels);
       setNewLabel('');
+      
+      // Immediately save with COMPLETE task object to prevent data loss
+      setIsSubmitting(true);
+      try {
+        const completeUpdate: any = {
+          title: formData.title.trim(),
+          notes: formData.notes.trim() || task?.notes || '',
+          priority: priority,
+          labels: newLabels,
+          recurring: recurring.enabled ? recurring : task?.recurring,
+          status: task?.status || 'needsAction',
+          columnId: task?.columnId,
+          googleTaskListId: task?.googleTaskListId,
+          position: task?.position,
+          due: formData.due || task?.due || undefined,
+        };
+        await onSubmit(completeUpdate);
+      } catch (error) {
+        setError('Failed to add label');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
-  }, [newLabel, labels]);
+  }, [newLabel, labels, formData, priority, recurring, task, onSubmit]);
 
   // Handle escape key
   useEffect(() => {
@@ -166,13 +201,28 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
             <div className="sticky top-0 z-10 bg-white border-b border-neutral-200 px-6 py-4">
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const isCompleted = task?.status === 'completed';
-                    handleSubmit().then(() => {
-                      if (task) {
-                        onSubmit(formData);
-                      }
-                    });
+                    setIsSubmitting(true);
+                    try {
+                      // Send COMPLETE task object when marking complete/incomplete
+                      await onSubmit({
+                        title: formData.title.trim(),
+                        notes: formData.notes.trim() || task?.notes || '',
+                        priority: priority,
+                        labels: labels,
+                        recurring: recurring.enabled ? recurring : task?.recurring,
+                        status: isCompleted ? 'needsAction' : 'completed',
+                        columnId: task?.columnId,
+                        googleTaskListId: task?.googleTaskListId,
+                        position: task?.position,
+                        due: formData.due || task?.due || undefined,
+                      });
+                    } catch (error) {
+                      setError('Failed to update task status');
+                    } finally {
+                      setIsSubmitting(false);
+                    }
                   }}
                   className="text-sm text-neutral-600 hover:text-neutral-800"
                 >
@@ -239,10 +289,20 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                         setPriority(newPriority);
                         setIsSubmitting(true);
                         try {
-                          await onSubmit({
+                          // Send COMPLETE task object when updating priority
+                          const completeUpdate: any = {
                             title: formData.title.trim(),
-                            priority: newPriority !== 'none' ? newPriority : undefined,
-                          });
+                            notes: formData.notes.trim() || task?.notes || '',
+                            priority: newPriority,
+                            labels: labels,
+                            recurring: recurring.enabled ? recurring : task?.recurring,
+                            status: task?.status || 'needsAction',
+                            columnId: task?.columnId,
+                            googleTaskListId: task?.googleTaskListId,
+                            position: task?.position,
+                            due: formData.due || task?.due || undefined,
+                          };
+                          await onSubmit(completeUpdate);
                         } catch (error) {
                           setError('Failed to update priority');
                         } finally {
@@ -298,9 +358,30 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                               {label}
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setLabels(prev => prev.filter(l => l !== label));
-                                  handleSubmit();
+                                onClick={async () => {
+                                  const newLabels = labels.filter(l => l !== label);
+                                  setLabels(newLabels);
+                                  // Send COMPLETE task object when removing label
+                                  setIsSubmitting(true);
+                                  try {
+                                    const completeUpdate: any = {
+                                      title: formData.title.trim(),
+                                      notes: formData.notes.trim() || task?.notes || '',
+                                      priority: priority,
+                                      labels: newLabels,
+                                      recurring: recurring.enabled ? recurring : task?.recurring,
+                                      status: task?.status || 'needsAction',
+                                      columnId: task?.columnId,
+                                      googleTaskListId: task?.googleTaskListId,
+                                      position: task?.position,
+                                      due: formData.due || task?.due || undefined,
+                                    };
+                                    await onSubmit(completeUpdate);
+                                  } catch (error) {
+                                    setError('Failed to update labels');
+                                  } finally {
+                                    setIsSubmitting(false);
+                                  }
                                 }}
                                 disabled={isSubmitting}
                                 className="hover:text-blue-900"
@@ -320,9 +401,30 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                     <div className="space-y-2">
                       <button
                         type="button"
-                        onClick={() => {
-                          setRecurring(prev => ({ ...prev, enabled: !prev.enabled }));
-                          handleSubmit();
+                        onClick={async () => {
+                          const newRecurring = { ...recurring, enabled: !recurring.enabled };
+                          setRecurring(newRecurring);
+                          // Send COMPLETE task object when toggling recurring
+                          setIsSubmitting(true);
+                          try {
+                            const completeUpdate: any = {
+                              title: formData.title.trim(),
+                              notes: formData.notes.trim() || task?.notes || '',
+                              priority: priority,
+                              labels: labels,
+                              recurring: newRecurring.enabled ? newRecurring : undefined,
+                              status: task?.status || 'needsAction',
+                              columnId: task?.columnId,
+                              googleTaskListId: task?.googleTaskListId,
+                              position: task?.position,
+                              due: formData.due || task?.due || undefined,
+                            };
+                            await onSubmit(completeUpdate);
+                          } catch (error) {
+                            setError('Failed to update recurring');
+                          } finally {
+                            setIsSubmitting(false);
+                          }
                         }}
                         className={`flex w-full items-center justify-between rounded-lg border px-3 py-1.5 text-sm transition-colors ${
                           recurring.enabled
@@ -341,9 +443,30 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                       {recurring.enabled && (
                         <select
                           value={recurring.frequency}
-                          onChange={(e) => {
-                            setRecurring(prev => ({ ...prev, frequency: e.target.value as any }));
-                            handleSubmit();
+                          onChange={async (e) => {
+                            const newRecurring = { ...recurring, frequency: e.target.value as any };
+                            setRecurring(newRecurring);
+                            // Send COMPLETE task object when changing recurring frequency
+                            setIsSubmitting(true);
+                            try {
+                              const completeUpdate: any = {
+                                title: formData.title.trim(),
+                                notes: formData.notes.trim() || task?.notes || '',
+                                priority: priority,
+                                labels: labels,
+                                recurring: newRecurring,
+                                status: task?.status || 'needsAction',
+                                columnId: task?.columnId,
+                                googleTaskListId: task?.googleTaskListId,
+                                position: task?.position,
+                                due: formData.due || task?.due || undefined,
+                              };
+                              await onSubmit(completeUpdate);
+                            } catch (error) {
+                              setError('Failed to update recurring frequency');
+                            } finally {
+                              setIsSubmitting(false);
+                            }
                           }}
                           className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-sm"
                         >

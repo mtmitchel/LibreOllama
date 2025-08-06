@@ -131,21 +131,7 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
         {/* Metadata Row */}
         {showMetadata && (task.due || (task.priority && task.priority !== 'none') || (task.labels && task.labels.length > 0)) && (
           <div className="flex items-center gap-2 flex-wrap" style={{ marginLeft: '30px' }}>
-            {/* Labels */}
-            {task.labels && task.labels.length > 0 && (
-              <>
-                {task.labels.map((label, index) => (
-                  <span
-                    key={index}
-                    className={`label label-${label.color}`}
-                  >
-                    {label.name}
-                  </span>
-                ))}
-              </>
-            )}
-            
-            {/* Due Date */}
+            {/* Due Date - comes first */}
             {(task.due_date_only || task.due) && (
               <div className="flex items-center gap-1" style={{
                 fontSize: '12px',
@@ -174,6 +160,26 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
               }}>
                 {task.priority === 'high' ? 'High' : task.priority === 'medium' ? 'Medium' : 'Low'}
               </span>
+            )}
+            
+            {/* Labels */}
+            {task.labels && task.labels.length > 0 && (
+              <>
+                {task.labels.slice(0, 2).map((label, index) => (
+                  <span
+                    key={index}
+                    className={`label label-${label.color}`}
+                    style={{ fontSize: '11px', padding: '2px 8px' }}
+                  >
+                    {label.name}
+                  </span>
+                ))}
+                {task.labels.length > 2 && (
+                  <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                    +{task.labels.length - 2}
+                  </span>
+                )}
+              </>
             )}
             
             {/* Recurring */}

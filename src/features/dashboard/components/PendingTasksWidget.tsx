@@ -6,10 +6,25 @@ import { useUnifiedTaskStore } from '../../../stores/unifiedTaskStore';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 
 export const PendingTasksWidget: React.FC = () => {
-  const { columns, getTasksByColumn, updateTask } = useUnifiedTaskStore();
+  const { columns, getTasksByColumn, updateTask, tasks } = useUnifiedTaskStore();
   
   const toggleComplete = (columnId: string, taskId: string, completed: boolean) => {
-    updateTask(taskId, { status: completed ? 'completed' : 'needsAction' });
+    // Get the full task to include all fields in update - prevent clearing other fields
+    const task = tasks[taskId];
+    if (task) {
+      const updates: any = {
+        title: task.title,
+        status: completed ? 'completed' : 'needsAction'
+      };
+      // Only include fields that have values - don't send empty/null values
+      if (task.notes) updates.notes = task.notes;
+      if (task.due) updates.due = task.due;
+      if (task.priority && task.priority !== 'none') updates.priority = task.priority;
+      if (task.labels && task.labels.length > 0) updates.labels = task.labels;
+      if (task.timeBlock) updates.timeBlock = task.timeBlock;
+      
+      updateTask(taskId, updates);
+    }
   };
 
   // Memoize the pending tasks calculation to prevent re-render loops

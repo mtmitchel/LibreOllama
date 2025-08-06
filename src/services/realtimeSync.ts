@@ -125,6 +125,16 @@ class RealtimeSync {
       }
       
       for (const [id, task] of Object.entries(taskData)) {
+        // Debug log tasks with priority to see what backend is sending
+        if (task.priority && task.priority !== 'none') {
+          console.log('🔍 [RealtimeSync] Task from backend with priority:', {
+            id: task.id,
+            title: task.title,
+            priority: task.priority,
+            google_task_list_id: task.google_task_list_id
+          });
+        }
+        
         // Handle potential undefined or null values
         // Map 'normal' priority from backend to 'none' for frontend
         const priority = task.priority === 'normal' || !task.priority ? 'none' : task.priority;
