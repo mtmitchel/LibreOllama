@@ -32,6 +32,7 @@ interface KanbanBoardProps {
   onEditTask?: (taskId: string) => void;
   selectedTaskId?: string;
   isSidePanelOpen?: boolean;
+  selectedLabels?: string[];
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
@@ -41,7 +42,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onRenameList,
   onEditTask,
   selectedTaskId,
-  isSidePanelOpen = false
+  isSidePanelOpen = false,
+  selectedLabels = []
 }) => {
   const {
     moveTask,
@@ -250,6 +252,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               onRename={onRenameList}
               onEditTask={onEditTask}
               selectedTaskId={selectedTaskId}
+              selectedLabels={selectedLabels}
             />
           ))}
           

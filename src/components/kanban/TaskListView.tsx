@@ -17,6 +17,7 @@ interface TaskListViewProps {
   showHeader?: boolean;
   selectedListId?: string;
   sortBy?: 'created' | 'due' | 'title';
+  selectedLabels?: string[];
   onEditTask?: (task: KanbanTask, columnId: string) => void;
 }
 
@@ -26,6 +27,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   showHeader = true,
   selectedListId: parentSelectedListId,
   sortBy: parentSortBy,
+  selectedLabels = [],
   onEditTask
 }) => {
   const {
@@ -92,7 +94,16 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
         if (!matchesTitle && !matchesNotes && !matchesTags) return false;
       }
 
-      // No status filter needed - list selection handles filtering
+      // Label filter
+      if (selectedLabels.length > 0) {
+        if (!task.labels || task.labels.length === 0) return false;
+        const taskLabelNames = task.labels.map(label => 
+          typeof label === 'string' ? label : label.name
+        );
+        if (!selectedLabels.some(selectedLabel => taskLabelNames.includes(selectedLabel))) {
+          return false;
+        }
+      }
 
       return true;
     })

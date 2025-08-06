@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { KanbanBoard } from '../../components/kanban';
 import { TaskListView } from '../../components/kanban/TaskListView';
 import { TaskSidePanel } from '../../components/tasks';
 import { useHeader } from '../contexts/HeaderContext';
 import { Button } from '../../components/ui';
+import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import './styles/TasksAsanaClean.css';
 import '../../styles/asana-tokens.css';
 import '../../styles/asana-design-system.css';
@@ -38,11 +39,49 @@ export default function TasksAsanaClean() {
   const [selectedTask, setSelectedTask] = useState<UnifiedTask | null>(null);
   const [isTaskPanelOpen, setIsTaskPanelOpen] = useState(false);
   const [showQuickTaskCreator, setShowQuickTaskCreator] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   const activeAccount = useActiveGoogleAccount();
   const isAuthenticated = !!activeAccount;
 
   const { columns, createTask, deleteColumn, updateColumn, updateTask, deleteTask, tasks } = useUnifiedTaskStore();
+
+  // Get all unique labels from tasks
+  const availableLabels = useMemo(() => {
+    const labelMap = new Map<string, { name: string; color: string }>();
+    Object.values(tasks).forEach(task => {
+      if (task.labels && task.labels.length > 0) {
+        task.labels.forEach(label => {
+          if (typeof label === 'string') {
+            labelMap.set(label, { name: label, color: 'gray' });
+          } else {
+            labelMap.set(label.name, { name: label.name, color: label.color });
+          }
+        });
+      }
+    });
+    return Array.from(labelMap.values());
+  }, [tasks]);
+
+  // Filter tasks by selected labels
+  const filteredTasks = useMemo(() => {
+    if (selectedLabels.length === 0) return tasks;
+    
+    const filtered: typeof tasks = {};
+    Object.entries(tasks).forEach(([id, task]) => {
+      if (task.labels && task.labels.length > 0) {
+        const taskLabelNames = task.labels.map(label => 
+          typeof label === 'string' ? label : label.name
+        );
+        if (selectedLabels.some(selectedLabel => taskLabelNames.includes(selectedLabel))) {
+          filtered[id] = task;
+        }
+      }
+    });
+    return filtered;
+  }, [tasks, selectedLabels]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -371,24 +410,34 @@ export default function TasksAsanaClean() {
           
           {/* Filter Button */}
           <button 
+            ref={filterButtonRef}
             className="px-4 py-2 text-sm rounded-xl flex items-center gap-2 transition-colors"
-            onClick={() => console.log('Filter clicked')}
+            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
             style={{
-              backgroundColor: '#F6F7F8',
-              color: '#6B6F76',
+              backgroundColor: selectedLabels.length > 0 ? '#796EFF' : '#F6F7F8',
+              color: selectedLabels.length > 0 ? '#FFFFFF' : '#6B6F76',
               fontWeight: 500,
               position: 'relative',
               zIndex: 10
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#E8E9EA';
+              if (selectedLabels.length === 0) {
+                e.currentTarget.style.backgroundColor = '#E8E9EA';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#F6F7F8';
+              if (selectedLabels.length === 0) {
+                e.currentTarget.style.backgroundColor = '#F6F7F8';
+              }
             }}
           >
             <Filter size={16} />
             Filter
+            {selectedLabels.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-white/20">
+                {selectedLabels.length}
+              </span>
+            )}
           </button>
           
           <button
@@ -461,6 +510,7 @@ export default function TasksAsanaClean() {
             onEditTask={handleEditTask}
             selectedTaskId={selectedTask?.id}
             isSidePanelOpen={isTaskPanelOpen}
+            selectedLabels={selectedLabels}
           />
         ) : (
           <TaskListView 
@@ -469,6 +519,7 @@ export default function TasksAsanaClean() {
             showHeader={false}
             selectedListId={selectedListId}
             sortBy={sortBy}
+            selectedLabels={selectedLabels}
             onEditTask={(task: UnifiedTask, columnId: string) => handleEditTask(task.id)}
           />
         )}
@@ -603,6 +654,21 @@ export default function TasksAsanaClean() {
         />
       )}
       </div>
+
+      {/* Filter Dropdown */}
+      <FilterDropdown
+        isOpen={showFilterDropdown}
+        onClose={() => setShowFilterDropdown(false)}
+        options={availableLabels.map(label => ({
+          value: label.name,
+          label: label.name,
+          color: label.color
+        }))}
+        selectedValues={selectedLabels}
+        onSelectionChange={setSelectedLabels}
+        anchorEl={filterButtonRef.current}
+        title="Filter by labels"
+      />
 
       {/* Quick Task Creator Modal */}
       {showQuickTaskCreator && (

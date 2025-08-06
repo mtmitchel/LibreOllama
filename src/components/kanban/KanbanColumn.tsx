@@ -25,6 +25,7 @@ interface KanbanColumnProps {
   onEditTask?: (taskId: string) => void;
   selectedTaskId?: string;
   style?: React.CSSProperties;
+  selectedLabels?: string[];
 }
 
 type SortOption = 'order' | 'date' | 'title' | 'priority';
@@ -36,7 +37,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onDelete,
   onRename,
   onEditTask,
-  selectedTaskId
+  selectedTaskId,
+  selectedLabels = []
 }) => {
   const { createTask, setShowCompleted } = useUnifiedTaskStore();
   const showCompleted = useUnifiedTaskStore(state => 
@@ -124,6 +126,17 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       });
     }
     
+    // Apply label filter
+    if (selectedLabels.length > 0) {
+      tasks = tasks.filter(task => {
+        if (!task.labels || task.labels.length === 0) return false;
+        const taskLabelNames = task.labels.map(label => 
+          typeof label === 'string' ? label : label.name
+        );
+        return selectedLabels.some(selectedLabel => taskLabelNames.includes(selectedLabel));
+      });
+    }
+    
     switch (sortBy) {
       case 'order':
         // Sort by position (manual order)
@@ -158,7 +171,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       default:
         return tasks;
     }
-  }, [column.tasks, sortBy, searchQuery]);
+  }, [column.tasks, sortBy, searchQuery, selectedLabels]);
 
   // Handle task creation
   const handleCreateTask = useCallback(async (data: {
