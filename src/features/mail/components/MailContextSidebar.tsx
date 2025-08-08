@@ -130,87 +130,49 @@ export function MailContextSidebar({
   // Get context data for the current message
   const contextData = getContextData(messageId);
   
-  // If closed, show only the toggle button
+  // If closed, show slim 40px gutter handle aligned like Canvas/Chat
   if (!isOpen) {
     return (
-      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
-        <div 
-          className="border-border-default flex flex-col items-center border-b p-3"
+      <div
+        style={{
+          width: '40px',
+          height: '64px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: '-24px'
+        }}
+      >
+        <button
+          onClick={onToggle}
+          title="Show context panel"
+          aria-label="Show context panel"
+          style={{
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            background: 'transparent',
+            border: 'none',
+            color: '#7B8794',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            padding: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#F4F6F8';
+            e.currentTarget.style.color = '#323F4B';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#7B8794';
+          }}
         >
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            title="Show context panel"
-            className="text-secondary hover:bg-tertiary hover:text-primary"
-          >
-            <PanelRight size={20} />
-          </Button>
-        </div>
-        
-        <div 
-          className="flex flex-1 flex-col items-center gap-3 pt-4"
-        >
-          {/* Context indicators */}
-                      <div 
-              className="flex flex-col items-center gap-2"
-            >
-            {/* Attachments indicator */}
-            <div 
-              title="Attachments"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
-            >
-              <Paperclip size={14} />
-            </div>
-            
-            {/* Tasks indicator */}
-            <div 
-              title="Related Tasks"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
-            >
-              <CheckSquare size={14} />
-            </div>
-            
-            {/* Notes indicator */}
-            <div 
-              title="Linked Notes"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
-            >
-              <FileText size={14} />
-            </div>
-            
-            {/* Related messages indicator */}
-            <div 
-              title="Related Messages"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
-            >
-              <Mail size={14} />
-            </div>
-            
-            {/* Tags indicator */}
-            <div 
-              title="Tags"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
-            >
-              <Tag size={14} />
-            </div>
-          </div>
-          
-          {/* Context count indicator */}
-          <div 
-            className="mt-2 flex flex-col items-center gap-1"
-          >
-            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
-              <Text size="xs" weight="bold" className="text-white">
-                {contextData.length}
-              </Text>
-            </div>
-            <Text size="xs" variant="tertiary" className="text-center">
-              Items
-            </Text>
-          </div>
-        </div>
-      </Card>
+          <PanelRight size={18} strokeWidth={2} />
+        </button>
+      </div>
     );
   }
 

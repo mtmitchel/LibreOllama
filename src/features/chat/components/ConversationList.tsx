@@ -4,7 +4,7 @@ import { ChatConversation } from "../../../core/lib/chatMockData";
 import { ConversationContextMenu } from "./ConversationContextMenu";
 import { formatConversationTimestamp } from "../utils/formatTimestamp";
 import { 
-  Plus, Search, Pin, MessagesSquare, PanelLeft
+  Plus, Search, Pin, MessagesSquare, PanelLeft, PanelRight
 } from 'lucide-react';
 
 // TypeScript interfaces provide prop validation - PropTypes not needed in TS projects
@@ -60,21 +60,49 @@ export function ConversationList({
   const pinnedConversations = filteredConversations.filter(conv => conv.isPinned);
   const recentConversations = filteredConversations.filter(conv => !conv.isPinned);
 
-  // If sidebar is closed, show only the toggle button
+  // If sidebar is closed, show slim gutter handle aligned with main nav toggle
   if (!isOpen) {
     return (
-      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
-        <div className="border-border-default flex flex-col items-center border-b p-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            className="text-secondary hover:text-primary"
-          >
-            <PanelLeft size={20} />
-          </Button>
-        </div>
-      </Card>
+      <div
+        style={{
+          width: '40px',
+          height: '64px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: '-24px'
+        }}
+      >
+        <button
+          onClick={onToggle}
+          title="Show conversations"
+          aria-label="Show conversations"
+          style={{
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            background: 'transparent',
+            border: 'none',
+            color: '#7B8794',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            padding: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#F4F6F8';
+            e.currentTarget.style.color = '#323F4B';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#7B8794';
+          }}
+        >
+          <PanelRight size={18} strokeWidth={2} />
+        </button>
+      </div>
     );
   }
 
@@ -144,9 +172,11 @@ export function ConversationList({
             variant="ghost"
             size="icon"
             onClick={onToggle}
-            className="text-secondary hover:text-primary"
+            className="size-8 p-0 text-secondary hover:text-primary"
+            title="Hide conversations"
+            aria-label="Hide conversations"
           >
-            <PanelLeft size={20} />
+            <PanelLeft size={18} strokeWidth={2} />
           </Button>
           <Heading level={3}>Conversations</Heading>
         </div>

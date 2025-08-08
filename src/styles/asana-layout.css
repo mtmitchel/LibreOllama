@@ -1,0 +1,439 @@
+/* Asana Layout System - Global Page Structure */
+/* Prevents horizontal scrolling and optimizes space usage */
+
+/* Root Layout */
+#root {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+
+/* Main App Container */
+.app-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Page Container - Used by all pages */
+.asana-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #FAFBFC;
+}
+
+/* Page Content Wrapper */
+.asana-page-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Prevent horizontal scroll on all pages */
+.asana-page-content * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Dashboard Specific Layout */
+.asana-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Dashboard Widget Container */
+.asana-dashboard-widget {
+  min-width: 0; /* Prevents grid blowout */
+  width: 100%;
+}
+
+/* Responsive Grid */
+@media (max-width: 1400px) {
+  .asana-dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .asana-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .asana-page-content {
+    padding: 16px;
+  }
+}
+
+/* Widget Cards */
+.asana-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 200ms ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.asana-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.asana-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F4F6F8;
+}
+
+.asana-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0;
+}
+
+.asana-card-body {
+  width: 100%;
+}
+
+/* Quick Actions Grid */
+.asana-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.asana-quick-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: #FAFBFC;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 150ms ease;
+  cursor: pointer;
+  min-height: 100px;
+}
+
+.asana-quick-action:hover {
+  background: #F4F6F8;
+  border-color: #796EFF;
+  transform: translateY(-2px);
+}
+
+.asana-quick-action-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+  color: #796EFF;
+}
+
+.asana-quick-action-label {
+  font-size: 13px;
+  color: #52606D;
+  text-align: center;
+}
+
+/* Focus Tabs */
+.asana-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #E4E7EB;
+  padding-bottom: 8px;
+}
+
+.asana-tab {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #52606D;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.asana-tab:hover {
+  background: #F4F6F8;
+}
+
+.asana-tab.active {
+  background: #796EFF;
+  color: white;
+}
+
+/* Task List */
+.asana-task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.asana-task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: all 150ms ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.asana-task-item:hover {
+  background: #FAFBFC;
+  border-color: #CBD2D9;
+}
+
+/* Mail List */
+.asana-mail-list {
+  width: 100%;
+}
+
+.asana-mail-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid #F4F6F8;
+  cursor: pointer;
+  transition: all 150ms ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.asana-mail-item:hover {
+  background: #FAFBFC;
+}
+
+.asana-mail-content {
+  flex: 1;
+  min-width: 0; /* Enables text truncation */
+}
+
+.asana-mail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  gap: 12px;
+}
+
+.asana-mail-sender {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323F4B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asana-mail-time {
+  font-size: 12px;
+  color: #9AA5B1;
+  flex-shrink: 0;
+}
+
+.asana-mail-subject {
+  font-size: 13px;
+  font-weight: 500;
+  color: #52606D;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asana-mail-preview {
+  font-size: 13px;
+  color: #7B8794;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Activity Feed */
+.asana-activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.asana-activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #F4F6F8;
+  width: 100%;
+}
+
+.asana-activity-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.asana-activity-title {
+  font-size: 14px;
+  color: #323F4B;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.asana-activity-description {
+  font-size: 13px;
+  color: #7B8794;
+  line-height: 1.4;
+}
+
+.asana-activity-time {
+  font-size: 12px;
+  color: #9AA5B1;
+  margin-top: 4px;
+}
+
+/* Empty States */
+.asana-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  min-height: 200px;
+}
+
+.asana-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.asana-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B;
+  margin-bottom: 8px;
+}
+
+.asana-empty-description {
+  font-size: 14px;
+  color: #7B8794;
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+/* Loading States */
+.asana-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 40px;
+}
+
+.asana-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E4E7EB;
+  border-top-color: #796EFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.asana-loading-text {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #7B8794;
+}
+
+/* Icon Buttons */
+.asana-icon-button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #7B8794;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-icon-button:hover {
+  background: #F4F6F8;
+  color: #323F4B;
+}
+
+/* Utility Classes */
+.asana-text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asana-scroll-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 100%;
+}
+
+/* Prevent horizontal scroll globally */
+* {
+  max-width: 100%;
+}
+
+/* Scrollbar Styling */
+.asana-page-content::-webkit-scrollbar,
+.asana-scroll-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.asana-page-content::-webkit-scrollbar-track,
+.asana-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.asana-page-content::-webkit-scrollbar-thumb,
+.asana-scroll-container::-webkit-scrollbar-thumb {
+  background: #CBD2D9;
+  border-radius: 4px;
+}
+
+.asana-page-content::-webkit-scrollbar-thumb:hover,
+.asana-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #9AA5B1;
+}

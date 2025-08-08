@@ -1,0 +1,581 @@
+/* ============================================
+   ASANA CORE DESIGN SYSTEM
+   Single Source of Truth - v1.0
+   Created: January 2025
+   
+   This is the MASTER CSS file for the Asana design system.
+   ALL pages must use these classes for consistency.
+   ============================================ */
+
+/* ============================================
+   1. CSS VARIABLES & TOKENS
+   ============================================ */
+:root {
+  /* Brand Colors */
+  --asana-brand-purple: #796EFF;
+  --asana-brand-coral: #FC636B;
+  
+  /* Background Colors */
+  --asana-bg-primary: #FFFFFF;
+  --asana-bg-secondary: #FAFBFC;
+  --asana-bg-tertiary: #F4F6F8;
+  
+  /* Text Colors */
+  --asana-text-primary: #323F4B;
+  --asana-text-secondary: #52606D;
+  --asana-text-muted: #7B8794;
+  --asana-text-disabled: #9AA5B1;
+  
+  /* Border Colors */
+  --asana-border-primary: #E4E7EB;
+  --asana-border-secondary: #CBD2D9;
+  --asana-border-focus: var(--asana-brand-purple);
+  
+  /* Status Colors */
+  --asana-success: #14A454;
+  --asana-warning: #FFA93C;
+  --asana-error: #E8384F;
+  --asana-info: #2563EB;
+  
+  /* Spacing Scale */
+  --asana-spacing-xs: 4px;
+  --asana-spacing-sm: 8px;
+  --asana-spacing-md: 12px;
+  --asana-spacing-lg: 16px;
+  --asana-spacing-xl: 20px;
+  --asana-spacing-2xl: 24px;
+  --asana-spacing-3xl: 32px;
+  --asana-spacing-4xl: 40px;
+  
+  /* CRITICAL: Page padding - MUST be used on all pages */
+  --asana-page-padding: 24px;
+  --asana-component-gap: 24px;
+  
+  /* Border Radius */
+  --asana-radius-sm: 4px;
+  --asana-radius-md: 6px;
+  --asana-radius-lg: 8px;
+  --asana-radius-xl: 12px;
+  --asana-radius-full: 9999px;
+  
+  /* Shadows */
+  --asana-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --asana-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --asana-shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+  --asana-shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
+  
+  /* Z-index Scale */
+  --asana-z-base: 1;
+  --asana-z-dropdown: 100;
+  --asana-z-sticky: 200;
+  --asana-z-modal: 300;
+  --asana-z-popover: 400;
+  --asana-z-tooltip: 500;
+}
+
+/* ============================================
+   2. RESET & BASE STYLES
+   ============================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--asana-text-primary);
+  background: var(--asana-bg-secondary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   3. CRITICAL PAGE LAYOUT
+   THIS IS THE MOST IMPORTANT SECTION!
+   ============================================ */
+
+/* Main app container */
+.asana-app {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* CRITICAL: Page layout with MANDATORY padding */
+.asana-app-layout {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  padding: var(--asana-page-padding); /* 24px padding on ALL sides */
+  gap: var(--asana-component-gap); /* 24px gap between components */
+  background: var(--asana-bg-secondary);
+  overflow: hidden;
+}
+
+/* Alternative for pages that need full height without padding */
+.asana-app-layout-full {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  background: var(--asana-bg-secondary);
+  overflow: hidden;
+}
+
+/* Then add padding wrapper inside */
+.asana-layout-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  padding: var(--asana-page-padding);
+  gap: var(--asana-component-gap);
+}
+
+/* ============================================
+   4. SIDEBAR COMPONENTS
+   ============================================ */
+
+/* Standard sidebar */
+.asana-sidebar {
+  width: 280px;
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: var(--asana-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.asana-sidebar-header {
+  padding: var(--asana-spacing-xl);
+  border-bottom: 1px solid var(--asana-border-primary);
+  background: var(--asana-bg-primary);
+}
+
+.asana-sidebar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--asana-text-primary);
+  margin: 0;
+}
+
+.asana-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--asana-spacing-md);
+}
+
+/* Collapsible sidebar */
+.asana-sidebar.collapsed {
+  width: 60px;
+}
+
+/* ============================================
+   5. MAIN CONTENT AREA
+   ============================================ */
+
+/* Main content wrapper */
+.asana-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Content card - the main container for page content */
+.asana-content-card {
+  flex: 1;
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: var(--asana-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Content header */
+.asana-content-header {
+  padding: var(--asana-spacing-xl);
+  border-bottom: 1px solid var(--asana-border-primary);
+  background: var(--asana-bg-primary);
+  flex-shrink: 0;
+}
+
+/* Content body */
+.asana-content-body {
+  flex: 1;
+  padding: var(--asana-spacing-2xl);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   6. CARD COMPONENTS
+   ============================================ */
+
+.asana-card {
+  background: var(--asana-bg-primary);
+  border: 1px solid var(--asana-border-primary);
+  border-radius: var(--asana-radius-lg);
+  overflow: hidden;
+}
+
+.asana-card-padded {
+  padding: var(--asana-spacing-xl);
+}
+
+.asana-card-header {
+  padding: var(--asana-spacing-lg) var(--asana-spacing-xl);
+  border-bottom: 1px solid var(--asana-border-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.asana-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--asana-text-primary);
+  margin: 0;
+}
+
+.asana-card-body {
+  padding: var(--asana-spacing-xl);
+}
+
+/* ============================================
+   7. BUTTON COMPONENTS
+   ============================================ */
+
+.asana-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--asana-spacing-sm);
+  padding: var(--asana-spacing-sm) var(--asana-spacing-lg);
+  border-radius: var(--asana-radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 150ms ease;
+  border: none;
+  outline: none;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Button variants */
+.asana-btn-primary {
+  background: var(--asana-brand-purple);
+  color: white;
+}
+
+.asana-btn-primary:hover {
+  background: #6B5EE6;
+  transform: translateY(-1px);
+  box-shadow: var(--asana-shadow-sm);
+}
+
+.asana-btn-secondary {
+  background: var(--asana-bg-tertiary);
+  color: var(--asana-text-primary);
+  border: 1px solid var(--asana-border-primary);
+}
+
+.asana-btn-secondary:hover {
+  background: var(--asana-bg-secondary);
+  border-color: var(--asana-border-secondary);
+}
+
+.asana-btn-ghost {
+  background: transparent;
+  color: var(--asana-text-secondary);
+}
+
+.asana-btn-ghost:hover {
+  background: var(--asana-bg-tertiary);
+  color: var(--asana-text-primary);
+}
+
+.asana-btn-danger {
+  background: transparent;
+  color: var(--asana-error);
+  border: 1px solid var(--asana-error);
+}
+
+.asana-btn-danger:hover {
+  background: var(--asana-error);
+  color: white;
+}
+
+/* Button sizes */
+.asana-btn-sm {
+  padding: var(--asana-spacing-xs) var(--asana-spacing-md);
+  font-size: 13px;
+}
+
+.asana-btn-lg {
+  padding: var(--asana-spacing-md) var(--asana-spacing-2xl);
+  font-size: 16px;
+}
+
+/* Icon button */
+.asana-btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--asana-radius-md);
+}
+
+/* ============================================
+   8. FORM COMPONENTS
+   ============================================ */
+
+.asana-input {
+  width: 100%;
+  padding: var(--asana-spacing-sm) var(--asana-spacing-md);
+  background: var(--asana-bg-primary);
+  border: 1px solid var(--asana-border-secondary);
+  border-radius: var(--asana-radius-md);
+  font-size: 14px;
+  color: var(--asana-text-primary);
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.asana-input:focus {
+  border-color: var(--asana-border-focus);
+  box-shadow: 0 0 0 2px rgba(121, 110, 255, 0.15);
+}
+
+.asana-input:disabled {
+  background: var(--asana-bg-tertiary);
+  color: var(--asana-text-disabled);
+  cursor: not-allowed;
+}
+
+.asana-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: var(--asana-spacing-sm) var(--asana-spacing-md);
+  background: var(--asana-bg-primary);
+  border: 1px solid var(--asana-border-secondary);
+  border-radius: var(--asana-radius-md);
+  font-size: 14px;
+  color: var(--asana-text-primary);
+  outline: none;
+  resize: vertical;
+  transition: all 150ms ease;
+  font-family: inherit;
+}
+
+.asana-textarea:focus {
+  border-color: var(--asana-border-focus);
+  box-shadow: 0 0 0 2px rgba(121, 110, 255, 0.15);
+}
+
+/* ============================================
+   9. EMPTY STATES
+   ============================================ */
+
+.asana-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--asana-spacing-4xl);
+  text-align: center;
+  min-height: 300px;
+}
+
+.asana-empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--asana-spacing-lg);
+  opacity: 0.5;
+}
+
+.asana-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--asana-text-primary);
+  margin-bottom: var(--asana-spacing-sm);
+}
+
+.asana-empty-description {
+  font-size: 14px;
+  color: var(--asana-text-muted);
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* ============================================
+   10. LOADING STATES
+   ============================================ */
+
+.asana-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--asana-spacing-4xl);
+  min-height: 300px;
+}
+
+.asana-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--asana-border-primary);
+  border-top-color: var(--asana-brand-purple);
+  border-radius: 50%;
+  animation: asana-spin 0.8s linear infinite;
+}
+
+@keyframes asana-spin {
+  to { transform: rotate(360deg); }
+}
+
+.asana-loading-text {
+  margin-top: var(--asana-spacing-lg);
+  color: var(--asana-text-muted);
+  font-size: 14px;
+}
+
+/* ============================================
+   11. GRID LAYOUTS
+   ============================================ */
+
+.asana-grid {
+  display: grid;
+  gap: var(--asana-spacing-xl);
+  width: 100%;
+}
+
+.asana-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.asana-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.asana-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.asana-grid-auto {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* ============================================
+   12. UTILITY CLASSES
+   ============================================ */
+
+/* Spacing utilities */
+.asana-p-0 { padding: 0; }
+.asana-p-xs { padding: var(--asana-spacing-xs); }
+.asana-p-sm { padding: var(--asana-spacing-sm); }
+.asana-p-md { padding: var(--asana-spacing-md); }
+.asana-p-lg { padding: var(--asana-spacing-lg); }
+.asana-p-xl { padding: var(--asana-spacing-xl); }
+.asana-p-2xl { padding: var(--asana-spacing-2xl); }
+
+.asana-m-0 { margin: 0; }
+.asana-m-xs { margin: var(--asana-spacing-xs); }
+.asana-m-sm { margin: var(--asana-spacing-sm); }
+.asana-m-md { margin: var(--asana-spacing-md); }
+.asana-m-lg { margin: var(--asana-spacing-lg); }
+.asana-m-xl { margin: var(--asana-spacing-xl); }
+.asana-m-2xl { margin: var(--asana-spacing-2xl); }
+
+/* Flex utilities */
+.asana-flex { display: flex; }
+.asana-flex-col { flex-direction: column; }
+.asana-flex-1 { flex: 1; }
+.asana-items-center { align-items: center; }
+.asana-justify-between { justify-content: space-between; }
+.asana-gap-sm { gap: var(--asana-spacing-sm); }
+.asana-gap-md { gap: var(--asana-spacing-md); }
+.asana-gap-lg { gap: var(--asana-spacing-lg); }
+.asana-gap-xl { gap: var(--asana-spacing-xl); }
+
+/* Text utilities */
+.asana-text-sm { font-size: 13px; }
+.asana-text-base { font-size: 14px; }
+.asana-text-lg { font-size: 16px; }
+.asana-text-xl { font-size: 18px; }
+.asana-text-2xl { font-size: 24px; }
+
+.asana-font-normal { font-weight: 400; }
+.asana-font-medium { font-weight: 500; }
+.asana-font-semibold { font-weight: 600; }
+.asana-font-bold { font-weight: 700; }
+
+.asana-text-primary { color: var(--asana-text-primary); }
+.asana-text-secondary { color: var(--asana-text-secondary); }
+.asana-text-muted { color: var(--asana-text-muted); }
+.asana-text-purple { color: var(--asana-brand-purple); }
+.asana-text-error { color: var(--asana-error); }
+.asana-text-success { color: var(--asana-success); }
+
+/* ============================================
+   13. RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .asana-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .asana-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .asana-app-layout {
+    padding: var(--asana-spacing-lg);
+    gap: var(--asana-spacing-lg);
+  }
+  
+  .asana-sidebar {
+    display: none;
+  }
+  
+  .asana-grid-2,
+  .asana-grid-3,
+  .asana-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   14. SCROLLBAR STYLING
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--asana-border-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--asana-text-disabled);
+}
+
+/* ============================================
+   END OF ASANA CORE CSS
+   ============================================ */

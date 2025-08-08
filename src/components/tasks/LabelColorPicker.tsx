@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { Button } from '../ui';
 
 interface LabelColorPickerProps {
   selectedColor: string;
@@ -43,12 +44,14 @@ export const LabelColorPicker: React.FC<LabelColorPickerProps> = ({
   
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
+      <Button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        variant="outline"
+        size="sm"
         className={compact 
-          ? `flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 h-[42px]`
-          : `label label-${selectedColor} flex items-center gap-1 px-3 py-1.5 text-sm`
+          ? `h-[42px]`
+          : `label label-${selectedColor}`
         }
         style={compact ? {} : { minWidth: '80px' }}
         title={compact ? `Color: ${selectedColor}` : undefined}
@@ -66,20 +69,22 @@ export const LabelColorPicker: React.FC<LabelColorPickerProps> = ({
             <ChevronDown size={14} />
           </>
         )}
-      </button>
+      </Button>
       
       {isOpen && (
         <div className="absolute bottom-full right-0 mb-1 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-[100]" style={{ width: '140px' }}>
           <div className="grid grid-cols-5 gap-1">
             {colors.map(color => (
-              <button
+              <Button
                 key={color.value}
                 type="button"
                 onClick={() => {
                   onColorSelect(color.value);
                   setIsOpen(false);
                 }}
-                className={`w-6 h-6 rounded-md label-${color.value} hover:ring-2 hover:ring-offset-1 hover:ring-gray-400 transition-all`}
+                variant="ghost"
+                size="icon"
+                className={`w-6 h-6 p-0 rounded-md label-${color.value} hover:ring-2 hover:ring-offset-1 hover:ring-gray-400`}
                 title={color.label}
               />
             ))}

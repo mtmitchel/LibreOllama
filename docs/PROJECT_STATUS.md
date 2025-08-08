@@ -1,7 +1,29 @@
 # LibreOllama Project Status
 
-**Last Updated**: February 6, 2025  
+**Last Updated**: August 6, 2025  
 **Purpose**: Consolidated project status and implementation guide
+
+## 🎨 Design System Migration (Asana)
+
+**Status**: 🚧 **IN PROGRESS** - Migrating from Linear/Obsidian to Asana design system
+
+**Completed**:
+- ✅ Created Asana design token system and CSS files
+- ✅ Implemented backwards compatibility layer
+- ✅ Created page-specific Asana styles
+- ✅ Archived old design system files
+
+**In Progress**:
+- 🔄 Updating component JSX to use Asana classes
+- 🔄 Fixing Sidebar to use light Asana design (currently dark purple)
+- 🔄 Applying proper color scheme (white backgrounds, purple accents only)
+- 🔄 Updating typography and spacing to match Asana's clean aesthetic
+
+**Known Issues**:
+- ⚠️ Components still using Tailwind classes instead of Asana classes
+- ⚠️ Sidebar using dark theme instead of light
+- ⚠️ Excessive purple usage (should be accent only)
+- ⚠️ Typography and spacing don't match Asana standards
 
 ## 🎯 Code Quality Metrics
 

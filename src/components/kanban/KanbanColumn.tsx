@@ -12,7 +12,7 @@ type KanbanColumnType = TaskColumn & {
 };
 import { UnifiedTaskCard } from '../tasks/UnifiedTaskCard';
 import { InlineTaskCreator } from './InlineTaskCreator';
-import { Card, ConfirmDialog } from '../ui';
+import { Card, ConfirmDialog, Button } from '../ui';
 import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3, Flag, Eye, EyeOff } from 'lucide-react';
 import { parseGoogleTaskDate } from '../../utils/dateUtils';
 
@@ -268,9 +268,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           </div>
           <div className="flex items-center gap-0.5">
             <div className="relative" ref={sortMenuRef}>
-              <button
-                className="asana-button-ghost flex size-7 items-center justify-center" 
-                style={{ padding: '4px', minWidth: 'auto' }}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 p-0"
                 title="Sort tasks"
                 aria-label="Sort tasks"
                 aria-expanded={showSortMenu}
@@ -278,7 +280,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 onClick={() => setShowSortMenu(!showSortMenu)}
               >
                 <ArrowUpDown size={14} />
-              </button>
+              </Button>
               
               {showSortMenu && (
                 <div className="absolute right-0 top-full z-[9998] mt-1 w-48 bg-white rounded-lg" 
@@ -289,63 +291,73 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   role="menu" 
                   aria-label="Sort options"
                 >
-                  <button
+                  <Button
+                    type="button"
                     onClick={() => {
                       setSortBy('order');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg transition-colors ${
-                      sortBy === 'order' ? 'bg-gray-50' : 'hover:bg-gray-50'
+                    variant="ghost"
+                    className={`w-full justify-start rounded-none first:rounded-t-lg ${
+                      sortBy === 'order' ? 'bg-gray-50' : ''
                     }`}
                   >
                     <GripVertical size={14} className="mr-2" />
                     Date created
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    type="button"
                     onClick={() => {
                       setSortBy('date');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
+                    variant="ghost"
+                    className={`w-full justify-start rounded-none ${
                       sortBy === 'date' ? 'bg-neutral-100' : ''
                     }`}
                   >
                     <Calendar size={14} className="mr-2" />
                     Due date
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    type="button"
                     onClick={() => {
                       setSortBy('title');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
+                    variant="ghost"
+                    className={`w-full justify-start rounded-none ${
                       sortBy === 'title' ? 'bg-neutral-100' : ''
                     }`}
                   >
                     <Type size={14} className="mr-2" />
                     Title
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    type="button"
                     onClick={() => {
                       setSortBy('priority');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-gray-50 ${
+                    variant="ghost"
+                    className={`w-full justify-start rounded-none last:rounded-b-lg ${
                       sortBy === 'priority' ? 'bg-neutral-100' : ''
                     }`}
                   >
                     <Flag size={14} className="mr-2" />
                     Priority
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
             
             
             <div className="relative" ref={optionsMenuRef}>
-              <button
-                className="asana-button-ghost flex size-7 items-center justify-center cursor-pointer relative z-10"
-                style={{ padding: '4px', minWidth: 'auto', pointerEvents: 'auto' }}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 p-0"
                 title="List options"
                 aria-label="List options menu"
                 aria-expanded={showOptionsMenu}
@@ -356,7 +368,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 }}
               >
                 <MoreHorizontal size={14} />
-              </button>
+              </Button>
               
               {showOptionsMenu && (
                 <div className="absolute right-0 top-full z-[9999] mt-1 w-48 bg-white rounded-lg" 
@@ -367,40 +379,46 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   role="menu" 
                   aria-label="List options"
                 >
-                  <button
+                  <Button
+                    type="button"
                     onClick={() => {
                       console.log('🎯 Toggle button clicked! Current showCompleted:', showCompleted, 'for column:', column.id);
                       setShowCompleted(!showCompleted, column.id);
                       setShowOptionsMenu(false);
                     }}
-                    className="flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50"
+                    variant="ghost"
+                    className="w-full justify-start rounded-none first:rounded-t-lg"
                   >
                     {showCompleted ? <EyeOff size={14} className="mr-2" /> : <Eye size={14} className="mr-2" />}
                     {showCompleted ? 'Hide completed' : 'Show completed'}
-                  </button>
+                  </Button>
                   {onRename && (
-                    <button
+                    <Button
+                      type="button"
                       onClick={() => {
                         setIsRenaming(true);
                         setShowOptionsMenu(false);
                       }}
-                      className="flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50"
+                      variant="ghost"
+                      className="w-full justify-start rounded-none"
                     >
                       <Edit3 size={14} className="mr-2" />
                       Rename list
-                    </button>
+                    </Button>
                   )}
                   {onDelete && (
-                    <button
+                    <Button
+                      type="button"
                       onClick={() => {
                         setShowOptionsMenu(false);
                         onDelete(column.id);
                       }}
-                      className="flex w-full items-center px-3 py-2 text-sm text-red-600 last:rounded-b-lg hover:bg-red-50"
+                      variant="ghost"
+                      className="w-full justify-start rounded-none text-red-600 last:rounded-b-lg hover:bg-red-50"
                     >
                       <Trash2 size={14} className="mr-2" />
                       Delete list
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -414,34 +432,18 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           
           {/* Add task button - at the top */}
           {!showInlineCreator && (
-            <button
+            <Button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowInlineCreator(true);
               }}
-              className="flex items-center gap-2 w-full cursor-pointer relative z-10 mb-2 rounded-lg transition-all"
-              style={{ 
-                fontSize: '14px',
-                color: '#6B6F76',
-                padding: '8px 12px',
-                pointerEvents: 'auto',
-                backgroundColor: 'transparent',
-                border: '1px dashed rgba(0, 0, 0, 0.08)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#1E1E1F';
-                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
-                e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.12)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#6B6F76';
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)';
-              }}
+              variant="outline"
+              className="w-full justify-start mb-2 border-dashed hover:border-solid"
             >
               <div className="asana-checkbox" style={{ width: '18px', height: '18px' }} />
               <span>Add task</span>
-            </button>
+            </Button>
           )}
           
           {/* Inline Creator - at the top */}

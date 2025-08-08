@@ -25,6 +25,7 @@ import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModa
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
 // Google Tasks now managed through unified task store
 import { useMailStore } from '../../features/mail/stores/mailStore';
+import './styles/settings-asana-v2.css';
 import { 
   useGeneralSettings, 
   useAppearanceSettings, 
@@ -1254,46 +1255,35 @@ const Settings: React.FC = () => {
   // Auth initialization is now handled by MailStoreProvider
 
   return (
-    <div className="flex h-full gap-6 bg-content p-6 lg:gap-8 lg:p-8">
+    <div className="asana-settings">
       {/* Left Navigation */}
-      <div className="w-64 shrink-0">
-        <div className="border-border-default shadow-card h-full rounded-lg border bg-card p-4">
-          <h3 className="mb-3 px-3 pt-1 text-base font-semibold text-primary">
-            Categories
-          </h3>
-          <nav className="flex flex-col gap-1">
-            {navItems.map(item => {
-              const IconComponent = item.icon;
-              const isActive = activeSection === item.id;
-              return (
-                <a
-                  key={item.id}
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveSection(item.id);
-                  }}
-                  className={`focus:ring-offset-bg-tertiary flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                    ${isActive 
-                      ? 'bg-accent-ghost font-semibold text-accent-primary' 
-                      : 'hover:bg-bg-tertiary text-muted hover:text-primary'
-                    }`
-                  }
-                >
-                  <IconComponent size={16} className="shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                </a>
-              );
-            })}
-          </nav>
-        </div>
+      <div className="asana-settings-sidebar">
+        <h3 className="asana-settings-title">Categories</h3>
+        <nav className="asana-settings-nav">
+          {navItems.map(item => {
+            const IconComponent = item.icon;
+            const isActive = activeSection === item.id;
+            return (
+              <a
+                key={item.id}
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveSection(item.id);
+                }}
+                className={`asana-settings-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <IconComponent className="asana-settings-nav-icon" />
+                <span>{item.label}</span>
+              </a>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Main Content Area */}
-      <div className="relative min-w-0 flex-1 rounded-lg bg-tertiary">
-        <div className="h-full">
-          {renderSection()} 
-        </div>
+      <div className="asana-settings-content">
+        {renderSection()}
 
         {/* Google Authentication Modal - positioned relative to main content area */}
         {showGoogleAuthModal && (

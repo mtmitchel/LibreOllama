@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { ContextMenu } from '../ui';
+import { ContextMenu, Button } from '../ui';
 import { Calendar, CheckSquare, Flag, Tag, RotateCcw, Edit3, Copy, Trash2, User, RefreshCw } from 'lucide-react';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 import { parseGoogleTaskDate, formatTaskDate } from '../../utils/dateUtils';
@@ -108,19 +108,22 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
       <div className="flex flex-col gap-2">
         <div className="flex items-start gap-3">
           {/* Completion Checkbox */}
-          <button
+          <Button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onToggle();
             }}
-            className={`asana-checkbox ${isCompleted ? 'checked' : ''}`}
+            variant="ghost"
+            size="icon"
+            className={`asana-checkbox ${isCompleted ? 'checked' : ''} h-5 w-5 p-0`}
             style={{ marginTop: '1px' }}
             title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
           >
             <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none">
               <path d="M13.5 4.5L6 12L2.5 8.5" stroke={isCompleted ? "white" : "#D4D6DA"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          </button>
+          </Button>
 
           {/* Task Title */}
           <h4 className={`asana-task-title ${isCompleted ? 'completed' : ''} flex-1`}>

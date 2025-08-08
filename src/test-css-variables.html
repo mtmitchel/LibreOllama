@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="./styles/reset.css">
+  <link rel="stylesheet" href="./styles/unified-tokens.css">
+  <link rel="stylesheet" href="./styles/themes.css">
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+    }
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .test-card {
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      background: var(--bg-primary);
+      box-shadow: var(--shadow-sm);
+    }
+    .variable {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+    .name { font-weight: bold; }
+    .value { color: var(--text-secondary); }
+    .undefined { color: var(--error); background: #fee; padding: 0 4px; }
+    h2 { 
+      margin-bottom: 10px;
+      color: var(--text-primary);
+      font-size: var(--text-h3);
+    }
+  </style>
+</head>
+<body>
+  <h1>CSS Variables Test</h1>
+  <div id="test-results" class="test-grid"></div>
+  
+  <script>
+    const criticalVariables = [
+      // Core colors
+      '--bg-canvas', '--bg-primary', '--bg-secondary', '--bg-tertiary',
+      '--text-primary', '--text-secondary', '--text-muted',
+      '--border-default', '--border-subtle', '--border-focus',
+      '--accent-primary', '--accent-soft',
+      
+      // Typography
+      '--font-family-sans', '--text-body', '--text-h1', '--text-h2',
+      '--font-weight-normal', '--font-weight-medium', '--font-weight-semibold',
+      
+      // Spacing
+      '--space-1', '--space-2', '--space-3', '--space-4',
+      
+      // Shadows
+      '--shadow-sm', '--shadow-md', '--shadow-lg',
+      
+      // Radius
+      '--radius-sm', '--radius-md', '--radius-lg',
+      
+      // Component specific (should exist)
+      '--header-height', '--sidebar-width',
+      
+      // Asana aliases (backwards compat)
+      '--asana-bg-primary', '--asana-text-primary', '--asana-border-default'
+    ];
+    
+    const categories = {
+      'Core Colors': ['--bg-canvas', '--bg-primary', '--bg-secondary', '--bg-tertiary', '--bg-muted', '--bg-surface'],
+      'Text Colors': ['--text-primary', '--text-secondary', '--text-muted', '--text-on-accent'],
+      'Borders': ['--border-default', '--border-subtle', '--border-focus', '--border-primary'],
+      'Accent': ['--accent-primary', '--accent-soft', '--accent-ghost'],
+      'Typography': ['--font-family-sans', '--text-body', '--text-h1', '--font-weight-normal'],
+      'Spacing': ['--space-1', '--space-2', '--space-3', '--space-4'],
+      'Layout': ['--header-height', '--sidebar-width', '--column-width']
+    };
+    
+    const container = document.getElementById('test-results');
+    const computedStyle = getComputedStyle(document.documentElement);
+    
+    let undefinedCount = 0;
+    let definedCount = 0;
+    
+    Object.entries(categories).forEach(([category, vars]) => {
+      const card = document.createElement('div');
+      card.className = 'test-card';
+      
+      const title = document.createElement('h2');
+      title.textContent = category;
+      card.appendChild(title);
+      
+      vars.forEach(varName => {
+        const value = computedStyle.getPropertyValue(varName).trim();
+        const row = document.createElement('div');
+        row.className = 'variable';
+        
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = varName;
+        
+        const val = document.createElement('span');
+        val.className = value ? 'value' : 'value undefined';
+        val.textContent = value || 'UNDEFINED';
+        
+        if (value) {
+          definedCount++;
+        } else {
+          undefinedCount++;
+        }
+        
+        row.appendChild(name);
+        row.appendChild(val);
+        card.appendChild(row);
+      });
+      
+      container.appendChild(card);
+    });
+    
+    // Summary
+    const summary = document.createElement('div');
+    summary.style.marginTop = '20px';
+    summary.style.padding = '20px';
+    summary.style.background = undefinedCount > 0 ? 'var(--error, #fee)' : 'var(--success, #efe)';
+    summary.style.borderRadius = 'var(--radius-md, 8px)';
+    summary.innerHTML = `
+      <h2>Summary</h2>
+      <p>Defined: ${definedCount}</p>
+      <p>Undefined: ${undefinedCount}</p>
+      <p>Status: ${undefinedCount === 0 ? '✅ All variables defined!' : '❌ Some variables missing'}</p>
+    `;
+    document.body.appendChild(summary);
+  </script>
+</body>
+</html>

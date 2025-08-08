@@ -1,0 +1,191 @@
+/**
+ * Design System CSS Reset
+ * 
+ * Modern CSS Reset based on Josh Comeau's reset with Asana DLS enhancements
+ * Ensures consistent rendering across all browsers and establishes baseline styles
+ * that work harmoniously with our design tokens.
+ */
+
+/*
+  1. Use a more-intuitive box-sizing model.
+*/
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/*
+  2. Remove default margin and padding
+*/
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/*
+  3. Allow percentage-based heights in the application
+*/
+html, body {
+  height: 100%;
+}
+
+/*
+  4. Add accessible line-height
+  5. Improve text rendering
+*/
+body {
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
+}
+
+/*
+  6. Improve media defaults
+*/
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/*
+  7. Remove built-in form typography styles
+*/
+input, button, textarea, select {
+  font: inherit;
+  color: inherit;
+}
+
+/*
+  8. Avoid text overflows
+*/
+p, h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/*
+  9. Create a root stacking context
+*/
+#root, #__next {
+  isolation: isolate;
+}
+
+/*
+  10. Remove list styles from lists with role="list"
+*/
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+}
+
+/*
+  11. Set consistent focus styles (will be overridden by components)
+*/
+:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/*
+  12. Remove default button styles
+*/
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/*
+  13. Remove default link styles
+*/
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/*
+  14. Ensure tables render consistently
+*/
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/*
+  15. Remove default fieldset styles
+*/
+fieldset {
+  border: none;
+}
+
+/*
+  16. Ensure consistent textarea behavior
+*/
+textarea {
+  resize: vertical;
+}
+
+/*
+  17. Hide content from screen readers when aria-hidden="true"
+*/
+[aria-hidden="true"] {
+  display: none !important;
+}
+
+/*
+  18. Ensure hidden elements are truly hidden
+*/
+[hidden] {
+  display: none !important;
+}
+
+/*
+  19. Improve scrollbar styling (webkit browsers)
+*/
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/*
+  20. Improve selection styling
+*/
+::selection {
+  background-color: var(--brand-subtle);
+  color: var(--brand-primary);
+}
+
+::-moz-selection {
+  background-color: var(--brand-subtle);
+  color: var(--brand-primary);
+}
+
+/*
+  21. Reduce motion for users who prefer it
+*/
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

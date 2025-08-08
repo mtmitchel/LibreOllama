@@ -57,18 +57,14 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
   };
 
   return (
-    <Card padding="sm">
-      <div className="mb-4 flex items-center justify-between">
-        <Heading level={3}>Quick actions</Heading>
+    <div className="asana-card">
+      <div className="asana-card-header">
+        <h3 className="asana-card-title">Quick actions</h3>
         <DropdownMenu>
           <DropdownMenu.Trigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-secondary hover:text-primary"
-            >
-              <Settings2 className="size-4" />
-            </Button>
+            <button className="asana-icon-button">
+              <Settings2 size={16} />
+            </button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Content>
             <DropdownMenu.Item onSelect={handleCustomizeActions}>
@@ -84,19 +80,20 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
           </DropdownMenu.Content>
         </DropdownMenu>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="asana-quick-actions">
         {actions.map((action) => (
-          <Button
+          <div
             key={action.id}
-            variant="secondary"
             onClick={action.onClick}
-            className="flex h-20 flex-col items-center justify-center gap-2 whitespace-normal p-2 text-center"
+            className="asana-quick-action"
           >
-            {action.icon}
-            <span className="text-xs font-medium leading-tight text-primary">{action.label}</span>
-          </Button>
+            <div className="asana-quick-action-icon">
+              {action.icon}
+            </div>
+            <span className="asana-quick-action-label">{action.label}</span>
+          </div>
         ))}
       </div>
-    </Card>
+    </div>
   );
 };

@@ -1,0 +1,410 @@
+/* 
+ * Asana Design System - Global Styles with Backwards Compatibility
+ * This file provides a migration path from the old design system to Asana
+ */
+
+/* Keep Tailwind for backwards compatibility during migration */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== ASANA DESIGN TOKENS ===== */
+:root {
+  /* Brand Colors */
+  --asana-brand-purple: #796EFF;
+  --asana-brand-coral: #FC636B;
+  --asana-brand-mint: #2EAADC;
+  --asana-brand-purple-hover: #6257E0;
+  
+  /* Background Colors */
+  --asana-bg-canvas: #FFFFFF; /* Changed to pure white */
+  --asana-bg-primary: #FFFFFF;
+  --asana-bg-secondary: #F6F7F8;
+  --asana-bg-sidebar: #FFFFFF; /* Sidebar white */
+  --asana-bg-hover: #F4F6F8; /* Light gray hover */
+  --asana-bg-input: #F6F7F8;
+  --asana-bg-input-focus: #FFFFFF;
+  --asana-bg-card: #FFFFFF;
+  --asana-bg-header: #FFFFFF;
+  
+  /* Text Colors */
+  --asana-text-primary: #151B26;
+  --asana-text-secondary: #6B6F76;
+  --asana-text-tertiary: #9CA1A8;
+  --asana-text-muted: #B4B8BD;
+  --asana-text-placeholder: #9CA3AF;
+  
+  /* Border Colors */
+  --asana-border-default: #E8E8E9;
+  --asana-border-subtle: #F0F0F1;
+  --asana-border-hover: #D1D5DB;
+  --asana-border-focus: #796EFF;
+  
+  /* Status Colors */
+  --asana-status-success: #14A454;
+  --asana-status-warning: #FFA93C;
+  --asana-status-blocked: #E8384F;
+  --asana-status-info: #6366F1;
+  
+  /* Priority Colors */
+  --asana-priority-urgent-bg: #FEE4E2;
+  --asana-priority-urgent-text: #DC2626;
+  --asana-priority-high-bg: #FEF3C7;
+  --asana-priority-high-text: #D97706;
+  --asana-priority-normal-bg: transparent;
+  --asana-priority-normal-text: inherit;
+  --asana-priority-low-bg: #F3F4F6;
+  --asana-priority-low-text: #6B7280;
+  
+  /* Shadows */
+  --asana-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --asana-shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --asana-shadow-drag: 0 12px 24px rgba(0, 0, 0, 0.15);
+  --asana-shadow-overlay: 0 20px 40px rgba(0, 0, 0, 0.2);
+  
+  /* Spacing */
+  --asana-spacing-xs: 4px;
+  --asana-spacing-sm: 8px;
+  --asana-spacing-md: 12px;
+  --asana-spacing-lg: 16px;
+  --asana-spacing-xl: 20px;
+  --asana-spacing-2xl: 24px;
+  --asana-spacing-3xl: 32px;
+  --asana-spacing-4xl: 40px;
+  
+  /* Consistent Page/Component Padding */
+  --asana-page-padding: 24px; /* Standard page padding */
+  --asana-card-padding: 20px; /* Standard card padding */
+  --asana-section-gap: 24px; /* Gap between sections */
+  --asana-component-gap: 16px; /* Gap between components */
+  
+  /* Typography */
+  --asana-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', sans-serif;
+  --asana-font-size-xs: 12px;
+  --asana-font-size-sm: 13px;
+  --asana-font-size-base: 14px;
+  --asana-font-size-lg: 16px;
+  --asana-font-size-xl: 18px;
+  --asana-font-size-2xl: 20px;
+  --asana-font-size-3xl: 24px;
+  --asana-font-weight-normal: 400;
+  --asana-font-weight-medium: 500;
+  --asana-font-weight-semibold: 600;
+  --asana-font-weight-bold: 700;
+  --asana-line-height-tight: 1.25;
+  --asana-line-height-base: 1.5;
+  --asana-line-height-relaxed: 1.75;
+  
+  /* Border Radius */
+  --asana-radius-sm: 4px;
+  --asana-radius-md: 6px;
+  --asana-radius-lg: 8px;
+  --asana-radius-xl: 12px;
+  --asana-radius-full: 9999px;
+  
+  /* Transitions */
+  --asana-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --asana-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --asana-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Layout */
+  --asana-header-height: 64px;
+  --asana-sidebar-width: 240px;
+  --asana-sidebar-collapsed: 64px;
+}
+
+/* ===== BACKWARDS COMPATIBILITY MAPPING ===== */
+/* Map old design system variables to Asana equivalents */
+:root {
+  /* Color Primitives - Map to closest Asana equivalents */
+  --gray-50: #fafafa;
+  --gray-100: #f4f4f5;
+  --gray-200: #e4e4e7;
+  --gray-300: #d4d4d8;
+  --gray-400: #a1a1aa;
+  --gray-500: #71717a;
+  --gray-600: #52525b;
+  --gray-700: #3f3f46;
+  --gray-800: #27272a;
+  --gray-850: #1f1f23;
+  --gray-900: #18181b;
+  --gray-950: #09090b;
+  
+  --indigo-50: #eef2ff;
+  --indigo-100: #e0e7ff;
+  --indigo-200: #c7d2fe;
+  --indigo-300: #a5b4fc;
+  --indigo-400: #818cf8;
+  --indigo-500: var(--asana-brand-purple);
+  --indigo-600: #4f46e5;
+  --indigo-700: #4338ca;
+  --indigo-800: #3730a3;
+  --indigo-900: #312e81;
+  --indigo-950: #1e1b4b;
+  
+  --green-50: #f0fdf4;
+  --green-200: #bbf7d0;
+  --green-500: var(--asana-status-success);
+  --green-600: #059669;
+  --emerald-500: var(--asana-status-success);
+  
+  --amber-50: #fffbeb;
+  --amber-200: #fde68a;
+  --amber-500: var(--asana-status-warning);
+  --amber-600: #d97706;
+  
+  --red-50: #fef2f2;
+  --red-200: #fecaca;
+  --red-300: #fca5a5;
+  --red-500: var(--asana-status-blocked);
+  --red-600: #dc2626;
+  
+  /* Typography Scale - Map to Asana */
+  --font-sans: var(--asana-font-family);
+  --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  
+  --text-xs: var(--asana-font-size-xs);
+  --text-sm: var(--asana-font-size-sm);
+  --text-base: var(--asana-font-size-base);
+  --text-lg: var(--asana-font-size-lg);
+  --text-xl: var(--asana-font-size-xl);
+  --text-2xl: var(--asana-font-size-2xl);
+  --text-3xl: var(--asana-font-size-3xl);
+  
+  --font-normal: var(--asana-font-weight-normal);
+  --font-medium: var(--asana-font-weight-medium);
+  --font-semibold: var(--asana-font-weight-semibold);
+  --font-bold: var(--asana-font-weight-bold);
+  
+  --leading-none: 1;
+  --leading-tight: var(--asana-line-height-tight);
+  --leading-normal: var(--asana-line-height-base);
+  --leading-relaxed: var(--asana-line-height-relaxed);
+  
+  /* Spacing Scale - Map to Asana */
+  --space-0: 0;
+  --space-0-5: 2px;
+  --space-1: var(--asana-spacing-xs);
+  --space-1-5: 6px;
+  --space-2: var(--asana-spacing-sm);
+  --space-2-5: 10px;
+  --space-3: var(--asana-spacing-md);
+  --space-4: var(--asana-spacing-lg);
+  --space-5: var(--asana-spacing-xl);
+  --space-6: var(--asana-spacing-2xl);
+  --space-8: var(--asana-spacing-3xl);
+  --space-10: var(--asana-spacing-4xl);
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
+  
+  /* Border Radius - Map to Asana */
+  --radius-none: 0;
+  --radius-sm: var(--asana-radius-sm);
+  --radius-md: var(--asana-radius-md);
+  --radius-lg: var(--asana-radius-lg);
+  --radius-xl: var(--asana-radius-xl);
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-full: var(--asana-radius-full);
+  
+  /* Transitions - Map to Asana */
+  --transition-fast: var(--asana-transition-fast);
+  --transition-medium: var(--asana-transition-base);
+  --transition-slow: var(--asana-transition-slow);
+  --transition-slower: 500ms ease;
+  --transition-colors: color, background-color, border-color var(--asana-transition-base);
+  --transition-transform: transform var(--asana-transition-base);
+  --transition-all: all var(--asana-transition-base);
+  
+  /* Z-Index Scale */
+  --z-0: 0;
+  --z-10: 10;
+  --z-20: 20;
+  --z-30: 30;
+  --z-40: 40;
+  --z-50: 50;
+}
+
+/* ===== SEMANTIC TOKEN MAPPING ===== */
+:root {
+  /* Backgrounds - Map to Asana */
+  --bg-page: var(--asana-bg-canvas);
+  --bg-content: var(--asana-bg-primary);
+  --bg-sidebar: var(--asana-bg-sidebar);
+  --bg-card: var(--asana-bg-card);
+  --bg-header: var(--asana-bg-header);
+  --bg-canvas: var(--asana-bg-canvas);
+  --bg-notes: var(--asana-bg-canvas);
+  --bg-primary: var(--asana-bg-primary);
+  --bg-secondary: var(--asana-bg-secondary);
+  --bg-tertiary: rgba(244, 244, 245, 0.6);
+  --bg-surface: rgba(255, 255, 255, 0.8);
+  --bg-elevated: rgba(249, 250, 251, 0.8);
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-glass: rgba(255, 255, 255, 0.6);
+  
+  /* Text Colors - Map to Asana */
+  --text-primary: var(--asana-text-primary);
+  --text-secondary: var(--asana-text-secondary);
+  --text-tertiary: var(--asana-text-tertiary);
+  --text-muted: var(--asana-text-muted);
+  --text-inverted: #ffffff;
+  --text-on-accent: #ffffff;
+  
+  /* Borders - Map to Asana */
+  --border-primary: var(--asana-border-default);
+  --border-secondary: var(--asana-border-subtle);
+  --border-subtle: var(--asana-border-subtle);
+  --border-focus: var(--asana-border-focus);
+  --border-error: var(--asana-status-blocked);
+  --border-success: var(--asana-status-success);
+  --border-warning: var(--asana-status-warning);
+  --border-default: var(--asana-border-default);
+  
+  /* Interactive States - Map to Asana */
+  --state-hover: var(--asana-bg-hover);
+  --state-active: rgba(121, 110, 255, 0.1);
+  --state-selected: rgba(121, 110, 255, 0.05);
+  --state-focus: rgba(121, 110, 255, 0.1);
+  --state-pressed: rgba(121, 110, 255, 0.2);
+  
+  --hover-bg: var(--asana-bg-hover);
+  --active-bg: rgba(121, 110, 255, 0.1);
+  --selected-bg: rgba(121, 110, 255, 0.05);
+  --selected-border: var(--asana-brand-purple);
+  --selected-text: var(--asana-brand-purple);
+  
+  /* Accent Colors - Map to Asana */
+  --accent-primary: var(--asana-brand-purple);
+  --accent-secondary: var(--asana-brand-purple-hover);
+  --accent-tertiary: var(--asana-brand-coral);
+  --accent-bg: rgba(121, 110, 255, 0.1);
+  --accent-text: var(--asana-brand-purple);
+  --accent-soft: rgba(121, 110, 255, 0.05);
+  --accent-ghost: rgba(121, 110, 255, 0.02);
+  
+  /* Status Colors - Map to Asana */
+  --status-success: var(--asana-status-success);
+  --status-warning: var(--asana-status-warning);
+  --status-error: var(--asana-status-blocked);
+  --status-info: var(--asana-status-info);
+  --status-success-bg: rgba(20, 164, 84, 0.1);
+  --status-warning-bg: rgba(255, 169, 60, 0.1);
+  --status-error-bg: rgba(232, 56, 79, 0.1);
+  --status-info-bg: rgba(99, 102, 241, 0.1);
+  
+  --success: var(--asana-status-success);
+  --success-fg: var(--asana-status-success);
+  --success-ghost: rgba(20, 164, 84, 0.1);
+  --warning: var(--asana-status-warning);
+  --warning-fg: var(--asana-status-warning);
+  --warning-ghost: rgba(255, 169, 60, 0.1);
+  --error: var(--asana-status-blocked);
+  --error-fg: var(--asana-status-blocked);
+  --error-ghost: rgba(232, 56, 79, 0.1);
+  
+  /* Component Backgrounds - Map to Asana */
+  --input-bg: var(--asana-bg-input);
+  --input-border: var(--asana-border-default);
+  --input-focus-ring: rgba(121, 110, 255, 0.2);
+  --chat-bubble-bg: var(--asana-bg-secondary);
+  --chat-bubble-border: var(--asana-border-subtle);
+  --chat-bubble-text: var(--asana-text-primary);
+  
+  /* Shadows - Map to Asana */
+  --shadow-sm: var(--asana-shadow-card);
+  --shadow-md: var(--asana-shadow-card-hover);
+  --shadow-lg: var(--asana-shadow-drag);
+  --shadow-xl: var(--asana-shadow-overlay);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  
+  /* Additional mappings for components */
+  --sidebar-bg: var(--asana-bg-sidebar);
+  --header-bg: var(--asana-bg-header);
+  --accent-primary-alpha: rgba(121, 110, 255, 0.1);
+}
+
+/* Dark theme - temporarily disabled during migration */
+.dark {
+  /* Keep light theme values for now */
+}
+
+/* ===== BASE STYLES ===== */
+body {
+  font-family: var(--asana-font-family);
+  color: #323F4B; /* Dark text for contrast */
+  background: #FFFFFF; /* Pure white background */
+  line-height: 1.5;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  background: #FFFFFF;
+  min-height: 100vh;
+  display: flex;
+}
+
+/* ===== ACCESSIBILITY & ANIMATION ===== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+*:focus-visible {
+  outline: 2px solid var(--asana-border-focus);
+  outline-offset: 2px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Keep specific app styles that were in globals.css */
+.notes-title-input:not(:focus) {
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.2s ease-in-out;
+}
+
+/* Google Auth Modal Animations */
+@keyframes scaleCheck {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-check {
+  animation: scaleCheck 0.6s ease-out;
+}
+
+.animation-delay-150 {
+  animation-delay: 150ms;
+}
+
+.animation-delay-300 {
+  animation-delay: 300ms;
+}

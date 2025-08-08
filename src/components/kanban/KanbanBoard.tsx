@@ -291,70 +291,39 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   autoFocus
                 />
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    type="button"
                     onClick={() => handleCreateList(newColumnTitle)}
-                    style={{
-                      padding: '6px 12px',
-                      backgroundColor: '#F06A6A',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
+                    variant="primary"
+                    size="sm"
+                    className="h-8 text-sm"
                   >
                     Add
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    type="button"
                     onClick={() => {
                       setNewColumnTitle('');
                       setIsAddingColumn(false);
                     }}
-                    style={{
-                      padding: '6px 12px',
-                      backgroundColor: 'transparent',
-                      color: '#6B6F76',
-                      border: '1px solid #E6E6E6',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-sm"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
-              <button
-                className="whitespace-nowrap flex items-center gap-2 cursor-pointer"
-                style={{ 
-                  fontSize: '14px',
-                  color: '#6B6F76',
-                  padding: '12px 16px',
-                  backgroundColor: 'transparent',
-                  border: '2px dashed rgba(0, 0, 0, 0.08)',
-                  borderRadius: '8px',
-                  width: '100%',
-                  transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-                  fontWeight: 500
-                }}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start border-dashed hover:border-solid"
                 onClick={() => setIsAddingColumn(true)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.12)';
-                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.02)';
-                  e.currentTarget.style.color = '#1E1E1F';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)';
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#6B6F76';
-                }}
               >
                 <Plus size={18} strokeWidth={2} />
                 <span>Add list</span>
-              </button>
+              </Button>
             )}
             </div>
           )}

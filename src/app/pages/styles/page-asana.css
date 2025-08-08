@@ -1,0 +1,327 @@
+/* Generic Page Styles - Asana Design System */
+/* For Notes, Canvas, Projects, Agents pages */
+
+/* Page Container */
+.asana-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--asana-bg-canvas);
+}
+
+/* Page Header */
+.asana-page-header {
+  height: 64px;
+  padding: 0 var(--asana-spacing-3xl);
+  background: var(--asana-bg-primary);
+  border-bottom: 1px solid var(--asana-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.asana-page-header-content {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-2xl);
+}
+
+.asana-page-title {
+  font-size: var(--asana-font-size-xl);
+  font-weight: var(--asana-font-weight-semibold);
+  color: var(--asana-text-primary);
+  margin: 0;
+}
+
+.asana-page-subtitle {
+  font-size: var(--asana-font-size-sm);
+  color: var(--asana-text-secondary);
+  margin: 0;
+}
+
+.asana-page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-md);
+}
+
+/* Page Content */
+.asana-page-content {
+  flex: 1;
+  padding: var(--asana-spacing-2xl);
+  overflow-y: auto;
+}
+
+.asana-page-container {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* Content Grid */
+.asana-content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--asana-spacing-xl);
+  margin-bottom: var(--asana-spacing-2xl);
+}
+
+/* Content Card */
+.asana-content-card {
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-lg);
+  border: 1px solid var(--asana-border-subtle);
+  box-shadow: var(--asana-shadow-card);
+  overflow: hidden;
+  transition: all var(--asana-transition-base);
+  cursor: pointer;
+}
+
+.asana-content-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--asana-shadow-card-hover);
+}
+
+.asana-content-card-header {
+  padding: var(--asana-spacing-xl);
+  border-bottom: 1px solid var(--asana-border-subtle);
+}
+
+.asana-content-card-title {
+  font-size: var(--asana-font-size-lg);
+  font-weight: var(--asana-font-weight-semibold);
+  color: var(--asana-text-primary);
+  margin: 0 0 var(--asana-spacing-sm) 0;
+}
+
+.asana-content-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-md);
+  font-size: var(--asana-font-size-xs);
+  color: var(--asana-text-secondary);
+}
+
+.asana-content-card-body {
+  padding: var(--asana-spacing-xl);
+}
+
+.asana-content-card-description {
+  font-size: var(--asana-font-size-sm);
+  color: var(--asana-text-secondary);
+  line-height: var(--asana-line-height-base);
+  margin: 0;
+}
+
+.asana-content-card-footer {
+  padding: var(--asana-spacing-lg) var(--asana-spacing-xl);
+  background: var(--asana-bg-secondary);
+  border-top: 1px solid var(--asana-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Action Button */
+.asana-action-btn {
+  padding: var(--asana-spacing-sm) var(--asana-spacing-lg);
+  background: var(--asana-brand-purple);
+  color: white;
+  border: none;
+  border-radius: var(--asana-radius-md);
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--asana-spacing-sm);
+}
+
+.asana-action-btn:hover {
+  background: var(--asana-brand-purple-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--asana-shadow-card);
+}
+
+.asana-action-btn-secondary {
+  background: transparent;
+  color: var(--asana-text-primary);
+  border: 1px solid var(--asana-border-default);
+}
+
+.asana-action-btn-secondary:hover {
+  background: var(--asana-bg-hover);
+  border-color: var(--asana-border-hover);
+}
+
+/* Search Bar */
+.asana-search-bar {
+  position: relative;
+  max-width: 400px;
+}
+
+.asana-search-input {
+  width: 100%;
+  padding: var(--asana-spacing-md) var(--asana-spacing-lg);
+  padding-left: 40px;
+  background: var(--asana-bg-input);
+  border: 1px solid transparent;
+  border-radius: var(--asana-radius-md);
+  color: var(--asana-text-primary);
+  font-size: var(--asana-font-size-sm);
+  outline: none;
+  transition: all var(--asana-transition-fast);
+}
+
+.asana-search-input::placeholder {
+  color: var(--asana-text-placeholder);
+}
+
+.asana-search-input:hover {
+  background: var(--asana-bg-primary);
+  border-color: var(--asana-border-default);
+}
+
+.asana-search-input:focus {
+  background: var(--asana-bg-primary);
+  border-color: var(--asana-border-focus);
+  box-shadow: 0 0 0 3px rgba(121, 110, 255, 0.1);
+}
+
+.asana-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--asana-text-muted);
+  width: 18px;
+  height: 18px;
+}
+
+/* Tabs */
+.asana-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-xs);
+  border-bottom: 1px solid var(--asana-border-subtle);
+  margin-bottom: var(--asana-spacing-2xl);
+}
+
+.asana-tab {
+  padding: var(--asana-spacing-md) var(--asana-spacing-lg);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--asana-text-secondary);
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  margin-bottom: -1px;
+}
+
+.asana-tab:hover {
+  color: var(--asana-text-primary);
+  background: var(--asana-bg-hover);
+}
+
+.asana-tab.active {
+  color: var(--asana-brand-purple);
+  border-bottom-color: var(--asana-brand-purple);
+}
+
+/* Filter Pills */
+.asana-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--asana-spacing-xl);
+}
+
+.asana-filter-pill {
+  padding: var(--asana-spacing-sm) var(--asana-spacing-md);
+  background: var(--asana-bg-secondary);
+  border: 1px solid var(--asana-border-subtle);
+  border-radius: var(--asana-radius-full);
+  color: var(--asana-text-secondary);
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+}
+
+.asana-filter-pill:hover {
+  background: var(--asana-bg-hover);
+  border-color: var(--asana-border-hover);
+}
+
+.asana-filter-pill.active {
+  background: var(--asana-brand-purple);
+  border-color: var(--asana-brand-purple);
+  color: white;
+}
+
+/* Empty State */
+.asana-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--asana-spacing-4xl);
+  text-align: center;
+  min-height: 400px;
+}
+
+.asana-empty-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--asana-text-muted);
+  opacity: 0.5;
+  margin-bottom: var(--asana-spacing-xl);
+}
+
+.asana-empty-title {
+  font-size: var(--asana-font-size-lg);
+  font-weight: var(--asana-font-weight-medium);
+  color: var(--asana-text-secondary);
+  margin: 0 0 var(--asana-spacing-sm) 0;
+}
+
+.asana-empty-description {
+  font-size: var(--asana-font-size-sm);
+  color: var(--asana-text-muted);
+  margin: 0 0 var(--asana-spacing-xl) 0;
+  max-width: 400px;
+}
+
+/* Floating Action Button */
+.asana-page-fab {
+  position: fixed;
+  bottom: var(--asana-spacing-3xl);
+  right: var(--asana-spacing-3xl);
+  width: 56px;
+  height: 56px;
+  border-radius: var(--asana-radius-full);
+  background: var(--asana-brand-purple);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--asana-shadow-card-hover);
+  cursor: pointer;
+  transition: all var(--asana-transition-base);
+  border: none;
+  z-index: 100;
+}
+
+.asana-page-fab:hover {
+  background: var(--asana-brand-purple-hover);
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(121, 110, 255, 0.4);
+}
+
+.asana-page-fab:active {
+  transform: scale(0.95);
+}

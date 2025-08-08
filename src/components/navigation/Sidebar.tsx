@@ -15,6 +15,7 @@ import {
   PanelRight,
   Search
 } from 'lucide-react';
+import './Sidebar.css';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -41,31 +42,19 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     return (
       <Link
         to={path}
-        className={`nav-item rounded-xl transition-all duration-200 ${isActive ? 'active' : ''} ${
-          isActive 
-            ? 'bg-selected text-selected' 
-            : 'text-primary hover:bg-hover'
-        }`}
+        className={`asana-sidebar-nav-item ${isActive ? 'active' : ''}`}
+        data-tooltip={!isOpen ? label : undefined}
       >
-        <div className="flex items-center gap-3">
-          <Icon 
-            size={18} 
-            className={`${isActive ? 'text-selected' : 'text-secondary'}`} 
-          />
-          {isOpen && (
-            <span className="text-sm font-medium">
-              {label}
-            </span>
-          )}
+        <div className="asana-sidebar-nav-content">
+          <div className="asana-sidebar-nav-icon">
+            <Icon size={18} />
+          </div>
+          <span className="asana-sidebar-nav-label">
+            {label}
+          </span>
         </div>
-        {isOpen && count && (
-          <span 
-            className={`rounded-full px-2 py-1 text-xs font-medium ${
-              isActive 
-                ? 'bg-accent-primary text-white' 
-                : 'bg-tertiary text-tertiary'
-            }`}
-          >
+        {count && (
+          <span className="asana-sidebar-nav-badge">
             {count}
           </span>
         )}
@@ -73,134 +62,93 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     );
   };
 
-  return (
-    <aside 
-      className="sidebar relative"
-      style={{ 
-        width: isOpen ? '224px' : '40px',
-        height: '100vh',
-        background: 'var(--sidebar-bg)',
-        borderRight: '1px solid var(--border-primary)',
-        transition: 'var(--transition-all)',
-      }}
-    >
-      {/* Header */}
-      <div 
-        className={`flex items-center ${isOpen ? 'justify-between gap-4 border-b px-4' : 'justify-center px-1'}`}
-        style={{ 
-          height: '56px',
-          borderBottom: isOpen ? '1px solid var(--border-primary)' : 'none',
-          background: 'var(--header-bg)'
-        }}
-      >
-        {isOpen && (
-          <div className="flex flex-1 items-center gap-3">
-            <div 
-              className="flex size-8 items-center justify-center"
-              style={{ 
-                background: 'var(--accent-primary)',
-                borderRadius: 'var(--radius-xl)',
-                boxShadow: 'var(--shadow-sm)'
-              }}
-            >
-              <span 
-                className="font-semibold text-white"
-                style={{ 
-                  fontSize: 'var(--text-sm)', 
-                  fontWeight: 'var(--font-semibold)' 
-                }}
-              >
-                L
-              </span>
-            </div>
-            <h1 
-              className="font-semibold"
-              style={{ 
-                fontSize: 'var(--text-lg)', 
-                fontWeight: 'var(--font-semibold)',
-                color: 'var(--text-primary)' 
-              }}
-            >
-              LibreOllama
-            </h1>
-          </div>
-        )}
-        
-        {/* Toggle Button */}
+  // When collapsed, only show the toggle button
+  if (!isOpen) {
+    return (
+      <div style={{
+        width: '40px',
+        height: '64px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }}>
         <button
           onClick={toggleSidebar}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md transition-all hover:bg-hover"
-          aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-          title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          className="asana-sidebar-toggle"
+          aria-label="Expand sidebar"
+          title="Expand sidebar"
         >
-          <PanelLeft size={18} className="text-secondary" />
+          <PanelRight size={18} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <aside className="asana-sidebar">
+      {/* Header */}
+      <div className="asana-sidebar-header">
+        <div className="asana-sidebar-logo">
+          <div className="asana-sidebar-logo-icon">
+            <span>L</span>
+          </div>
+          <span className="asana-sidebar-logo-text">
+            LibreOllama
+          </span>
+        </div>
+        <button
+          onClick={toggleSidebar}
+          className="asana-sidebar-toggle"
+          aria-label="Collapse sidebar"
+          title="Collapse sidebar"
+        >
+          <PanelLeft size={18} />
         </button>
       </div>
 
-      {/* Navigation - only show when open */}
-      {isOpen && (
-        <>
-          {/* Global Search */}
-          <div className="border-b p-3" style={{ borderColor: 'var(--border-primary)' }}>
-            <div className="relative">
-              <Search 
-                size={16} 
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" 
-              />
-              <input
-                type="text"
-                placeholder="Search everywhere..."
-                className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm transition-all duration-200 focus:outline-none focus:ring-2"
-                style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderColor: 'var(--border-default)',
-                  color: 'var(--text-primary)'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--accent-primary)';
-                  e.target.style.boxShadow = '0 0 0 3px var(--accent-primary-alpha)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'var(--border-default)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            </div>
-          </div>
+      {/* Search */}
+      <div className="asana-sidebar-search">
+        <div className="asana-sidebar-search-box">
+          <Search size={16} className="asana-sidebar-search-icon" />
+          <input
+            type="text"
+            placeholder="Search everywhere..."
+            className="asana-sidebar-search-input"
+          />
+        </div>
+      </div>
 
-          <nav 
-            className="flex-1 overflow-y-auto p-3"
-            role="navigation"
-            aria-label="Main navigation"
-          >
-            <div className="flex-1 space-y-2">
-              {workspaceItems.map((item) => (
-                <NavItem 
-                  key={item.name}
-                  icon={item.icon}
-                  label={item.name}
-                  count={undefined}
-                  path={item.path}
-                />
-              ))}
-            </div>
-          </nav>
-
-          {/* Settings Section */}
-          <div 
-            className="border-border-subtle border-t p-3"
-            style={{ 
-              background: 'var(--header-bg)'
-            }}
-          >
+      {/* Navigation */}
+      <nav 
+        className="asana-sidebar-nav"
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        <div className="asana-sidebar-nav-group">
+          <div className="asana-sidebar-nav-title">Workspace</div>
+          {workspaceItems.map((item) => (
             <NavItem 
-              icon={Settings}
-              label="Settings"
-              path="/settings"
+              key={item.name}
+              icon={item.icon}
+              label={item.name}
+              count={undefined}
+              path={item.path}
             />
-          </div>
-        </>
-      )}
+          ))}
+        </div>
+      </nav>
+
+      {/* Footer */}
+      <div className="asana-sidebar-footer">
+        <Link
+          to="/settings"
+          className={`asana-sidebar-settings ${location.pathname === '/settings' ? 'active' : ''}`}
+        >
+          <Settings size={18} />
+          <span>Settings</span>
+        </Link>
+      </div>
     </aside>
   );
 }

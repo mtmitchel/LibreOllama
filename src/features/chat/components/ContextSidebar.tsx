@@ -149,60 +149,46 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
   // If closed, show only the toggle button
   if (!isOpen) {
     return (
-      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
-        <div className="border-border-default flex flex-col items-center border-b p-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            title="Show context panel"
-            className="text-secondary hover:text-primary"
-          >
-            <PanelRight size={20} />
-          </Button>
-        </div>
-        
-        <div className="flex flex-1 flex-col items-center gap-3 pt-4">
-          {/* Context indicators */}
-          <div className="flex flex-col items-center gap-2">
-            {/* Notes indicator */}
-            <div 
-              title="Related notes"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
-            >
-              <FileText size={14} />
-            </div>
-            
-            {/* Tasks indicator */}
-            <div 
-              title="Related tasks"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
-            >
-              <CheckSquare size={14} />
-            </div>
-            
-            {/* Events indicator */}
-            <div 
-              title="Related events"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
-            >
-              <Calendar size={14} />
-            </div>
-          </div>
-          
-          {/* Context count indicator */}
-          <div className="mt-2 flex flex-col items-center gap-1">
-            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
-              <Text size="xs" weight="bold" className="text-white">
-                {contextData.length}
-              </Text>
-            </div>
-            <Text size="xs" variant="tertiary" className="text-center">
-              items
-            </Text>
-          </div>
-        </div>
-      </Card>
+      <div
+        style={{
+          width: '40px',
+          height: '64px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: '-24px'
+        }}
+      >
+        <button
+          onClick={onToggle}
+          title="Show context panel"
+          aria-label="Show context panel"
+          style={{
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            background: 'transparent',
+            border: 'none',
+            color: '#7B8794',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            padding: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#F4F6F8';
+            e.currentTarget.style.color = '#323F4B';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#7B8794';
+          }}
+        >
+          <PanelRight size={18} strokeWidth={2} />
+        </button>
+      </div>
     );
   }
 
@@ -419,9 +405,9 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
               size="icon"
               onClick={onToggle}
               title="Hide context panel"
-              className="-mt-1 text-secondary hover:text-primary"
+              className="size-8 p-0 -mt-1 text-secondary hover:text-primary"
             >
-              <PanelRight size={18} />
+              <PanelRight size={18} strokeWidth={2} />
             </Button>
           </div>
         </div>

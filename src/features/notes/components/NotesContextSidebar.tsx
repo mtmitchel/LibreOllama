@@ -11,65 +11,49 @@ export const NotesContextSidebar: React.FC<NotesContextSidebarProps> = ({
   isOpen = true, 
   onToggle
 }) => {
-  // If closed, show only the toggle button
+  // If closed, show slim 40px gutter handle aligned like Canvas/Chat
   if (!isOpen) {
     return (
-      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
-        <div 
-          className="border-border-default flex flex-col items-center border-b p-3"
+      <div
+        style={{
+          width: '40px',
+          height: '64px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: '-24px'
+        }}
+      >
+        <button
+          onClick={onToggle}
+          title="Show context panel"
+          aria-label="Show context panel"
+          style={{
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            background: 'transparent',
+            border: 'none',
+            color: '#7B8794',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            padding: 0
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = '#F4F6F8';
+            (e.currentTarget as HTMLButtonElement).style.color = '#323F4B';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+            (e.currentTarget as HTMLButtonElement).style.color = '#7B8794';
+          }}
         >
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            title="Show context panel"
-            className="text-secondary hover:bg-tertiary hover:text-primary"
-          >
-            <PanelRight size={20} />
-          </Button>
-        </div>
-        
-        <div className="flex flex-1 flex-col items-center gap-3 pt-4">
-          {/* Context indicators */}
-          <div className="flex flex-col items-center gap-2">
-            {/* Note info indicator */}
-            <div 
-              title="Note info"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
-            >
-              <FileText size={14} />
-            </div>
-            
-            {/* Tags indicator */}
-            <div 
-              title="Tags"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
-            >
-              <Tag size={14} />
-            </div>
-            
-            {/* History indicator */}
-            <div 
-              title="History"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
-            >
-              <Clock size={14} />
-            </div>
-          </div>
-          
-          {/* Context count indicator */}
-          <div className="mt-2 flex flex-col items-center gap-1">
-            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
-              <Text size="xs" weight="bold" className="text-white">
-                3
-              </Text>
-            </div>
-            <Text size="xs" variant="tertiary" className="text-center">
-              Items
-            </Text>
-          </div>
-        </div>
-      </Card>
+          <PanelRight size={18} strokeWidth={2} />
+        </button>
+      </div>
     );
   }
 

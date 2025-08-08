@@ -1,0 +1,517 @@
+/* Mail Page - Asana Design System v2 */
+
+.asana-mail {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #FAFBFC;
+  padding: 24px;
+  gap: 24px;
+}
+
+/* Mail Sidebar */
+.asana-mail-sidebar {
+  width: 240px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.asana-mail-sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid #E4E7EB;
+  background: #FFFFFF;
+}
+
+.asana-mail-sidebar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0 0 12px 0;
+}
+
+.asana-mail-compose-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: #796EFF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+}
+
+.asana-mail-compose-btn:hover {
+  background: #6B5EE6;
+  transform: translateY(-1px);
+}
+
+/* Mail Folders */
+.asana-mail-folders {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 8px;
+}
+
+.asana-mail-folder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #52606D;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  margin-bottom: 2px;
+}
+
+.asana-mail-folder:hover {
+  background: #F4F6F8;
+  color: #323F4B;
+}
+
+.asana-mail-folder.active {
+  background: rgba(121, 110, 255, 0.08);
+  color: #796EFF;
+  font-weight: 500;
+}
+
+.asana-mail-folder-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.asana-mail-folder-icon {
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+}
+
+.asana-mail-folder-count {
+  padding: 2px 8px;
+  background: #E4E7EB;
+  color: #52606D;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.asana-mail-folder.active .asana-mail-folder-count {
+  background: #796EFF;
+  color: white;
+}
+
+/* Main Mail Content */
+.asana-mail-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Mail Header - FIXED WITH PROPER HEIGHT */
+.asana-mail-header {
+  min-height: 56px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #E8E8E9;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.asana-mail-content-header {
+  flex-shrink: 0; /* Prevent search bar area from shrinking */
+}
+
+.asana-mail-search {
+  flex: 1;
+  max-width: 400px;
+  position: relative;
+}
+
+.asana-mail-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 40px;
+  background: #F6F7F8;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #323F4B;
+  outline: none;
+  transition: all 150ms ease;
+  height: 36px;
+}
+
+.asana-mail-search-input:focus {
+  background: #FFFFFF;
+  border-color: #D1D5DB;
+}
+
+.asana-mail-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9CA3AF;
+  width: 18px;
+  height: 18px;
+}
+
+.asana-mail-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.asana-mail-action-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #7B8794;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-mail-action-btn:hover {
+  background: #F4F6F8;
+  color: #323F4B;
+}
+
+/* Mail Toolbar - FIXED SPACING */
+.asana-mail-toolbar {
+  min-height: 56px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #F4F6F8;
+  background: #FAFBFC;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0; /* Prevent toolbar from shrinking */
+}
+
+.asana-mail-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.asana-mail-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #CBD2D9;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-mail-checkbox:hover {
+  border-color: #796EFF;
+}
+
+.asana-mail-checkbox.checked {
+  background: #796EFF;
+  border-color: #796EFF;
+}
+
+.asana-mail-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.asana-mail-toolbar-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #E4E7EB;
+  border-radius: 6px;
+  color: #52606D;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.asana-mail-toolbar-btn:hover {
+  background: #FFFFFF;
+  border-color: #CBD2D9;
+  color: #323F4B;
+}
+
+/* Mail Content Body - Container for the list */
+.asana-mail-content-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0; /* Important for flexbox scrolling */
+}
+
+/* Mail List */
+.asana-mail-list {
+  background: #FFFFFF;
+}
+
+.asana-mail-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #F4F6F8;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-mail-item:hover {
+  background: #FAFBFC;
+}
+
+.asana-mail-item.selected {
+  background: rgba(121, 110, 255, 0.04);
+  border-left: 3px solid #796EFF;
+  padding-left: 21px;
+}
+
+.asana-mail-item.unread {
+  font-weight: 500;
+}
+
+.asana-mail-item-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #CBD2D9;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.asana-mail-item-star {
+  width: 20px;
+  height: 20px;
+  color: #CBD2D9;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.asana-mail-item-star:hover {
+  color: #FFA93C;
+}
+
+.asana-mail-item-star.starred {
+  color: #FFA93C;
+}
+
+.asana-mail-item-sender {
+  width: 180px;
+  font-size: 14px;
+  color: #323F4B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.asana-mail-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.asana-mail-item-subject {
+  font-size: 14px;
+  color: #323F4B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asana-mail-item-preview {
+  font-size: 14px;
+  color: #7B8794;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asana-mail-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.asana-mail-item-attachment {
+  width: 16px;
+  height: 16px;
+  color: #9AA5B1;
+}
+
+.asana-mail-item-time {
+  font-size: 13px;
+  color: #9AA5B1;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Mail Context Sidebar */
+.asana-mail-context {
+  width: 320px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.asana-mail-context-section {
+  margin-bottom: 32px;
+}
+
+.asana-mail-context-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323F4B;
+  margin-bottom: 16px;
+}
+
+.asana-mail-context-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.asana-mail-context-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #796EFF, #FC636B);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.asana-mail-context-info {
+  flex: 1;
+}
+
+.asana-mail-context-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #323F4B;
+}
+
+.asana-mail-context-email {
+  font-size: 12px;
+  color: #7B8794;
+}
+
+/* Empty State */
+.asana-mail-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.asana-mail-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.asana-mail-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #323F4B;
+  margin-bottom: 8px;
+}
+
+.asana-mail-empty-description {
+  font-size: 14px;
+  color: #7B8794;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* Scrollbar */
+.asana-mail-list::-webkit-scrollbar,
+.asana-mail-folders::-webkit-scrollbar,
+.asana-mail-context::-webkit-scrollbar {
+  width: 6px;
+}
+
+.asana-mail-list::-webkit-scrollbar-track,
+.asana-mail-folders::-webkit-scrollbar-track,
+.asana-mail-context::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.asana-mail-list::-webkit-scrollbar-thumb,
+.asana-mail-folders::-webkit-scrollbar-thumb,
+.asana-mail-context::-webkit-scrollbar-thumb {
+  background: #CBD2D9;
+  border-radius: 3px;
+}
+
+.asana-mail-list::-webkit-scrollbar-thumb:hover,
+.asana-mail-folders::-webkit-scrollbar-thumb:hover,
+.asana-mail-context::-webkit-scrollbar-thumb:hover {
+  background: #9AA5B1;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .asana-mail-context {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .asana-mail-sidebar {
+    display: none;
+  }
+  
+  .asana-mail-item-sender {
+    width: 120px;
+  }
+  
+  .asana-mail-content {
+    padding: 0;
+  }
+}

@@ -1,0 +1,557 @@
+/* Dashboard Page - Asana Design System v3 */
+/* Consistent padding and clean Asana aesthetic */
+
+.asana-dashboard {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  background: #FFFFFF;
+}
+
+.asana-dashboard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.asana-dashboard-main {
+  flex: 1;
+  padding: var(--asana-page-padding); /* Consistent 24px padding */
+  overflow-y: auto;
+  background: #FAFBFC; /* Very light gray background */
+}
+
+/* Dashboard Grid Layout */
+.asana-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--asana-section-gap); /* Consistent 24px gap */
+  margin-bottom: var(--asana-section-gap);
+}
+
+/* Dashboard Cards - Consistent styling */
+.asana-dashboard-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  padding: var(--asana-card-padding); /* Consistent 20px padding */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 200ms ease;
+}
+
+.asana-dashboard-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.asana-dashboard-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F4F6F8;
+}
+
+.asana-dashboard-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0;
+}
+
+.asana-dashboard-card-subtitle {
+  font-size: 13px;
+  color: #7B8794;
+  margin: 4px 0 0 0;
+}
+
+.asana-dashboard-card-body {
+  padding: 0;
+}
+
+/* Quick Actions Section */
+.asana-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.asana-quick-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #FAFBFC;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.asana-quick-action:hover {
+  background: #F4F6F8;
+  border-color: #796EFF;
+  transform: translateY(-2px);
+}
+
+.asana-quick-action-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #796EFF;
+  margin-bottom: 8px;
+}
+
+.asana-quick-action-label {
+  font-size: 13px;
+  color: #52606D;
+  text-align: center;
+}
+
+/* Today's Focus Tabs */
+.asana-focus-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.asana-focus-tab {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #E4E7EB;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #52606D;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-focus-tab:hover {
+  background: #F4F6F8;
+  border-color: #CBD2D9;
+}
+
+.asana-focus-tab.active {
+  background: #796EFF;
+  border-color: #796EFF;
+  color: white;
+}
+
+/* Task List */
+.asana-task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.asana-task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: all 150ms ease;
+}
+
+.asana-task-item:hover {
+  background: #FAFBFC;
+  border-color: #CBD2D9;
+}
+
+.asana-task-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #CBD2D9;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.asana-task-checkbox:hover {
+  border-color: #796EFF;
+}
+
+.asana-task-checkbox.checked {
+  background: #796EFF;
+  border-color: #796EFF;
+  position: relative;
+}
+
+.asana-task-checkbox.checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.asana-task-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asana-task-title {
+  font-size: 14px;
+  color: #323F4B;
+  font-weight: 500;
+}
+
+.asana-task-project {
+  font-size: 12px;
+  color: #9AA5B1;
+}
+
+.asana-task-priority {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.asana-task-priority.high {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.asana-task-priority.medium {
+  background: #DBEAFE;
+  color: #2563EB;
+}
+
+.asana-task-priority.low {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+/* Pending Tasks Table */
+.asana-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.asana-table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7B8794;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #E4E7EB;
+}
+
+.asana-table td {
+  padding: 12px;
+  font-size: 14px;
+  color: #323F4B;
+  border-bottom: 1px solid #F4F6F8;
+}
+
+.asana-table tr:hover td {
+  background: #FAFBFC;
+}
+
+.asana-table-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.asana-table-status.overdue {
+  background: rgba(232, 56, 79, 0.1);
+  color: #E8384F;
+}
+
+.asana-table-status.pending {
+  background: rgba(255, 169, 60, 0.1);
+  color: #FFA93C;
+}
+
+/* Project Progress */
+.asana-progress-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.asana-progress-label {
+  font-size: 14px;
+  color: #52606D;
+}
+
+.asana-progress-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323F4B;
+}
+
+.asana-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #F4F6F8;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.asana-progress-fill {
+  height: 100%;
+  background: #796EFF;
+  border-radius: 4px;
+  transition: width 300ms ease;
+}
+
+/* Activity List */
+.asana-activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.asana-activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #F4F6F8;
+}
+
+.asana-activity-item:last-child {
+  border-bottom: none;
+}
+
+.asana-activity-icon {
+  width: 32px;
+  height: 32px;
+  background: #F4F6F8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.asana-activity-icon svg {
+  width: 16px;
+  height: 16px;
+  color: #7B8794;
+}
+
+.asana-activity-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asana-activity-title {
+  font-size: 14px;
+  color: #323F4B;
+  font-weight: 500;
+}
+
+.asana-activity-description {
+  font-size: 13px;
+  color: #7B8794;
+}
+
+.asana-activity-time {
+  font-size: 12px;
+  color: #9AA5B1;
+}
+
+/* Empty State */
+.asana-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.asana-empty-icon {
+  width: 48px;
+  height: 48px;
+  color: #CBD2D9;
+  margin-bottom: 16px;
+}
+
+.asana-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B;
+  margin-bottom: 8px;
+}
+
+.asana-empty-description {
+  font-size: 14px;
+  color: #7B8794;
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+/* Mail Preview Widget */
+.asana-mail-preview {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.asana-mail-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid #F4F6F8;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-mail-item:hover {
+  background: #FAFBFC;
+}
+
+.asana-mail-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #796EFF, #FC636B);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.asana-mail-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.asana-mail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.asana-mail-sender {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323F4B;
+}
+
+.asana-mail-time {
+  font-size: 12px;
+  color: #9AA5B1;
+  flex-shrink: 0;
+}
+
+.asana-mail-subject {
+  font-size: 13px;
+  font-weight: 500;
+  color: #52606D;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asana-mail-preview-text {
+  font-size: 13px;
+  color: #7B8794;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Available Agents */
+.asana-agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.asana-agent-card {
+  padding: 16px;
+  background: #FAFBFC;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  text-align: center;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.asana-agent-card:hover {
+  background: #F4F6F8;
+  border-color: #796EFF;
+  transform: translateY(-2px);
+}
+
+.asana-agent-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 8px;
+  background: linear-gradient(135deg, #796EFF, #FC636B);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.asana-agent-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #323F4B;
+  margin-bottom: 4px;
+}
+
+.asana-agent-status {
+  font-size: 11px;
+  color: #7B8794;
+}
+
+.asana-agent-status.online {
+  color: #14A454;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .asana-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .asana-quick-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .asana-dashboard-main {
+    padding: 16px;
+  }
+  
+  .asana-dashboard-card {
+    padding: 16px;
+  }
+}

@@ -105,14 +105,25 @@ const NotesPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full gap-6 bg-primary p-6">
+    <div
+      className="flex h-full"
+      style={{
+        display: 'flex',
+        height: '100vh',
+        overflow: 'hidden',
+        background: '#FAFBFC',
+        padding: `${24}px ${isContextOpen ? 24 : 0}px ${24}px ${isNotesSidebarOpen ? 24 : 0}px`,
+        gap: isNotesSidebarOpen ? '24px' : '0px'
+      }}
+    >
       <Sidebar
         isOpen={isNotesSidebarOpen}
         onToggle={toggleNotesSidebar}
         onSelectNote={handleNoteSelect}
         onCreateNote={handleCreateNote}
       />
-      <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1 }}>
+        <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
         {selectedNote ? (
           <div className="flex flex-1 flex-col overflow-y-auto">
             <div className="border-b border-primary p-4">
@@ -135,18 +146,19 @@ const NotesPage: React.FC = () => {
               />
             </div>
           </div>
-        ) : (
-          <div className="flex flex-1 items-center justify-center">
-            <p className="text-muted">
-              {notes.length === 0 ? 'Create your first note' : 'Select a note to view'}
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-1 items-center justify-center">
+              <p className="text-muted">
+                {notes.length === 0 ? 'Create your first note' : 'Select a note to view'}
+              </p>
+            </div>
+          )}
+        </div>
+        <NotesContextSidebar
+          isOpen={isContextOpen}
+          onToggle={() => setIsContextOpen(!isContextOpen)}
+        />
       </div>
-      <NotesContextSidebar
-        isOpen={isContextOpen}
-        onToggle={() => setIsContextOpen(!isContextOpen)}
-      />
     </div>
   );
 };

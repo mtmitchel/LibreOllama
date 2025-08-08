@@ -1,0 +1,497 @@
+/* Settings Page - Asana Design System v2 */
+
+.asana-settings {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #FAFBFC;
+  padding: 24px;
+  gap: 24px;
+}
+
+/* Settings Sidebar */
+.asana-settings-sidebar {
+  width: 240px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px 16px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.asana-settings-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323F4B;
+  margin-bottom: 20px;
+  padding: 0 12px;
+}
+
+/* Settings Navigation */
+.asana-settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asana-settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #52606D;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-settings-nav-item:hover {
+  background: #F4F6F8;
+  color: #323F4B;
+}
+
+.asana-settings-nav-item.active {
+  background: rgba(121, 110, 255, 0.08);
+  color: #796EFF;
+  font-weight: 500;
+}
+
+.asana-settings-nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Settings Content */
+.asana-settings-content {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.asana-settings-header {
+  margin-bottom: 32px;
+}
+
+.asana-settings-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0 0 8px 0;
+}
+
+.asana-settings-page-description {
+  font-size: 14px;
+  color: #7B8794;
+  line-height: 1.5;
+}
+
+/* Settings Section */
+.asana-settings-section {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.asana-settings-section-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #F4F6F8;
+  background: #FAFBFC;
+}
+
+.asana-settings-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0 0 4px 0;
+}
+
+.asana-settings-section-description {
+  font-size: 13px;
+  color: #7B8794;
+  line-height: 1.4;
+}
+
+.asana-settings-section-content {
+  padding: 24px;
+}
+
+/* Settings Form */
+.asana-settings-field {
+  margin-bottom: 24px;
+}
+
+.asana-settings-field:last-child {
+  margin-bottom: 0;
+}
+
+.asana-settings-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #323F4B;
+  margin-bottom: 8px;
+}
+
+.asana-settings-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: #FFFFFF;
+  border: 1px solid #CBD2D9;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #323F4B;
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.asana-settings-input:focus {
+  border-color: #796EFF;
+  box-shadow: 0 0 0 2px rgba(121, 110, 255, 0.15);
+}
+
+.asana-settings-input:disabled {
+  background: #F4F6F8;
+  color: #9AA5B1;
+  cursor: not-allowed;
+}
+
+.asana-settings-select {
+  width: 100%;
+  padding: 8px 12px;
+  background: #FFFFFF;
+  border: 1px solid #CBD2D9;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #323F4B;
+  outline: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-settings-select:focus {
+  border-color: #796EFF;
+  box-shadow: 0 0 0 2px rgba(121, 110, 255, 0.15);
+}
+
+.asana-settings-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 8px 12px;
+  background: #FFFFFF;
+  border: 1px solid #CBD2D9;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #323F4B;
+  outline: none;
+  resize: vertical;
+  transition: all 150ms ease;
+  font-family: inherit;
+}
+
+.asana-settings-textarea:focus {
+  border-color: #796EFF;
+  box-shadow: 0 0 0 2px rgba(121, 110, 255, 0.15);
+}
+
+.asana-settings-help {
+  font-size: 12px;
+  color: #7B8794;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* Toggle Switch */
+.asana-settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.asana-settings-toggle-info {
+  flex: 1;
+}
+
+.asana-settings-toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #323F4B;
+  margin-bottom: 4px;
+}
+
+.asana-settings-toggle-description {
+  font-size: 13px;
+  color: #7B8794;
+  line-height: 1.4;
+}
+
+.asana-settings-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: #CBD2D9;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.asana-settings-switch.active {
+  background: #796EFF;
+}
+
+.asana-settings-switch-handle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  transition: transform 150ms ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.asana-settings-switch.active .asana-settings-switch-handle {
+  transform: translateX(20px);
+}
+
+/* Buttons */
+.asana-settings-actions {
+  display: flex;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid #F4F6F8;
+  margin-top: 24px;
+}
+
+.asana-settings-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  border: none;
+  outline: none;
+}
+
+.asana-settings-btn-primary {
+  background: #796EFF;
+  color: white;
+}
+
+.asana-settings-btn-primary:hover {
+  background: #6B5EE6;
+  transform: translateY(-1px);
+}
+
+.asana-settings-btn-secondary {
+  background: transparent;
+  color: #52606D;
+  border: 1px solid #CBD2D9;
+}
+
+.asana-settings-btn-secondary:hover {
+  background: #F4F6F8;
+  border-color: #9AA5B1;
+}
+
+.asana-settings-btn-danger {
+  background: transparent;
+  color: #E8384F;
+  border: 1px solid #E8384F;
+}
+
+.asana-settings-btn-danger:hover {
+  background: #E8384F;
+  color: white;
+}
+
+/* Account Cards */
+.asana-settings-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.asana-settings-account {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #FAFBFC;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  transition: all 150ms ease;
+}
+
+.asana-settings-account:hover {
+  background: #F4F6F8;
+  border-color: #CBD2D9;
+}
+
+.asana-settings-account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #796EFF, #FC636B);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.asana-settings-account-info {
+  flex: 1;
+}
+
+.asana-settings-account-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #323F4B;
+  margin-bottom: 2px;
+}
+
+.asana-settings-account-email {
+  font-size: 13px;
+  color: #7B8794;
+}
+
+.asana-settings-account-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #52606D;
+}
+
+.asana-settings-account-status.connected {
+  background: rgba(20, 164, 84, 0.08);
+  border-color: #14A454;
+  color: #14A454;
+}
+
+.asana-settings-account-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Appearance Preview */
+.asana-settings-appearance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.asana-settings-theme {
+  padding: 16px;
+  border: 2px solid #E4E7EB;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-align: center;
+}
+
+.asana-settings-theme:hover {
+  border-color: #CBD2D9;
+}
+
+.asana-settings-theme.active {
+  border-color: #796EFF;
+  background: rgba(121, 110, 255, 0.04);
+}
+
+.asana-settings-theme-preview {
+  width: 100%;
+  height: 100px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  background: linear-gradient(to bottom, #FFFFFF 50%, #FAFBFC 50%);
+  border: 1px solid #E4E7EB;
+}
+
+.asana-settings-theme.dark .asana-settings-theme-preview {
+  background: linear-gradient(to bottom, #1F2933 50%, #323F4B 50%);
+}
+
+.asana-settings-theme-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #323F4B;
+}
+
+/* Info Box */
+.asana-settings-info {
+  padding: 16px;
+  background: #F0F7FF;
+  border: 1px solid #B3D9FF;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.asana-settings-info-icon {
+  display: inline-block;
+  margin-right: 8px;
+  color: #2563EB;
+}
+
+.asana-settings-info-text {
+  font-size: 13px;
+  color: #1E40AF;
+  line-height: 1.5;
+}
+
+/* Scrollbar */
+.asana-settings-sidebar::-webkit-scrollbar,
+.asana-settings-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.asana-settings-sidebar::-webkit-scrollbar-track,
+.asana-settings-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.asana-settings-sidebar::-webkit-scrollbar-thumb,
+.asana-settings-content::-webkit-scrollbar-thumb {
+  background: #CBD2D9;
+  border-radius: 3px;
+}
+
+.asana-settings-sidebar::-webkit-scrollbar-thumb:hover,
+.asana-settings-content::-webkit-scrollbar-thumb:hover {
+  background: #9AA5B1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .asana-settings {
+    flex-direction: column;
+  }
+  
+  .asana-settings-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #E4E7EB;
+    padding: 16px;
+  }
+  
+  .asana-settings-content {
+    padding: 20px;
+  }
+}

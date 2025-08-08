@@ -1,5 +1,6 @@
 // UI Components using LibreOllama Design System CSS Variables
 import React from 'react';
+import './ui-asana.css';
 
 // Typography Components
 interface HeadingProps extends React.HTMLAttributes<HTMLHeadingElement> {

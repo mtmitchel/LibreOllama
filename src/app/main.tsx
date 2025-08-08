@@ -1,7 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import "../core/design-system/globals.css";
+// Import Asana Design System with backwards compatibility
+import "../styles/asana-globals.css";
+import "../styles/asana-tokens.css";
+import "../styles/asana-design-system.css";
+import "../styles/asana-layout.css";
 
 // FullCalendar CSS - v6 doesn't require CSS imports as it's built-in
 

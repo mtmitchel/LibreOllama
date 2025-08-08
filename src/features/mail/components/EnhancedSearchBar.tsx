@@ -219,19 +219,31 @@ export function EnhancedSearchBar({
 
   return (
     <>
-      <div className={`relative mx-auto max-w-2xl ${className}`}>
-        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="relative">
+      <div className={`relative flex items-center justify-center ${className}`} style={{ padding: '12px 24px', height: '64px', width: '100%' }}>
+        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="relative" style={{ width: '100%', maxWidth: '480px' }}>
           <div 
-            className={`bg-bg-secondary border-border-primary flex items-center rounded-full border px-4 py-3 transition-all duration-200 ${
-              isFocused ? 'border-accent-primary/30 shadow-md' : 'hover:shadow-sm'
-            }`}
+            className={`relative flex items-center transition-all duration-200`}
+            style={{
+              backgroundColor: isFocused ? '#FFFFFF' : '#F6F7F8',
+              borderColor: isFocused ? '#D1D5DB' : 'transparent',
+              borderRadius: '8px',
+              padding: '0 12px 0 40px',
+              height: '40px',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              width: '100%'
+            }}
           >
             {/* Search Icon */}
             <Search 
-              size={20} 
-              className={`mr-3 shrink-0 transition-colors ${
-                isLoading ? 'animate-spin text-accent-primary' : 'text-text-secondary'
-              }`} 
+              size={18} 
+              className={`shrink-0 transition-colors`}
+              style={{
+                position: 'absolute',
+                left: '12px',
+                color: isLoading ? '#796EFF' : '#9CA3AF',
+                animation: isLoading ? 'spin 1s linear infinite' : 'none'
+              }}
             />
             
             {/* Search Input */}
@@ -244,51 +256,67 @@ export function EnhancedSearchBar({
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="flex-1 border-none bg-transparent text-sm text-primary outline-none placeholder:text-secondary"
+              className="flex-1 border-none bg-transparent outline-none"
+              style={{
+                fontSize: '14px',
+                color: '#323F4B',
+                paddingLeft: '0'
+              }}
               disabled={isLoading}
             />
             
             {/* Clear Button */}
             {inputValue && (
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
                 onClick={handleClear}
-                className="ml-2 size-6 text-secondary hover:text-primary"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 transition-colors"
                 title="Clear search"
               >
-                <X size={16} />
-              </Button>
+                <X size={14} />
+              </button>
             )}
-            
-            {/* Saved Searches Button */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowSavedSearches(true)}
-              className="ml-2 size-8 text-primary hover:text-primary"
-              title="Saved searches"
-            >
-              <Star size={20} />
-            </Button>
-            
-
-            
-            {/* Advanced Search Button */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowAdvancedFilters(true)}
-              className="ml-2 size-8 text-primary hover:text-primary"
-              title="Advanced search"
-            >
-              <Filter size={20} />
-            </Button>
           </div>
         </form>
+        
+        {/* Icon Group - Positioned absolutely to the right */}
+        <div className="absolute right-6 flex items-center gap-1">
+          {/* Saved Searches Button */}
+          <button
+            type="button"
+            onClick={() => setShowSavedSearches(true)}
+            className="flex items-center justify-center transition-colors"
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '8px',
+              backgroundColor: 'transparent'
+            }}
+            title="Saved searches"
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F7F8'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <Star size={18} style={{ color: '#6B6F76' }} />
+          </button>
+          
+          {/* Advanced Search Button */}
+          <button
+            type="button"
+            onClick={() => setShowAdvancedFilters(true)}
+            className="flex items-center justify-center transition-colors"
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '8px',
+              backgroundColor: 'transparent'
+            }}
+            title="Advanced search"
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F7F8'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <Filter size={18} style={{ color: '#6B6F76' }} />
+          </button>
+        </div>
       </div>
 
       {/* Phase 2.4 Advanced Search Components */}

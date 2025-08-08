@@ -5,6 +5,114 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-02-07
+
+### 🎨 Design System Complete Overhaul
+
+#### Critical Design System Audit & Fixes 🚧
+- **Conducted exhaustive component audit of ALL pages** ✅
+  - Documented every component, class, and pattern across 10+ pages
+  - Identified critical padding crisis: ONLY Notes page had proper 24px padding
+  - Found 500+ Tailwind classes that need replacement with Asana classes
+  - Created comprehensive `COMPONENT_AUDIT_REPORT.md` with all findings
+  - Location: `docs/COMPONENT_AUDIT_REPORT.md`
+
+- **Created Design System Mitigation Plan** ✅
+  - Established 5-day implementation schedule
+  - Defined Notes page as reference implementation
+  - Created systematic approach for fixing all pages
+  - Documented rollback plan and success metrics
+  - Location: `docs/DESIGN_SYSTEM_MITIGATION_PLAN.md`
+
+#### Phase 1: Foundation (In Progress) 🚧
+- **Created unified CSS framework** ✅
+  - Created `src/styles/asana-core.css` as single source of truth
+  - Defined `.asana-app-layout` with MANDATORY 24px padding
+  - Established complete component library (buttons, cards, forms, etc.)
+  - Added proper spacing scale and CSS variables
+  - Location: `src/styles/asana-core.css`
+
+- **Dashboard Page Updated** ✅
+  - Changed from `asana-page` to `asana-app-layout` (adds 24px padding!)
+  - Updated grid to use `asana-grid asana-grid-3`
+  - Wrapped content in proper `asana-content-card` structure
+  - Removed dashboard-specific wrapper classes
+  - Result: Dashboard now has proper padding and spacing!
+
+- **Chat Page Fixed** ✅
+  - Added 24px padding and gaps to main container
+  - Fixed sidebar and main area with rounded corners and shadows
+  - Context sidebar properly displays when toggled
+  - No more cut-off headers!
+
+- **Mail Page Overhauled** ✅
+  - Added 24px padding wrapper and component gaps
+  - Increased header height to 72px (was cramped at ~48px)
+  - Fixed search bar design: changed from pill to rounded rectangle
+  - Reduced search bar height from 40px to 36px for better alignment
+  - Fixed loading spinner centering issue (changed to flex layout)
+
+### 🎨 Design System Migration - Phase 2 (2025-02-07)
+
+#### Documentation Consolidation ✅
+- **Consolidated all design documentation** 
+  - Created unified `docs/DESIGN_SYSTEM.md` v4.0 as single source of truth
+  - Archived 8+ outdated design documents to `docs/_archive/design/`
+  - Updated status tracking and implementation guidelines
+  - Documented all CSS architecture and component patterns
+
+#### Component Standardization (In Progress) 🚧
+- **Button Component Migration**
+  - Kanban Components:
+    - Replaced 9 raw `<button>` elements in `InlineTaskCreator.tsx`
+    - Replaced 3 raw buttons in `KanbanBoard.tsx` 
+    - Replaced 11 raw buttons in `KanbanColumn.tsx`
+  - Task Components:
+    - Replaced 1 checkbox button in `UnifiedTaskCard.tsx`
+    - Replaced 3 raw buttons in `TaskSidePanel.tsx`
+    - Replaced 2 raw buttons in `LabelColorPicker.tsx`
+  - All buttons now use unified `Button` component with proper variants
+  - Standardized to design system patterns (primary, ghost, outline)
+  - Remaining: TaskSidebar.tsx and TaskListView.tsx still have raw buttons
+
+#### Identified Issues from External Audit
+- **Tailwind Classes**: 135 occurrences need replacement
+- **Inline Colors**: 144 hex colors outside design tokens  
+- **Raw Buttons**: Extensive use throughout codebase
+- **Inconsistent Patterns**: Mixed approaches in components
+
+#### Settings Page Fix ✅
+- Added missing 24px padding to Settings page
+- Fixed component gaps and spacing
+
+#### Canvas Page Layout Fix ✅
+- Fixed canvas toolbar visibility - no more scrolling needed
+- Removed incorrect `.asana-page` wrapper that was adding extra padding
+- Fixed sidebar to display properly with Asana design (280px width, white background)
+- Toolbar now correctly positioned at bottom of viewport (24px from bottom)
+- Canvas now uses full height without unnecessary padding
+- Added proper 24px padding to sidebar header, search, and list sections
+- Maintained consistent spacing between all UI components
+  - Fixed search input height to 40px with proper padding
+  - Increased action button spacing from 8px to 12px
+  - Added rounded corners and shadows to all containers
+  - Result: No more cramped top bar, proper visual hierarchy!
+
+#### Canvas Sidebar Toggle UX Alignment ✅
+- Reworked canvas sidebar toggle for professional UX consistency
+  - Toggle now lives on the sidebar when open, and a minimal handle appears only when closed
+  - Closed-state handle peeks in the gutter between main nav and canvas, aligned with main nav toggle
+  - Identical 32x32 button size, 18px icon, stroke width 2, equal left/right breathing room
+  - Precise horizontal alignment with main app sidebar toggle; removed extra padding and chrome
+  - Files: `src/app/pages/Canvas.tsx`, `src/features/canvas/components/CanvasSidebar.tsx`
+
+#### Chat Sidebars Toggle UX Alignment ✅
+- Matched conversation list (left) and context panel (right) toggle behavior to canvas pattern
+  - When closed: slim 40px gutter with centered 32x32 button and 18px icon (stroke 2)
+  - When open: header shows a matching-size icon button to close
+  - Ensured horizontal alignment with main nav toggle via negative top offset to cancel page padding
+  - Files: `src/features/chat/components/ConversationList.tsx`, `src/features/chat/components/ContextSidebar.tsx`
+
 ## [Unreleased] - 2025-02-06
 
 ### 🔧 Code Quality & Testing Infrastructure

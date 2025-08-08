@@ -3,9 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { CanvasContainer } from '../../features/canvas/components/CanvasContainer';
 import { useHeader } from '../contexts/HeaderContext';
 import { Button } from '../../components/ui';
-import { PanelRightClose } from 'lucide-react';
+import { PanelRight } from 'lucide-react';
 import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
 import Konva from 'konva';
+import './styles/page-asana-v2.css';
 
 /**
  * This component establishes the two-pane layout for the Canvas feature,
@@ -28,7 +29,15 @@ import Konva from 'konva';
   }, [clearHeaderProps]);
 
   return (
-    <div className="relative flex h-full gap-4 overflow-hidden bg-canvas p-6">
+    <div style={{ 
+      display: 'flex', 
+      height: '100vh', 
+      overflow: 'hidden', 
+      background: '#FAFBFC',
+      padding: isCanvasSidebarOpen ? '24px' : '24px 24px 24px 0', // remove left padding when closed so gutter is owned by the toggle container
+      gap: isCanvasSidebarOpen ? '24px' : '0px'
+    }}>
+      {/* Sidebar - only renders when open */}
       {isCanvasSidebarOpen && (
         <CanvasSidebar
           isOpen={isCanvasSidebarOpen}
@@ -37,26 +46,59 @@ import Konva from 'konva';
         />
       )}
 
+      {/* Canvas sidebar toggle when closed - centered with minimal padding */}
       {!isCanvasSidebarOpen && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCanvasSidebarOpen(true)}
-          className="absolute z-10 rounded-full"
-          style={{
-            top: 'var(--space-4)',
-            left: 'var(--space-3)',
-            color: 'var(--text-secondary)',
-            background: 'var(--bg-glass)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid var(--border-primary)'
-          }}
-        >
-          <PanelRightClose size={20} />
-        </Button>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '40px', // owns the gutter; equal breathing room around 32px button
+          height: '64px', // match main sidebar header height
+          marginTop: '-24px' // cancel page top padding so centers align horizontally with the main sidebar toggle
+        }}>
+          <button
+            onClick={() => setCanvasSidebarOpen(true)}
+            style={{
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '6px',
+              background: 'transparent',
+              border: 'none',
+              color: '#7B8794',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+              padding: 0,
+              flexShrink: 0
+            }}
+            title="Show canvas sidebar"
+            aria-label="Show canvas sidebar"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#F4F6F8';
+              e.currentTarget.style.color = '#323F4B';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = '#7B8794';
+            }}
+          >
+            <PanelRight size={18} strokeWidth={2} />
+          </button>
+        </div>
       )}
 
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main style={{ 
+        flex: 1, 
+        minWidth: 0, 
+        position: 'relative', 
+        overflow: 'visible',
+        background: '#FFFFFF',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+      }}>
+        
         <CanvasContainer onStageReady={handleStageReady} />
       </main>
     </div>

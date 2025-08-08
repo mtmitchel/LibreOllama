@@ -1,0 +1,557 @@
+/* Generic Page Styles - Asana Design System v2 */
+/* Used by: Projects, Notes, Canvas, Agents */
+
+.asana-page {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #FAFBFC;
+  padding: 24px;
+  gap: 24px;
+}
+
+.asana-page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.asana-page-container {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #FAFBFC;
+}
+
+/* Page Header */
+.asana-page-header {
+  padding: 20px 24px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E4E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.asana-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0;
+}
+
+.asana-page-subtitle {
+  font-size: 14px;
+  color: #7B8794;
+  margin: 4px 0 0 0;
+}
+
+.asana-page-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Content Grid */
+.asana-content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+/* Projects Specific */
+.asana-projects-sidebar {
+  width: 260px;
+  background: #FFFFFF;
+  border-right: 1px solid #E4E7EB;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.asana-projects-header {
+  padding: 20px;
+  border-bottom: 1px solid #E4E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.asana-projects-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0;
+}
+
+.asana-search-box {
+  padding: 12px 20px;
+  position: relative;
+}
+
+.asana-search-icon {
+  position: absolute;
+  left: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9AA5B1;
+  width: 16px;
+  height: 16px;
+}
+
+.asana-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  background: #F4F6F8;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #323F4B;
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.asana-search-input:focus {
+  background: #FFFFFF;
+  border-color: #796EFF;
+  box-shadow: 0 0 0 2px rgba(121, 110, 255, 0.15);
+}
+
+.asana-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  border: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.asana-btn-primary {
+  background: #796EFF;
+  color: white;
+}
+
+.asana-btn-primary:hover {
+  background: #6B5EE6;
+  transform: translateY(-1px);
+}
+
+.asana-projects-group {
+  margin-bottom: 20px;
+}
+
+.asana-projects-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9AA5B1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 8px 12px;
+}
+
+.asana-projects-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.asana-project-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  margin-bottom: 2px;
+}
+
+.asana-project-item:hover {
+  background: #F4F6F8;
+}
+
+.asana-project-item.active {
+  background: rgba(121, 110, 255, 0.08);
+  color: #796EFF;
+}
+
+.asana-project-icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.asana-project-name {
+  flex: 1;
+  font-size: 14px;
+  color: #323F4B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asana-project-count {
+  font-size: 12px;
+  color: #9AA5B1;
+}
+
+/* Project Content */
+.asana-project-content {
+  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.asana-project-header {
+  margin-bottom: 32px;
+}
+
+.asana-project-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0 0 8px 0;
+}
+
+.asana-project-description {
+  font-size: 14px;
+  color: #7B8794;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.asana-project-meta {
+  display: flex;
+  gap: 24px;
+  padding: 16px 0;
+  border-top: 1px solid #E4E7EB;
+  border-bottom: 1px solid #E4E7EB;
+}
+
+.asana-project-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asana-project-stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #323F4B;
+}
+
+.asana-project-stat-label {
+  font-size: 12px;
+  color: #7B8794;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Notes Specific */
+.asana-notes-container {
+  display: flex;
+  height: 100%;
+  background: #FFFFFF;
+}
+
+.asana-notes-sidebar {
+  width: 280px;
+  background: #FAFBFC;
+  border-right: 1px solid #E4E7EB;
+  display: flex;
+  flex-direction: column;
+}
+
+.asana-notes-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+}
+
+.asana-notes-toolbar {
+  padding: 12px 24px;
+  border-bottom: 1px solid #E4E7EB;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.asana-notes-content {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Canvas Specific */
+.asana-canvas-container {
+  width: 100%;
+  height: 100%;
+  background: #FAFBFC;
+  position: relative;
+}
+
+.asana-canvas-toolbar {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.asana-canvas-tool {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #7B8794;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-canvas-tool:hover {
+  background: #F4F6F8;
+  color: #323F4B;
+}
+
+.asana-canvas-tool.active {
+  background: #796EFF;
+  color: white;
+}
+
+/* Agents Grid */
+.asana-agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 24px;
+}
+
+.asana-agent-card {
+  background: #FFFFFF;
+  border: 1px solid #E4E7EB;
+  border-radius: 8px;
+  padding: 24px;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.asana-agent-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.asana-agent-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.asana-agent-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #796EFF, #FC636B);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.asana-agent-info {
+  flex: 1;
+}
+
+.asana-agent-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B;
+  margin: 0 0 4px 0;
+}
+
+.asana-agent-type {
+  font-size: 13px;
+  color: #7B8794;
+}
+
+.asana-agent-description {
+  font-size: 14px;
+  color: #52606D;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.asana-agent-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #F4F6F8;
+}
+
+.asana-agent-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.asana-agent-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #CBD2D9;
+}
+
+.asana-agent-status.online .asana-agent-status-dot {
+  background: #14A454;
+}
+
+.asana-agent-status.busy .asana-agent-status-dot {
+  background: #FFA93C;
+}
+
+.asana-agent-status.offline .asana-agent-status-dot {
+  background: #E8384F;
+}
+
+.asana-agent-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.asana-agent-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #E4E7EB;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #52606D;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-agent-btn:hover {
+  background: #F4F6F8;
+  border-color: #CBD2D9;
+  color: #323F4B;
+}
+
+/* Add New Card */
+.asana-add-card {
+  background: transparent;
+  border: 2px dashed #CBD2D9;
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-add-card:hover {
+  border-color: #796EFF;
+  background: rgba(121, 110, 255, 0.02);
+}
+
+.asana-add-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #F4F6F8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #796EFF;
+  margin-bottom: 12px;
+}
+
+.asana-add-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #52606D;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD2D9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9AA5B1;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .asana-content-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .asana-page-container {
+    padding: 16px;
+  }
+  
+  .asana-projects-sidebar,
+  .asana-notes-sidebar {
+    display: none;
+  }
+  
+  .asana-content-grid,
+  .asana-agents-grid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  
+  .asana-canvas-toolbar {
+    top: 10px;
+    padding: 4px;
+  }
+  
+  .asana-canvas-tool {
+    width: 32px;
+    height: 32px;
+  }
+}

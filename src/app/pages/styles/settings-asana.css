@@ -1,0 +1,321 @@
+/* Settings Page - Asana Design System */
+
+.asana-settings {
+  height: 100%;
+  display: flex;
+  background: var(--asana-bg-canvas);
+}
+
+/* Settings Sidebar */
+.asana-settings-sidebar {
+  width: 280px;
+  background: var(--asana-bg-sidebar);
+  border-right: 1px solid var(--asana-border-subtle);
+  padding: var(--asana-spacing-2xl);
+  overflow-y: auto;
+}
+
+.asana-settings-title {
+  font-size: var(--asana-font-size-xl);
+  font-weight: var(--asana-font-weight-semibold);
+  color: var(--asana-text-primary);
+  margin: 0 0 var(--asana-spacing-2xl) 0;
+}
+
+/* Settings Navigation */
+.asana-settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--asana-spacing-xs);
+}
+
+.asana-settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-md);
+  padding: var(--asana-spacing-md);
+  border-radius: var(--asana-radius-md);
+  color: var(--asana-text-primary);
+  text-decoration: none;
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  transition: all var(--asana-transition-fast);
+  cursor: pointer;
+}
+
+.asana-settings-nav-item:hover {
+  background: var(--asana-bg-hover);
+}
+
+.asana-settings-nav-item.active {
+  background: rgba(121, 110, 255, 0.08);
+  color: var(--asana-brand-purple);
+}
+
+.asana-settings-nav-icon {
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+}
+
+/* Settings Content */
+.asana-settings-content {
+  flex: 1;
+  padding: var(--asana-spacing-3xl);
+  overflow-y: auto;
+}
+
+.asana-settings-section {
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-lg);
+  border: 1px solid var(--asana-border-subtle);
+  padding: var(--asana-spacing-2xl);
+  margin-bottom: var(--asana-spacing-2xl);
+}
+
+.asana-settings-section-title {
+  font-size: var(--asana-font-size-lg);
+  font-weight: var(--asana-font-weight-semibold);
+  color: var(--asana-text-primary);
+  margin: 0 0 var(--asana-spacing-lg) 0;
+}
+
+.asana-settings-section-description {
+  font-size: var(--asana-font-size-sm);
+  color: var(--asana-text-secondary);
+  margin: 0 0 var(--asana-spacing-xl) 0;
+}
+
+/* Form Elements */
+.asana-settings-field {
+  margin-bottom: var(--asana-spacing-xl);
+}
+
+.asana-settings-label {
+  display: block;
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  color: var(--asana-text-primary);
+  margin-bottom: var(--asana-spacing-sm);
+}
+
+.asana-settings-input {
+  width: 100%;
+  padding: var(--asana-spacing-md);
+  background: var(--asana-bg-input);
+  border: 1px solid var(--asana-border-default);
+  border-radius: var(--asana-radius-md);
+  color: var(--asana-text-primary);
+  font-size: var(--asana-font-size-sm);
+  outline: none;
+  transition: all var(--asana-transition-fast);
+}
+
+.asana-settings-input:hover {
+  border-color: var(--asana-border-hover);
+}
+
+.asana-settings-input:focus {
+  background: var(--asana-bg-primary);
+  border-color: var(--asana-border-focus);
+  box-shadow: 0 0 0 3px rgba(121, 110, 255, 0.1);
+}
+
+.asana-settings-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236B6F76' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.asana-settings-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.asana-settings-helper {
+  font-size: var(--asana-font-size-xs);
+  color: var(--asana-text-muted);
+  margin-top: var(--asana-spacing-sm);
+}
+
+/* Toggle Switch */
+.asana-settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--asana-spacing-lg) 0;
+  border-bottom: 1px solid var(--asana-border-subtle);
+}
+
+.asana-settings-toggle:last-child {
+  border-bottom: none;
+}
+
+.asana-settings-toggle-info {
+  flex: 1;
+  margin-right: var(--asana-spacing-xl);
+}
+
+.asana-settings-toggle-label {
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  color: var(--asana-text-primary);
+  margin-bottom: var(--asana-spacing-xs);
+}
+
+.asana-settings-toggle-description {
+  font-size: var(--asana-font-size-xs);
+  color: var(--asana-text-secondary);
+}
+
+.asana-settings-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--asana-bg-secondary);
+  border: 1px solid var(--asana-border-default);
+  border-radius: var(--asana-radius-full);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+}
+
+.asana-settings-switch.active {
+  background: var(--asana-brand-purple);
+  border-color: var(--asana-brand-purple);
+}
+
+.asana-settings-switch-handle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: var(--asana-radius-full);
+  transition: all var(--asana-transition-fast);
+  box-shadow: var(--asana-shadow-card);
+}
+
+.asana-settings-switch.active .asana-settings-switch-handle {
+  transform: translateX(20px);
+}
+
+/* Account Card */
+.asana-account-card {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-lg);
+  padding: var(--asana-spacing-lg);
+  background: var(--asana-bg-secondary);
+  border: 1px solid var(--asana-border-subtle);
+  border-radius: var(--asana-radius-md);
+  margin-bottom: var(--asana-spacing-md);
+}
+
+.asana-account-card.active {
+  background: rgba(121, 110, 255, 0.05);
+  border-color: var(--asana-brand-purple);
+}
+
+.asana-account-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--asana-radius-full);
+  background: linear-gradient(135deg, var(--asana-brand-purple), var(--asana-brand-coral));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: var(--asana-font-size-lg);
+  font-weight: var(--asana-font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.asana-account-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.asana-account-name {
+  font-size: var(--asana-font-size-base);
+  font-weight: var(--asana-font-weight-medium);
+  color: var(--asana-text-primary);
+  margin-bottom: var(--asana-spacing-xs);
+}
+
+.asana-account-email {
+  font-size: var(--asana-font-size-sm);
+  color: var(--asana-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asana-account-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-sm);
+}
+
+.asana-account-badge {
+  padding: var(--asana-spacing-xs) var(--asana-spacing-sm);
+  background: var(--asana-brand-purple);
+  color: white;
+  border-radius: var(--asana-radius-full);
+  font-size: var(--asana-font-size-xs);
+  font-weight: var(--asana-font-weight-medium);
+}
+
+/* Buttons */
+.asana-settings-btn {
+  padding: var(--asana-spacing-md) var(--asana-spacing-lg);
+  border-radius: var(--asana-radius-md);
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  border: none;
+  outline: none;
+}
+
+.asana-settings-btn-primary {
+  background: var(--asana-brand-purple);
+  color: white;
+}
+
+.asana-settings-btn-primary:hover {
+  background: var(--asana-brand-purple-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--asana-shadow-card);
+}
+
+.asana-settings-btn-secondary {
+  background: transparent;
+  color: var(--asana-text-primary);
+  border: 1px solid var(--asana-border-default);
+}
+
+.asana-settings-btn-secondary:hover {
+  background: var(--asana-bg-hover);
+  border-color: var(--asana-border-hover);
+}
+
+.asana-settings-btn-danger {
+  background: transparent;
+  color: var(--asana-status-blocked);
+  border: 1px solid var(--asana-status-blocked);
+}
+
+.asana-settings-btn-danger:hover {
+  background: var(--asana-status-blocked);
+  color: white;
+}
+
+.asana-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-md);
+  margin-top: var(--asana-spacing-2xl);
+}

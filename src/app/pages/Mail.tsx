@@ -7,6 +7,7 @@ import { MailContextSidebar } from '../../features/mail/components/MailContextSi
 import { ComposeModal } from '../../features/mail/components';
 import { MessageViewModal } from '../../features/mail/components/MessageViewModal';
 import { useMailStore } from '../../features/mail/stores/mailStore';
+import './styles/mail-asana-v2.css';
 // Import debug utilities (only in dev mode)
 if (import.meta.env.DEV) {
   import('../../features/mail/utils/debugGmail');
@@ -37,18 +38,31 @@ export default function Mail() {
   const handleOpenLabelPicker = () => {};
 
   return (
-    <div className="flex h-full gap-6 bg-primary p-6">
+    <div
+      className="asana-mail"
+      style={{
+        display: 'flex',
+        height: '100vh',
+        overflow: 'hidden',
+        background: '#FAFBFC',
+        // Mirror canvas/chat: remove side padding when the corresponding panel is closed
+        padding: `${24}px ${isContextOpen ? 24 : 0}px ${24}px ${isMailSidebarOpen ? 24 : 0}px`,
+        gap: isMailSidebarOpen ? '24px' : '0px'
+      }}
+    >
       {/* Mail Sidebar */}
       <MailSidebar 
         isOpen={isMailSidebarOpen}
         onToggle={toggleMailSidebar}
       />
 
-      {/* Main Content Area */}
-      <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+      {/* Main + Context grouped to keep inner 24px gap */}
+      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1 }}>
+        {/* Main Content Area */}
+        <div className="asana-mail-content">
           
           {/* Enhanced Search Bar */}
-          <div className="bg-bg-tertiary shrink-0 rounded-t-xl p-4">
+          <div className="asana-mail-content-header">
             <EnhancedSearchBar 
               onAdvancedSearch={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)}
             />
@@ -59,21 +73,22 @@ export default function Mail() {
 
 
           {/* Message List */}
-          <div className="relative flex min-h-0 flex-1 overflow-hidden">
+          <div className="asana-mail-content-body">
             <EnhancedMessageList />
           </div>
           
-      </div>
+        </div>
 
-      {/* Context Sidebar */}
-      <MailContextSidebar 
-        isOpen={isContextOpen}
-        onToggle={toggleContext}
-        isThreadedView={isThreadedView}
-        onThreadedViewChange={setIsThreadedView}
-        listViewType={listViewType}
-        onListViewTypeChange={setListViewType}
-      />
+        {/* Context Sidebar */}
+        <MailContextSidebar 
+          isOpen={isContextOpen}
+          onToggle={toggleContext}
+          isThreadedView={isThreadedView}
+          onThreadedViewChange={setIsThreadedView}
+          listViewType={listViewType}
+          onListViewTypeChange={setListViewType}
+        />
+      </div>
 
       {/* Compose Modal - Only show for new compose, not replies */}
       {isComposing && !currentMessage && <ComposeModal />}

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useNotesStore } from '../store';
 import { Button, Text, Input, Card, Heading, Toast } from '../../../components/ui';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '../../../components/ui/DropdownMenu';
-import { FolderPlus, FilePlus, Search, MoreHorizontal, Edit, Trash2, Folder as FolderIcon, FileText as NoteIcon, ChevronRight, X, FileDown, PanelLeft } from 'lucide-react';
+import { FolderPlus, FilePlus, Search, MoreHorizontal, Edit, Trash2, Folder as FolderIcon, FileText as NoteIcon, ChevronRight, X, FileDown, PanelLeft, PanelRight } from 'lucide-react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, DragStartEvent } from '@dnd-kit/core';
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import * as HTMLtoDOCX from 'html-to-docx';
@@ -558,62 +558,49 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
     });
   };
 
-  // If closed, show only the toggle button
+  // If closed, show slim 40px gutter handle aligned like Canvas/Chat
   if (!isOpen) {
     return (
-      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
-        <div className="border-border-default flex flex-col items-center border-b p-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            title="Show notes sidebar"
-            className="mb-2 text-secondary hover:bg-tertiary hover:text-primary"
-          >
-            <NoteIcon size={20} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => createNote({ title: 'Untitled Note', content: '<p></p>', folderId: null })}
-            title="Create new note"
-            className="text-secondary hover:bg-accent-soft hover:text-primary"
-          >
-            <FilePlus size={18} />
-          </Button>
-        </div>
-        
-        <div className="flex flex-1 flex-col items-center gap-2 pt-4">
-          {/* Show indicators for folders and notes */}
-          <div className="flex flex-col items-center gap-2">
-            <div 
-              title="Folders"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
-            >
-              <FolderIcon size={14} />
-            </div>
-            
-            <div 
-              title="Notes"
-              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
-            >
-              <NoteIcon size={14} />
-            </div>
-          </div>
-          
-          {/* Notes count indicator */}
-          <div className="mt-2 flex flex-col items-center gap-1">
-            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
-              <Text size="xs" weight="bold" className="text-white">
-                {notes.length}
-              </Text>
-            </div>
-            <Text size="xs" variant="tertiary" className="text-center">
-              Notes
-            </Text>
-          </div>
-        </div>
-      </Card>
+      <div
+        style={{
+          width: '40px',
+          height: '64px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: '-24px'
+        }}
+      >
+        <button
+          onClick={onToggle}
+          title="Show notes sidebar"
+          aria-label="Show notes sidebar"
+          style={{
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            background: 'transparent',
+            border: 'none',
+            color: '#7B8794',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            padding: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#F4F6F8';
+            e.currentTarget.style.color = '#323F4B';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#7B8794';
+          }}
+        >
+          <PanelRight size={18} strokeWidth={2} />
+        </button>
+      </div>
     );
   }
 

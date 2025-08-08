@@ -1,0 +1,480 @@
+/* UI Components - Asana Design System */
+
+/* Card Component */
+.asana-card {
+  background: var(--asana-bg-primary);
+  border: 1px solid var(--asana-border-subtle);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: var(--asana-shadow-card);
+  padding: var(--asana-spacing-xl);
+  transition: all var(--asana-transition-base);
+}
+
+.asana-card:hover {
+  box-shadow: var(--asana-shadow-card-hover);
+}
+
+/* Button Component */
+.asana-btn {
+  padding: var(--asana-spacing-sm) var(--asana-spacing-lg);
+  border-radius: var(--asana-radius-md);
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  border: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--asana-spacing-sm);
+}
+
+.asana-btn-primary {
+  background: var(--asana-brand-purple);
+  color: white;
+}
+
+.asana-btn-primary:hover {
+  background: var(--asana-brand-purple-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--asana-shadow-card);
+}
+
+.asana-btn-secondary {
+  background: transparent;
+  color: var(--asana-text-primary);
+  border: 1px solid var(--asana-border-default);
+}
+
+.asana-btn-secondary:hover {
+  background: var(--asana-bg-hover);
+  border-color: var(--asana-border-hover);
+}
+
+.asana-btn-ghost {
+  background: transparent;
+  color: var(--asana-text-secondary);
+}
+
+.asana-btn-ghost:hover {
+  background: var(--asana-bg-hover);
+  color: var(--asana-text-primary);
+}
+
+.asana-btn-danger {
+  background: var(--asana-status-blocked);
+  color: white;
+}
+
+.asana-btn-danger:hover {
+  background: var(--asana-status-blocked-hover);
+}
+
+/* Input Component */
+.asana-input {
+  width: 100%;
+  padding: var(--asana-spacing-md);
+  background: var(--asana-bg-input);
+  border: 1px solid var(--asana-border-default);
+  border-radius: var(--asana-radius-md);
+  color: var(--asana-text-primary);
+  font-size: var(--asana-font-size-sm);
+  outline: none;
+  transition: all var(--asana-transition-fast);
+}
+
+.asana-input:hover {
+  border-color: var(--asana-border-hover);
+}
+
+.asana-input:focus {
+  background: var(--asana-bg-primary);
+  border-color: var(--asana-border-focus);
+  box-shadow: 0 0 0 3px rgba(121, 110, 255, 0.1);
+}
+
+.asana-input::placeholder {
+  color: var(--asana-text-placeholder);
+}
+
+/* Modal/Dialog Component */
+.asana-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.asana-modal {
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-xl);
+  box-shadow: var(--asana-shadow-modal);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.asana-modal-header {
+  padding: var(--asana-spacing-2xl);
+  border-bottom: 1px solid var(--asana-border-subtle);
+}
+
+.asana-modal-title {
+  font-size: var(--asana-font-size-xl);
+  font-weight: var(--asana-font-weight-semibold);
+  color: var(--asana-text-primary);
+  margin: 0;
+}
+
+.asana-modal-body {
+  padding: var(--asana-spacing-2xl);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.asana-modal-footer {
+  padding: var(--asana-spacing-xl) var(--asana-spacing-2xl);
+  border-top: 1px solid var(--asana-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--asana-spacing-md);
+}
+
+/* Badge/Tag Component */
+.asana-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--asana-spacing-xs) var(--asana-spacing-sm);
+  border-radius: var(--asana-radius-full);
+  font-size: var(--asana-font-size-xs);
+  font-weight: var(--asana-font-weight-medium);
+  gap: var(--asana-spacing-xs);
+}
+
+.asana-badge-primary {
+  background: rgba(121, 110, 255, 0.1);
+  color: var(--asana-brand-purple);
+}
+
+.asana-badge-success {
+  background: rgba(var(--asana-status-success-rgb), 0.1);
+  color: var(--asana-status-success);
+}
+
+.asana-badge-warning {
+  background: rgba(var(--asana-status-warning-rgb), 0.1);
+  color: var(--asana-status-warning);
+}
+
+.asana-badge-danger {
+  background: rgba(var(--asana-status-blocked-rgb), 0.1);
+  color: var(--asana-status-blocked);
+}
+
+.asana-badge-muted {
+  background: var(--asana-bg-secondary);
+  color: var(--asana-text-secondary);
+}
+
+/* Avatar Component */
+.asana-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--asana-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--asana-font-weight-medium);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.asana-avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: var(--asana-font-size-sm);
+}
+
+.asana-avatar-lg {
+  width: 48px;
+  height: 48px;
+  font-size: var(--asana-font-size-lg);
+}
+
+.asana-avatar-default {
+  background: linear-gradient(135deg, var(--asana-brand-purple), var(--asana-brand-coral));
+  color: white;
+}
+
+.asana-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Dropdown Menu */
+.asana-dropdown {
+  position: absolute;
+  background: var(--asana-bg-primary);
+  border: 1px solid var(--asana-border-default);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: var(--asana-shadow-dropdown);
+  padding: var(--asana-spacing-sm);
+  min-width: 200px;
+  z-index: 100;
+}
+
+.asana-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-md);
+  padding: var(--asana-spacing-sm) var(--asana-spacing-md);
+  border-radius: var(--asana-radius-md);
+  color: var(--asana-text-primary);
+  font-size: var(--asana-font-size-sm);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  text-decoration: none;
+}
+
+.asana-dropdown-item:hover {
+  background: var(--asana-bg-hover);
+}
+
+.asana-dropdown-item.active {
+  background: rgba(121, 110, 255, 0.08);
+  color: var(--asana-brand-purple);
+}
+
+.asana-dropdown-divider {
+  height: 1px;
+  background: var(--asana-border-subtle);
+  margin: var(--asana-spacing-sm) 0;
+}
+
+/* Toast/Notification */
+.asana-toast {
+  position: fixed;
+  bottom: var(--asana-spacing-2xl);
+  right: var(--asana-spacing-2xl);
+  background: var(--asana-bg-primary);
+  border: 1px solid var(--asana-border-default);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: var(--asana-shadow-toast);
+  padding: var(--asana-spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-md);
+  min-width: 300px;
+  z-index: 1000;
+  animation: slideInUp var(--asana-transition-base);
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.asana-toast-success {
+  border-left: 3px solid var(--asana-status-success);
+}
+
+.asana-toast-error {
+  border-left: 3px solid var(--asana-status-blocked);
+}
+
+.asana-toast-warning {
+  border-left: 3px solid var(--asana-status-warning);
+}
+
+.asana-toast-info {
+  border-left: 3px solid var(--asana-brand-purple);
+}
+
+/* Checkbox */
+.asana-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--asana-border-default);
+  border-radius: var(--asana-radius-sm);
+  background: var(--asana-bg-input);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  position: relative;
+}
+
+.asana-checkbox:hover {
+  border-color: var(--asana-border-hover);
+}
+
+.asana-checkbox.checked {
+  background: var(--asana-brand-purple);
+  border-color: var(--asana-brand-purple);
+}
+
+.asana-checkbox.checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Progress Ring */
+.asana-progress-ring {
+  position: relative;
+  display: inline-block;
+}
+
+.asana-progress-ring svg {
+  transform: rotate(-90deg);
+}
+
+.asana-progress-ring-circle {
+  fill: none;
+  stroke-width: 3;
+}
+
+.asana-progress-ring-bg {
+  stroke: var(--asana-bg-secondary);
+}
+
+.asana-progress-ring-fill {
+  stroke: var(--asana-brand-purple);
+  stroke-linecap: round;
+  transition: stroke-dasharray var(--asana-transition-base);
+}
+
+/* Tooltip */
+.asana-tooltip {
+  position: absolute;
+  background: var(--asana-bg-tooltip);
+  color: white;
+  padding: var(--asana-spacing-sm) var(--asana-spacing-md);
+  border-radius: var(--asana-radius-md);
+  font-size: var(--asana-font-size-xs);
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: var(--asana-shadow-tooltip);
+}
+
+.asana-tooltip::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 4px solid transparent;
+}
+
+.asana-tooltip.top::after {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: var(--asana-bg-tooltip);
+}
+
+.asana-tooltip.bottom::after {
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: var(--asana-bg-tooltip);
+}
+
+/* Flexible Grid */
+.asana-grid {
+  display: grid;
+  gap: var(--asana-spacing-xl);
+}
+
+.asana-grid-auto {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* Stepper */
+.asana-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.asana-stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--asana-spacing-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.asana-stepper-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--asana-radius-full);
+  background: var(--asana-bg-secondary);
+  border: 2px solid var(--asana-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  color: var(--asana-text-secondary);
+  transition: all var(--asana-transition-fast);
+}
+
+.asana-stepper-step.active .asana-stepper-circle {
+  background: var(--asana-brand-purple);
+  border-color: var(--asana-brand-purple);
+  color: white;
+}
+
+.asana-stepper-step.completed .asana-stepper-circle {
+  background: var(--asana-status-success);
+  border-color: var(--asana-status-success);
+  color: white;
+}
+
+.asana-stepper-line {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--asana-border-subtle);
+  z-index: 0;
+}
+
+/* Loading Spinner */
+.asana-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--asana-bg-secondary);
+  border-top-color: var(--asana-brand-purple);
+  border-radius: var(--asana-radius-full);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

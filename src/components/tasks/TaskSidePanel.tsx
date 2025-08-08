@@ -180,21 +180,16 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
           {/* Header - with reduced height to align content */}
           <div className="flex items-center justify-between px-6 py-2 border-b border-gray-200" style={{ minHeight: '48px' }}>
             <h2 className="text-base font-semibold text-gray-900">Task details</h2>
-            <button
+            <Button
+              type="button"
               onClick={onClose}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
               aria-label="Close panel"
-              style={{
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
             >
               <X size={20} color="#6B6F76" strokeWidth={2} />
-            </button>
+            </Button>
           </div>
 
           {/* Content */}
@@ -248,8 +243,9 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
               </label>
               <div className="flex gap-2">
                 {priorityOptions.map((option) => (
-                  <button
+                  <Button
                     key={option.value}
+                    type="button"
                     onClick={async () => {
                       // Only update if priority actually changed
                       if (formData.priority !== option.value) {
@@ -298,7 +294,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                     }
                   >
                     {option.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -320,13 +316,16 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                     style={{ paddingRight: '4px' }}
                   >
                     {label.name}
-                    <button
+                    <Button
+                      type="button"
                       onClick={() => handleRemoveLabel(label.name)}
-                      className="hover:opacity-70 inline-flex items-center justify-center"
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 p-0 hover:opacity-70"
                       style={{ marginLeft: '4px', marginRight: '-2px' }}
                     >
                       <X size={12} />
-                    </button>
+                    </Button>
                   </span>
                 ))}
               </div>

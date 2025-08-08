@@ -15,6 +15,7 @@ import {
   Tag,
   Mail,
   PanelLeft,
+  PanelRight,
   RefreshCw,
   LogOut,
   ExternalLink,
@@ -257,94 +258,49 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     await fetchMessages(labelId);
   };
 
-  // If closed, show only the toggle button
+  // If closed, show slim 40px gutter handle aligned like Canvas/Chat
   if (!isOpen) {
     return (
-      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
-        <div 
-          className="border-border-default flex flex-col items-center border-b p-3"
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            title="Show mail folders"
-            className="mb-2 text-secondary hover:bg-tertiary hover:text-primary"
-          >
-            <Mail size={20} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => startCompose()}
-            title="Compose new email"
-            className="text-secondary hover:bg-accent-ghost hover:text-primary"
-          >
-            <Edit size={18} />
-          </Button>
-        </div>
-        
-        <div 
-          className="flex flex-1 flex-col items-center"
-          style={{ 
-            paddingTop: 'var(--space-4)',
-            gap: 'var(--space-2)'
+      <div
+        style={{
+          width: '40px',
+          height: '64px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: '-24px'
+        }}
+      >
+        <button
+          onClick={onToggle}
+          title="Show mail folders"
+          aria-label="Show mail folders"
+          style={{
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            background: 'transparent',
+            border: 'none',
+            color: '#7B8794',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            padding: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#F4F6F8';
+            e.currentTarget.style.color = '#323F4B';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#7B8794';
           }}
         >
-          {/* Show indicators for main folders */}
-          {mainFolders.slice(0, 4).map(folder => {
-            const Icon = folder.icon;
-            
-            // Map folder IDs to Gmail labels for active state check
-            const labelMap: Record<string, string> = {
-              'inbox': 'INBOX',
-              'starred': 'STARRED',
-              'snoozed': 'SNOOZED',
-              'sent': 'SENT',
-              'drafts': 'DRAFT',
-              'all': 'all', // All mail uses 'all' as the view identifier
-              'spam': 'SPAM',
-              'trash': 'TRASH'
-            };
-            
-            const expectedView = labelMap[folder.id];
-            const isActive = currentView === expectedView;
-            
-            return (
-              <button
-                key={folder.id}
-                onClick={() => handleFolderClick(folder.id)}
-                title={folder.name}
-                className={`flex size-8 items-center justify-center rounded-md transition-all motion-safe:hover:scale-105 ${
-                  isActive 
-                    ? 'bg-selected text-selected shadow-sm' 
-                    : 'bg-tertiary text-secondary hover:bg-hover'
-                }`}
-              >
-                <Icon size={14} />
-              </button>
-            );
-          })}
-          
-          {/* Folder count indicator */}
-          <div 
-            className="mt-2 flex flex-col items-center"
-            style={{ 
-              gap: 'var(--space-1)',
-              marginTop: 'var(--space-2)'
-            }}
-          >
-            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
-              <Text size="xs" weight="bold" className="text-white">
-                {mainFolders.length}
-              </Text>
-            </div>
-            <Text size="xs" variant="tertiary" className="text-center">
-              Folders
-            </Text>
-          </div>
-        </div>
-      </Card>
+          <PanelRight size={18} strokeWidth={2} />
+        </button>
+      </div>
     );
   }
 

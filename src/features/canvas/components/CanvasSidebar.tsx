@@ -301,20 +301,33 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
     canvas.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // If closed, return null (toggle button will be shown by parent)
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <aside
-      className={`border-border-subtle flex flex-col overflow-hidden rounded-lg border bg-surface shadow-lg transition-all duration-300 ease-in-out`}
+      className="flex flex-col overflow-hidden"
       style={{
-        width: isOpen ? '20rem' : '0',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        width: '280px',
+        background: '#FFFFFF',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        height: '100%'
       }}
       role="complementary"
       aria-label="Canvas sidebar"
     >
       {/* Header */}
       <div 
-        className={`border-border-subtle flex shrink-0 items-center justify-between border-b bg-surface transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'} p-3`}
+        style={{
+          padding: '24px',
+          borderBottom: '1px solid #E4E7EB',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}
       >
         <Heading 
           level={3} 
@@ -339,6 +352,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
             onClick={onToggle} 
             className="text-secondary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-primary"
             aria-label="Close canvas sidebar"
+            title="Hide canvas sidebar"
           >
             <PanelLeftClose size={18} />
           </Button>
@@ -347,7 +361,9 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
 
       {/* Search */}
       <div 
-        className={`shrink-0 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'} p-3`}
+        style={{
+          padding: '0 24px 24px 24px'
+        }}
       >
         <div className="relative">
           <Search 
@@ -367,7 +383,10 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
 
       {/* Canvas List */}
       <div 
-        className={`flex-1 overflow-y-auto transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'} px-3 pb-3`}
+        className="flex-1 overflow-y-auto"
+        style={{
+          padding: '0 24px 24px 24px'
+        }}
         role="list"
         aria-label="Canvas list"
       >
@@ -375,12 +394,24 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
           {filteredCanvases.map((canvas) => (
             <div
               key={canvas.id}
-              className={`focus-within:ring-offset-bg-surface group flex cursor-pointer items-center rounded-md border border-transparent p-3
-                transition-all duration-200 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2
-                ${selectedCanvasId === canvas.id 
-                  ? "border-accent-primary bg-accent-ghost text-accent-primary shadow-sm" 
-                  : "hover:border-border-default hover:bg-tertiary hover:shadow-sm active:bg-tertiary"
-                }`}
+              className="group flex cursor-pointer items-center"
+              style={{
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '4px',
+                background: selectedCanvasId === canvas.id ? 'rgba(121, 110, 255, 0.08)' : 'transparent',
+                transition: 'all 200ms ease'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedCanvasId !== canvas.id) {
+                  e.currentTarget.style.background = '#F4F6F8';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedCanvasId !== canvas.id) {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
               onClick={() => loadCanvas(canvas.id)}
               role="listitem"
               tabIndex={0}
@@ -395,15 +426,23 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
             >
               {/* Thumbnail */}
               <div 
-                className={`mr-3 flex size-10 shrink-0 items-center justify-center rounded-md border transition-all duration-200
-                  ${selectedCanvasId === canvas.id 
-                    ? "border-accent-primary bg-accent-primary" 
-                    : "border-border-subtle group-hover:border-border-default bg-tertiary"
-                  }`}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '12px',
+                  background: selectedCanvasId === canvas.id ? '#796EFF' : '#F4F6F8',
+                  transition: 'all 200ms ease'
+                }}
               >
                 <Shapes 
                   size={20} 
-                  className={`transition-all duration-200 ${selectedCanvasId === canvas.id ? 'text-white' : 'text-muted'}`}
+                  style={{ 
+                    color: selectedCanvasId === canvas.id ? 'white' : '#7B8794'
+                  }}
                 />
               </div>
               

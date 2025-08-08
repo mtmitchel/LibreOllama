@@ -35,27 +35,21 @@ import Settings from './pages/Settings';
  */
 const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => {
   return (
-    <main 
-      role="main" 
-      className="h-full overflow-y-auto bg-page"
-      aria-label="Main content"
-    >
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/mail" element={<Mail />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/notes" element={<Notes />} />
-        <Route path="/canvas" element={<CanvasPage />} />
-        {/* Custom Calendar Implementation */}
-        <Route path="/calendar" element={<CalendarCustom />} />
-        <Route path="/tasks" element={<Tasks />} />
-        {/* <Route path="/tasks-redesigned" element={<TasksRedesigned />} />
-        <Route path="/tasks-asana" element={<TasksAsanaStyle />} /> */}
-        <Route path="/agents" element={<Agents />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
-    </main>
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/chat" element={<Chat />} />
+      <Route path="/mail" element={<Mail />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/notes" element={<Notes />} />
+      <Route path="/canvas" element={<CanvasPage />} />
+      {/* Custom Calendar Implementation */}
+      <Route path="/calendar" element={<CalendarCustom />} />
+      <Route path="/tasks" element={<Tasks />} />
+      {/* <Route path="/tasks-redesigned" element={<TasksRedesigned />} />
+      <Route path="/tasks-asana" element={<TasksAsanaStyle />} /> */}
+      <Route path="/agents" element={<Agents />} />
+      <Route path="/settings" element={<Settings />} />
+    </Routes>
   );
 };
 
@@ -89,7 +83,7 @@ export default function App() {
           <HeaderProvider>
             <MailStoreProvider>
               <TextSelectionDetector>
-                <div className="flex h-screen bg-page font-sans text-primary">
+                <div className="app-container">
               {/* Skip to main content link for keyboard users */}
               <a 
                 href="#main-content"

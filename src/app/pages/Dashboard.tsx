@@ -10,10 +10,9 @@ import {
 } from "../../features/dashboard/components";
 import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetErrorBoundary";
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
-import { LoadingState, FloatingActionButton } from "../../components/ui";
 import { Settings2 } from 'lucide-react';
-import './styles/dashboard.css';
-import Masonry from 'react-masonry-css';
+import '../../styles/asana-core.css';
+import './styles/dashboard-asana-v3.css';
 
 // Widget configuration
 interface WidgetConfig {
@@ -36,14 +35,8 @@ export function Dashboard() {
     { id: 'available-agents', component: AgentStatusWidget }
   ];
 
-  // Responsive column breakpoints
-  const breakpointColumns = {
-    default: 4,
-    1600: 4,
-    1200: 3,
-    900: 2,
-    600: 1
-  };
+  // Grid columns configuration
+  const columns = 3; // Standard 3-column layout
 
   // Simulate initial loading
   useEffect(() => {
@@ -56,45 +49,38 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="dashboard-container bg-primary">
-        <LoadingState 
-          size="lg" 
-          text="Loading your dashboard..." 
-          className="mb-8" 
-        />
+      <div className="asana-app-layout">
+        <div className="asana-content-card">
+          <div className="asana-loading">
+            <div className="asana-spinner" />
+            <span className="asana-loading-text">Loading your dashboard...</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="dashboard-container bg-primary">
-        <Masonry
-          breakpointCols={breakpointColumns}
-          className="dashboard-masonry"
-          columnClassName="dashboard-masonry-column"
-        >
-          {widgets.map((widget) => {
-            const WidgetComponent = widget.component;
-            return (
-              <div key={widget.id} className="dashboard-widget-wrapper">
-                <WidgetErrorBoundary fallback={`Failed to load ${widget.id}`}>
-                  <WidgetComponent />
-                </WidgetErrorBoundary>
-              </div>
-            );
-          })}
-        </Masonry>
+    <div className="asana-app-layout">
+      <div className="asana-content">
+        <div className="asana-content-card">
+          <div className="asana-content-body">
+            <div className="asana-grid asana-grid-3">
+              {widgets.map((widget) => {
+                const WidgetComponent = widget.component;
+                return (
+                  <div key={widget.id}>
+                    <WidgetErrorBoundary fallback={`Failed to load ${widget.id}`}>
+                      <WidgetComponent />
+                    </WidgetErrorBoundary>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
-      
-      {/* Floating Action Button for Dashboard Customization */}
-      <FloatingActionButton
-        icon={Settings2}
-        label="Customize"
-        onClick={() => console.log('Open dashboard customization')}
-        position="bottom-right"
-      />
-    </>
+    </div>
   );
 }
 

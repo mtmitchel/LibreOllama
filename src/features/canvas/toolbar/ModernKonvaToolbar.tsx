@@ -266,7 +266,14 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[1000] flex justify-center">
-      <div className="bg-bg-elevated border-border-default pointer-events-auto flex max-w-[95vw] items-center justify-center gap-3 overflow-visible rounded-lg border px-3 py-1.5 shadow-xl backdrop-blur-sm">
+      <div className="pointer-events-auto flex max-w-[95vw] items-center justify-center gap-3 overflow-visible"
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #E4E7EB',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+        }}>
         {/* Basic Tools */}
         <div className="flex items-center gap-1">
           {basicTools.map(tool => {

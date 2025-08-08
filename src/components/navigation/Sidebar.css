@@ -1,0 +1,404 @@
+/* Sidebar Component - Asana Light Design System */
+
+.asana-sidebar {
+  width: 240px;
+  height: 100vh;
+  background: #FFFFFF; /* Clean white background - NOT purple */
+  border-right: 1px solid #E4E7EB; /* Light gray border */
+  display: flex;
+  flex-direction: column;
+  transition: width 200ms ease;
+  position: relative;
+  overflow: visible; /* allow collapsed toggle to peek outside */
+}
+
+.asana-sidebar.collapsed {
+  width: 40px; /* thin width for centered toggle */
+  flex: 0 0 40px;
+  border-right: none; /* no divider when collapsed */
+  background: transparent;
+}
+
+/* Header Section */
+.asana-sidebar-header {
+  height: 64px;
+  padding: 0 20px;
+  border-bottom: 1px solid #F4F6F8; /* Very light gray border */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FAFBFC; /* Very light gray header */
+}
+
+.asana-sidebar.collapsed .asana-sidebar-header {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 64px; /* keep original header height */
+  border-bottom: none;
+  background: transparent;
+}
+
+/* Collapsed toggle centered in thin sidebar */
+.asana-sidebar.collapsed .asana-sidebar-toggle {
+  width: 32px;
+  height: 32px;
+}
+
+.asana-sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  flex: 1;
+}
+
+.asana-sidebar-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: #796EFF; /* Purple ONLY for logo icon */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.asana-sidebar-logo-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323F4B; /* Dark text, not purple */
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-logo-text {
+  display: none;
+}
+
+.asana-sidebar-toggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #7B8794; /* Muted gray icon */
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.asana-sidebar-toggle:hover {
+  background: #F4F6F8; /* Light gray hover */
+  color: #323F4B;
+}
+
+/* Search Section */
+.asana-sidebar-search {
+  padding: 12px 16px;
+  border-bottom: 1px solid #F4F6F8;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-search {
+  padding: 12px;
+}
+
+.asana-sidebar-search-box {
+  position: relative;
+}
+
+.asana-sidebar-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  background: #F4F6F8; /* Light gray input background */
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #323F4B;
+  font-size: 14px;
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.asana-sidebar-search-input::placeholder {
+  color: #9AA5B1; /* Muted placeholder */
+}
+
+.asana-sidebar-search-input:hover {
+  background: #E4E7EB;
+}
+
+.asana-sidebar-search-input:focus {
+  background: #FFFFFF;
+  border-color: #796EFF; /* Purple focus border */
+  box-shadow: 0 0 0 2px rgba(121, 110, 255, 0.15);
+}
+
+.asana-sidebar-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9AA5B1;
+  pointer-events: none;
+  width: 16px;
+  height: 16px;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-search-input {
+  display: none;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-search-box {
+  display: flex;
+  justify-content: center;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-search-icon {
+  position: static;
+  transform: none;
+  cursor: pointer;
+  pointer-events: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 150ms ease;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-search-icon:hover {
+  background: #F4F6F8;
+}
+
+/* Navigation Section */
+.asana-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 8px;
+}
+
+.asana-sidebar-nav-group {
+  margin-bottom: 24px;
+}
+
+.asana-sidebar-nav-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9AA5B1; /* Muted gray for section titles */
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px 12px;
+  white-space: nowrap;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-nav-title {
+  display: none;
+}
+
+.asana-sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+  color: #52606D; /* Default gray text */
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: all 150ms ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.asana-sidebar-nav-item:hover {
+  background: #F4F6F8; /* Light gray hover */
+  color: #323F4B; /* Darker text on hover */
+}
+
+.asana-sidebar-nav-item.active {
+  background: rgba(121, 110, 255, 0.08); /* Very light purple tint */
+  color: #796EFF; /* Purple text for active */
+  font-weight: 500;
+}
+
+.asana-sidebar-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 70%;
+  background: #796EFF; /* Purple accent bar */
+  border-radius: 0 2px 2px 0;
+}
+
+.asana-sidebar-nav-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.asana-sidebar-nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+}
+
+.asana-sidebar-nav-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-nav-label {
+  display: none;
+}
+
+.asana-sidebar-nav-badge {
+  padding: 2px 6px;
+  background: #E4E7EB; /* Light gray badge */
+  color: #52606D;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.asana-sidebar-nav-item.active .asana-sidebar-nav-badge {
+  background: #796EFF; /* Purple badge for active */
+  color: white;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-nav-badge {
+  display: none;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-nav-item {
+  justify-content: center;
+  padding: 12px;
+}
+
+/* Footer Section */
+.asana-sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #F4F6F8;
+  background: #FAFBFC; /* Light gray footer */
+}
+
+.asana-sidebar.collapsed .asana-sidebar-footer {
+  padding: 12px;
+}
+
+/* Settings Link */
+.asana-sidebar-settings {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #7B8794; /* Muted gray */
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: all 150ms ease;
+}
+
+.asana-sidebar-settings:hover {
+  background: #F4F6F8;
+  color: #323F4B;
+}
+
+.asana-sidebar-settings.active {
+  background: rgba(121, 110, 255, 0.08);
+  color: #796EFF;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-settings {
+  justify-content: center;
+  padding: 12px;
+}
+
+.asana-sidebar.collapsed .asana-sidebar-settings span {
+  display: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .asana-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transform: translateX(-100%);
+  }
+  
+  .asana-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .asana-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+  }
+  
+  .asana-sidebar.open + .asana-sidebar-overlay {
+    display: block;
+  }
+}
+
+/* Tooltip for collapsed state */
+.asana-sidebar.collapsed .asana-sidebar-nav-item[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #323F4B;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Scrollbar styling */
+.asana-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.asana-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.asana-sidebar-nav::-webkit-scrollbar-thumb {
+  background: #CBD2D9;
+  border-radius: 3px;
+}
+
+.asana-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: #9AA5B1;
+}

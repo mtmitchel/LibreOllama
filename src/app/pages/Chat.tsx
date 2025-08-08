@@ -10,6 +10,7 @@ import { ContextSidebar } from '../../features/chat/components/ContextSidebar';
 import { ConversationList } from '../../features/chat/components/ConversationList';
 import { EmptyState } from '../../features/chat/components/EmptyState';
 import { useChatStore } from '../../features/chat/stores/chatStore';
+import './styles/chat-asana.css';
 
 function Chat() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
@@ -201,12 +202,12 @@ function Chat() {
   // --- ERROR DISPLAY ---
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <p className="mb-4 text-red-500">{error}</p>
+      <div className="asana-chat">
+        <div className="asana-empty">
+          <p className="asana-empty-title" style={{ color: 'var(--asana-status-blocked)' }}>{error}</p>
           <button 
             onClick={clearError}
-            className="hover:bg-primary/80 rounded bg-primary px-4 py-2 text-white"
+            className="asana-action-btn"
           >
             Retry
           </button>
@@ -217,7 +218,20 @@ function Chat() {
 
   // --- RENDER ---
   return (
-    <div className="flex h-full gap-6 bg-primary p-6">
+    <div
+      className="asana-chat"
+      style={{
+        display: 'flex',
+        height: '100vh',
+        overflow: 'hidden',
+        background: '#FAFBFC',
+        // Remove left/right page padding when the corresponding panels are closed,
+        // so the closed-state handles own a dedicated 40px gutter like Canvas
+        padding: `${24}px ${isContextOpen ? 24 : 0}px ${24}px ${isConvoListOpen ? 24 : 0}px`,
+        // Gap between left conversations panel (or its gutter) and the main+right wrapper
+        gap: isConvoListOpen ? '24px' : '0px'
+      }}
+    >
       {/* Left Sidebar - Conversation List */}
       <ConversationList
         conversations={conversations}
@@ -236,8 +250,10 @@ function Chat() {
         onExportConversation={handleExportConversation}
       />
 
-      {/* Main Chat Area */}
-      <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+      {/* Main + Right Context grouped so their internal gap remains 24px */}
+      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1 }}>
+        {/* Main Chat Area */}
+        <div className="asana-chat-main">
         {selectedChat ? (
           <>
             {/* Chat Header */}
@@ -246,67 +262,68 @@ function Chat() {
             />
 
             {/* Messages Area */}
-            <div className="flex flex-1 overflow-hidden">
-              <div className="flex flex-1 flex-col">
-                <div className="flex-1 overflow-y-auto p-4">
-                  {isLoadingMessages ? (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="text-secondary">Loading messages...</div>
-                    </div>
-                  ) : currentMessages.length === 0 ? (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="text-center text-secondary">
-                        <p>No messages yet.</p>
-                        <p>Start a conversation!</p>
+            <div className="asana-chat-messages">
+              {isLoadingMessages ? (
+                <div className="asana-empty">
+                  <div className="asana-empty-title">Loading messages...</div>
+                </div>
+              ) : currentMessages.length === 0 ? (
+                <div className="asana-empty">
+                  <div className="asana-empty-title">No messages yet.</div>
+                  <div className="asana-empty-description">Start a conversation!</div>
+                </div>
+              ) : (
+                <>
+                  {currentMessages.map((message) => (
+                    <ChatMessageBubble
+                      key={message.id}
+                      message={message}
+                      variant="ghost"
+                      onRegenerate={handleRegenerate}
+                    />
+                  ))}
+                  {isSending && (
+                    <div className="asana-chat-typing">
+                      <div className="asana-chat-typing-dots">
+                        <div className="asana-chat-typing-dot"></div>
+                        <div className="asana-chat-typing-dot"></div>
+                        <div className="asana-chat-typing-dot"></div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {currentMessages.map((message) => (
-                        <ChatMessageBubble
-                          key={message.id}
-                          message={message}
-                          variant="ghost"
-                          onRegenerate={handleRegenerate}
-                        />
-                      ))}
-                      {isSending && (
-                        <div className="flex items-center space-x-2 text-secondary">
-                          <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                          <span>AI is typing...</span>
-                        </div>
-                      )}
+                      <span>AI is typing...</span>
                     </div>
                   )}
-                  <div ref={messagesEndRef} />
-                </div>
+                </>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
 
-                {/* Chat Input */}
-                <ChatInput
-                  newMessage={newMessage}
-                  selectedChatId={selectedConversationId}
-                  selectedChatTitle={selectedChat?.title}
-                  onMessageChange={setNewMessage}
-                  onSendMessage={handleSendMessage}
-                  disabled={isSending || isLoadingMessages}
-                />
-              </div>
+            {/* Chat Input */}
+            <div className="asana-chat-input-container">
+              <ChatInput
+                newMessage={newMessage}
+                selectedChatId={selectedConversationId}
+                selectedChatTitle={selectedChat?.title}
+                onMessageChange={setNewMessage}
+                onSendMessage={handleSendMessage}
+                disabled={isSending || isLoadingMessages}
+              />
             </div>
           </>
-        ) : (
-          /* Empty State */
-          <div className="flex flex-1 items-center justify-center">
-            <EmptyState onNewChat={handleNewChat} />
-          </div>
-        )}
-      </div>
+          ) : (
+            /* Empty State */
+            <div className="asana-empty">
+              <EmptyState onNewChat={handleNewChat} />
+            </div>
+          )}
+        </div>
 
-      {/* Context Sidebar */}
-      <ContextSidebar
-        isOpen={isContextOpen}
-        conversationId={selectedConversationId || undefined}
-        onToggle={() => setIsContextOpen(!isContextOpen)}
-      />
+        {/* Context Sidebar */}
+        <ContextSidebar
+          isOpen={isContextOpen}
+          conversationId={selectedConversationId || undefined}
+          onToggle={() => setIsContextOpen(!isContextOpen)}
+        />
+      </div>
     </div>
   );
 }

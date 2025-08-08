@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Card, AddNewCard, Button, Tag, Heading, Text, FlexibleGrid } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { Settings2, Trash2, PlusCircle } from 'lucide-react';
+import './styles/page-asana-v2.css';
 
 
 
@@ -43,8 +44,9 @@ export function Agents() {
   }, [clearHeaderProps]);
 
   return (
-    <div className="size-full p-6 lg:p-8">
-      <FlexibleGrid minItemWidth={320} gap={6} className="w-full">
+    <div className="asana-page">
+      <div className="asana-page-content">
+        <div className="asana-content-grid">
         {agents.map((agent) => (
           <Card 
             key={agent.id} 
@@ -132,7 +134,8 @@ export function Agents() {
           }}
           minHeight="280px"
         />
-      </FlexibleGrid>
+        </div>
+      </div>
     </div>
   );
 };

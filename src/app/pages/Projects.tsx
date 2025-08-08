@@ -8,8 +8,9 @@ import NewProjectModal from '../../features/projects/components/NewProjectModal'
 import EditProjectModal from '../../features/projects/components/EditProjectModal';
 import { Card, Button, Text, Heading, Caption, FlexibleGrid } from '../../components/ui';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { FileText, CheckSquare, Image, Paperclip, MessageSquare, Users, Plus } from 'lucide-react';
+import { FileText, CheckSquare, Image, Paperclip, MessageSquare, Users, Plus, Search } from 'lucide-react';
 import { useProjectStore, Project, ProjectGoal, ProjectAsset } from '../../features/projects/stores/projectStore';
+import './styles/page-asana-v2.css';
 
 interface FileItem {
   id: string;
@@ -244,12 +245,12 @@ export function Projects() {
   // --- ERROR DISPLAY ---
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <p className="mb-4 text-red-500">{error}</p>
+      <div className="asana-page">
+        <div className="asana-empty">
+          <p className="asana-empty-title" style={{ color: 'var(--asana-status-blocked)' }}>{error}</p>
           <button 
             onClick={clearError}
-            className="hover:bg-primary/80 rounded bg-primary px-4 py-2 text-white"
+            className="asana-action-btn"
           >
             Retry
           </button>
@@ -260,102 +261,126 @@ export function Projects() {
 
   // --- RENDER ---
   return (
-    <div 
-      className="flex h-full"
-      style={{ 
-        background: 'var(--bg-content)',
-        padding: 'var(--space-6)',
-        gap: 'var(--space-6)'
-      }}
-    >
+    <div className="asana-page">
       {/* Projects Sidebar */}
-      <ProjectsSidebar
-        projects={projects}
-        selectedProjectId={selectedProjectId}
-        onSelectProject={handleSelectProject}
-        onNewProject={handleCreateProject}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onEditProject={handleEditProject}
-        onDuplicateProject={handleDuplicateProject}
-        onArchiveProject={handleArchiveProject}
-        onDeleteProject={handleDeleteProjectClick}
-      />
+      <div className="asana-projects-sidebar">
+        <div className="asana-projects-header">
+          <h2 className="asana-projects-title">All projects</h2>
+          <button className="asana-btn asana-btn-primary" onClick={handleCreateProject}>
+            <Plus size={16} />
+          </button>
+        </div>
+        
+        <div className="asana-search-box">
+          <Search size={16} className="asana-search-icon" />
+          <input 
+            type="search" 
+            placeholder="Search projects..." 
+            className="asana-search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="asana-projects-list">
+          {Object.entries(
+            projects.reduce((acc, project) => {
+              const status = project.statusTag || 'OTHER';
+              if (!acc[status]) acc[status] = [];
+              acc[status].push(project);
+              return acc;
+            }, {} as Record<string, Project[]>)
+          ).map(([status, projectList]) => (
+            <div key={status} className="asana-projects-group">
+              <div className="asana-projects-group-title">{status}</div>
+              {projectList
+                .filter(p => 
+                  p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.description.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map(project => (
+                  <div
+                    key={project.id}
+                    className={`asana-project-item ${selectedProjectId === project.id ? 'active' : ''}`}
+                    onClick={() => handleSelectProject(project.id)}
+                  >
+                    <div className="asana-project-icon" style={{ backgroundColor: project.color || '#796EFF' }} />
+                    <span className="asana-project-name">{project.name}</span>
+                    <span className="asana-project-count">{project.progress}%</span>
+                  </div>
+                ))}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Main Content Area */}
-      <div 
-        className="flex flex-1 flex-col"
-        style={{ 
-          background: 'var(--bg-tertiary)',
-          borderRadius: 'var(--radius-lg)'
-        }}
-      >
-        {selectedProject ? (
-          <Card className="flex h-full flex-col" padding="none">
-            {/* Project Header */}
-            <div 
-              className="shrink-0"
-              style={{ 
-                padding: 'var(--space-6)',
-                borderBottom: '1px solid var(--border-primary)'
-              }}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <Heading level={1}>{selectedProject.name}</Heading>
-                  <Text 
-                    variant="secondary" 
-                    size="lg"
-                    className="mt-1"
-                  >
-                    {selectedProject.description}
-                  </Text>
-                  <div className="mt-3 flex items-center gap-4">
-                    <Text variant="tertiary" size="sm">
-                      Progress: {selectedProject.progress}%
-                    </Text>
+      <div className="asana-page-content">
+        <div className="asana-page-container">
+          {selectedProject ? (
+            <div className="asana-project-content">
+              {/* Project Header */}
+              <div className="asana-project-header">
+                <h1 className="asana-project-title">{selectedProject.name}</h1>
+                <p className="asana-project-description">
+                  {selectedProject.description}
+                </p>
+                <div className="asana-project-meta">
+                  <div className="asana-project-stat">
+                    <span className="asana-project-stat-value">{selectedProject.progress}%</span>
+                    <span className="asana-project-stat-label">Progress</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Project Content */}
-            <div className="flex-1 overflow-y-auto p-6">
               {/* Quick Actions */}
-              <div>
-                <Heading level={3} className="mb-4">Quick actions</Heading>
-                <FlexibleGrid>
-                  {[
-                    { id: 'notes', label: 'Create notes', icon: FileText },
-                    { id: 'tasks', label: 'Add tasks', icon: CheckSquare },
-                    { id: 'canvas', label: 'Open canvas', icon: Image },
-                    { id: 'files', label: 'Upload files', icon: Paperclip },
-                    { id: 'chat', label: 'Start chat', icon: MessageSquare },
-                    { id: 'agent', label: 'Configure agent', icon: Users }
-                  ].map((action) => (
-                    <Card
-                      key={action.id}
-                      padding="lg"
-                      className="cursor-pointer text-center transition-shadow hover:shadow-md"
-                      onClick={() => handleCreateAsset(action.id)}
-                    >
-                      <div className="mb-3 flex justify-center">
-                        <action.icon size={24} className="text-accent-primary" />
-                      </div>
-                      <Text size="sm" weight="medium">{action.label}</Text>
-                    </Card>
-                  ))}
-                </FlexibleGrid>
+              <div className="asana-content-grid">
+                {[
+                  { id: 'notes', label: 'Create notes', icon: FileText },
+                  { id: 'tasks', label: 'Add tasks', icon: CheckSquare },
+                  { id: 'canvas', label: 'Open canvas', icon: Image },
+                  { id: 'files', label: 'Upload files', icon: Paperclip },
+                  { id: 'chat', label: 'Start chat', icon: MessageSquare },
+                  { id: 'agent', label: 'Configure agent', icon: Users }
+                ].map((action) => (
+                  <div
+                    key={action.id}
+                    className="asana-add-card"
+                    onClick={() => handleCreateAsset(action.id)}
+                  >
+                    <div className="asana-add-icon">
+                      <action.icon size={24} />
+                    </div>
+                    <div className="asana-add-text">{action.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-          </Card>
-        ) : (
-          /* No Project Selected */
-          <NoProjectSelected 
-            onCreateProject={handleCreateProject} 
-            hasProjects={projects.length > 0}
-          />
-        )}
+          ) : (
+            /* No Project Selected */
+            <div className="asana-mail-empty">
+              <div className="asana-mail-empty-icon">📁</div>
+              <h3 className="asana-mail-empty-title">
+                {projects.length > 0 ? 'Select a project' : 'No projects yet'}
+              </h3>
+              <p className="asana-mail-empty-description">
+                {projects.length > 0 
+                  ? 'Choose a project from the sidebar to view its details' 
+                  : 'Create your first project to get started'}
+              </p>
+              {projects.length === 0 && (
+                <button 
+                  className="asana-btn asana-btn-primary" 
+                  onClick={handleCreateProject}
+                  style={{ marginTop: '16px' }}
+                >
+                  <Plus size={16} style={{ marginRight: '8px' }} />
+                  Create project
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* New Project Modal */}
