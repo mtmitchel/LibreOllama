@@ -1,5 +1,8 @@
 import React from 'react';
-import { Button, Text, Card, Caption, Badge } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Badge } from '../../../components/ui/design-system/Badge';
+import { Text, Caption } from '../../../components/ui';
 import { 
   Edit, 
   Inbox, 
@@ -307,7 +310,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
   return (
     <Card 
       className="flex h-full w-[340px] shrink-0 flex-col"
-      padding="default"
+      padding="md"
     >
       {/* Header */}
       <div 
@@ -392,7 +395,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                     </Text>
                     <div className="flex min-w-[24px] items-center justify-center">
                       {folder.count && folder.count > 0 && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-[11px]">
                           {folder.count}
                         </Badge>
                       )}
@@ -486,7 +489,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                             </Text>
                             <div className="flex min-w-[24px] items-center justify-center">
                               {label.threadsUnread && label.threadsUnread > 0 && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-[11px]">
                                   {label.threadsUnread}
                                 </Badge>
                               )}

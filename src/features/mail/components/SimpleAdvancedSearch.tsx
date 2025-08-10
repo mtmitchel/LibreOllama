@@ -146,7 +146,7 @@ export function SimpleAdvancedSearch({
       <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b p-4">
-          <h2 className="text-lg font-medium">Advanced search</h2>
+          <h2 className="asana-text-lg font-medium">Advanced search</h2>
           <button
             onClick={onClose}
             className="text-secondary transition-colors hover:text-primary"
@@ -159,7 +159,7 @@ export function SimpleAdvancedSearch({
         <div className="space-y-4 p-6">
           {/* From */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               From
             </label>
             <input
@@ -173,7 +173,7 @@ export function SimpleAdvancedSearch({
 
           {/* To */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               To
             </label>
             <input
@@ -187,7 +187,7 @@ export function SimpleAdvancedSearch({
 
           {/* Subject */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Subject
             </label>
             <input
@@ -201,7 +201,7 @@ export function SimpleAdvancedSearch({
 
           {/* Has the words */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Has the words
             </label>
             <input
@@ -215,7 +215,7 @@ export function SimpleAdvancedSearch({
 
           {/* Doesn't have */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Doesn't have
             </label>
             <input
@@ -229,7 +229,7 @@ export function SimpleAdvancedSearch({
 
           {/* Size */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Size
             </label>
             <div className="flex space-x-2">
@@ -270,7 +270,7 @@ export function SimpleAdvancedSearch({
 
           {/* Date within */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Date within
             </label>
             <select
@@ -288,7 +288,7 @@ export function SimpleAdvancedSearch({
 
           {/* Search in */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Search
             </label>
             <select
@@ -313,7 +313,7 @@ export function SimpleAdvancedSearch({
                 onChange={(e) => updateFilter('hasAttachment', e.target.checked)}
                 className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
               />
-              <span className="text-sm font-medium text-primary">Has attachment</span>
+              <span className="asana-text-sm font-medium text-primary">Has attachment</span>
             </label>
           </div>
         </div>
@@ -322,7 +322,7 @@ export function SimpleAdvancedSearch({
         <div className="flex items-center justify-between border-t bg-surface p-4">
           <button
             onClick={handleReset}
-            className="text-sm text-secondary transition-colors hover:text-primary"
+            className="asana-text-sm text-secondary transition-colors hover:text-primary"
           >
             Reset
           </button>
@@ -330,13 +330,13 @@ export function SimpleAdvancedSearch({
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-secondary transition-colors hover:text-primary"
+              className="px-4 py-2 asana-text-sm text-secondary transition-colors hover:text-primary"
             >
               Cancel
             </button>
             <button
               onClick={handleSearch}
-              className="flex items-center space-x-2 rounded-md bg-accent-primary px-4 py-2 text-sm text-white transition-colors hover:bg-accent-secondary"
+              className="flex items-center space-x-2 rounded-md bg-accent-primary px-4 py-2 asana-text-sm text-white transition-colors hover:bg-accent-secondary"
             >
               <Search className="size-4" />
               <span>Search</span>

@@ -73,11 +73,14 @@ export function ChatInput({
         {/* Hidden File Input */}
         <input
           ref={fileInputRef}
+          id="chat-attachment-input"
+          name="chat-attachments"
           type="file"
           multiple
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.md"
           onChange={handleFileChange}
           className="hidden"
+          aria-label="Chat attachments"
         />
         
         {/* Left: Attachment IconButton */}

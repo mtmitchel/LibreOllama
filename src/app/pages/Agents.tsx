@@ -1,8 +1,11 @@
 import React, { useEffect } from 'react';
-import { Card, AddNewCard, Button, Tag, Heading, Text, FlexibleGrid } from '../../components/ui';
+import { Button } from '../../components/ui/design-system/Button';
+import { Card } from '../../components/ui/design-system/Card';
+import { Tag } from '../../components/ui/design-system/Tag';
+import { AddNewCard, Heading, Text, FlexibleGrid } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { Settings2, Trash2, PlusCircle } from 'lucide-react';
-import './styles/page-asana-v2.css';
+import { Page, PageContent, PageCard, PageBody } from '../../components/ui/design-system/Page';
 
 
 
@@ -44,8 +47,10 @@ export function Agents() {
   }, [clearHeaderProps]);
 
   return (
-    <div className="asana-page">
-      <div className="asana-page-content">
+    <Page>
+      <PageContent>
+        <PageCard>
+          <PageBody>
         <div className="asana-content-grid">
         {agents.map((agent) => (
           <Card 
@@ -135,8 +140,10 @@ export function Agents() {
           minHeight="280px"
         />
         </div>
-      </div>
-    </div>
+          </PageBody>
+        </PageCard>
+      </PageContent>
+    </Page>
   );
 };
 

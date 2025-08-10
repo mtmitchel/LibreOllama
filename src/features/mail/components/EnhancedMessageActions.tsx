@@ -48,7 +48,7 @@ function ActionButton({
   size = 'sm'
 }: ActionButtonProps) {
   const baseClasses = "flex items-center gap-1 transition-all duration-200";
-  const sizeClasses = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm';
+  const sizeClasses = size === 'sm' ? 'px-2 py-1 text-[11px]' : 'px-3 py-2 asana-text-sm';
   
   const variantClasses = {
     primary: isActive 
@@ -331,7 +331,7 @@ export function EnhancedMessageActions({
 
       {/* Message Metadata */}
       <div className="border-border-default mt-4 border-t pt-3">
-        <div className="flex items-center justify-between text-xs text-secondary">
+        <div className="flex items-center justify-between text-[11px] text-secondary">
           <div className="flex items-center gap-4">
             <span>
               Labels: {message.labels.length > 0 
@@ -355,7 +355,7 @@ export function EnhancedMessageActions({
 
       {/* Importance indicator */}
       {message.importance && message.importance !== 'normal' && (
-        <div className={`mt-2 inline-flex items-center gap-1 rounded px-2 py-1 text-xs ${
+        <div className={`mt-2 inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] ${
           message.importance === 'high' 
             ? 'bg-error-ghost text-error dark:bg-red-900/20 dark:text-red-400'
             : 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'

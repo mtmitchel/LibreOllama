@@ -160,7 +160,7 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
           </div>
 
           {/* URL bar */}
-          <div className="flex flex-1 items-center gap-2 rounded-md bg-white px-3 py-1 text-sm dark:bg-gray-700">
+          <div className="flex flex-1 items-center gap-2 rounded-md bg-white px-3 py-1 asana-text-sm dark:bg-gray-700">
             <Globe size={14} className="text-gray-400" />
             <span className="flex-1 truncate text-gray-600 dark:text-gray-300">
               {currentUrl}
@@ -196,7 +196,7 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-gray-900/80">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <p className="text-sm text-gray-600 dark:text-gray-400">Loading...</p>
+                <p className="asana-text-sm text-gray-600 dark:text-gray-400">Loading...</p>
               </div>
             </div>
           )}
@@ -206,10 +206,10 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
               <div className="flex flex-col items-center gap-3 text-center">
                 <AlertCircle className="h-12 w-12 text-gray-400" />
                 <div>
-                  <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                  <p className="asana-text-lg font-medium text-gray-700 dark:text-gray-300">
                     Unable to load this page
                   </p>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 asana-text-sm text-gray-500 dark:text-gray-400">
                     Some websites don't allow embedding for security reasons.
                   </p>
                   <Button

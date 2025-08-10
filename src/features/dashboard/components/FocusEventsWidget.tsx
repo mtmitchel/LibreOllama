@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Clock, Calendar, Target, CheckCircle } from 'lucide-react';
-import { Button } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { WidgetHeader } from '../../../components/ui/design-system';
 
 interface FocusItem {
   id: string;
@@ -97,42 +98,41 @@ export function FocusEventsWidget() {
   };
 
   return (
-    <div className="border-border-default flex h-full flex-col rounded-xl border bg-card p-4">
-      {/* Header with Toggle */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
-            {activeView === 'focus' ? (
-              <Target size={20} className="text-blue-500" />
-            ) : (
-              <Calendar size={20} className="text-blue-500" />
-            )}
+    <div className="asana-card asana-card-padded">
+      <WidgetHeader
+        title={(
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
+              {activeView === 'focus' ? (
+                <Target size={20} className="text-blue-500" />
+              ) : (
+                <Calendar size={20} className="text-blue-500" />
+              )}
+            </div>
+            <span>{activeView === 'focus' ? "Today's focus" : 'Upcoming events'}</span>
           </div>
-          <h3 className="text-lg font-semibold">
-            {activeView === 'focus' ? "Today's focus" : 'Upcoming events'}
-          </h3>
-        </div>
-        
-        {/* Toggle Buttons */}
-        <div className="flex gap-1 rounded-lg bg-tertiary p-1">
-          <Button
-            variant={activeView === 'focus' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveView('focus')}
-            className="px-3 py-1 text-xs"
-          >
-            Focus
-          </Button>
-          <Button
-            variant={activeView === 'events' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveView('events')}
-            className="px-3 py-1 text-xs"
-          >
-            Events
-          </Button>
-        </div>
-      </div>
+        )}
+        actions={(
+          <div className="flex gap-1 rounded-lg bg-tertiary p-1">
+            <Button
+              variant={activeView === 'focus' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('focus')}
+              className="px-3 py-1 text-[11px]"
+            >
+              Focus
+            </Button>
+            <Button
+              variant={activeView === 'events' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('events')}
+              className="px-3 py-1 text-[11px]"
+            >
+              Events
+            </Button>
+          </div>
+        )}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
@@ -151,12 +151,12 @@ export function FocusEventsWidget() {
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <h4 className="font-medium text-primary">{item.title}</h4>
-                        <span className={`text-xs font-medium ${getPriorityColor(item.priority)}`}>
+                        <span className={`text-[11px] font-medium ${getPriorityColor(item.priority)}`}>
                           {item.priority.toUpperCase()}
                         </span>
                       </div>
                       {item.description && (
-                        <p className="mt-1 text-sm text-secondary">{item.description}</p>
+                        <p className="mt-1 asana-text-sm text-secondary">{item.description}</p>
                       )}
                     </div>
                   </div>
@@ -179,10 +179,10 @@ export function FocusEventsWidget() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-primary">{event.title}</h4>
-                        <span className="text-xs text-secondary">{event.time}</span>
+                        <span className="text-[11px] text-secondary">{event.time}</span>
                       </div>
                       {event.location && (
-                        <p className="mt-1 text-xs text-secondary">{event.location}</p>
+                        <p className="mt-1 text-[11px] text-secondary">{event.location}</p>
                       )}
                     </div>
                   </div>

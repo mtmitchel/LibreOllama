@@ -119,10 +119,12 @@ const gridVariants = cva(
   }
 );
 
+type GridTag = 'div' | 'section' | 'main' | 'article';
+
 export interface GridProps extends VariantProps<typeof gridVariants> {
   children: React.ReactNode;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: GridTag;
   style?: React.CSSProperties;
   role?: string;
   'aria-label'?: string;
@@ -151,9 +153,10 @@ export const Grid = forwardRef<HTMLDivElement, GridProps>(({
   id,
   ...props
 }, ref) => {
+  const Comp = Component as any;
   return (
-    <Component
-      ref={ref}
+    <Comp
+      ref={ref as any}
       id={id}
       role={role}
       aria-label={ariaLabel}
@@ -171,10 +174,10 @@ export const Grid = forwardRef<HTMLDivElement, GridProps>(({
         placeItems,
         className,
       })}
-      {...props}
+      {...(props as any)}
     >
       {children}
-    </Component>
+    </Comp>
   );
 });
 
@@ -284,10 +287,12 @@ const gridItemVariants = cva(
   }
 );
 
+type GridItemTag = 'div' | 'section' | 'article' | 'main';
+
 export interface GridItemProps extends VariantProps<typeof gridItemVariants> {
   children: React.ReactNode;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: GridItemTag;
   style?: React.CSSProperties;
   id?: string;
 }
@@ -308,9 +313,10 @@ export const GridItem = forwardRef<HTMLDivElement, GridItemProps>(({
   id,
   ...props
 }, ref) => {
+  const CompItem = Component as any;
   return (
-    <Component
-      ref={ref}
+    <CompItem
+      ref={ref as any}
       id={id}
       style={style}
       className={gridItemVariants({
@@ -324,10 +330,10 @@ export const GridItem = forwardRef<HTMLDivElement, GridItemProps>(({
         alignSelf,
         className,
       })}
-      {...props}
+      {...(props as any)}
     >
       {children}
-    </Component>
+    </CompItem>
   );
 });
 

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { Button } from '../../../components/ui';
-import { DropdownMenu } from '../../../components/ui/DropdownMenu';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Dropdown } from '../../../components/ui/design-system';
 import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
 
@@ -31,7 +31,7 @@ export function ModelSelector() {
   if (error) {
     return (
       <div className="text-destructive flex items-center gap-2">
-        <span className="text-sm">Failed to load models</span>
+        <span className="asana-text-sm">Failed to load models</span>
         <Button
           variant="ghost"
           size="icon"
@@ -48,7 +48,7 @@ export function ModelSelector() {
   if (isLoadingModels) {
     return (
       <div className="flex items-center gap-2 text-secondary">
-        <span className="text-sm">Loading models...</span>
+        <span className="asana-text-sm">Loading models...</span>
         <RefreshCw size={14} className="animate-spin" />
       </div>
     );
@@ -57,7 +57,7 @@ export function ModelSelector() {
   if (availableModels.length === 0) {
     return (
       <div className="flex items-center gap-2 text-secondary">
-        <span className="text-sm">No models available</span>
+        <span className="asana-text-sm">No models available</span>
         <Button
           variant="ghost"
           size="icon"
@@ -75,58 +75,23 @@ export function ModelSelector() {
   const displayName = currentModel?.name || 'Select Model';
 
   return (
-    <DropdownMenu>
-      <DropdownMenu.Trigger asChild>
+    <Dropdown
+      items={availableModels.map((model, index) => ({
+        value: model.id || model.name,
+        label: model.name,
+      }))}
+      onSelect={(value) => handleModelSelect(value)}
+      placement="bottom-start"
+      trigger={(
         <Button
           variant="ghost"
-          className="flex h-8 items-center gap-2 px-3 text-sm font-medium"
+          className="flex h-8 items-center gap-2 px-3 asana-text-sm font-medium"
           title={`Current model: ${displayName}`}
         >
           <span className="max-w-32 truncate">{displayName}</span>
           <ChevronDown size={14} />
         </Button>
-      </DropdownMenu.Trigger>
-
-      <DropdownMenu.Content className="w-64">
-        <div className="border-border-default flex items-center justify-between border-b px-2 py-1.5 text-xs font-medium text-secondary">
-          <span>Available Models</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRefreshModels}
-            className="size-5"
-            title="Refresh models"
-          >
-            <RefreshCw size={12} />
-          </Button>
-        </div>
-        
-        {availableModels.map((model, index) => (
-          <DropdownMenu.Item
-            key={`${model.provider}-${model.id || model.name}-${index}`}
-            onSelect={() => handleModelSelect(model.id || model.name)}
-            className={`${
-              selectedModel === (model.id || model.name)
-                ? 'bg-accent text-accent-foreground' 
-                : ''
-            }`}
-          >
-            <div className="flex w-full flex-col items-start gap-1">
-              <div className="flex w-full items-center justify-between">
-                <span className="truncate font-medium">{model.name}</span>
-                {selectedModel === (model.id || model.name) && (
-                  <div className="size-2 rounded-full bg-primary" />
-                )}
-              </div>
-              {model.parameter_size && (
-                <span className="text-xs text-secondary">
-                  {model.parameter_size}
-                </span>
-              )}
-            </div>
-          </DropdownMenu.Item>
-        ))}
-      </DropdownMenu.Content>
-    </DropdownMenu>
+      )}
+    />
   );
 } 

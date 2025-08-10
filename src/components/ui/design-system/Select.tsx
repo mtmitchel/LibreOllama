@@ -15,7 +15,7 @@ const selectTriggerVariants = cva(
   `
     flex items-center justify-between w-full
     px-[var(--space-1-5)] py-[var(--space-1)]
-    text-[var(--text-body)]
+    asana-text-base
     font-[family-name:var(--font-family-sans)]
     bg-[var(--bg-secondary)]
     border border-[var(--border-default)]
@@ -80,9 +80,9 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
     const containerRef = useRef<HTMLDivElement>(null);
 
     const sizeClasses = {
-      sm: 'h-8 text-xs',
-      default: 'h-10 text-sm',
-      lg: 'h-12 text-base',
+      sm: 'h-8 asana-text-sm',
+      default: 'h-10 asana-text-base',
+      lg: 'h-12 asana-text-lg',
     };
 
     useEffect(() => {
@@ -116,7 +116,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
     return (
       <div ref={ref} className={`relative ${className}`}>
         {label && (
-          <label className="block mb-1.5 text-sm font-medium text-[#151B26]">
+          <label className="block mb-1.5 asana-text-base font-medium text-[#151B26]">
             {label}
           </label>
         )}
@@ -132,7 +132,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
             aria-expanded={isOpen}
             aria-haspopup="listbox"
           >
-            <span className={`flex items-center gap-2 ${!selectedOption ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]'}`}>
+            <span className={`flex items-center gap-2 ${!selectedOption ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]'}`}>
               {selectedOption?.icon && (
                 <span className="flex-shrink-0">{selectedOption.icon}</span>
               )}
@@ -140,7 +140,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
             </span>
             <ChevronDown 
               size={16} 
-              className={`text-[var(--text-secondary)] transition-transform duration-[var(--transition-duration)] ${
+              className={`text-[color:var(--text-secondary)] transition-transform duration-[var(--transition-duration)] ${
                 isOpen ? 'rotate-180' : ''
               }`}
             />
@@ -165,13 +165,13 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                       'w-full',
                       'px-3',
                       'py-2',
-                      'text-sm',
+                       'asana-text-sm',
                       'text-left',
                       'transition-colors',
                       'duration-150',
                       option.disabled 
-                        ? 'text-[#6B6F76] opacity-50 cursor-not-allowed' 
-                        : 'text-[#151B26] hover:bg-[#F6F7F8] cursor-pointer',
+                         ? 'text-[#6B6F76] opacity-50 cursor-not-allowed' 
+                         : 'text-[#151B26] hover:bg-[#F6F7F8] cursor-pointer',
                       option.value === selectedValue ? 'bg-[#796EFF]/10' : '',
                     ].join(' ')}
                     role="option"
@@ -194,7 +194,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
         </div>
 
         {error && (
-          <p className="mt-1.5 text-xs text-red-500">
+            <p className="mt-1.5 asana-text-sm text-red-500">
             {error}
           </p>
         )}
@@ -219,7 +219,7 @@ export const NativeSelect = React.forwardRef<
   return (
     <div className="relative">
       {label && (
-        <label className="block mb-[var(--space-0-5)] text-[var(--text-label)] font-medium text-[var(--text-primary)]">
+        <label className="block mb-[var(--space-0-5)] asana-text-base font-medium text-[color:var(--text-primary)]">
           {label}
         </label>
       )}
@@ -233,7 +233,7 @@ export const NativeSelect = React.forwardRef<
             'px-3',
             'py-2',
             'pr-8',
-            'text-sm',
+            'asana-text-sm',
             'font-sans',
             'bg-[#F6F7F8]',
             'text-[#151B26]',
@@ -264,7 +264,7 @@ export const NativeSelect = React.forwardRef<
       </div>
 
       {error && (
-        <p className="mt-1.5 text-xs text-red-500">
+        <p className="mt-1.5 text-[11px] text-red-500">
           {error}
         </p>
       )}

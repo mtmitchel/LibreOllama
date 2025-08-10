@@ -226,12 +226,15 @@ function DropZone({ onFilesSelected, disabled, isDragOver, maxFileSize, allowedT
       
       <input
         ref={fileInputRef}
+        id="mail-attachment-input"
+        name="mail-attachments"
         type="file"
         multiple
         onChange={handleFileSelect}
         className="hidden"
         accept={allowedTypes.length > 0 ? allowedTypes.join(',') : undefined}
         disabled={disabled}
+        aria-label="Mail attachments"
       />
     </div>
   );
@@ -413,7 +416,7 @@ export function EnhancedAttachmentHandler({
           </Text>
         </div>
         
-        <div className="text-xs text-secondary">
+        <div className="text-[11px] text-secondary">
           {formatFileSize(totalSize)} / {formatFileSize(maxTotalSize)}
           {isAtMaxCapacity && (
             <span className="ml-2 text-warning">

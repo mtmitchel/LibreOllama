@@ -1,5 +1,9 @@
 import React from 'react';
-import { Card, Button, Badge, Progress, Checkbox, StatusBadge, Heading, Text, Avatar } from "../../../components/ui";
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Badge } from '../../../components/ui/design-system/Badge';
+import { Avatar } from '../../../components/ui/design-system/Avatar';
+import { Progress, Checkbox, Heading, Text } from '../../../components/ui';
 import { MoreVertical, Upload, ImageIcon, File, Link, Plus, Users, Calendar, Target } from 'lucide-react';
 
 interface Project {
@@ -36,7 +40,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     { id: 'team', label: 'Team', icon: Users }
   ];
 
-  const getPriorityStatus = (priority: string): 'error' | 'warning' | 'success' | 'info' => {
+  const getPriorityVariant = (priority: string): 'error' | 'warning' | 'success' | 'info' => {
     switch (priority) {
       case 'high': return 'error';
       case 'medium': return 'warning';
@@ -57,7 +61,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`flex items-center gap-2 rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 rounded-t-lg px-4 py-2 asana-text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'border-b-2 border-accent-primary bg-secondary text-primary'
                     : 'text-secondary hover:bg-tertiary hover:text-primary'
@@ -141,12 +145,12 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                           {goal.title}
                         </Text>
                       </div>
-                      <StatusBadge 
-                        status={getPriorityStatus(goal.priority)}
+                      <Badge 
+                        variant={getPriorityVariant(goal.priority)}
                         size="sm"
                       >
                         {goal.priority}
-                      </StatusBadge>
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -158,7 +162,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
             <div className="flex flex-col gap-6">
               <div className="flex items-center justify-between">
                 <Heading level={3}>Project assets</Heading>
-                <Button variant="default" className="flex items-center gap-2">
+                <Button variant="secondary" className="flex items-center gap-2">
                   <Upload size={16} />
                   Upload Asset
                 </Button>
@@ -178,7 +182,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                         <Text size="xs" variant="secondary" className="mt-1">
                           Uploaded {new Date(asset.uploadDate).toLocaleDateString()}
                         </Text>
-                        <Badge variant="outline" className="mt-2 text-xs">
+                        <Badge variant="outline" className="mt-2 text-[11px]">
                           {asset.type}
                         </Badge>
                       </div>
@@ -216,7 +220,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                   <div className="mb-2 flex items-center gap-3">
                     <div className="size-3 rounded-full bg-accent-primary" />
                     <Text weight="medium">Phase 2: Development</Text>
-                    <Badge variant="default">In Progress</Badge>
+                    <Badge variant="secondary">In Progress</Badge>
                   </div>
                   <Text size="sm" variant="secondary" className="ml-6">
                     Core feature development and implementation
@@ -240,7 +244,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
             <div className="flex flex-col gap-6">
               <div className="flex items-center justify-between">
                 <Heading level={3}>Team members</Heading>
-                <Button variant="default" className="flex items-center gap-2">
+                <Button variant="secondary" className="flex items-center gap-2">
                   <Plus size={16} />
                   Invite team member
                 </Button>

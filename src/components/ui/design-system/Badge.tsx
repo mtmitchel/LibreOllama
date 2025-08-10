@@ -15,7 +15,7 @@ const badgeVariants = cva(
   `
     inline-flex items-center justify-center
     rounded-[var(--radius-full)]
-    text-[var(--text-small)]
+    asana-text-sm
     font-medium
     transition-[var(--transition-property)]
     duration-[var(--transition-duration)]
@@ -25,16 +25,16 @@ const badgeVariants = cva(
       variant: {
         default: `
           bg-[var(--bg-tertiary)]
-          text-[var(--text-primary)]
+          text-[color:var(--text-primary)]
           border border-[var(--border-default)]
         `,
         primary: `
           bg-[var(--brand-primary)]
-          text-[var(--text-on-brand)]
+          text-[color:var(--text-on-brand)]
         `,
         secondary: `
           bg-[var(--bg-secondary)]
-          text-[var(--text-secondary)]
+          text-[color:var(--text-secondary)]
         `,
         success: `
           bg-[var(--semantic-success-bg)]
@@ -58,14 +58,14 @@ const badgeVariants = cva(
         `,
         outline: `
           bg-transparent
-          text-[var(--text-primary)]
+          text-[color:var(--text-primary)]
           border border-[var(--border-default)]
         `,
       },
       size: {
         sm: 'px-[var(--space-1)] py-[1px] text-[10px]',
         md: 'px-[var(--space-1-5)] py-[2px] text-[11px]',
-        lg: 'px-[var(--space-2)] py-[var(--space-0-5)] text-[var(--text-small)]',
+        lg: 'px-[var(--space-2)] py-[var(--space-0-5)] asana-text-sm',
       },
       interactive: {
         true: 'cursor-pointer hover:opacity-80',

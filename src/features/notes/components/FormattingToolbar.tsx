@@ -293,7 +293,7 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor, cl
       <div className="relative">
         <button
           onClick={() => setShowBlockTypeMenu(!showBlockTypeMenu)}
-          className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 min-w-[120px] h-[28px] text-left text-sm"
+          className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 min-w-[120px] h-[28px] text-left asana-text-sm"
         >
           <span>{getBlockTypeLabel()}</span>
           <ChevronDown size={12} className="ml-auto opacity-70" />
@@ -303,28 +303,28 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor, cl
           <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[160px] z-50">
             <button
               onClick={() => setBlockType('paragraph')}
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
+              className="w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
             >
               <Type size={14} className="mr-2 opacity-70" />
               Normal text
             </button>
             <button
               onClick={() => setBlockType('heading')}
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
+              className="w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
             >
               <Heading1 size={14} className="mr-2 opacity-70" />
               Heading 1
             </button>
             <button
               onClick={() => setBlockType('heading')}
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
+              className="w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
             >
               <Heading2 size={14} className="mr-2 opacity-70" />
               Heading 2
             </button>
             <button
               onClick={() => setBlockType('heading')}
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
+              className="w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
             >
               <Heading3 size={14} className="mr-2 opacity-70" />
               Heading 3
@@ -332,14 +332,14 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor, cl
             <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
             <button
               onClick={() => setBlockType('bulletListItem')}
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
+              className="w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
             >
               <List size={14} className="mr-2 opacity-70" />
               Bullet list
             </button>
             <button
               onClick={() => setBlockType('numberedListItem')}
-              className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
+              className="w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center"
             >
               <ListOrdered size={14} className="mr-2 opacity-70" />
               Numbered list
@@ -358,7 +358,7 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor, cl
         >
           <Minus size={14} />
         </button>
-        <span className="text-sm w-8 text-center">{fontSize}</span>
+        <span className="asana-text-sm w-8 text-center">{fontSize}</span>
         <button
           onClick={() => handleFontSizeChange(2)}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"

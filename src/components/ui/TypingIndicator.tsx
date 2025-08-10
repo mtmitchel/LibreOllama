@@ -22,19 +22,19 @@ export function TypingIndicator({
       container: 'px-3 py-2',
       dots: 'w-1 h-1',
       gap: 'gap-1',
-      text: 'text-xs'
+      text: 'text-[11px]'
     },
     md: {
       container: 'px-4 py-3',
       dots: 'w-1.5 h-1.5',
       gap: 'gap-1.5',
-      text: 'text-sm'
+      text: 'asana-text-sm'
     },
     lg: {
       container: 'px-5 py-4',
       dots: 'w-2 h-2',
       gap: 'gap-2',
-      text: 'text-base'
+      text: 'asana-text-base'
     }
   };
 
@@ -113,17 +113,17 @@ export function ChatTypingIndicator({
     sm: {
       avatar: 'w-6 h-6',
       container: 'px-3 py-2',
-      text: 'text-xs'
+      text: 'text-[11px]'
     },
     md: {
       avatar: 'w-8 h-8',
       container: 'px-4 py-3',
-      text: 'text-sm'
+      text: 'asana-text-sm'
     },
     lg: {
       avatar: 'w-10 h-10',
       container: 'px-5 py-4',
-      text: 'text-base'
+      text: 'asana-text-base'
     }
   };
 

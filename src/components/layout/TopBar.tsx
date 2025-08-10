@@ -1,6 +1,7 @@
 import { Search, Bell, Sun, Moon, HelpCircle } from 'lucide-react';
 import { useTheme } from '../ThemeProvider';
-import { Button, Avatar } from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { Avatar } from '../ui/design-system/Avatar';
 import { useHeader } from '../../app/contexts/HeaderContext';
 
 export const TopBar = () => {
@@ -21,11 +22,11 @@ export const TopBar = () => {
       <div className="flex min-w-0 flex-1 items-center gap-4">
         {headerProps.title ? (
           <div className="flex flex-col gap-1">
-            <h1 className="m-0 text-lg font-semibold leading-tight text-primary">
+            <h1 className="m-0 asana-text-lg font-semibold leading-tight text-primary">
               {headerProps.title}
             </h1>
             {headerProps.subtitle && (
-              <p className="m-0 text-sm text-secondary opacity-80">
+              <p className="m-0 asana-text-sm text-secondary opacity-80">
                 {headerProps.subtitle}
               </p>
             )}
@@ -35,16 +36,16 @@ export const TopBar = () => {
             <div className="flex items-center gap-3">
               <div className="flex size-8 items-center justify-center rounded-xl bg-accent-primary shadow-sm"
               >
-                <span className="text-sm font-semibold text-white">L</span>
+                <span className="asana-text-sm font-semibold text-white">L</span>
               </div>
-              <h1 className="text-lg font-semibold text-primary">LibreOllama</h1>
+              <h1 className="asana-text-lg font-semibold text-primary">LibreOllama</h1>
             </div>
             <button 
               onClick={handleSearchFocus}
               className="flex items-center gap-2 rounded-xl border border-default bg-surface px-3 py-1.5 transition-all duration-200 hover:border-primary"
             >
               <Search size={14} className="text-tertiary opacity-60" />
-              <span className="text-xs text-secondary">Search</span>
+              <span className="text-[11px] text-secondary">Search</span>
             </button>
           </div>
         )}

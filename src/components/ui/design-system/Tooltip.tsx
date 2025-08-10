@@ -41,7 +41,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const calculatePosition = () => {
     if (!triggerRef.current || !tooltipRef.current) return;
@@ -124,7 +124,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   };
 
   const handleMouseLeave = () => {
-    clearTimeout(timeoutRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsVisible(false);
   };
 
@@ -162,8 +162,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
             fixed z-[var(--z-tooltip)]
             px-[var(--space-1)] py-[var(--space-0-5)]
             bg-[var(--text-primary)]
-            text-[var(--text-on-brand)]
-            text-[var(--text-small)]
+            text-[color:var(--text-on-brand)]
+            asana-text-sm
             font-normal
             rounded-[var(--radius-sm)]
             shadow-[var(--shadow-popover)]
@@ -272,8 +272,8 @@ export const InfoTooltip: React.FC<{
         className={`
           inline-flex items-center justify-center
           w-4 h-4
-          text-[var(--text-secondary)]
-          hover:text-[var(--text-primary)]
+          text-[color:var(--text-secondary)]
+          hover:text-[color:var(--text-primary)]
           transition-colors
           duration-[var(--transition-duration)]
           ${className}

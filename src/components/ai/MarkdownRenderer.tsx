@@ -21,9 +21,9 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
     // Convert markdown to HTML
     let html = text
       // Headers
-      .replace(/^### (.+)$/gm, '<h3 class="text-base font-semibold mb-2">$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2 class="text-lg font-semibold mb-3">$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1 class="text-xl font-semibold mb-3">$1</h1>')
+      .replace(/^### (.+)$/gm, '<h3 class="asana-text-base font-semibold mb-2">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2 class="asana-text-lg font-semibold mb-3">$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1 class="asana-text-xl font-semibold mb-3">$1</h1>')
       // Bold
       .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold">$1</strong>')
       // Italic
@@ -31,7 +31,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       // Code blocks
       .replace(/```([^`]+)```/g, '<pre class="bg-surface p-3 rounded-md my-2 overflow-x-auto"><code>$1</code></pre>')
       // Inline code
-      .replace(/`([^`]+)`/g, '<code class="bg-surface px-1.5 py-0.5 rounded text-sm">$1</code>')
+      .replace(/`([^`]+)`/g, '<code class="bg-surface px-1.5 py-0.5 rounded asana-text-sm">$1</code>')
       // Line breaks
       .replace(/\n\n/g, '</p><p class="mb-3">')
       // Bullet lists - handle various bullet formats and mark them

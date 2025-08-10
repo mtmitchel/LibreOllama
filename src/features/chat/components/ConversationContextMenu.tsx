@@ -370,7 +370,7 @@ export function ConversationContextMenu({
                   <button
                     onMouseEnter={() => setActiveSubmenu(item.id)}
                     className={`
-                      flex w-full items-center justify-between px-3 py-2 text-left text-sm text-primary
+                      flex w-full items-center justify-between px-3 py-2 text-left asana-text-sm text-primary
                       transition-colors hover:bg-hover hover:text-primary
                     `}
                     role="menuitem"
@@ -397,7 +397,7 @@ export function ConversationContextMenu({
                               subItem.action?.();
                               setActiveSubmenu(null);
                             }}
-                            className="flex w-full items-center px-3 py-2 text-left text-sm text-primary transition-colors hover:bg-hover hover:text-primary"
+                            className="flex w-full items-center px-3 py-2 text-left asana-text-sm text-primary transition-colors hover:bg-hover hover:text-primary"
                           >
                             {subItem.label}
                           </button>
@@ -415,7 +415,7 @@ export function ConversationContextMenu({
                 onClick={item.action}
                 disabled={item.disabled}
                 className={`
-                  flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors
+                  flex w-full items-center justify-between px-3 py-2 text-left asana-text-sm transition-colors
                   ${item.disabled 
                     ? 'cursor-not-allowed text-muted' 
                     : item.destructive
@@ -430,7 +430,7 @@ export function ConversationContextMenu({
                   <span>{item.label}</span>
                 </div>
                 {item.shortcut && (
-                  <span className="ml-2 text-xs text-muted">
+                  <span className="ml-2 text-[11px] text-muted">
                     {item.shortcut}
                   </span>
                 )}
@@ -449,12 +449,12 @@ export function ConversationContextMenu({
                 <AlertTriangle className="size-5 text-error" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-primary">Delete conversation</h3>
-                <p className="text-sm text-secondary">This action cannot be undone.</p>
+                <h3 className="asana-text-lg font-semibold text-primary">Delete conversation</h3>
+                <p className="asana-text-sm text-secondary">This action cannot be undone.</p>
               </div>
             </div>
             
-            <p className="mb-6 text-sm text-secondary">
+            <p className="mb-6 asana-text-sm text-secondary">
               Are you sure you want to delete "{conversation.title}"? This will permanently remove the conversation and all its messages.
             </p>
             

@@ -225,7 +225,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
           <div className="border-b border-red-200 bg-red-50 p-4">
             <div className="flex items-center gap-2 text-red-700">
               <AlertCircle className="size-4" />
-              <span className="text-sm">{error}</span>
+              <span className="asana-text-sm">{error}</span>
             </div>
           </div>
         )}
@@ -327,7 +327,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
                     />
                     <div className="flex-1 text-left">
                       <div className="font-medium">{label.name}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-[11px] text-gray-500">
                         {label.messagesTotal} messages
                         {mode === 'pick' && isCurrentLabel && !isSelected && (
                           <span className="ml-2 text-orange-600">• Will remove</span>
@@ -372,7 +372,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t bg-gray-50 p-4">
-          <div className="text-sm text-gray-500">
+          <div className="asana-text-sm text-gray-500">
             {selectedLabels.size} selected
           </div>
           <div className="flex gap-2">

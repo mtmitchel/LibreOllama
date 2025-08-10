@@ -58,7 +58,7 @@ export const Popover: React.FC<PopoverProps> = ({
   const [actualPlacement, setActualPlacement] = useState(placement);
   const triggerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout>();
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : internalOpen;
@@ -208,7 +208,7 @@ export const Popover: React.FC<PopoverProps> = ({
 
   const handleMouseEnter = () => {
     if (trigger === 'hover') {
-      clearTimeout(hoverTimeoutRef.current);
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
       setOpen(true);
     }
   };
@@ -334,7 +334,7 @@ export const PopoverHeader: React.FC<{
 }> = ({ children, className = '' }) => {
   return (
     <div className={`px-[var(--space-1-5)] py-[var(--space-1)] border-b border-[var(--border-default)] ${className}`}>
-      <h3 className="text-[var(--text-body)] font-semibold text-[var(--text-primary)]">{children}</h3>
+      <h3 className="asana-text-base font-semibold text-[color:var(--text-primary)]">{children}</h3>
     </div>
   );
 };

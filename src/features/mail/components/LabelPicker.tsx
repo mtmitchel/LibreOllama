@@ -224,7 +224,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Tag className="size-4 text-secondary" />
-            <span className="text-sm font-medium">
+            <span className="asana-text-sm font-medium">
               Labels for {messageIds.length} message{messageIds.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -246,14 +246,14 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            className="border-border-default w-full rounded-lg border py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border-border-default w-full rounded-lg border py-2 pl-10 pr-4 asana-text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="border-b border-error bg-error-ghost p-3 text-sm text-error">
+        <div className="border-b border-error bg-error-ghost p-3 asana-text-sm text-error">
           {error}
         </div>
       )}
@@ -278,7 +278,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
                   className="flex w-full items-center space-x-2 rounded px-3 py-2 text-left transition-colors hover:bg-surface"
                 >
                   <Plus className="size-4 text-accent-primary" />
-                  <span className="text-sm">
+                  <span className="asana-text-sm">
                     Create label "<span className="font-medium">{searchTerm}</span>"
                   </span>
                 </button>
@@ -294,13 +294,13 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
                     value={newLabelName}
                     onChange={(e) => setNewLabelName(e.target.value)}
                     placeholder="Label name"
-                    className="border-border-default focus:ring-accent-primary flex-1 rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    className="border-border-default focus:ring-accent-primary flex-1 rounded border px-3 py-2 asana-text-sm focus:outline-none focus:ring-2"
                     autoFocus
                   />
                   <button
                     onClick={createNewLabel}
                     disabled={!newLabelName.trim() || loading}
-                    className="rounded bg-accent-primary px-3 py-2 text-sm text-white transition-colors hover:bg-accent-secondary disabled:opacity-50"
+                    className="rounded bg-accent-primary px-3 py-2 asana-text-sm text-white transition-colors hover:bg-accent-secondary disabled:opacity-50"
                   >
                     <Check className="size-4" />
                   </button>
@@ -320,7 +320,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
             {/* Labels List */}
             <div className="py-1">
               {filteredLabels.length === 0 && !isCreatingLabel && searchTerm ? (
-                <div className="p-4 text-center text-sm text-secondary">
+                <div className="p-4 text-center asana-text-sm text-secondary">
                   No labels found matching "{searchTerm}"
                 </div>
               ) : (
@@ -345,19 +345,19 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center space-x-2">
-                          <span className="truncate text-sm font-medium">{label.name}</span>
+                          <span className="truncate asana-text-sm font-medium">{label.name}</span>
                           {isCurrentLabel && !isSelected && (
-                            <span className="bg-warning-bg rounded px-2 py-0.5 text-xs text-warning-fg">
+                            <span className="bg-warning-bg rounded px-2 py-0.5 text-[11px] text-warning-fg">
                               Remove
                             </span>
                           )}
                           {!isCurrentLabel && isSelected && (
-                            <span className="bg-success-bg rounded px-2 py-0.5 text-xs text-success">
+                            <span className="bg-success-bg rounded px-2 py-0.5 text-[11px] text-success">
                               Add
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-secondary">
+                        <div className="text-[11px] text-secondary">
                           {label.type === 'system' ? 'System label' : 'User label'}
                         </div>
                       </div>
@@ -373,12 +373,12 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
       {/* Footer */}
       <div className="border-border-default border-t bg-surface p-3">
         <div className="flex items-center justify-between">
-          <div className="text-xs text-secondary">
+          <div className="text-[11px] text-secondary">
             {Array.from(selectedLabels).length} label{Array.from(selectedLabels).length !== 1 ? 's' : ''} selected
           </div>
           <button
             onClick={handleClose}
-            className="rounded bg-accent-primary px-4 py-2 text-sm text-white transition-colors hover:bg-accent-secondary"
+            className="rounded bg-accent-primary px-4 py-2 asana-text-sm text-white transition-colors hover:bg-accent-secondary"
           >
             Apply Changes
           </button>

@@ -268,11 +268,11 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[1000] flex justify-center">
       <div className="pointer-events-auto flex max-w-[95vw] items-center justify-center gap-3 overflow-visible"
         style={{
-          background: '#FFFFFF',
-          border: '1px solid #E4E7EB',
+          background: 'var(--bg-primary)',
+          border: '1px solid var(--border-default)',
           borderRadius: '8px',
           padding: '8px 12px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+          boxShadow: 'var(--shadow-card)'
         }}>
         {/* Basic Tools */}
         <div className="flex items-center gap-1">
@@ -435,7 +435,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             onClick={resetZoom}
             title="Reset to 100% (Ctrl + 0)"
             aria-label="Reset Zoom"
-            className="size-9 min-w-[45px] text-xs font-medium"
+            className="size-9 min-w-[45px] text-[11px] font-medium"
           >
             {currentZoom}%
           </Button>
@@ -489,11 +489,14 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
       {/* Hidden file input for image tool */}
       <input
         ref={fileInputRef}
+        id="canvas-image-input"
+        name="canvas-images"
         type="file"
         accept="image/*"
         multiple
         onChange={handleFileInput}
         style={{ display: 'none' }}
+        aria-label="Canvas image upload"
       />
     </div>
   );

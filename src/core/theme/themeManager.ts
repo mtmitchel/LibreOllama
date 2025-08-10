@@ -126,7 +126,7 @@ export class ThemeManager {
   private applyTheme(): void {
     if (typeof document === 'undefined') return;
 
-    const resolvedTheme = this.getResolvedTheme();
+    const resolvedTheme = this.resolveTheme();
     
     // Remove all theme attributes
     document.documentElement.removeAttribute('data-theme');
@@ -143,7 +143,7 @@ export class ThemeManager {
   /**
    * Get the actual theme being applied (resolves 'system' to light/dark)
    */
-  private getResolvedTheme(): string {
+  private resolveTheme(): string {
     if (this.currentTheme === 'system') {
       return this.systemPreference;
     }
@@ -200,7 +200,7 @@ export class ThemeManager {
    * Get resolved theme (what's actually applied)
    */
   getResolvedTheme(): 'light' | 'dark' | 'light-high-contrast' | 'dark-high-contrast' {
-    const resolved = this.getResolvedTheme();
+    const resolved = this.resolveTheme();
     return resolved as 'light' | 'dark' | 'light-high-contrast' | 'dark-high-contrast';
   }
 

@@ -103,11 +103,11 @@ const ToastItem: React.FC<ToastItemProps> = ({
       
       <div className="flex-1 min-w-0">
         {title && (
-          <div className="text-[var(--text-body)] font-medium text-[var(--text-primary)] mb-[2px]">
+          <div className="asana-text-base font-medium text-[color:var(--text-primary)] mb-[2px]">
             {title}
           </div>
         )}
-        <div className="text-[var(--text-small)] text-[var(--text-secondary)]">
+        <div className="asana-text-sm text-[color:var(--text-secondary)]">
           {description}
         </div>
         {action && (
@@ -115,9 +115,9 @@ const ToastItem: React.FC<ToastItemProps> = ({
             onClick={action.onClick}
             className={`
               mt-[var(--space-1)]
-              text-[var(--text-small)]
-              text-[var(--brand-primary)]
-              hover:text-[var(--brand-hover)]
+              asana-text-sm
+              text-[color:var(--brand-primary)]
+              hover:text-[color:var(--brand-hover)]
               font-medium
               transition-colors
               duration-[var(--transition-duration)]
@@ -134,9 +134,9 @@ const ToastItem: React.FC<ToastItemProps> = ({
           flex-shrink-0
           p-[var(--space-0-5)]
           rounded-[var(--radius-sm)]
-          text-[var(--text-secondary)]
+          text-[color:var(--text-secondary)]
           hover:bg-[var(--bg-secondary)]
-          hover:text-[var(--text-primary)]
+          hover:text-[color:var(--text-primary)]
           transition-[var(--transition-property)]
           duration-[var(--transition-duration)]
         `}

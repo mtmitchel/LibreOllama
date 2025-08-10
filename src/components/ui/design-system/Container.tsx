@@ -57,10 +57,12 @@ const containerVariants = cva(
   }
 );
 
+type ContainerTag = 'div' | 'section' | 'main' | 'article';
+
 export interface ContainerProps extends VariantProps<typeof containerVariants> {
   children: React.ReactNode;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: ContainerTag;
   style?: React.CSSProperties;
   role?: string;
   'aria-label'?: string;
@@ -85,9 +87,10 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
   id,
   ...props
 }, ref) => {
+  const Comp = Component as any;
   return (
-    <Component
-      ref={ref}
+    <Comp
+      ref={ref as any}
       id={id}
       role={role}
       aria-label={ariaLabel}
@@ -101,10 +104,10 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
         center,
         className,
       })}
-      {...props}
+      {...(props as any)}
     >
       {children}
-    </Component>
+    </Comp>
   );
 });
 
@@ -300,17 +303,17 @@ export const Article = forwardRef<HTMLDivElement, ArticleProps>(({
             {(title || subtitle || meta || actions) && (
               <header className="mb-[var(--space-8)]">
                 {title && (
-                  <h1 className="text-[var(--text-h1)] font-bold text-[var(--text-primary)] mb-[var(--space-2)]">
+                  <h1 className="asana-text-2xl font-bold text-[color:var(--text-primary)] mb-[var(--space-2)]">
                     {title}
                   </h1>
                 )}
                 {subtitle && (
-                  <p className="text-[var(--text-large)] text-[var(--text-secondary)] mb-[var(--space-4)]">
+                  <p className="asana-text-lg text-[color:var(--text-secondary)] mb-[var(--space-4)]">
                     {subtitle}
                   </p>
                 )}
                 {meta && (
-                  <div className="text-[var(--text-small)] text-[var(--text-muted)] mb-[var(--space-4)]">
+                  <div className="asana-text-sm text-[color:var(--text-muted)] mb-[var(--space-4)]">
                     {meta}
                   </div>
                 )}
@@ -330,7 +333,7 @@ export const Article = forwardRef<HTMLDivElement, ArticleProps>(({
           <aside className="lg:col-span-1">
             {toc && (
               <div className="sticky top-[var(--space-6)] mb-[var(--space-8)]">
-                <h2 className="text-[var(--text-body)] font-semibold text-[var(--text-primary)] mb-[var(--space-3)]">
+                <h2 className="asana-text-base font-semibold text-[color:var(--text-primary)] mb-[var(--space-3)]">
                   Table of Contents
                 </h2>
                 {toc}
@@ -354,17 +357,17 @@ export const Article = forwardRef<HTMLDivElement, ArticleProps>(({
         {(title || subtitle || meta || actions) && (
           <header className="mb-[var(--space-8)]">
             {title && (
-              <h1 className="text-[var(--text-h1)] font-bold text-[var(--text-primary)] mb-[var(--space-2)]">
+              <h1 className="asana-text-2xl font-bold text-[color:var(--text-primary)] mb-[var(--space-2)]">
                 {title}
               </h1>
             )}
             {subtitle && (
-              <p className="text-[var(--text-large)] text-[var(--text-secondary)] mb-[var(--space-4)]">
+              <p className="asana-text-lg text-[color:var(--text-secondary)] mb-[var(--space-4)]">
                 {subtitle}
               </p>
             )}
             {meta && (
-              <div className="text-[var(--text-small)] text-[var(--text-muted)] mb-[var(--space-4)]">
+              <div className="asana-text-sm text-[color:var(--text-muted)] mb-[var(--space-4)]">
                 {meta}
               </div>
             )}
@@ -407,7 +410,7 @@ export const Hero = forwardRef<HTMLDivElement, HeroProps>(({
     default: '',
     gradient: 'bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]',
     muted: 'bg-[var(--bg-muted)]',
-    brand: 'bg-[var(--brand-primary)] text-[var(--text-on-brand)]',
+    brand: 'bg-[var(--brand-primary)] text-[color:var(--text-on-brand)]',
   };
 
   const textAlignClasses = {

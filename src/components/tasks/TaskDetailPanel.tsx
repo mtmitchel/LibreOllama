@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Flag, Tag, CheckSquare, Plus, Trash2 } from 'lucide-react';
-import { Button } from '../ui';
-import { Input } from '../ui';
-import { Textarea } from '../ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Badge } from '../ui/badge';
+import { Button } from '../ui/design-system/Button';
+import { Badge } from '../ui/design-system/Badge';
+import { Select } from '../ui/design-system/Select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/design-system/Dialog';
+import { Input, Textarea } from '../ui';
 import type { tasks_v1 } from '../../api/googleTasksApi';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { cn } from '../../lib/utils';
@@ -146,7 +145,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={handleSave}
-                className="text-lg font-medium"
+                className="asana-text-lg font-medium"
                 placeholder="Task title"
               />
             </div>
@@ -154,7 +153,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
           
           {/* Due Date */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium">
+            <label className="flex items-center gap-2 asana-text-sm font-medium">
               <Calendar className="h-4 w-4" />
               Due date
             </label>
@@ -168,33 +167,29 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
           
           {/* Priority */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium">
+            <label className="flex items-center gap-2 asana-text-sm font-medium">
               <Flag className="h-4 w-4" />
               Priority
             </label>
             <Select
+              options={[
+                { value: 'low', label: 'Low' },
+                { value: 'normal', label: 'Normal' },
+                { value: 'high', label: 'High' },
+                { value: 'urgent', label: 'Urgent' },
+              ]}
               value={metadata.priority}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 updateTask(taskId, {
-                  priority: (value === 'normal' ? 'none' : value === 'urgent' ? 'high' : value) as 'high' | 'medium' | 'low' | 'none'
+                  priority: ((value as string) === 'normal' ? 'none' : (value as string) === 'urgent' ? 'high' : (value as string)) as 'high' | 'medium' | 'low' | 'none'
                 });
               }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
           
           {/* Labels */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium">
+            <label className="flex items-center gap-2 asana-text-sm font-medium">
               <Tag className="h-4 w-4" />
               Labels
             </label>
@@ -236,7 +231,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
           
           {/* Notes */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Notes</label>
+            <label className="asana-text-sm font-medium">Notes</label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -248,7 +243,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
           
           {/* Subtasks */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium">
+            <label className="flex items-center gap-2 asana-text-sm font-medium">
               <CheckSquare className="h-4 w-4" />
               Subtasks
             </label>

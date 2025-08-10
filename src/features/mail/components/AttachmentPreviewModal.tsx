@@ -145,7 +145,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
       case 'code':
         return (
           <div className="max-h-96 overflow-auto rounded-lg bg-surface p-4 dark:bg-surface">
-            <pre className="whitespace-pre-wrap text-sm text-primary dark:text-gray-200">
+            <pre className="whitespace-pre-wrap asana-text-sm text-primary dark:text-gray-200">
               {previewContent}
             </pre>
           </div>
@@ -188,7 +188,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
               <p className="mb-2 text-secondary dark:text-muted">
                 Preview not available for this file type
               </p>
-              <p className="text-sm text-secondary dark:text-secondary">
+              <p className="asana-text-sm text-secondary dark:text-secondary">
                 {fileTypeInfo.extension.toUpperCase()} file
               </p>
             </div>
@@ -204,10 +204,10 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
         <div className="border-border-default flex items-center justify-between border-b p-4 dark:border-gray-700">
           <div className="flex items-center space-x-3">
             <div 
-              className="flex size-8 items-center justify-center rounded text-sm font-medium text-white"
+              className="flex size-8 items-center justify-center rounded asana-text-sm font-medium text-white"
               style={{ backgroundColor: fileTypeInfo.color }}
             >
-              <span className="material-icons-outlined text-base">
+              <span className="material-icons-outlined asana-text-base">
                 {fileTypeInfo.icon}
               </span>
             </div>
@@ -215,7 +215,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
               <h3 className="truncate font-semibold text-primary dark:text-gray-100">
                 {attachment.filename}
               </h3>
-              <p className="text-sm text-secondary dark:text-muted">
+              <p className="asana-text-sm text-secondary dark:text-muted">
                 {formatFileSize(attachment.size)} • {fileTypeInfo.extension.toUpperCase()}
               </p>
             </div>
@@ -275,7 +275,7 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
         {/* Footer with metadata */}
         {preview.metadata && (
           <div className="border-border-default border-t bg-surface p-4 dark:border-gray-700 dark:bg-gray-700">
-            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 asana-text-sm md:grid-cols-4">
               {preview.metadata.width && preview.metadata.height && (
                 <div>
                   <span className="text-secondary dark:text-muted">Dimensions:</span>

@@ -142,7 +142,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
         <div className="flex items-center justify-between border-b p-6">
           <div className="flex items-center space-x-2">
             <Settings className="size-5 text-secondary" />
-            <h2 className="text-xl font-semibold">Label settings</h2>
+            <h2 className="asana-text-xl font-semibold">Label settings</h2>
           </div>
           <button
             onClick={handleClose}
@@ -157,7 +157,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
           <div className="space-y-8">
             {/* Visibility Settings */}
             <div>
-              <h3 className="mb-4 flex items-center space-x-2 text-lg font-medium">
+              <h3 className="mb-4 flex items-center space-x-2 asana-text-lg font-medium">
                 <Eye className="size-5 text-accent-primary" />
                 <span>Visibility settings</span>
               </h3>
@@ -172,7 +172,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Show system labels</span>
-                      <p className="text-sm text-secondary">Display Gmail's built-in labels like Inbox, Sent, etc.</p>
+                      <p className="asana-text-sm text-secondary">Display Gmail's built-in labels like Inbox, Sent, etc.</p>
                     </div>
                   </label>
                   
@@ -185,7 +185,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Show user labels</span>
-                      <p className="text-sm text-secondary">Display custom labels you've created</p>
+                      <p className="asana-text-sm text-secondary">Display custom labels you've created</p>
                     </div>
                   </label>
                   
@@ -198,7 +198,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Show empty labels</span>
-                      <p className="text-sm text-secondary">Display labels with no messages</p>
+                      <p className="asana-text-sm text-secondary">Display labels with no messages</p>
                     </div>
                   </label>
                 </div>
@@ -213,7 +213,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Show unread counts only</span>
-                      <p className="text-sm text-secondary">Hide total message counts, show only unread</p>
+                      <p className="asana-text-sm text-secondary">Hide total message counts, show only unread</p>
                     </div>
                   </label>
                   
@@ -226,7 +226,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Compact view</span>
-                      <p className="text-sm text-secondary">Use smaller labels and reduced spacing</p>
+                      <p className="asana-text-sm text-secondary">Use smaller labels and reduced spacing</p>
                     </div>
                   </label>
                 </div>
@@ -235,13 +235,13 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
 
             {/* Sorting Settings */}
             <div>
-              <h3 className="mb-4 flex items-center space-x-2 text-lg font-medium">
+              <h3 className="mb-4 flex items-center space-x-2 asana-text-lg font-medium">
                 <SortAsc className="size-5 text-success" />
                 <span>Sorting settings</span>
               </h3>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-primary">
+                  <label className="mb-1 block asana-text-sm font-medium text-primary">
                     Sort Labels By
                   </label>
                   <select
@@ -258,7 +258,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                 </div>
                 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-primary">
+                  <label className="mb-1 block asana-text-sm font-medium text-primary">
                     Sort Order
                   </label>
                   <select
@@ -281,7 +281,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Group by type</span>
-                      <p className="text-sm text-secondary">Group system and user labels separately</p>
+                      <p className="asana-text-sm text-secondary">Group system and user labels separately</p>
                     </div>
                   </label>
                   
@@ -294,7 +294,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Prioritize unread</span>
-                      <p className="text-sm text-secondary">Show labels with unread messages first</p>
+                      <p className="asana-text-sm text-secondary">Show labels with unread messages first</p>
                     </div>
                   </label>
                 </div>
@@ -303,7 +303,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
 
             {/* Behavior Settings */}
             <div>
-              <h3 className="mb-4 flex items-center space-x-2 text-lg font-medium">
+              <h3 className="mb-4 flex items-center space-x-2 asana-text-lg font-medium">
                 <Palette className="size-5 text-accent-primary" />
                                   <span>Behavior settings</span>
               </h3>
@@ -318,7 +318,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Auto-apply Labels</span>
-                      <p className="text-sm text-secondary">Automatically apply labels based on filters</p>
+                      <p className="asana-text-sm text-secondary">Automatically apply labels based on filters</p>
                     </div>
                   </label>
                   
@@ -331,7 +331,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Remove from Inbox When Labeled</span>
-                      <p className="text-sm text-secondary">Archive messages when a label is applied</p>
+                      <p className="asana-text-sm text-secondary">Archive messages when a label is applied</p>
                     </div>
                   </label>
                   
@@ -344,7 +344,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Show Label Colors</span>
-                      <p className="text-sm text-secondary">Display colored indicators for labels</p>
+                      <p className="asana-text-sm text-secondary">Display colored indicators for labels</p>
                     </div>
                   </label>
                 </div>
@@ -359,12 +359,12 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                     />
                     <div>
                       <span className="font-medium">Enable Label Shortcuts</span>
-                      <p className="text-sm text-secondary">Use keyboard shortcuts for quick labeling</p>
+                      <p className="asana-text-sm text-secondary">Use keyboard shortcuts for quick labeling</p>
                     </div>
                   </label>
                   
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-primary">
+                    <label className="mb-1 block asana-text-sm font-medium text-primary">
                       Max Labels per Message
                     </label>
                     <input
@@ -377,7 +377,7 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       })}
                       className="border-border-default w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <p className="mt-1 text-sm text-secondary">
+                    <p className="mt-1 asana-text-sm text-secondary">
                       Maximum number of labels that can be applied to a single message
                     </p>
                   </div>

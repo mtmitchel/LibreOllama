@@ -129,9 +129,9 @@ export const CardTitle: React.FC<CardTitleProps> = ({
   return (
     <Component
       className={`
-        text-[var(--text-heading)]
+        asana-text-lg
         font-medium
-        text-[var(--text-primary)]
+        text-[color:var(--text-primary)]
         ${className}
       `}
       {...props}

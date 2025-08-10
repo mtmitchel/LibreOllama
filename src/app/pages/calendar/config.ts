@@ -5,35 +5,35 @@ export const asanaTypography = {
     fontWeight: 600,
     letterSpacing: '-0.01em',
     lineHeight: 1.3,
-    color: '#151B26'
+    color: 'var(--asana-text-primary)'
   },
   h2: {
     fontSize: '16px',
     fontWeight: 600,
     letterSpacing: '0',
     lineHeight: 1.4,
-    color: '#151B26'
+    color: 'var(--asana-text-primary)'
   },
   body: {
     fontSize: '14px',
     fontWeight: 400,
     letterSpacing: '0',
     lineHeight: 1.5,
-    color: '#6B6F76'
+    color: 'var(--asana-text-secondary)'
   },
   small: {
     fontSize: '12px',
     fontWeight: 400,
     letterSpacing: '0',
     lineHeight: 1.5,
-    color: '#9CA6AF'
+    color: 'var(--asana-text-tertiary)'
   },
   label: {
     fontSize: '12px',
     fontWeight: 500,
     letterSpacing: '0',
     lineHeight: 1.5,
-    color: '#6B6F76',
+    color: 'var(--asana-text-secondary)',
     textTransform: 'uppercase' as const
   }
 };

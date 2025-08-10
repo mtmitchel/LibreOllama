@@ -43,7 +43,7 @@ export const AlignmentMenu: React.FC<AlignmentMenuProps> = ({
         <button
           onClick={() => handleAlign('left')}
           className={cn(
-            "w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2",
+            "w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2",
             currentAlignment === 'left' && "bg-gray-100 dark:bg-gray-800"
           )}
         >
@@ -53,7 +53,7 @@ export const AlignmentMenu: React.FC<AlignmentMenuProps> = ({
         <button
           onClick={() => handleAlign('center')}
           className={cn(
-            "w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2",
+            "w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2",
             currentAlignment === 'center' && "bg-gray-100 dark:bg-gray-800"
           )}
         >
@@ -63,7 +63,7 @@ export const AlignmentMenu: React.FC<AlignmentMenuProps> = ({
         <button
           onClick={() => handleAlign('right')}
           className={cn(
-            "w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2",
+            "w-full px-3 py-1.5 text-left asana-text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2",
             currentAlignment === 'right' && "bg-gray-100 dark:bg-gray-800"
           )}
         >

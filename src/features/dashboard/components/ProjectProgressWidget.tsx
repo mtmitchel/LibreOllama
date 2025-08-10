@@ -1,5 +1,8 @@
 import React, { useEffect } from 'react';
-import { Card, Progress, Heading, Text, Button } from "../../../components/ui";
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Progress, Heading, Text } from '../../../components/ui';
+import { WidgetHeader } from '../../../components/ui/design-system';
 import { useProjectStore } from "../../projects/stores/projectStore";
 import { CheckCircle2, Circle, FolderOpen } from 'lucide-react';
 
@@ -52,30 +55,28 @@ export const ProjectProgressWidget: React.FC = () => {
 
   if (activeProjects.length === 0) {
     return (
-      <Card padding="sm">
-        <div className="mb-4 flex items-center justify-between">
-          <Heading level={3}>Project progress</Heading>
+      <div className="asana-card asana-card-padded">
+        <WidgetHeader title="Project progress" actions={(
           <Text variant="body" size="sm" weight="medium" className="rounded-xl bg-secondary px-3 py-1 text-secondary">
             No active projects
           </Text>
-        </div>
+        )} />
         <div className="py-3 text-center">
           <FolderOpen className="mx-auto mb-1.5 size-6 text-secondary" />
           <Text variant="secondary" size="xs">No active projects to show</Text>
           <Text variant="tertiary" size="xs" className="mt-0.5 text-[10px]">Create a project to see progress here</Text>
         </div>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <div className="mb-3 flex items-center justify-between">
-        <Heading level={3}>Project progress</Heading>
+    <div className="asana-card asana-card-padded">
+      <WidgetHeader title="Project progress" actions={(
         <Text variant="body" size="sm" weight="medium" className="rounded-xl bg-accent-soft px-3 py-1 text-accent-primary">
           {totalProgress}% average
         </Text>
-      </div>
+      )} />
       <div className="mb-3">
         <Progress value={totalProgress} max={100} />
       </div>
@@ -115,6 +116,6 @@ export const ProjectProgressWidget: React.FC = () => {
           </Button>
         </div>
       )}
-    </Card>
+    </div>
   );
 };

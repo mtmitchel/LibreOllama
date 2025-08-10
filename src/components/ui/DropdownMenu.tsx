@@ -1,8 +1,18 @@
-import React, { useState, useRef, useEffect, createContext, useContext, useLayoutEffect } from 'react';
-import ReactDOM from 'react-dom';
-import { ChevronRight } from 'lucide-react';
+/**
+ * Legacy DropdownMenu Compatibility Wrapper
+ * 
+ * This file provides backward compatibility for the legacy DropdownMenu API
+ * by wrapping the design-system Dropdown component.
+ * 
+ * @deprecated Use design-system/Dropdown directly for new implementations
+ */
 
-// 1. Create Context
+import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { Dropdown, ActionMenu } from './design-system/Dropdown';
+import { Popover, PopoverContent } from './design-system/Popover';
+
+// Legacy Context for compound component pattern
 interface DropdownMenuContextProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -11,6 +21,14 @@ interface DropdownMenuContextProps {
   focusedIndex: number;
   setFocusedIndex: React.Dispatch<React.SetStateAction<number>>;
   itemRefs: React.RefObject<(HTMLButtonElement | null)[]>;
+  items: Array<{
+    children: React.ReactNode;
+    onSelect?: () => void;
+    variant?: 'default' | 'destructive';
+    disabled?: boolean;
+    separator?: boolean;
+  }>;
+  addItem: (item: any) => void;
 }
 
 const DropdownMenuContext = createContext<DropdownMenuContextProps | null>(null);
@@ -23,82 +41,18 @@ const useDropdownMenu = () => {
   return context;
 };
 
-// 2. Main DropdownMenu Component (Provider)
+// Main DropdownMenu wrapper
 function DropdownMenu({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [items, setItems] = useState<any[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // Handle click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        isOpen &&
-        menuRef.current && !menuRef.current.contains(event.target as Node) &&
-        triggerRef.current && !triggerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-        setFocusedIndex(-1);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isOpen) return;
-      
-      const currentIndex = focusedIndex;
-      const itemCount = itemRefs.current.length;
-      
-      switch (event.key) {
-        case 'ArrowDown':
-          event.preventDefault();
-          setFocusedIndex((currentIndex + 1) % itemCount);
-          itemRefs.current[(currentIndex + 1) % itemCount]?.focus();
-          break;
-        case 'ArrowUp':
-          event.preventDefault();
-          setFocusedIndex((currentIndex - 1 + itemCount) % itemCount);
-          itemRefs.current[(currentIndex - 1 + itemCount) % itemCount]?.focus();
-          break;
-        case 'Home':
-          event.preventDefault();
-          setFocusedIndex(0);
-          itemRefs.current[0]?.focus();
-          break;
-        case 'End': {
-          event.preventDefault();
-          const lastIndex = itemRefs.current.length - 1;
-          setFocusedIndex(lastIndex);
-          itemRefs.current[lastIndex]?.focus();
-          break;
-        }
-        case 'Escape':
-          setIsOpen(false);
-          triggerRef.current?.focus();
-          break;
-        default:
-          break;
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isOpen, focusedIndex]);
-
-  // Reset focus index when menu opens
-  useEffect(() => {
-    if (isOpen) {
-      setFocusedIndex(-1);
-    }
-  }, [isOpen]);
+  const addItem = (item: any) => {
+    setItems(prev => [...prev, item]);
+  };
 
   const value = { 
     isOpen, 
@@ -107,270 +61,126 @@ function DropdownMenu({ children }: { children: React.ReactNode }) {
     menuRef, 
     focusedIndex, 
     setFocusedIndex,
-    itemRefs 
+    itemRefs,
+    items,
+    addItem
   };
+
+  // Extract trigger and content from children
+  let trigger: React.ReactNode = null;
+  let content: React.ReactNode = null;
+  
+  React.Children.forEach(children, (child) => {
+    if (React.isValidElement(child)) {
+      if (child.type === DropdownMenuTrigger) {
+        trigger = child;
+      } else if (child.type === DropdownMenuContent) {
+        content = child;
+      }
+    }
+  });
 
   return (
     <DropdownMenuContext.Provider value={value}>
-      <div className="relative">{children}</div>
+      <div className="relative">
+        {trigger}
+        {content}
+      </div>
     </DropdownMenuContext.Provider>
   );
 }
 
-// 3. Trigger Component
+// Trigger Component - wraps the Popover trigger
 interface DropdownMenuTriggerProps {
   children: React.ReactNode;
   asChild?: boolean;
 }
 
 const DropdownMenuTrigger = ({ children, asChild = false }: DropdownMenuTriggerProps) => {
-  const { isOpen, setIsOpen, triggerRef, setFocusedIndex } = useDropdownMenu();
+  const { isOpen, setIsOpen, triggerRef } = useDropdownMenu();
   
-  const handleTriggerClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsOpen(!isOpen);
-    setFocusedIndex(-1);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      setIsOpen(true);
-      setFocusedIndex(-1);
-    }
-  };
-
+  
+  // If asChild, try to pass props to child element
   if (asChild && React.isValidElement(children)) {
-    const originalOnClick = (children.props as any).onClick;
-    const composedOnClick = (e: React.MouseEvent) => {
-      originalOnClick?.(e);
-      handleTriggerClick(e);
-    };
-    
-    return React.cloneElement(children, {
-      ref: triggerRef as React.RefObject<HTMLElement>,
-      onClick: composedOnClick,
-      onKeyDown: handleKeyDown,
-      'aria-expanded': isOpen,
-      'aria-haspopup': true,
-    } as React.HTMLAttributes<HTMLElement>);
+    const childElement = React.Children.only(children) as React.ReactElement<any>;
+    return React.cloneElement(childElement, {
+      onClick: handleClick,
+      ref: triggerRef as any
+    });
   }
-
+  
+  // Otherwise wrap in a div
   return (
-    <button
-      ref={triggerRef as React.RefObject<HTMLButtonElement>}
-      onClick={handleTriggerClick}
-      onKeyDown={handleKeyDown}
+    <div
+      ref={triggerRef as React.RefObject<HTMLDivElement>}
+      onClick={handleClick}
       aria-expanded={isOpen}
-      aria-haspopup="true"
+      aria-haspopup={true}
+      className="inline-block"
     >
       {children}
-    </button>
+    </div>
   );
 };
 
-// 4. Content Component
+// Content Component - renders items using PopoverContent
 interface DropdownMenuContentProps {
   children: React.ReactNode;
   className?: string;
 }
 
 const DropdownMenuContent = ({ children, className = '' }: DropdownMenuContentProps) => {
-  const { isOpen, menuRef, triggerRef } = useDropdownMenu();
-  const [style, setStyle] = useState<React.CSSProperties>({});
-
-  useEffect(() => {
-    if (isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setStyle({
-        position: 'fixed',
-        top: `${rect.bottom + 4}px`, // Add some space
-        left: `${rect.left}px`,
-        minWidth: `${rect.width}px`,
-      });
-    }
-  }, [isOpen, triggerRef]);
+  const { isOpen, menuRef, items } = useDropdownMenu();
   
+  // Collect items from children
+  const menuItems: React.ReactNode[] = [];
+  
+  React.Children.forEach(children, (child) => {
+    if (React.isValidElement(child)) {
+      menuItems.push(child);
+    }
+  });
+
   if (!isOpen) return null;
 
-  return ReactDOM.createPortal(
-    <div
-      ref={menuRef}
-      style={style}
-      role="menu"
-      className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[9999] rounded-md border bg-white py-1 shadow-lg dark:bg-gray-900 ${className}`}
-      onClick={(e) => e.stopPropagation()}
+  return (
+    <PopoverContent
+      className={`min-w-[180px] py-[var(--space-0-5)] ${className}`}
     >
-      {children}
-    </div>,
-    document.body
+      <div ref={menuRef} role="menu">
+        {menuItems}
+      </div>
+    </PopoverContent>
   );
 };
 
-// 6. Sub-menu Components
+// Sub-menu context for nested menus
 const SubMenuContext = createContext<{
   isSubMenuOpen: boolean;
   setIsSubMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
-  handleOpen: () => void;
-  handleClose: () => void;
 } | null>(null);
 
 function DropdownMenuSub({ children }: { children: React.ReactNode }) {
-    const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
-    const triggerRef = useRef<HTMLButtonElement>(null);
-    const timerRef = useRef<number | undefined>(undefined);
+  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-    const handleOpen = () => {
-        window.clearTimeout(timerRef.current);
-        if (!isSubMenuOpen) {
-            setIsSubMenuOpen(true);
-        }
-    };
-    
-    const handleClose = () => {
-        console.log('⏰ DropdownMenuSub handleClose called - with delay');
-        // Add a small delay to prevent race conditions when moving from trigger to submenu
-        timerRef.current = window.setTimeout(() => {
-            setIsSubMenuOpen(false);
-        }, 150);
-    };
+  const value = { isSubMenuOpen, setIsSubMenuOpen, triggerRef };
 
-    const value = { isSubMenuOpen, setIsSubMenuOpen, triggerRef, handleOpen, handleClose };
-
-    return (
-        <SubMenuContext.Provider value={value}>
-            <div className="relative">
-                {children}
-            </div>
-        </SubMenuContext.Provider>
-    );
+  return (
+    <SubMenuContext.Provider value={value}>
+      <div className="relative">
+        {children}
+      </div>
+    </SubMenuContext.Provider>
+  );
 }
 
-const DropdownMenuSubTrigger = ({ children, className, ...props }: DropdownMenuItemProps) => {
-    const { triggerRef, handleOpen, handleClose, isSubMenuOpen, setIsSubMenuOpen } = useContext(SubMenuContext)!;
-    
-    const handleClick = (e: React.MouseEvent) => {
-        console.log('🖱️ DropdownMenuSubTrigger handleClick called');
-        e.preventDefault();
-        e.stopPropagation();
-        setIsSubMenuOpen(!isSubMenuOpen);
-    };
-    
-    return (
-        <button
-            ref={triggerRef}
-            onClick={handleClick}
-            onMouseEnter={handleOpen}
-            onMouseLeave={handleClose}
-            className={`focus:ring-accent-primary flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm text-primary transition-colors hover:bg-tertiary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${className}`}
-            {...props}
-        >
-            {children}
-            <ChevronRight size={16} />
-        </button>
-    );
-};
-
-const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProps) => {
-    const { isSubMenuOpen, triggerRef, handleOpen, handleClose } = useContext(SubMenuContext)!;
-    const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0, position: 'fixed' });
-    const menuRef = useRef<HTMLDivElement>(null);
-    const contentTimerRef = useRef<number | undefined>(undefined);
-
-    // Clear timers on unmount
-    useEffect(() => {
-        return () => {
-            if (contentTimerRef.current) {
-                window.clearTimeout(contentTimerRef.current);
-            }
-        };
-    }, []);
-
-    useLayoutEffect(() => {
-      if (isSubMenuOpen && triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        
-        // Position submenu to overlap with trigger to prevent dead zones
-        const initialLeft = rect.right - 8; // Overlap by 8px to create buffer
-        const initialTop = rect.top;
-        
-        // Set initial position for measurement
-        setStyle({
-            position: 'fixed',
-            zIndex: 10000,
-            top: `${initialTop}px`,
-            left: `${initialLeft}px`,
-            opacity: 1,
-        });
-        
-        // Adjust positioning after render if needed
-        setTimeout(() => {
-          if (menuRef.current && isSubMenuOpen) {
-            const menuRect = menuRef.current.getBoundingClientRect();
-            
-            // Check if we need to adjust horizontal positioning
-            const spaceOnRight = window.innerWidth - rect.right;
-            let left = rect.right - 8; // Overlap by 8px
-            if (spaceOnRight < menuRect.width && rect.left > menuRect.width) {
-              left = rect.left - menuRect.width + 8; // Overlap when positioning left
-            }
-
-            // Check if we need to adjust vertical positioning
-            const spaceBelow = window.innerHeight - rect.bottom;
-            let top = rect.top;
-            if (spaceBelow < menuRect.height && rect.top > menuRect.height) {
-              top = rect.bottom - menuRect.height;
-            }
-
-            // Update with adjusted positioning if needed
-            setStyle({
-                position: 'fixed',
-                zIndex: 10000,
-                top: `${top}px`,
-                left: `${left}px`,
-                opacity: 1,
-            });
-          }
-        }, 0);
-      } else {
-        setStyle({ opacity: 0, position: 'fixed', zIndex: -1 });
-      }
-    }, [isSubMenuOpen, triggerRef]);
-
-    if (!isSubMenuOpen) return null;
-
-    const handleContentMouseEnter = () => {
-        console.log('🎯 SubContent mouseEnter - clearing close timer');
-        if (contentTimerRef.current) {
-            window.clearTimeout(contentTimerRef.current);
-        }
-        handleOpen();
-    };
-
-    const handleContentMouseLeave = () => {
-        console.log('🎯 SubContent mouseLeave - starting close timer');
-        contentTimerRef.current = window.setTimeout(() => {
-            handleClose();
-        }, 150);
-    };
-
-    return ReactDOM.createPortal(
-        <div 
-            ref={menuRef}
-            style={style}
-            onMouseEnter={handleContentMouseEnter}
-            onMouseLeave={handleContentMouseLeave}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[10000] rounded-md border bg-white py-1 shadow-lg dark:bg-gray-900 ${className}`}
-        >
-            {children}
-        </div>,
-        document.body
-    );
-};
-
-// 7. Item Component
+// Item Component props
 interface DropdownMenuItemProps {
   children: React.ReactNode;
   onSelect?: () => void;
@@ -379,8 +189,43 @@ interface DropdownMenuItemProps {
   disabled?: boolean;
 }
 
-let itemCounter = 0;
+const DropdownMenuSubTrigger = ({ children, className, ...props }: DropdownMenuItemProps) => {
+  const { triggerRef, isSubMenuOpen, setIsSubMenuOpen } = useContext(SubMenuContext)!;
+  
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsSubMenuOpen(!isSubMenuOpen);
+  };
+  
+  return (
+    <button
+      ref={triggerRef}
+      onClick={handleClick}
+      className={`focus:ring-accent-primary flex w-full items-center justify-between rounded-sm px-3 py-2 text-left asana-text-sm text-primary transition-colors hover:bg-tertiary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${className}`}
+      {...props}
+    >
+      {children}
+      <ChevronRight size={16} />
+    </button>
+  );
+};
 
+const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProps) => {
+  const { isSubMenuOpen } = useContext(SubMenuContext)!;
+  
+  if (!isSubMenuOpen) return null;
+
+  return (
+    <PopoverContent 
+      className={`absolute left-full top-0 ml-1 min-w-[180px] py-[var(--space-0-5)] ${className}`}
+    >
+      {children}
+    </PopoverContent>
+  );
+};
+
+// Item Component
 const DropdownMenuItem = ({
   children,
   onSelect,
@@ -391,12 +236,9 @@ const DropdownMenuItem = ({
   const dropdownContext = useContext(DropdownMenuContext);
   const subMenuContext = useContext(SubMenuContext);
   
-  // Use the appropriate context based on whether we're in a submenu
-  const context = subMenuContext || dropdownContext;
   const isInSubmenu = !!subMenuContext;
   
-  const { setIsOpen, itemRefs, focusedIndex, setFocusedIndex } = dropdownContext!;
-  const [itemIndex] = useState(() => itemCounter++);
+  const { setIsOpen } = dropdownContext!;
   
   const variantClasses = {
     default: 'text-primary hover:bg-tertiary',
@@ -406,76 +248,38 @@ const DropdownMenuItem = ({
   const handleSelect = (e: React.MouseEvent) => {
     if (disabled) return;
     
-    console.log('🎯 DropdownMenuItem handleSelect called', { onSelect: !!onSelect, isInSubmenu });
     e.preventDefault();
     e.stopPropagation();
     
-    // Execute the onSelect callback
     if (onSelect) {
-      console.log('🚀 Executing onSelect callback');
       onSelect();
     }
     
-    // Close the submenu if we're in one
     if (isInSubmenu && subMenuContext) {
-      console.log('🔒 Closing submenu');
       subMenuContext.setIsSubMenuOpen(false);
     }
     
-    // Close the main menu
-    console.log('🔒 Closing main menu');
     setIsOpen(false);
-    setFocusedIndex(-1);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleSelect(e as unknown as React.MouseEvent);
-    }
-  };
-
-  const handleMouseEnter = () => {
-    setFocusedIndex(itemIndex);
-  };
-
-  // Register this item ref
-  useEffect(() => {
-    return () => {
-      // Reset counter when component unmounts (when menu closes)
-      if (itemIndex === itemCounter - 1) {
-        itemCounter = 0;
-      }
-    };
-  }, [itemIndex]);
 
   return (
     <button
-      ref={(el) => {
-        if (itemRefs.current) {
-          itemRefs.current[itemIndex] = el;
-        }
-      }}
       role="menuitem"
       disabled={disabled}
-      className={`focus:ring-accent-primary w-full rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${variantClasses[variant]} ${className} ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+      className={`w-full flex items-center gap-[var(--space-1)] px-[var(--space-1-5)] py-[var(--space-1)] asana-text-base text-left transition-[var(--transition-property)] duration-[var(--transition-duration)] ${variantClasses[variant]} ${className} ${disabled ? 'cursor-not-allowed opacity-50' : ''}`.trim()}
       onClick={handleSelect}
-      onMouseDown={(e) => e.preventDefault()}
-      onKeyDown={handleKeyDown}
-      onMouseEnter={handleMouseEnter}
-      tabIndex={focusedIndex === itemIndex ? 0 : -1}
     >
       {children}
     </button>
   );
 };
 
-// 6. Separator Component
+// Separator Component
 const DropdownMenuSeparator = () => {
-  return <div className="bg-border-default my-1 h-px" />;
+  return <div className="my-[var(--space-0-5)] h-px bg-[var(--border-default)]" />;
 };
 
-// 7. Compound Component
+// Compound Component wrapper
 const WrappedDropdownMenu = (props: { children: React.ReactNode }) => {
   return <DropdownMenu {...props} />;
 };
@@ -498,3 +302,6 @@ export {
   DropdownMenuSubContent, 
   DropdownMenuSeparator 
 };
+
+// Re-export design system components for migration
+export { Dropdown, ActionMenu } from './design-system/Dropdown';

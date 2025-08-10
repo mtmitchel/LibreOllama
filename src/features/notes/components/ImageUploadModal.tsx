@@ -113,7 +113,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
           <X size={18} />
         </button>
         
-        <h3 className="text-lg font-semibold mb-4">Insert Image</h3>
+        <h3 className="asana-text-lg font-semibold mb-4">Insert Image</h3>
         
         {/* Tabs */}
         <div className="flex gap-1 mb-4">
@@ -158,10 +158,13 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             >
               <input
                 ref={fileInputRef}
+                id="image-upload-input"
+                name="image-upload"
                 type="file"
                 accept="image/*"
                 onChange={handleFileSelect}
                 className="hidden"
+                aria-label="Upload image"
               />
               
               {previewUrl ? (
@@ -171,7 +174,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                     alt="Preview" 
                     className="max-h-48 mx-auto rounded"
                   />
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="asana-text-sm text-gray-600 dark:text-gray-400">
                     {selectedFile?.name}
                   </p>
                 </div>
@@ -181,7 +184,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                   <p className="text-gray-600 dark:text-gray-400">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-500">
+                  <p className="asana-text-sm text-gray-500 dark:text-gray-500">
                     PNG, JPG, GIF up to 10MB
                   </p>
                 </div>
@@ -190,7 +193,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
           </div>
         ) : (
           <div>
-            <label htmlFor="image-url" className="block text-sm font-medium mb-1">
+            <label htmlFor="image-url" className="block asana-text-sm font-medium mb-1">
               Image URL
             </label>
             <input

@@ -122,11 +122,11 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
     
     return (
       <div 
-        className="flex size-8 items-center justify-center rounded text-sm font-medium text-white"
+        className="flex size-8 items-center justify-center rounded asana-text-sm font-medium text-white"
         style={{ backgroundColor: fileTypeInfo.color }}
         title={attachment.mimeType}
       >
-        <span className="material-icons-outlined text-base">
+        <span className="material-icons-outlined asana-text-base">
           {fileTypeInfo.icon}
         </span>
       </div>
@@ -152,34 +152,34 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
         <div className="min-w-0 flex-1">
           <div className="flex items-center space-x-2">
             <h4 className={`truncate font-medium text-primary dark:text-gray-100 ${
-              compact ? 'text-sm' : 'text-base'
+              compact ? 'asana-text-sm' : 'asana-text-base'
             }`}>
               {attachment.filename}
             </h4>
             {attachment.isInline && (
-              <span className="inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+              <span className="inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                 Inline
               </span>
             )}
             {cached && (
-              <span className="inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+              <span className="inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
                 Cached
               </span>
             )}
             {!isSecureFileType(attachment.mimeType) && (
-              <span className="inline-flex items-center rounded bg-error-ghost px-2 py-0.5 text-xs font-medium text-error dark:bg-red-900 dark:text-red-200">
+              <span className="inline-flex items-center rounded bg-error-ghost px-2 py-0.5 text-[11px] font-medium text-error dark:bg-red-900 dark:text-red-200">
                 ⚠️ Unsafe
               </span>
             )}
           </div>
-          <div className={`text-secondary dark:text-muted ${compact ? 'text-xs' : 'text-sm'}`}>
+          <div className={`text-secondary dark:text-muted ${compact ? 'text-[11px]' : 'asana-text-sm'}`}>
             {formatFileSize(attachment.size)} • {fileTypeInfo.extension.toUpperCase()}
           </div>
           
           {/* Download Progress */}
           {download && download.status === 'downloading' && (
             <div className="mt-2">
-              <div className="mb-1 flex justify-between text-xs text-secondary dark:text-muted">
+              <div className="mb-1 flex justify-between text-[11px] text-secondary dark:text-muted">
                 <span>Downloading...</span>
                 <span>{download.progress}%</span>
               </div>
@@ -194,7 +194,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
 
           {/* Download Error */}
           {download && download.status === 'failed' && (
-            <div className="mt-2 text-xs text-error dark:text-red-400">
+            <div className="mt-2 text-[11px] text-error dark:text-red-400">
               Error: {download.error}
             </div>
           )}
@@ -210,7 +210,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
               title="Preview"
               disabled={download?.status === 'downloading'}
             >
-              <span className="material-icons-outlined text-base">
+              <span className="material-icons-outlined asana-text-base">
                 visibility
               </span>
             </button>
@@ -230,7 +230,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
               className="p-2 text-muted transition-colors hover:text-secondary dark:text-secondary dark:hover:text-muted"
               title="More actions"
             >
-              <span className="material-icons-outlined text-base">
+              <span className="material-icons-outlined asana-text-base">
                 more_vert
               </span>
             </button>
@@ -252,7 +252,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
           <span className="material-icons-outlined text-secondary dark:text-muted">
             attach_file
           </span>
-          <h3 className="text-sm font-medium text-primary dark:text-gray-100">
+          <h3 className="asana-text-sm font-medium text-primary dark:text-gray-100">
             Attachments ({displayAttachments.length})
           </h3>
         </div>
@@ -260,7 +260,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
         {hasMoreAttachments && (
           <button
             onClick={() => setExpandedView(!expandedView)}
-            className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+            className="text-[11px] text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
           >
             {expandedView ? 'Show Less' : `Show All (${displayAttachments.length})`}
           </button>
@@ -282,12 +282,12 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
               onClick={() => {
                 displayAttachments.forEach(att => handleDownload(att));
               }}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+              className="asana-text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
             >
               Download All
             </button>
             <button
-              className="text-sm text-secondary hover:text-primary dark:text-muted dark:hover:text-gray-200"
+              className="asana-text-sm text-secondary hover:text-primary dark:text-muted dark:hover:text-gray-200"
             >
               Save to Drive
             </button>

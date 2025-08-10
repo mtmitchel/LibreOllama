@@ -15,7 +15,7 @@ export const NoProjectSelected: React.FC<NoProjectSelectedProps> = ({ onCreatePr
         {!hasProjects && (
           <button 
             onClick={onCreateProject}
-            className="hover:bg-accent-primary/90 rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white transition-colors"
+            className="hover:bg-accent-primary/90 rounded-lg bg-accent-primary px-4 py-2 asana-text-sm font-medium text-white transition-colors"
           >
             Create new project
           </button>

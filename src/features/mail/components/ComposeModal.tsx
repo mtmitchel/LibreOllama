@@ -339,13 +339,13 @@ function ComposeModal({
             
             {/* Auto-save indicator */}
             {autoSaveStatus === 'saving' && (
-              <div className="flex items-center gap-2 text-xs text-secondary">
+              <div className="flex items-center gap-2 text-[11px] text-secondary">
                 <div className="size-3 animate-spin rounded-full border-2 border-accent-primary border-t-transparent"></div>
                 Saving...
               </div>
             )}
             {autoSaveStatus === 'saved' && (
-              <div className="flex items-center gap-1 text-xs text-success">
+              <div className="flex items-center gap-1 text-[11px] text-success">
                 <CheckCircle size={12} />
                 Saved
               </div>
@@ -379,7 +379,7 @@ function ComposeModal({
                     setCompose(prev => ({ ...prev, accountId: e.target.value }));
                   }
                 }}
-                className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-1 text-sm text-primary hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-1 asana-text-sm text-primary hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
               >
                 {accounts.map(account => (
                   <option key={account.id} value={account.id} className="bg-primary text-primary">
@@ -406,14 +406,14 @@ function ComposeModal({
                 value={formatEmailAddresses(compose.to)}
                 onChange={(e) => handleEmailAddressChange('to', e.target.value)}
                 placeholder="Enter recipients..."
-                className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
               />
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setCcVisible(!ccVisible)}
-                  className="text-xs text-secondary hover:text-primary"
+                  className="text-[11px] text-secondary hover:text-primary"
                 >
                   Cc
                 </Button>
@@ -421,7 +421,7 @@ function ComposeModal({
                   variant="ghost"
                   size="sm"
                   onClick={() => setBccVisible(!bccVisible)}
-                  className="text-xs text-secondary hover:text-primary"
+                  className="text-[11px] text-secondary hover:text-primary"
                 >
                   Bcc
                 </Button>
@@ -440,7 +440,7 @@ function ComposeModal({
                   value={formatEmailAddresses(compose.cc)}
                   onChange={(e) => handleEmailAddressChange('cc', e.target.value)}
                   placeholder="Enter CC recipients..."
-                  className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                  className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
                 />
               </div>
             )}
@@ -457,7 +457,7 @@ function ComposeModal({
                   value={formatEmailAddresses(compose.bcc)}
                   onChange={(e) => handleEmailAddressChange('bcc', e.target.value)}
                   placeholder="Enter BCC recipients..."
-                  className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                  className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
                 />
               </div>
             )}
@@ -473,7 +473,7 @@ function ComposeModal({
                 value={compose.subject}
                 onChange={(e) => setCompose(prev => ({ ...prev, subject: e.target.value }))}
                 placeholder="Enter subject..."
-                className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
               />
             </div>
           </div>
@@ -486,7 +486,7 @@ function ComposeModal({
                 value={compose.bodyText}
                 onChange={(e) => setCompose(prev => ({ ...prev, bodyText: e.target.value }))}
                 placeholder="Write your message..."
-                className="border-border-default focus:ring-accent-primary size-full resize-none rounded-md border bg-transparent p-3 text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                className="border-border-default focus:ring-accent-primary size-full resize-none rounded-md border bg-transparent p-3 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
                 style={{ minHeight: '200px' }}
               />
             </div>

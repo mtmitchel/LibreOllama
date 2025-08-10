@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, LogOut, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { Button } from '../ui';
+import { Button } from '../ui/design-system/Button';
 import { useGoogleAuth } from './GoogleAuthProvider';
 
 interface GmailAuthButtonProps {
@@ -98,7 +98,7 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
           Retry Authentication
         </Button>
         {showUserInfo && (
-          <p className="text-center text-sm text-error">
+          <p className="text-center asana-text-sm text-error">
             {error}
           </p>
         )}
@@ -114,10 +114,10 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
           <div className="flex items-center gap-3 rounded-lg border border-success bg-success-ghost p-3">
             <CheckCircle size={16} className="shrink-0 text-success" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-success">
+              <p className="truncate asana-text-sm font-medium text-success">
                 {user.name || user.email}
               </p>
-              <p className="truncate text-xs text-success-fg">
+              <p className="truncate text-[11px] text-success-fg">
                 {user.email}
               </p>
             </div>

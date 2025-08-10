@@ -18,14 +18,16 @@ import {
   UserMinus,
   Trash2,
 } from 'lucide-react';
-import { Card, Button, Input, Heading, Text, Checkbox } from '../../components/ui';
-import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
+import { Button } from '../../components/ui/design-system/Button';
+import { Card } from '../../components/ui/design-system/Card';
+import { Input, Heading, Text, Checkbox } from '../../components/ui';
+import { SimpleDialog as ConfirmationModal } from '../../components/ui/design-system';
 import { useHeader } from '../contexts/HeaderContext';
 import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModal';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
 // Google Tasks now managed through unified task store
 import { useMailStore } from '../../features/mail/stores/mailStore';
-import './styles/settings-asana-v2.css';
+import { Page, PageContent } from '../../components/ui/design-system/Page';
 import { 
   useGeneralSettings, 
   useAppearanceSettings, 
@@ -1255,6 +1257,8 @@ const Settings: React.FC = () => {
   // Auth initialization is now handled by MailStoreProvider
 
   return (
+    <Page>
+      <PageContent>
     <div className="asana-settings">
       {/* Left Navigation */}
       <div className="asana-settings-sidebar">
@@ -1321,22 +1325,25 @@ const Settings: React.FC = () => {
 
         {/* Account Removal Confirmation Modal */}
         <ConfirmationModal
-          isOpen={!!accountToRemove}
-          onClose={() => setAccountToRemove(null)}
-          onConfirm={confirmRemoveAccount}
+          open={!!accountToRemove}
+          onOpenChange={(open) => { if (!open) setAccountToRemove(null); }}
           title="Remove Google account"
-          message={accountToRemove ? 
+          description={accountToRemove ? 
             `Are you sure you want to remove ${accountToRemove.email} from LibreOllama?\n\nThis will:\n• Remove the account from this app\n• Revoke LibreOllama's access to Google services\n• Clear all cached data for this account\n\nYou can always reconnect this account later if needed.` 
             : ''
           }
-          confirmText="Remove account"
-          cancelText="Keep account"
-          variant="warning"
-          confirmButtonVariant="destructive"
-          icon={<UserMinus size={24} className="text-warning" />}
+          footer={(
+            <div className="flex items-center justify-end gap-2 w-full">
+              <Button variant="ghost" onClick={() => setAccountToRemove(null)}>Keep account</Button>
+              <Button variant="destructive" onClick={confirmRemoveAccount}>Remove account</Button>
+            </div>
+          )}
+          size="sm"
         />
       </div>
     </div>
+      </PageContent>
+    </Page>
   );
 };
 

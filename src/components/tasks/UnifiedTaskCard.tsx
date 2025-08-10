@@ -1,10 +1,11 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { ContextMenu, Button } from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { ContextMenu } from '../ui/design-system/ContextMenu';
 import { Calendar, CheckSquare, Flag, Tag, RotateCcw, Edit3, Copy, Trash2, User, RefreshCw } from 'lucide-react';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 import { parseGoogleTaskDate, formatTaskDate } from '../../utils/dateUtils';
-import '../../styles/asana-design-system.css';
+import '../../styles/asana-core.css';
 
 interface UnifiedTaskCardProps {
   task: UnifiedTask;
@@ -93,7 +94,7 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
         style={{
           marginBottom: '8px',
           minHeight: variant === 'compact' ? '36px' : '44px',
-          outline: isSelected ? '2px solid #4573D2' : 'none',
+          outline: isSelected ? '2px solid var(--accent-primary)' : 'none',
           outlineOffset: '2px'
         }}
         onClick={(e) => {
@@ -121,7 +122,7 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
             title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
           >
             <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none">
-              <path d="M13.5 4.5L6 12L2.5 8.5" stroke={isCompleted ? "white" : "#D4D6DA"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M13.5 4.5L6 12L2.5 8.5" stroke={isCompleted ? "white" : "var(--border-subtle)"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Button>
 
@@ -158,8 +159,8 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
                 fontWeight: 500,
                 padding: '2px 8px',
                 borderRadius: '12px',
-                backgroundColor: task.priority === 'high' ? 'var(--red-50)' : task.priority === 'medium' ? 'var(--amber-50)' : '#e0f2fe',
-                color: task.priority === 'high' ? 'var(--red-600)' : task.priority === 'medium' ? 'var(--amber-600)' : '#0369a1'
+                backgroundColor: task.priority === 'high' ? 'var(--red-50)' : task.priority === 'medium' ? 'var(--amber-50)' : 'var(--status-info-bg)',
+                color: task.priority === 'high' ? 'var(--red-600)' : task.priority === 'medium' ? 'var(--amber-600)' : 'var(--status-info)'
               }}>
                 {task.priority === 'high' ? 'High' : task.priority === 'medium' ? 'Medium' : 'Low'}
               </span>
@@ -178,7 +179,7 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
                   </span>
                 ))}
                 {task.labels.length > 2 && (
-                  <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                     +{task.labels.length - 2}
                   </span>
                 )}

@@ -99,10 +99,10 @@ export function ErrorDisplay({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
-              <h4 className={`text-sm font-medium ${errorColor.text}`}>
+              <h4 className={`asana-text-sm font-medium ${errorColor.text}`}>
                 {errorMessage.title}
               </h4>
-              <p className={`mt-1 text-sm ${errorColor.textSecondary}`}>
+              <p className={`mt-1 asana-text-sm ${errorColor.textSecondary}`}>
                 {errorMessage.message}
               </p>
             </div>
@@ -122,10 +122,10 @@ export function ErrorDisplay({
           {/* Error Details */}
           {process.env.NODE_ENV === 'development' && error.details && (
             <details className="mt-2">
-              <summary className={`cursor-pointer text-xs ${errorColor.textSecondary}`}>
+              <summary className={`cursor-pointer text-[11px] ${errorColor.textSecondary}`}>
                 Technical Details
               </summary>
-              <pre className={`mt-1 text-xs ${errorColor.textSecondary} whitespace-pre-wrap`}>
+              <pre className={`mt-1 text-[11px] ${errorColor.textSecondary} whitespace-pre-wrap`}>
                 {JSON.stringify(error.details, null, 2)}
               </pre>
             </details>
@@ -134,13 +134,13 @@ export function ErrorDisplay({
           {/* Suggested Actions */}
           {showActions && errorMessage.actions.length > 0 && (
             <div className="mt-3">
-              <p className={`text-xs font-medium ${errorColor.text} mb-2`}>
+              <p className={`text-[11px] font-medium ${errorColor.text} mb-2`}>
                 Suggested actions:
               </p>
-              <ul className={`space-y-1 text-xs ${errorColor.textSecondary}`}>
+              <ul className={`space-y-1 text-[11px] ${errorColor.textSecondary}`}>
                 {errorMessage.actions.map((action, index) => (
                   <li key={index} className="flex items-start gap-1">
-                    <span className="mt-0.5 text-xs">•</span>
+                    <span className="mt-0.5 text-[11px]">•</span>
                     <span>{action}</span>
                   </li>
                 ))}

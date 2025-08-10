@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Skeleton } from "../../../components/ui";
+import { Card } from '../../../components/ui/design-system/Card';
+import { Skeleton } from '../../../components/ui';
 
 interface WidgetSkeletonProps {
   className?: string;

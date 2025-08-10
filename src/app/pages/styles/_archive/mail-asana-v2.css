@@ -390,6 +390,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 24px;
   overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .asana-mail-context-section {

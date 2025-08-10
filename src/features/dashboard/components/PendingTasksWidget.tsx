@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
-import { Card, Heading, Text, Button } from '../../../components/ui';
-import { DropdownMenu } from '../../../components/ui/DropdownMenu';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Heading, Text } from '../../../components/ui';
+import { WidgetHeader, Dropdown } from '../../../components/ui/design-system';
 import { MoreHorizontal, CheckSquare, Plus, Calendar } from 'lucide-react';
 import { useUnifiedTaskStore } from '../../../stores/unifiedTaskStore';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
@@ -113,26 +115,28 @@ export const PendingTasksWidget: React.FC = () => {
   };
 
   return (
-    <Card padding="sm">
-      <div className="mb-4 flex items-center justify-between">
-        <Heading level={3}>Pending tasks</Heading>
-        <DropdownMenu>
-          <DropdownMenu.Trigger asChild>
-            <Button variant="ghost" size="icon" className="text-secondary hover:text-primary">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content>
-            <DropdownMenu.Item onSelect={handleAddTask}>
-              <Plus className="mr-2 size-4" />
-              Add new task
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onSelect={handleViewTasks}>
-              View all tasks
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
-      </div>
+    <div className="asana-card asana-card-padded">
+      <WidgetHeader
+        title="Pending tasks"
+        actions={(
+          <Dropdown
+            items={[
+              { value: 'add', label: 'Add new task', icon: <Plus className="mr-2 size-4" /> },
+              { value: 'view', label: 'View all tasks' }
+            ]}
+            onSelect={(v: string) => {
+              if (v === 'add') handleAddTask();
+              else if (v === 'view') handleViewTasks();
+            }}
+            placement="bottom-end"
+            trigger={(
+              <Button variant="ghost" size="icon" className="text-secondary hover:text-primary" aria-label="Pending tasks menu">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            )}
+          />
+        )}
+      />
       
       {pendingTasks.length === 0 ? (
         <div className="py-2 text-center">
@@ -142,7 +146,7 @@ export const PendingTasksWidget: React.FC = () => {
             variant="ghost" 
             size="sm" 
             onClick={handleAddTask}
-            className="mt-1 h-auto px-2 py-0.5 text-xs"
+            className="mt-1 h-auto px-2 py-0.5 text-[11px]"
           >
             Add your first task
           </Button>
@@ -168,7 +172,7 @@ export const PendingTasksWidget: React.FC = () => {
                     </Text>
                     <div className="flex shrink-0 items-center gap-2">
                       {priority && (
-                        <span className={`text-xs font-medium ${getPriorityColor(priority)}`}>
+                        <span className={`text-[11px] font-medium ${getPriorityColor(priority)}`}>
                           {priority[0].toUpperCase()}
                         </span>
                       )}
@@ -185,6 +189,6 @@ export const PendingTasksWidget: React.FC = () => {
           })}
         </ul>
       )}
-    </Card>
+    </div>
   );
 }; 

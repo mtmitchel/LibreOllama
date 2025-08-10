@@ -49,7 +49,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   }, [showDatePicker]);
 
   return (
-    <div className="flex items-center px-6 py-3" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E8E9' }}>
+    <div className="flex items-center px-6 py-3" style={{ backgroundColor: 'var(--asana-bg-primary)', borderBottom: '1px solid var(--asana-border-default)' }}>
       {/* Left side - Today, Navigation and Title */}
       <div className="flex items-center gap-4" style={{ flex: '1 1 0' }}>
         <Button
@@ -57,7 +57,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           size="sm"
           onClick={() => onNavigate('today')}
           style={{
-            backgroundColor: '#796EFF',
+            backgroundColor: 'var(--accent-primary)',
             color: '#FFFFFF',
             padding: '8px 16px',
             borderRadius: '12px',
@@ -74,30 +74,25 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             onClick={() => onNavigate('prev')}
             aria-label="Previous"
           >
-            <ChevronLeft size={18} style={{ color: '#6B6F76' }} />
+            <ChevronLeft size={18} style={{ color: 'var(--asana-text-secondary)' }} />
           </button>
           <button
             className="p-1 rounded hover:bg-gray-100 transition-colors"
             onClick={() => onNavigate('next')}
             aria-label="Next"
           >
-            <ChevronRight size={18} style={{ color: '#6B6F76' }} />
+            <ChevronRight size={18} style={{ color: 'var(--asana-text-secondary)' }} />
           </button>
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 500, color: '#444', margin: 0 }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 500, color: 'var(--asana-text-primary)', margin: 0 }}>
             {currentViewTitle}
           </h2>
           
           {/* Timezone label for day/week views */}
           {(view === 'timeGridWeek' || view === 'timeGridDay') && (
-            <span style={{ 
-              fontSize: '11px', 
-              color: '#71717A',
-              marginTop: '2px',
-              fontWeight: 400
-            }}>
+            <span style={{ fontSize: '11px', color: 'var(--asana-text-secondary)', marginTop: '2px', fontWeight: 400 }}>
               {Intl.DateTimeFormat().resolvedOptions().timeZone}
             </span>
           )}
@@ -106,24 +101,20 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       
       {/* Center - Search */}
       <div className="relative max-w-md flex-1 mx-6">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--asana-text-placeholder)' }} />
         <input
           type="search"
           placeholder="Search tasks..."
           value={searchQuery}
           onChange={(e) => onSearchChange?.(e.target.value)}
           className="pl-10 pr-4 py-2 rounded-xl outline-none transition-all w-full"
-          style={{ 
-            fontSize: '14px',
-            backgroundColor: '#F6F7F8',
-            border: '1px solid transparent'
-          }}
+          style={{ fontSize: '14px', backgroundColor: 'var(--asana-bg-input)', border: '1px solid transparent' }}
           onFocus={(e) => {
-            e.currentTarget.style.backgroundColor = '#FFFFFF';
-            e.currentTarget.style.borderColor = '#D1D5DB';
+            e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+            e.currentTarget.style.borderColor = 'var(--asana-border-hover)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.backgroundColor = '#F6F7F8';
+            e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
             e.currentTarget.style.borderColor = 'transparent';
           }}
         />
@@ -145,7 +136,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             onClick={() => setShowDatePicker(!showDatePicker)}
             title="Go to date"
           >
-            <Calendar size={18} style={{ color: '#6B6F76' }} />
+            <Calendar size={18} style={{ color: 'var(--asana-text-secondary)' }} />
           </button>
           
           {showDatePicker && (
@@ -182,7 +173,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           size="sm"
           onClick={onNewEvent}
           style={{
-            backgroundColor: '#796EFF',
+            backgroundColor: 'var(--accent-primary)',
             color: '#FFFFFF',
             padding: '8px 16px',
             borderRadius: '12px',

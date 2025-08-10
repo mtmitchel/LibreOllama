@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { X, Calendar, Flag, Tag, CheckSquare, Trash2, Plus } from 'lucide-react';
 import type { UnifiedTask, UpdateTaskInput } from '../../stores/unifiedTaskStore.types';
-import { Button } from '../ui';
+import { Button } from '../ui/design-system/Button';
 import { format } from 'date-fns';
 import { LabelColorPicker } from './LabelColorPicker';
 
@@ -135,9 +135,9 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
       value: 'low', 
       label: 'Low',
       style: {
-        backgroundColor: '#e0f2fe',
-        color: '#0369a1',
-        borderColor: '#e0f2fe'
+        backgroundColor: 'var(--bg-secondary)',
+        color: 'var(--text-secondary)',
+        borderColor: 'var(--border-default)'
       }
     },
     { 
@@ -179,7 +179,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
         <div className="h-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden flex flex-col">
           {/* Header - with reduced height to align content */}
           <div className="flex items-center justify-between px-6 py-2 border-b border-gray-200" style={{ minHeight: '48px' }}>
-            <h2 className="text-base font-semibold text-gray-900">Task details</h2>
+            <h2 className="asana-text-base font-semibold text-gray-900">Task details</h2>
             <Button
               type="button"
               onClick={onClose}
@@ -188,7 +188,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
               className="h-8 w-8"
               aria-label="Close panel"
             >
-              <X size={20} color="#6B6F76" strokeWidth={2} />
+              <X size={20} strokeWidth={2} style={{ color: 'var(--text-secondary)' }} />
             </Button>
           </div>
 
@@ -202,14 +202,14 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 onBlur={handleSubmit}
-                className="w-full text-2xl font-normal border-0 focus:outline-none px-0 py-0"
+                className="w-full asana-text-2xl font-normal border-0 focus:outline-none px-0 py-0"
                 placeholder="Write a task name"
               />
             </div>
 
             {/* Due Date Section */}
             <div className="px-6 py-4">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 asana-text-sm font-medium text-gray-700 mb-2">
                 <Calendar size={16} />
                 Due date
               </label>
@@ -225,7 +225,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
                 />
                 {formData.due && (
-                  <div className="mt-2 text-sm text-gray-600">
+                  <div className="mt-2 asana-text-sm text-gray-600">
                     {format(new Date(formData.due.split('T')[0] + 'T12:00:00'), 'MMM d, yyyy')}
                   </div>
                 )}
@@ -237,7 +237,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
 
             {/* Priority Section */}
             <div className="px-6 py-4">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 asana-text-sm font-medium text-gray-700 mb-2">
                 <Flag size={16} />
                 Priority
               </label>
@@ -282,14 +282,14 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                         }
                       }
                     }}
-                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all border-2"
+                    className="px-4 py-2 rounded-lg asana-text-sm font-medium transition-all border-2"
                     style={
                       formData.priority === option.value
-                        ? { ...option.style, boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }
+                        ? { ...option.style, boxShadow: '0 1px 2px var(--shadow-sm, rgba(0, 0, 0, 0.05))' }
                         : {
-                            backgroundColor: '#F9FAFB',
-                            color: '#6B7280',
-                            borderColor: '#E5E7EB'
+                            backgroundColor: 'var(--bg-secondary)',
+                            color: 'var(--text-secondary)',
+                            borderColor: 'var(--border-default)'
                           }
                     }
                   >
@@ -304,7 +304,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
 
             {/* Labels Section */}
             <div className="px-6 py-4">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 asana-text-sm font-medium text-gray-700 mb-2">
                 <Tag size={16} />
                 Labels
               </label>
@@ -341,7 +341,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                     }
                   }}
                   placeholder="Add a label"
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 asana-text-sm focus:border-blue-500 focus:outline-none"
                 />
                 <LabelColorPicker
                   selectedColor={newLabelColor}
@@ -364,7 +364,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
 
             {/* Notes Section */}
             <div className="px-6 py-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block asana-text-sm font-medium text-gray-700 mb-2">
                 Notes
               </label>
               <textarea

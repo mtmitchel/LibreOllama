@@ -92,7 +92,7 @@ export const HeatMapCalendars: Story = () => {
             <h3 className="mb-4 font-medium text-primary">Green scale (default)</h3>
             <HeatMapCalendar
               data={randomData}
-              colorScale="green"
+              colorScheme="green"
               cellSize="sm"
               showMonthLabels={true}
               showWeekdayLabels={false}
@@ -103,7 +103,7 @@ export const HeatMapCalendars: Story = () => {
             <h3 className="mb-4 font-medium text-primary">Blue scale</h3>
             <HeatMapCalendar
               data={randomData}
-              colorScale="blue"
+              colorScheme="blue"
               cellSize="sm"
               showMonthLabels={true}
               showWeekdayLabels={false}
@@ -114,7 +114,7 @@ export const HeatMapCalendars: Story = () => {
             <h3 className="mb-4 font-medium text-primary">Purple scale</h3>
             <HeatMapCalendar
               data={randomData}
-              colorScale="purple"
+              colorScheme="purple"
               cellSize="sm"
               showMonthLabels={true}
               showWeekdayLabels={false}
@@ -125,7 +125,7 @@ export const HeatMapCalendars: Story = () => {
             <h3 className="mb-4 font-medium text-primary">Custom scale</h3>
             <HeatMapCalendar
               data={randomData}
-              colorScale="custom"
+              colorScheme="brand"
               cellSize="sm"
               showMonthLabels={true}
               showWeekdayLabels={false}
@@ -142,7 +142,7 @@ export const HeatMapCalendars: Story = () => {
             <HeatMapCalendar
               data={sparseData}
               cellSize="sm"
-              colorScale="green"
+              colorScheme="green"
             />
           </div>
           
@@ -151,7 +151,7 @@ export const HeatMapCalendars: Story = () => {
             <HeatMapCalendar
               data={sparseData}
               cellSize="md"
-              colorScale="blue"
+              colorScheme="blue"
             />
           </div>
           
@@ -160,7 +160,7 @@ export const HeatMapCalendars: Story = () => {
             <HeatMapCalendar
               data={sparseData}
               cellSize="lg"
-              colorScale="purple"
+              colorScheme="purple"
             />
           </div>
         </div>
@@ -174,7 +174,7 @@ export const HeatMapCalendars: Story = () => {
             <p className="mb-4 text-sm text-secondary">Higher activity in winter months</p>
             <HeatMapCalendar
               data={seasonalData}
-              colorScale="blue"
+              colorScheme="blue"
               cellSize="sm"
             />
           </div>
@@ -184,7 +184,7 @@ export const HeatMapCalendars: Story = () => {
             <p className="mb-4 text-sm text-secondary">More activity on weekdays</p>
             <HeatMapCalendar
               data={weekdayData}
-              colorScale="green"
+              colorScheme="green"
               cellSize="sm"
             />
           </div>
@@ -208,7 +208,7 @@ export const HeatMapCalendars: Story = () => {
           </div>
           <HeatMapCalendar
             data={randomData}
-            colorScale="custom"
+            colorScheme="brand"
             cellSize="md"
             onCellClick={setSelectedCell}
             onCellHover={() => {
@@ -229,7 +229,7 @@ export const HeatMapCalendars: Story = () => {
               data={randomData}
               startDate={new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000)}
               endDate={new Date()}
-              colorScale="green"
+              colorScheme="green"
               cellSize="md"
             />
           </div>
@@ -240,7 +240,7 @@ export const HeatMapCalendars: Story = () => {
               data={canvasPerformanceData}
               startDate={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)}
               endDate={new Date()}
-              colorScale="purple"
+              colorScheme="purple"
               cellSize="md"
               maxValue={50}
               tooltipFormatter={(data) => `Render time: ${data.value}ms`}
@@ -256,7 +256,7 @@ export const HeatMapCalendars: Story = () => {
             <h3 className="mb-4 font-medium text-primary">Minimal (no labels)</h3>
             <HeatMapCalendar
               data={sparseData}
-              colorScale="custom"
+              colorScheme="brand"
               cellSize="md"
               showMonthLabels={false}
               showWeekdayLabels={false}
@@ -268,12 +268,11 @@ export const HeatMapCalendars: Story = () => {
             <h3 className="mb-4 font-medium text-primary">Full featured</h3>
             <HeatMapCalendar
               data={sparseData}
-              colorScale="blue"
+              colorScheme="blue"
               cellSize="md"
               showMonthLabels={true}
               showWeekdayLabels={true}
               showTooltip={true}
-              emptyColor="bg-gray-100"
             />
           </div>
         </div>
@@ -287,7 +286,7 @@ export const HeatMapCalendars: Story = () => {
             <p className="mb-4 text-sm text-secondary">Track daily coding activity and contributions</p>
             <HeatMapCalendar
               data={randomData}
-              colorScale="green"
+              colorScheme="green"
               cellSize="sm"
               tooltipFormatter={(data) => `${data.value} contributions on ${data.date}`}
             />
@@ -298,7 +297,7 @@ export const HeatMapCalendars: Story = () => {
             <p className="mb-4 text-sm text-secondary">Visualize render times and performance metrics over time</p>
             <HeatMapCalendar
               data={canvasPerformanceData}
-              colorScale="purple"
+              colorScheme="purple"
               cellSize="md"
               maxValue={50}
               startDate={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)}
@@ -315,7 +314,7 @@ export const HeatMapCalendars: Story = () => {
             <p className="mb-4 text-sm text-secondary">Monitor user engagement or system usage patterns</p>
             <HeatMapCalendar
               data={weekdayData}
-              colorScale="blue"
+              colorScheme="blue"
               cellSize="sm"
               tooltipFormatter={(data) => `${data.value} active users on ${data.date}`}
             />

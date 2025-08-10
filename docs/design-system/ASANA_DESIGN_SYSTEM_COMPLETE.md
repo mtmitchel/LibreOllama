@@ -1,4 +1,5 @@
 # Complete Asana Design System Specification
+> Note: The authoritative, living design system document is `docs/DESIGN_SYSTEM.md`. This spec remains as a supporting reference and should not diverge from the authoritative doc.
 **Based on Tasks and Calendar Pages Implementation**
 **Version:** 1.0
 **Last Updated:** 2025-02-06

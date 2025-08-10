@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Button, Card, Text, Caption, Progress, Input } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Text, Caption, Progress, Input } from '../../../components/ui';
 import { Plus, Search, PanelLeft, Folder, FileText, Calendar, CheckSquare } from 'lucide-react';
 import { ProjectContextMenu } from './ProjectContextMenu';
 import type { Project } from '../stores/projectStore';
@@ -58,7 +60,7 @@ export function ProjectsSidebar({
   return (
     <Card 
       className="flex w-[340px] shrink-0 flex-col"
-      padding="default"
+      padding="md"
     >
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">

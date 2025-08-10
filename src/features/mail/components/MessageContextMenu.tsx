@@ -373,7 +373,7 @@ export function MessageContextMenu({
               onMouseLeave={() => setActiveSubmenu(null)}
             >
               <button
-                className="flex w-full items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="flex w-full items-center justify-between px-4 py-2 asana-text-sm text-gray-700 hover:bg-gray-100"
               >
                 <div className="flex items-center gap-3">
                   {item.icon}
@@ -393,7 +393,7 @@ export function MessageContextMenu({
                         subItem.action();
                         onClose();
                       }}
-                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex w-full items-center px-4 py-2 asana-text-sm text-gray-700 hover:bg-gray-100"
                     >
                       {subItem.label}
                     </button>
@@ -409,7 +409,7 @@ export function MessageContextMenu({
             key={item.id}
             onClick={item.action}
             disabled={item.disabled}
-            className={`flex w-full items-center gap-3 px-4 py-2 text-sm ${
+            className={`flex w-full items-center gap-3 px-4 py-2 asana-text-sm ${
               item.disabled
                 ? 'cursor-not-allowed text-gray-400'
                 : 'text-gray-700 hover:bg-gray-100'

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Card, Heading } from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { Card } from '../ui/design-system/Card';
+import { Heading } from '../ui';
 import { Copy, RefreshCw, ArrowLeftRight, X, Loader2 } from 'lucide-react';
 import { cn } from '../../core/lib/utils';
 
@@ -85,7 +87,7 @@ function AIOutputModalComponent({
           <Card className="relative overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
-              <Heading level={3} className="text-lg">AI Writing Assistant</Heading>
+              <Heading level={3} className="asana-text-lg">AI Writing Assistant</Heading>
               <Button
                 size="icon"
                 variant="ghost"
@@ -100,24 +102,24 @@ function AIOutputModalComponent({
             <div className="p-6 space-y-4">
               {/* Prompt display */}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-secondary">Your request:</p>
-                <p className="text-sm text-tertiary bg-surface rounded-md p-3">
+                <p className="asana-text-sm font-medium text-secondary">Your request:</p>
+                <p className="asana-text-sm text-tertiary bg-surface rounded-md p-3">
                   {prompt}
                 </p>
               </div>
 
               {/* Output display */}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-secondary">AI response:</p>
+                <p className="asana-text-sm font-medium text-secondary">AI response:</p>
                 <div className="relative">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin text-accent-primary" />
-                      <span className="ml-2 text-sm text-secondary">Generating response...</span>
+                      <span className="ml-2 asana-text-sm text-secondary">Generating response...</span>
                     </div>
                   ) : (
                     <div className="bg-surface rounded-md p-4 min-h-[120px]">
-                      <pre className="text-sm whitespace-pre-wrap font-sans">{output}</pre>
+                      <pre className="asana-text-sm whitespace-pre-wrap font-sans">{output}</pre>
                     </div>
                   )}
                 </div>

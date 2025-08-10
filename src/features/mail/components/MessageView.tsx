@@ -61,7 +61,7 @@ function MessageHeader({ message }: MessageHeaderProps) {
         {/* Subject Line with action buttons */}
         <div className="mb-4">
           <div className="flex items-start justify-between gap-4">
-            <h1 className="text-2xl font-semibold leading-tight text-primary">
+            <h1 className="asana-text-2xl font-semibold leading-tight text-primary">
               {safeDecodeHtmlEntities(message.subject || '(no subject)')}
             </h1>
             
@@ -94,7 +94,7 @@ function MessageHeader({ message }: MessageHeaderProps) {
         </div>
 
         {/* Metadata in a more compact, readable format */}
-        <div className="text-sm text-secondary">
+        <div className="asana-text-sm text-secondary">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             {/* From */}
             <div className="flex items-center gap-1">
@@ -102,7 +102,7 @@ function MessageHeader({ message }: MessageHeaderProps) {
               <span className="text-primary">
                 {message.from.name || message.from.email}
               </span>
-              <span className="text-xs text-tertiary">
+              <span className="text-[11px] text-tertiary">
                 &lt;{message.from.email}&gt;
               </span>
             </div>

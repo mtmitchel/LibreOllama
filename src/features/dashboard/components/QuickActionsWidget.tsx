@@ -1,7 +1,9 @@
 import React from 'react';
-import { Card, Button, Heading } from '../../../components/ui';
-import { DropdownMenu } from '../../../components/ui/DropdownMenu';
-import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate } from 'lucide-react';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Heading } from '../../../components/ui';
+import { WidgetHeader, Tile, Dropdown } from '../../../components/ui/design-system';
+import { MoreHorizontal, MessageSquare, FileText, FolderPlus, LayoutTemplate } from 'lucide-react';
 
 interface QuickAction {
   id: string;
@@ -57,41 +59,34 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
   };
 
   return (
-    <div className="asana-card">
-      <div className="asana-card-header">
-        <h3 className="asana-card-title">Quick actions</h3>
-        <DropdownMenu>
-          <DropdownMenu.Trigger asChild>
-            <button className="asana-icon-button">
-              <Settings2 size={16} />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content>
-            <DropdownMenu.Item onSelect={handleCustomizeActions}>
-              Customize actions
-            </DropdownMenu.Item>
-            <DropdownMenu.Item onSelect={handleAddAction}>
-              Add new action
-            </DropdownMenu.Item>
-            <DropdownMenu.Separator />
-            <DropdownMenu.Item onSelect={handleResetActions}>
-              Reset to defaults
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
-      </div>
+    <div className="asana-card asana-card-padded">
+      <WidgetHeader
+        title="Quick actions"
+        actions={(
+          <Dropdown
+            items={[
+              { value: 'customize', label: 'Customize actions' },
+              { value: 'add', label: 'Add new action' },
+              { separator: true, value: 'sep', label: '' } as any,
+              { value: 'reset', label: 'Reset to defaults' }
+            ]}
+            onSelect={(v: string) => {
+              if (v === 'customize') handleCustomizeActions();
+              else if (v === 'add') handleAddAction();
+              else if (v === 'reset') handleResetActions();
+            }}
+            placement="bottom-end"
+            trigger={(
+              <Button variant="ghost" size="icon" aria-label="Open quick actions menu" className="text-primary">
+                <MoreHorizontal size={18} />
+              </Button>
+            )}
+          />
+        )}
+      />
       <div className="asana-quick-actions">
         {actions.map((action) => (
-          <div
-            key={action.id}
-            onClick={action.onClick}
-            className="asana-quick-action"
-          >
-            <div className="asana-quick-action-icon">
-              {action.icon}
-            </div>
-            <span className="asana-quick-action-label">{action.label}</span>
-          </div>
+          <Tile key={action.id} icon={action.icon} label={action.label} onClick={action.onClick} />
         ))}
       </div>
     </div>

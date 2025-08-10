@@ -33,21 +33,21 @@ const buttonVariants = cva(
       variant: {
         primary: `
           bg-[var(--brand-primary)]
-          text-[var(--text-on-brand)]
+          text-[color:var(--text-on-brand)]
           hover:bg-[var(--brand-hover)]
           shadow-[var(--shadow-card)]
           hover:shadow-[var(--shadow-hover)]
         `,
         secondary: `
           bg-[var(--bg-secondary)]
-          text-[var(--text-primary)]
+          text-[color:var(--text-primary)]
           hover:bg-[var(--bg-hover)]
           border border-[var(--border-default)]
           hover:border-[var(--border-focus)]
         `,
         ghost: `
           bg-transparent
-          text-[var(--text-primary)]
+          text-[color:var(--text-primary)]
           hover:bg-[var(--bg-secondary)]
           active:bg-[var(--bg-hover)]
         `,
@@ -56,29 +56,29 @@ const buttonVariants = cva(
           text-[var(--brand-primary)]
           border border-[var(--brand-primary)]
           hover:bg-[var(--brand-primary)]
-          hover:text-[var(--text-on-brand)]
+          hover:text-[color:var(--text-on-brand)]
         `,
         destructive: `
-          bg-[var(--semantic-error)]
-          text-[var(--text-on-brand)]
-          hover:bg-[#DC2626]
+          bg-[var(--status-error)]
+          text-[color:var(--text-on-brand)]
+          hover:bg-[var(--status-error-hover)]
           shadow-[var(--shadow-card)]
         `,
       },
       size: {
         sm: `
           h-8 px-[var(--space-1-5)]
-          text-[var(--text-small)]
+          asana-text-sm
           rounded-[var(--radius-md)]
         `,
         default: `
           h-10 px-[var(--space-2)]
-          text-[var(--text-body)]
+          asana-text-base
           rounded-[var(--radius-md)]
         `,
         lg: `
           h-12 px-[var(--space-3)]
-          text-[var(--text-body-large)]
+          asana-text-base
           rounded-[var(--radius-lg)]
         `,
         icon: `

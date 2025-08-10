@@ -1,6 +1,8 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { Button, Card, Heading, Text } from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { Card } from '../ui/design-system/Card';
+import { Heading, Text } from '../ui';
 import { useHeader } from '../../app/contexts/HeaderContext';
 import { 
   Filter, 
@@ -142,9 +144,12 @@ export function UnifiedHeader({
           <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex max-w-2xl flex-1 items-center gap-3">
               <input
+                id="notes-search-input"
+                name="notesSearch"
                 type="text"
                 placeholder="Search notes..."
-                className="flex-1 rounded-lg border px-3 py-1.5 text-sm transition-all duration-200 focus:outline-none focus:ring-2"
+                aria-label="Search notes"
+                className="flex-1 rounded-lg border px-3 py-1.5 asana-text-sm transition-all duration-200 focus:outline-none focus:ring-2"
                 style={{
                   backgroundColor: 'var(--bg-secondary)',
                   borderColor: 'var(--border-default)',
@@ -171,7 +176,10 @@ export function UnifiedHeader({
           <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex items-center gap-3">
               <select 
-                className="rounded-lg border bg-surface px-3 py-1.5 text-sm"
+                id="canvas-selector"
+                name="canvasSelector"
+                aria-label="Select canvas"
+                className="rounded-lg border bg-surface px-3 py-1.5 asana-text-sm"
                 style={{
                   borderColor: 'var(--border-default)',
                   color: 'var(--text-primary)'
@@ -225,7 +233,7 @@ export function UnifiedHeader({
               <input
                 type="text"
                 placeholder="Search agents..."
-                className="flex-1 rounded-lg border px-3 py-1.5 text-sm transition-all duration-200 focus:outline-none focus:ring-2"
+                className="flex-1 rounded-lg border px-3 py-1.5 asana-text-sm transition-all duration-200 focus:outline-none focus:ring-2"
                 style={{
                   backgroundColor: 'var(--bg-secondary)',
                   borderColor: 'var(--border-default)',

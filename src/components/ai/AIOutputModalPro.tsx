@@ -1,12 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { 
-  Button, 
-  Card, 
-  Heading, 
-  Text,
-  Badge
-} from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { Card } from '../ui/design-system/Card';
+import { Badge } from '../ui/design-system/Badge';
+import { Heading, Text } from '../ui';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { 
   Copy, 
@@ -297,10 +294,10 @@ export function AIOutputModalPro({
                   }
                 </div>
                 <div>
-                  <Heading level={3} className="text-lg font-semibold">{actionConfig?.title || 'AI Writing'}</Heading>
+                  <Heading level={3} className="asana-text-lg font-semibold">{actionConfig?.title || 'AI Writing'}</Heading>
                   {usedModel && usedProvider && (
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-[11px]">
                         <Sparkles size={10} className="mr-1" />
                         {usedProvider} · {usedModel}
                       </Badge>
@@ -336,6 +333,8 @@ export function AIOutputModalPro({
                         : 'Select target language'}
                     </Text>
                     <select
+                      id="target-language-select"
+                      name="targetLanguage"
                       value={targetLanguage}
                       onChange={(e) => {
                         e.stopPropagation();
@@ -353,7 +352,8 @@ export function AIOutputModalPro({
                         e.stopPropagation();
                       }}
                       disabled={isLoading || isProcessing}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      aria-label="Select target language for translation"
+                      className="w-full px-3 py-2 asana-text-sm bg-white dark:bg-gray-800 border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
                       {LANGUAGES.map(lang => (
                         <option key={lang.value} value={lang.value}>
@@ -389,6 +389,8 @@ export function AIOutputModalPro({
                       What would you like to ask about this text?
                     </Text>
                     <input
+                      id="ask-ai-question-input"
+                      name="askAIQuestion"
                       type="text"
                       value={askAIQuestion}
                       onChange={(e) => setAskAIQuestion(e.target.value)}
@@ -401,8 +403,9 @@ export function AIOutputModalPro({
                         }
                       }}
                       placeholder="Enter your question..."
+                      aria-label="Enter your question about this text"
                       disabled={isLoading || isProcessing}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      className="w-full px-3 py-2 asana-text-sm bg-white dark:bg-gray-800 border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                       autoFocus
                     />
                   </div>
@@ -429,12 +432,12 @@ export function AIOutputModalPro({
 
             {/* Original text reference */}
             <details className="group">
-              <summary className="flex items-center gap-2 cursor-pointer text-sm text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-hover">
+              <summary className="flex items-center gap-2 cursor-pointer asana-text-sm text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-hover">
                 <ChevronDown size={16} className="group-open:rotate-180 transition-transform" />
                 <span className="font-medium">Original text</span>
-                <span className="text-xs text-tertiary">({originalText.length} characters)</span>
+                <span className="text-[11px] text-tertiary">({originalText.length} characters)</span>
               </summary>
-              <div className="mt-2 p-4 text-sm text-secondary bg-surface-hover/50 rounded-lg border border-border-subtle max-h-32 overflow-y-auto font-mono">
+              <div className="mt-2 p-4 asana-text-sm text-secondary bg-surface-hover/50 rounded-lg border border-border-subtle max-h-32 overflow-y-auto font-mono">
                 {originalText}
               </div>
             </details>
@@ -448,7 +451,7 @@ export function AIOutputModalPro({
                 </div>
                 {!isLoading && (
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 px-3 py-1 bg-surface-hover/50 rounded-full text-xs">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-surface-hover/50 rounded-full text-[11px]">
                       <span className="text-secondary">{metrics.words} words</span>
                       <span className="text-tertiary">•</span>
                       <span className="text-secondary">{metrics.chars} chars</span>
@@ -503,9 +506,12 @@ export function AIOutputModalPro({
                 </div>
               ) : isEditing ? (
                 <textarea
+                  id="edit-ai-response-textarea"
+                  name="editedOutput"
                   value={editedOutput}
                   onChange={(e) => setEditedOutput(e.target.value)}
-                  className="w-full min-h-[250px] p-4 bg-surface border-2 border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary resize-y text-sm font-mono transition-all"
+                  aria-label="Edit the AI response"
+                  className="w-full min-h-[250px] p-4 bg-surface border-2 border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary resize-y asana-text-sm font-mono transition-all"
                   autoFocus
                   placeholder="Edit the AI response..."
                 />
@@ -513,7 +519,7 @@ export function AIOutputModalPro({
                 <div className="bg-gradient-to-br from-surface to-surface-hover/30 rounded-lg border border-border-subtle p-6 shadow-inner">
                   {(action === 'create-list' || action === 'key-points') ? (
                     // Special rendering for list actions
-                    <div className="text-sm leading-relaxed">
+                    <div className="asana-text-sm leading-relaxed">
                       {output.split('\n').filter(line => line.trim()).map((line, index) => {
                         // Check indentation level by counting leading spaces/tabs
                         const indentMatch = line.match(/^(\s*)/);
@@ -538,7 +544,7 @@ export function AIOutputModalPro({
                       })}
                     </div>
                   ) : (
-                    <MarkdownRenderer content={output} className="text-sm leading-relaxed" />
+                    <MarkdownRenderer content={output} className="asana-text-sm leading-relaxed" />
                   )}
                 </div>
               ) : action === 'translate' ? (

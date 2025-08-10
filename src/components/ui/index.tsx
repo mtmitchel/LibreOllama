@@ -1,6 +1,5 @@
 // UI Components using LibreOllama Design System CSS Variables
 import React from 'react';
-import './ui-asana.css';
 
 // Typography Components
 interface HeadingProps extends React.HTMLAttributes<HTMLHeadingElement> {
@@ -11,10 +10,10 @@ interface HeadingProps extends React.HTMLAttributes<HTMLHeadingElement> {
 
 export function Heading({ level = 1, children, className = '', ...props }: HeadingProps) {
   const levelStyles = {
-    1: 'text-3xl font-bold leading-tight',
-    2: 'text-2xl font-semibold leading-tight',
-    3: 'text-xl font-semibold leading-snug',
-    4: 'text-lg font-semibold leading-snug'
+    1: 'asana-text-2xl font-bold leading-tight',
+    2: 'asana-text-xl font-semibold leading-tight',
+    3: 'asana-text-lg font-semibold leading-snug',
+    4: 'asana-text-base font-semibold leading-snug'
   };
   
   const classes = `text-primary font-sans ${levelStyles[level]} ${className}`.trim();
@@ -64,13 +63,13 @@ export function Text({
   };
   
   const sizeClasses = {
-    xs: 'text-xs',
-    sm: 'text-sm',
-    base: 'text-base',
-    lg: 'text-lg',
-    '2xl': 'text-2xl',
-    '3xl': 'text-3xl'
-  };
+    xs: 'text-[12px]',
+    sm: 'asana-text-sm',
+    base: 'asana-text-base',
+    lg: 'asana-text-lg',
+    '2xl': 'asana-text-2xl',
+    '3xl': 'asana-text-2xl'
+  } as const;
   
   const weightClasses = {
     normal: 'font-normal',
@@ -123,7 +122,7 @@ interface CaptionProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 export function Caption({ children, className = '', as = 'p', ...props }: CaptionProps) {
-  const classes = `text-xs text-muted font-normal font-sans leading-loose ${className}`.trim();
+  const classes = `text-[11px] text-muted font-normal font-sans leading-loose ${className}`.trim();
   
   switch (as) {
     case 'span':
@@ -135,75 +134,8 @@ export function Caption({ children, className = '', as = 'p', ...props }: Captio
   }
 }
 
-// Button Component - Uses Tailwind utilities with design system variables
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'destructive' | 'default';
-  size?: 'sm' | 'default' | 'icon';
-  children: React.ReactNode;
-  isLoading?: boolean;
-  loadingText?: string;
-}
-
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
-  className = '',
-  variant = 'secondary',
-  size = 'default',
-  children,
-  isLoading = false,
-  loadingText,
-  disabled,
-  'aria-label': ariaLabel,
-  ...props
-}, ref) => {
-  const baseClasses = 'inline-flex items-center justify-center gap-2 border-none rounded-md font-sans font-medium leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-primary';
-  
-  const variantClasses = {
-    primary: 'bg-accent-primary text-white hover:bg-accent-secondary active:bg-accent-secondary active:scale-95 shadow-sm hover:shadow-md active:shadow-sm',
-    secondary: 'bg-tertiary text-primary border border-primary hover:bg-secondary active:bg-tertiary active:scale-95 shadow-sm hover:shadow-md active:shadow-sm',
-    ghost: 'bg-transparent text-primary hover:bg-tertiary active:bg-secondary active:scale-95 hover:text-primary',
-    outline: 'bg-transparent text-primary border border-primary hover:bg-tertiary active:bg-secondary active:scale-95 shadow-sm hover:shadow-md active:shadow-sm',
-    destructive: 'bg-transparent text-error border border-error hover:bg-error hover:text-white active:bg-error active:scale-95 focus:ring-error',
-    default: 'bg-tertiary text-primary border border-primary hover:bg-secondary active:bg-tertiary active:scale-95 shadow-sm hover:shadow-md active:shadow-sm'
-  };
-  
-  const sizeClasses = {
-    sm: 'py-2 px-3 text-xs',
-    default: 'py-2.5 px-4 text-sm',
-    icon: 'p-2.5 w-11 h-11 flex items-center justify-center [&>svg]:align-middle'
-  };
-
-  const isDisabled = disabled || isLoading;
-  
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!isDisabled && props.onClick) {
-      e.stopPropagation();
-      props.onClick(e);
-    }
-  };
-
-  return (
-    <button
-      ref={ref}
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${isLoading ? 'cursor-not-allowed' : ''} relative z-10 ${className}`.trim()}
-      style={{ pointerEvents: isDisabled ? 'none' : 'auto', ...props.style }}
-      disabled={isDisabled}
-      aria-disabled={isDisabled}
-      aria-label={ariaLabel}
-      {...props}
-      onClick={handleClick}
-    >
-      {isLoading && (
-        <div
-          className="mr-2 size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-          aria-hidden="true"
-        />
-      )}
-      {isLoading ? (loadingText || 'Loading...') : children}
-    </button>
-  );
-});
-
-Button.displayName = 'Button';
+// Re-export Button from design system
+export { Button, type ButtonProps } from './design-system/Button';
 
 // Input Component - Uses Tailwind utilities with design system variables
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -242,7 +174,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
       {label && (
         <label 
           htmlFor={inputId}
-          className="mb-1 block text-sm font-medium text-primary"
+          className="mb-1 block asana-text-sm font-medium text-primary"
         >
           {label}
         </label>
@@ -250,7 +182,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
       {description && (
         <p 
           id={descriptionId}
-          className="mb-2 text-sm text-secondary"
+          className="mb-2 asana-text-sm text-secondary"
         >
           {description}
         </p>
@@ -258,7 +190,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
       <input
         ref={ref}
         id={inputId}
-        className={`${baseClasses} ${paddingClasses} ${stateClasses} text-sm ${className}`.trim()}
+        className={`${baseClasses} ${paddingClasses} ${stateClasses} asana-text-sm ${className}`.trim()}
         style={style}
         aria-invalid={error ? 'true' : 'false'}
         aria-describedby={ariaDescribedBy}
@@ -277,7 +209,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
           aria-live="polite"
           style={{
             marginTop: 'var(--space-1)',
-            fontSize: 'var(--text-xs)',
+            fontSize: 'var(--text-[11px])',
             color: 'var(--status-error)'
           }}
         >
@@ -290,38 +222,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
 
 Input.displayName = 'Input';
 
-// Card Component - Uses Tailwind utilities with design system variables
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-  padding?: 'none' | 'sm' | 'default' | 'lg';
-}
-
-export function Card({ 
-  className = '', 
-  children, 
-  padding = 'default',
-  style,
-  ...props 
-}: CardProps) {
-  const baseClasses = 'bg-tertiary border border-default rounded-lg relative shadow-sm hover:shadow-md transition-shadow duration-200';
-  
-  const paddingClasses = {
-    none: '',
-    sm: 'p-3',
-    default: 'p-6',
-    lg: 'p-8'
-  };
-  
-  return (
-    <div
-      className={`${baseClasses} ${paddingClasses[padding]} ${className}`.trim()}
-      style={style}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
+// Re-export Card component from design system
+export { 
+  Card, CardHeader, CardTitle, CardContent, CardFooter,
+  type CardProps, type CardHeaderProps, type CardTitleProps, type CardContentProps, type CardFooterProps
+} from './design-system/Card';
 
 // AddNewCard Component - Standardized pattern for "add new" actions
 interface AddNewCardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -364,11 +269,11 @@ export function AddNewCard({
           {icon}
         </div>
       )}
-      <h3 className="mb-2 text-base font-semibold text-primary">
+      <h3 className="mb-2 asana-text-base font-semibold text-primary">
         {title}
       </h3>
       {description && (
-        <p className="text-sm text-muted">
+        <p className="asana-text-sm text-muted">
           {description}
         </p>
       )}
@@ -376,47 +281,7 @@ export function AddNewCard({
   );
 }
 
-// Badge Component - Uses design system variables
-interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'accent' | 'secondary' | 'outline';
-  children: React.ReactNode;
-}
-
-export function Badge({ 
-  variant = 'default', 
-  className = '', 
-  children, 
-  style,
-  ...props 
-}: BadgeProps) {  const getVariantStyle = () => {
-    switch (variant) {
-      case 'success':
-        return 'bg-success text-success-fg';
-      case 'warning':
-        return 'bg-warning text-warning-fg';
-      case 'error':
-        return 'bg-error text-error-fg';
-      case 'accent':
-        return 'bg-accent-primary text-white';
-      case 'secondary':
-        return 'bg-bg-elevated text-text-primary';
-      case 'outline':
-        return 'bg-transparent text-text-secondary border border-border-default';
-      default:
-        return 'bg-bg-secondary text-text-secondary';
-    }
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center justify-center rounded-xl px-2 py-1 text-xs font-medium ${getVariantStyle()} ${className}`.trim()}
-      style={style}
-      {...props}
-    >
-      {children}
-    </span>
-  );
-}
+// Badge is re-exported from design system above
 
 // Progress Component
 interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -473,11 +338,14 @@ export function Spinner({ size = 'md', color = 'primary', className = '' }: Spin
   );
 }
 
-// Loading Button Component
+// Import Button from design system for LoadingButton
+import { Button } from './design-system/Button';
+
+// Loading Button Component - wrapper around design system Button
 interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   loadingText?: string;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'destructive' | 'default';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'destructive';
   size?: 'sm' | 'default' | 'icon';
   children: React.ReactNode;
 }
@@ -526,7 +394,7 @@ export function LoadingState({ size = 'md', text = 'Loading...', className = '' 
   return (
     <div className={`flex flex-col items-center justify-center ${sizeClasses[size]} ${className}`.trim()}>
       <Spinner size={size} className="mb-3" />
-      <p className="text-sm font-medium text-secondary">{text}</p>
+      <p className="asana-text-sm font-medium text-secondary">{text}</p>
     </div>
   );
 }
@@ -583,7 +451,7 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className = '', error, style, ...props }, ref) => {
-    const baseClasses = 'w-full bg-input-bg border border-border-primary rounded-md font-sans text-sm text-text-primary transition-all duration-150 placeholder:text-text-secondary focus:outline-none resize-vertical min-h-[80px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-secondary';
+    const baseClasses = 'w-full bg-input-bg border border-border-primary rounded-md font-sans asana-text-sm text-text-primary transition-all duration-150 placeholder:text-text-secondary focus:outline-none resize-vertical min-h-[80px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-secondary';
     
     const stateClasses = error 
       ? 'border-error focus:border-error focus:ring-2 focus:ring-error/20'
@@ -598,7 +466,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p className="mt-1 text-xs text-error">
+          <p className="mt-1 text-[11px] text-error">
             {error}
           </p>
         )}
@@ -684,7 +552,7 @@ export function TabsTrigger({ value, children, className = '' }: TabsTriggerProp
       aria-controls={`tabpanel-${value}`}
       id={`tab-${value}`}
       onClick={() => setActiveTab(value)}
-      className={`ring-offset-bg-primary inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${isActive ? 'bg-primary text-primary shadow-sm' : ''} ${className}`}
+      className={`ring-offset-bg-primary inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 asana-text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${isActive ? 'bg-primary text-primary shadow-sm' : ''} ${className}`}
     >
       {children}
     </button>
@@ -755,7 +623,7 @@ export function Checkbox({
           {label && (
             <label 
               htmlFor={checkboxId} 
-              className="block cursor-pointer text-sm font-medium leading-none text-primary"
+              className="block cursor-pointer asana-text-sm font-medium leading-none text-primary"
             >
               {label}
             </label>
@@ -763,7 +631,7 @@ export function Checkbox({
           {description && (
             <p 
               id={descriptionId}
-              className="mt-1 text-sm text-secondary"
+              className="mt-1 asana-text-sm text-secondary"
             >
               {description}
             </p>
@@ -775,7 +643,7 @@ export function Checkbox({
           id={errorId}
           role="alert"
           aria-live="polite"
-          className="ml-8 text-sm text-error"
+          className="ml-8 asana-text-sm text-error"
         >
           {error}
         </p>
@@ -823,14 +691,14 @@ export function Alert({
       aria-live="polite"
     >
       <div className="flex items-start gap-3">
-        <span className="shrink-0 text-lg" aria-hidden="true">
+        <span className="shrink-0 asana-text-lg" aria-hidden="true">
           {iconMap[variant]}
         </span>
         <div className="flex-1">
           {title && (
             <h4 className="mb-1 font-medium">{title}</h4>
           )}
-          <div className="text-sm">{children}</div>
+          <div className="asana-text-sm">{children}</div>
         </div>
         {dismissible && onDismiss && (
           <button
@@ -846,96 +714,7 @@ export function Alert({
   );
 }
 
-// Toast Component
-interface ToastProps {
-  variant?: 'info' | 'success' | 'warning' | 'error';
-  title?: string;
-  message: string;
-  duration?: number;
-  onDismiss?: () => void;
-  className?: string;
-}
-
-export function Toast({ 
-  variant = 'info', 
-  title, 
-  message, 
-  duration = 5000,
-  onDismiss,
-  className = ''
-}: ToastProps) {
-  const [isVisible, setIsVisible] = React.useState(true);
-  
-  React.useEffect(() => {
-    if (duration > 0) {
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-        setTimeout(() => onDismiss?.(), 300); // Allow fade out animation
-      }, duration);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [duration, onDismiss]);
-  
-  const variantClasses = {
-    info: 'border-accent-primary/20 bg-surface text-primary',
-    success: 'border-success/20 bg-surface text-primary',
-    warning: 'border-warning/20 bg-surface text-primary',
-    error: 'border-error/20 bg-surface text-primary'
-  };
-  
-  const iconClasses = {
-    info: 'text-accent-primary',
-    success: 'text-success',
-    warning: 'text-warning',
-    error: 'text-error'
-  };
-  
-  const iconMap = {
-    info: '💡',
-    success: '✅',
-    warning: '⚠️',
-    error: '❌'
-  };
-  
-  if (!isVisible) return null;
-  
-  return (
-    <div
-      className={`
-        fixed top-4 right-4 z-50 max-w-sm w-full
-        border rounded-lg p-4 shadow-lg
-        transform transition-all duration-300 ease-in-out
-        ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
-        ${variantClasses[variant]} ${className}
-      `.trim()}
-      role="alert"
-      aria-live="assertive"
-    >
-      <div className="flex items-start gap-3">
-        <span className={`shrink-0 text-lg ${iconClasses[variant]}`} aria-hidden="true">
-          {iconMap[variant]}
-        </span>
-        <div className="flex-1">
-          {title && (
-            <h4 className="mb-1 font-medium">{title}</h4>
-          )}
-          <p className="text-sm text-secondary">{message}</p>
-        </div>
-        <button
-          onClick={() => {
-            setIsVisible(false);
-            setTimeout(() => onDismiss?.(), 300);
-          }}
-          className="ml-2 shrink-0 rounded-sm text-muted transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
-          aria-label="Dismiss notification"
-        >
-          ✕
-        </button>
-      </div>
-    </div>
-  );
-}
+// Toast is re-exported from design system above
 
 // Error State Component
 interface ErrorStateProps {
@@ -972,10 +751,10 @@ export function ErrorState({
       <div className={`${iconSizes[size]} mb-4`} role="img" aria-label="Error">
         😞
       </div>
-      <h3 className="mb-2 text-lg font-semibold text-primary">
+      <h3 className="mb-2 asana-text-lg font-semibold text-primary">
         {title}
       </h3>
-      <p className="mb-4 max-w-md text-sm text-secondary">
+      <p className="mb-4 max-w-md asana-text-sm text-secondary">
         {message}
       </p>
       {onRetry && (
@@ -1025,10 +804,10 @@ export function EmptyState({
       <div className={`${iconSizes[size]} mb-4`} role="img" aria-label="Empty state">
         {icon}
       </div>
-      <h3 className="mb-2 text-lg font-semibold text-primary">
+      <h3 className="mb-2 asana-text-lg font-semibold text-primary">
         {title}
       </h3>
-      <p className="mb-4 max-w-md text-sm text-secondary">
+      <p className="mb-4 max-w-md asana-text-sm text-secondary">
         {message}
       </p>
       {action && (
@@ -1040,95 +819,128 @@ export function EmptyState({
   );
 }
 
-// Status Badge Component
-interface StatusBadgeProps {
-  status: 'success' | 'warning' | 'error' | 'info' | 'pending';
-  children: React.ReactNode;
-  className?: string;
-  size?: 'sm' | 'md';
-}
+// StatusBadge is re-exported from design system Badge module above 
 
-export function StatusBadge({ 
-  status, 
-  children, 
-  className = '',
-  size = 'md'
-}: StatusBadgeProps) {
-  const statusClasses = {
-    success: 'bg-success/10 text-success border-success/20',
-    warning: 'bg-warning/10 text-warning border-warning/20',
-    error: 'bg-error/10 text-error border-error/20',
-    info: 'bg-accent-primary/10 text-accent-primary border-accent-primary/20',
-    pending: 'bg-text-tertiary/10 text-text-tertiary border-text-tertiary/20'
-  };
-  
-  const sizeClasses = {
-    sm: 'px-2 py-1 text-xs',
-    md: 'px-3 py-1 text-sm'
-  };
-  
-  const indicators = {
-    success: '●',
-    warning: '●',
-    error: '●',
-    info: '●',
-    pending: '○'
-  };
-  
-  return (
-    <span
-      className={`
-        inline-flex items-center gap-1 border rounded-full font-medium
-        ${statusClasses[status]} ${sizeClasses[size]} ${className}
-      `.trim()}
-    >
-      <span aria-hidden="true">{indicators[status]}</span>
-      {children}
-    </span>
-  );
-} 
+// Re-export design system components
+export { 
+  Tag, HashTag, ColorTag, TagGroup, TagInput,
+  type TagProps, type HashTagProps, type ColorTagProps, type TagGroupProps, type TagInputProps
+} from './design-system/Tag';
 
-// Export the Tag component
-export { Tag } from './Tag';
+export { 
+  Avatar, AvatarGroup, UserAvatar, BotAvatar, TeamAvatar,
+  type AvatarProps, type AvatarGroupProps, type UserAvatarProps, type BotAvatarProps, type TeamAvatarProps
+} from './design-system/Avatar';
 
-// Export the Avatar component
-export { Avatar } from './Avatar';
+export { 
+  ProgressRing, ProgressBar, LoadingSpinner, ProgressSteps,
+  type ProgressRingProps, type ProgressBarProps, type LoadingSpinnerProps, type ProgressStepsProps
+} from './design-system/ProgressRing';
 
-// Export the FlexibleGrid component
+export { 
+  Stepper, StepProgress, MiniStepper,
+  type StepperStep, type StepperProps, type StepProgressProps, type MiniStepperProps
+} from './design-system/Stepper';
+
+export { 
+  HeatMapCalendar, ActivityCalendar,
+  type HeatMapData, type HeatMapCalendarProps, type ActivityCalendarProps
+} from './design-system/HeatMapCalendar';
+
+export { 
+  Tooltip, KeyboardTooltip, InfoTooltip,
+  type TooltipProps, type TooltipPlacement
+} from './design-system/Tooltip';
+
+export { 
+  ContextMenu, ContextMenuTrigger, useContextMenu,
+  type ContextMenuItem, type ContextMenuProps, type ContextMenuTriggerProps
+} from './design-system/ContextMenu';
+
+export { 
+  ConfirmDialog, useConfirmDialog, confirmDelete, confirmDiscard, confirmLogout,
+  type ConfirmDialogProps
+} from './design-system/ConfirmDialog';
+
+export {
+  FilterDropdown, FilterButton, FilterBar,
+  type FilterOption, type FilterDropdownProps, type FilterButtonProps, type FilterBarProps
+} from './design-system/FilterDropdown';
+
+export {
+  Badge, CountBadge, StatusBadge, BadgeGroup,
+  type BadgeProps, type CountBadgeProps, type StatusBadgeProps, type BadgeGroupProps
+} from './design-system/Badge';
+
+export {
+  Dialog, DialogTrigger, DialogPortal, DialogOverlay, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter, SimpleDialog,
+  type DialogProps, type DialogContentProps, type DialogFooterProps, type SimpleDialogProps
+} from './design-system/Dialog';
+
+export {
+  Popover, PopoverContent, PopoverHeader, PopoverFooter,
+  type PopoverProps, type PopoverPlacement
+} from './design-system/Popover';
+
+export {
+  Select, NativeSelect,
+  type SelectProps, type SelectOption
+} from './design-system/Select';
+
+export {
+  ToastProvider, useToast, toast, showToast, useRegisterGlobalToast,
+  type ToastVariant, type ToastData, type ToastProviderProps
+} from './design-system/Toast';
+
+export {
+  Toggle, ToggleRow, ToggleGroup, ToggleCard, ToggleButton,
+  type ToggleProps, type ToggleRowProps, type ToggleGroupProps, type ToggleCardProps, type ToggleButtonProps
+} from './design-system/Toggle';
+
+// Export unique components that don't have design-system equivalents
 export { FlexibleGrid } from './FlexibleGrid';
-
-// Export the ProgressRing component
-export { ProgressRing } from './ProgressRing';
-
-// Export the Stepper component
-export { Stepper } from './Stepper';
-export type { StepperStep } from './Stepper';
-
-// Export the ColorSwatch component
 export { ColorSwatch, ColorPalette } from './ColorSwatch';
-
-// Export the HeatMapCalendar component
-export { HeatMapCalendar } from './HeatMapCalendar';
-export type { HeatMapData } from './HeatMapCalendar';
-
-// Export the DragOverlay components
 export { DragOverlay, LiftedCard, DragPreview, DropZone, DragIndicator } from './DragOverlay';
-
-// Export the TypingIndicator components
 export { TypingIndicator, ChatTypingIndicator, SimpleTypingDots } from './TypingIndicator';
-
-// Export the ToggleRow components
-export { ToggleRow, ToggleGroup, ToggleCard } from './ToggleRow';
-
-// Export the Tooltip components
-export { Tooltip, TooltipTrigger, TruncatedText } from './Tooltip';
-
-// Export the Kanban components
-export { KanbanBoard, KanbanColumn, TaskListView } from '../kanban';
-
-// Export other UI components
-export { ContextMenu } from './ContextMenu';
-export { ConfirmDialog } from './ConfirmDialog';
-export { SyncStatus } from '../SyncStatus';
 export { FloatingActionButton, FloatingActionMenu } from './FloatingActionButton';
 export { ConfirmationModal } from './ConfirmationModal';
+
+// Export Kanban components
+export { KanbanBoard, KanbanColumn, TaskListView } from '../kanban';
+
+// Export other components
+export { SyncStatus } from '../SyncStatus';
+
+// DropdownMenu legacy wrapper removed; use design-system Dropdown/ActionMenu
+
+// Export layout primitives from design system
+export {
+  Stack, VStack, HStack, Divider, Spacer, FormStack, ListStack, ButtonGroup,
+  type StackProps, type VStackProps, type HStackProps, type DividerProps, type SpacerProps, type FormStackProps, type ListStackProps, type ButtonGroupProps
+} from './design-system/Stack';
+
+export {
+  Grid, GridItem, CardGrid, DashboardGrid, SidebarLayout, MasonryGrid, AutoGrid,
+  type GridProps, type GridItemProps, type CardGridProps, type DashboardGridProps, type SidebarLayoutProps, type MasonryGridProps, type AutoGridProps
+} from './design-system/Grid';
+
+export {
+  Box, Center, Square, Circle, Flex, AspectRatio,
+  type BoxProps, type CenterProps, type SquareProps, type CircleProps, type FlexProps, type AspectRatioProps
+} from './design-system/Box';
+
+export {
+  Container, Section, Article, Hero,
+  type ContainerProps, type SectionProps, type ArticleProps, type HeroProps
+} from './design-system/Container';
+
+export {
+  FormControl, FormLabel, FormHelperText, FormErrorMessage, FormSuccessMessage, FormHint, FormInput, FormTextarea, FormGroup, useFormControl,
+  type FormControlProps, type FormLabelProps, type FormHelperTextProps, type FormErrorMessageProps, type FormSuccessMessageProps, type FormHintProps, type FormInputProps, type FormTextareaProps, type FormGroupProps
+} from './design-system/FormControl';
+
+// Export new design system components
+export { default as WidgetHeader, type WidgetHeaderProps } from './design-system/WidgetHeader';
+export { default as Tile, type TileProps } from './design-system/Tile';
+export { default as ListItem, type ListItemProps } from './design-system/ListItem';
+export { default as Page, type PageProps } from './design-system/Page';

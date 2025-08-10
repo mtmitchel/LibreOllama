@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Button } from '../ui';
+import { Button } from '../ui/design-system/Button';
 
 interface LabelColorPickerProps {
   selectedColor: string;
@@ -86,7 +86,9 @@ export const LabelColorPicker: React.FC<LabelColorPickerProps> = ({
                 size="icon"
                 className={`w-6 h-6 p-0 rounded-md label-${color.value} hover:ring-2 hover:ring-offset-1 hover:ring-gray-400`}
                 title={color.label}
-              />
+              >
+                <span className="sr-only">{color.label}</span>
+              </Button>
             ))}
           </div>
         </div>

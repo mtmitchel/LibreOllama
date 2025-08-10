@@ -111,10 +111,14 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       <div className="asana-sidebar-search">
         <div className="asana-sidebar-search-box">
           <Search size={16} className="asana-sidebar-search-icon" />
+          <label htmlFor="sidebar-search" className="sr-only">Search everywhere</label>
           <input
+            id="sidebar-search"
+            name="sidebarSearch"
             type="text"
             placeholder="Search everywhere..."
             className="asana-sidebar-search-input"
+            aria-label="Search everywhere"
           />
         </div>
       </div>

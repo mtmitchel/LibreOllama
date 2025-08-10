@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useNotesStore } from '../store';
-import { Button, Text, Input, Card, Heading, Toast } from '../../../components/ui';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '../../../components/ui/DropdownMenu';
+import { Button, Text, Input, Card, Heading, toast } from '../../../components/ui';
+import { Dropdown } from '../../../components/ui/design-system';
 import { FolderPlus, FilePlus, Search, MoreHorizontal, Edit, Trash2, Folder as FolderIcon, FileText as NoteIcon, ChevronRight, X, FileDown, PanelLeft, PanelRight } from 'lucide-react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, DragStartEvent } from '@dnd-kit/core';
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
@@ -21,7 +21,7 @@ interface SidebarProps {
 }
 
 const NoteDragPreview = ({ note }: { note: { title: string } }) => (
-    <div className="ring-accent-primary flex items-center gap-2 rounded-md bg-accent-soft p-2 text-sm font-medium text-accent-primary shadow-lg ring-2">
+    <div className="ring-accent-primary flex items-center gap-2 rounded-md bg-accent-soft p-2 asana-text-sm font-medium text-accent-primary shadow-lg ring-2">
         <NoteIcon size={16} />
         <span>{note.title}</span>
     </div>
@@ -379,7 +379,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
         return (
           <DroppableFolder key={item.id} folder={item}>
             <div
-              className={`group flex cursor-pointer items-center justify-between rounded-xl p-2 text-sm font-medium transition-colors ${selectedFolderId === item.id ? 'bg-selected-bg text-selected-text' : 'hover:bg-hover-bg'}`}
+              className={`group flex cursor-pointer items-center justify-between rounded-xl p-2 asana-text-sm font-medium transition-colors ${selectedFolderId === item.id ? 'bg-selected-bg text-selected-text' : 'hover:bg-hover-bg'}`}
               style={{ paddingLeft }}
             >
               <div className="flex flex-1 items-center gap-2" onClick={() => selectFolder(item.id)}>
@@ -410,21 +410,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
                 )}
               </div>
               {!isRenaming && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <Dropdown
+                  trigger={(
                     <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100">
                       <MoreHorizontal size={16} />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="z-50">
-                    <DropdownMenuItem onSelect={() => { setRenamingFolderId(item.id); setRenameFolderName(item.name); }}>
-                      <Edit size={14} className="mr-2" /> Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => deleteFolder(item.id)} className="text-error">
-                      <Trash2 size={14} className="mr-2" /> Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  )}
+                  items={[
+                    { value: 'rename', label: 'Rename', icon: <Edit size={14} className="mr-2" /> },
+                    { value: 'delete', label: 'Delete', icon: <Trash2 size={14} className="mr-2" />, destructive: true },
+                  ]}
+                  onSelect={(v) => {
+                    if (v === 'rename') { setRenamingFolderId(item.id); setRenameFolderName(item.name); }
+                    if (v === 'delete') { deleteFolder(item.id); }
+                  }}
+                />
               )}
             </div>
             {isExpanded && (
@@ -468,87 +468,46 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
                   </div>
                 </div>
                 {!isRenaming && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                  <Dropdown
+                    trigger={(
                       <button 
                         className="flex size-6 items-center justify-center rounded-sm opacity-0 transition-colors hover:bg-tertiary group-hover:opacity-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
+                        onClick={(e) => { e.stopPropagation(); }}
                       >
                         <MoreHorizontal size={16} />
                       </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onSelect={() => { setRenamingNoteId(item.id); setRenameNoteTitle(item.title); }}>
-                        <Edit size={14} className="mr-2" /> Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <FolderIcon size={14} className="mr-2" /> Move to
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                          {folders.length === 0 ? (
-                            <DropdownMenuItem disabled>
-                              No folders available
-                            </DropdownMenuItem>
-                          ) : (
-                            folders.map(folder => (
-                              <DropdownMenuItem
-                                key={folder.id}
-                                onSelect={() => {
-                                  console.log('🎯 Move folder item onSelect triggered');
-                                  console.log(`🔄 Move initiated: note ${item.id} to folder ${folder.id}`);
-                                  updateNote({ id: item.id, folderId: folder.id })
-                                    .then(() => {
-                                      console.log('✅ Move completed successfully');
-                                      const event = new CustomEvent('app-notification', {
-                                        detail: { type: 'success', message: 'Note moved successfully' }
-                                      });
-                                      window.dispatchEvent(event);
-                                    })
-                                    .catch((error) => {
-                                      console.error('❌ Move failed:', error);
-                                      const event = new CustomEvent('app-notification', {
-                                        detail: { type: 'error', message: `Move failed: ${error}` }
-                                      });
-                                      window.dispatchEvent(event);
-                                    });
-                                }}
-                              >
-                                <FolderIcon size={14} className="mr-2" /> {folder.name}
-                              </DropdownMenuItem>
-                            ))
-                          )}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <FileDown size={14} className="mr-2" /> Export
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                          <DropdownMenuItem onSelect={() => {
-                            console.log('🎯 PDF Export menu item onSelect triggered');
-                            console.log('🖨️ PDF Export initiated for note:', item.id);
-                            exportNote(item.id, 'pdf');
-                          }}>PDF</DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => {
-                            console.log('🎯 DOCX Export menu item onSelect triggered');
-                            console.log('📄 DOCX Export initiated for note:', item.id);
-                            exportNote(item.id, 'docx');
-                          }}>DOCX</DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => {
-                            console.log('🎯 TXT Export menu item onSelect triggered');
-                            console.log('📝 TXT Export initiated for note:', item.id);
-                            exportNote(item.id, 'txt');
-                          }}>TXT</DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                      <DropdownMenuItem onSelect={() => deleteNote(item.id)} className="text-error">
-                        <Trash2 size={14} className="mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    )}
+                    items={[
+                      { value: 'rename', label: 'Rename', icon: <Edit size={14} className="mr-2" /> },
+                      { value: 'move', label: 'Move to', icon: <FolderIcon size={14} className="mr-2" /> },
+                      { value: 'export-pdf', label: 'Export as PDF', icon: <FileDown size={14} className="mr-2" /> },
+                      { value: 'export-docx', label: 'Export as DOCX', icon: <FileDown size={14} className="mr-2" /> },
+                      { value: 'export-txt', label: 'Export as TXT', icon: <FileDown size={14} className="mr-2" /> },
+                      { value: 'delete', label: 'Delete', icon: <Trash2 size={14} className="mr-2" />, destructive: true },
+                    ]}
+                    onSelect={(v) => {
+                      if (v === 'rename') { setRenamingNoteId(item.id); setRenameNoteTitle(item.title); }
+                      if (v === 'move') {
+                        // Default to first folder if available
+                        if (folders.length > 0) {
+                          const folder = folders[0];
+                          updateNote({ id: item.id, folderId: folder.id })
+                            .then(() => {
+                              const event = new CustomEvent('app-notification', { detail: { type: 'success', message: `Moved to ${folder.name}` } });
+                              window.dispatchEvent(event);
+                            })
+                            .catch((error) => {
+                              const event = new CustomEvent('app-notification', { detail: { type: 'error', message: `Move failed: ${error}` } });
+                              window.dispatchEvent(event);
+                            });
+                        }
+                      }
+                      if (v === 'export-pdf') { exportNote(item.id, 'pdf'); }
+                      if (v === 'export-docx') { exportNote(item.id, 'docx'); }
+                      if (v === 'export-txt') { exportNote(item.id, 'txt'); }
+                      if (v === 'delete') { deleteNote(item.id); }
+                    }}
+                  />
                 )}
               </div>
             </div>
@@ -584,18 +543,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
             borderRadius: '6px',
             background: 'transparent',
             border: 'none',
-            color: '#7B8794',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
             transition: 'all 150ms ease',
             padding: 0
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#F4F6F8';
-            e.currentTarget.style.color = '#323F4B';
+            e.currentTarget.style.background = 'var(--bg-secondary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = '#7B8794';
+            e.currentTarget.style.color = 'var(--text-muted)';
           }}
         >
           <PanelRight size={18} strokeWidth={2} />

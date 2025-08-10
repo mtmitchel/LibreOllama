@@ -8,6 +8,12 @@
 // Phase 1: Core Interactive Elements
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
+export { default as WidgetHeader } from './WidgetHeader';
+export type { WidgetHeaderProps } from './WidgetHeader';
+export { default as Tile } from './Tile';
+export type { TileProps } from './Tile';
+export { default as ListItem } from './ListItem';
+export type { ListItemProps } from './ListItem';
 
 export { Select, NativeSelect } from './Select';
 export type { SelectProps, SelectOption } from './Select';
@@ -40,16 +46,14 @@ export {
   CardHeader,
   CardTitle,
   CardContent,
-  CardFooter,
-  CardGrid
+  CardFooter
 } from './Card';
 export type { 
   CardProps,
   CardHeaderProps,
   CardTitleProps,
   CardContentProps,
-  CardFooterProps,
-  CardGridProps
+  CardFooterProps
 } from './Card';
 
 export { 

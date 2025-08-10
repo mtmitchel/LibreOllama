@@ -68,10 +68,10 @@ export function ChatAttachmentPreview({
 
             {/* File Info */}
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium text-primary">
+              <div className="truncate asana-text-sm font-medium text-primary">
                 {attachment.filename}
               </div>
-              <div className="text-xs text-secondary">
+              <div className="text-[11px] text-secondary">
                 {formatFileSize(attachment.size)}
               </div>
               
@@ -87,7 +87,7 @@ export function ChatAttachmentPreview({
               
               {/* Upload Status */}
               {attachment.uploadStatus === 'failed' && (
-                <div className="mt-1 text-xs text-error">
+                <div className="mt-1 text-[11px] text-error">
                   {attachment.error || 'Upload failed'}
                 </div>
               )}

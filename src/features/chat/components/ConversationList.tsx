@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Caption, Text, Heading, Button, Input, Card, EmptyState } from "../../../components/ui";
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Caption, Text, Heading, Input, EmptyState } from '../../../components/ui';
+import { ListItem } from '../../../components/ui/design-system';
 import { ChatConversation } from "../../../core/lib/chatMockData";
 import { ConversationContextMenu } from "./ConversationContextMenu";
 import { formatConversationTimestamp } from "../utils/formatTimestamp";
@@ -86,18 +89,18 @@ export function ConversationList({
             borderRadius: '6px',
             background: 'transparent',
             border: 'none',
-            color: '#7B8794',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
             transition: 'all 150ms ease',
             padding: 0
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#F4F6F8';
-            e.currentTarget.style.color = '#323F4B';
+            e.currentTarget.style.background = 'var(--bg-secondary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = '#7B8794';
+            e.currentTarget.style.color = 'var(--text-muted);'
           }}
         >
           <PanelRight size={18} strokeWidth={2} />
@@ -127,37 +130,19 @@ export function ConversationList({
     return (
       <div
         key={conv.id}
-        className={`
-          group relative cursor-pointer rounded-lg border px-3 py-2 transition-all hover:bg-hover
-          ${selectedChatId === conv.id ? 'border-selected bg-selected' : 'border-transparent'}
-        `}
-        onClick={() => onSelectChat(conv.id)}
-        onContextMenu={handleContextMenu}
+        className={`group relative cursor-pointer rounded-lg border transition-all hover:bg-hover px-1 py-0.5 ${selectedChatId === conv.id ? 'border-selected bg-selected' : 'border-transparent'}`}
         onKeyDown={handleKeyDown}
-        onMouseEnter={() => onHoverConversation(conv.id)}
-        onMouseLeave={() => onHoverConversation(null)}
-        tabIndex={0}
-        role="button"
-        aria-label={`Select conversation: ${conv.title}`}
       >
-        <div className="flex items-start justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <Heading level={4} className="truncate">
-                {conv.title}
-              </Heading>
-              {conv.isPinned && (
-                <Pin className="size-3 text-muted" />
-              )}
-            </div>
-            <Text variant="secondary" size="sm" className="mt-1 truncate">
-              {conv.lastMessage}
-            </Text>
-            <Caption className="mt-1 text-xs">
-              {formatConversationTimestamp(conv.timestamp)}
-            </Caption>
-          </div>
-        </div>
+        <ListItem
+          leading={conv.isPinned ? <Pin className="size-3 text-muted" /> : undefined}
+          primary={<span className="truncate asana-text-base" title={conv.title}>{conv.title}</span>}
+          onActivate={() => onSelectChat(conv.id)}
+          onContextMenu={handleContextMenu}
+          onMouseEnter={() => onHoverConversation(conv.id)}
+          onMouseLeave={() => onHoverConversation(null)}
+          className="px-2 py-2"
+          aria-label={`Select conversation: ${conv.title}`}
+        />
       </div>
     );
   };
@@ -229,13 +214,9 @@ export function ConversationList({
               </div>
             )}
             
-            {/* Recent Section */}
+            {/* Recent Section (header removed) */}
             {recentConversations.length > 0 && (
               <div className="pb-4">
-                <div className="flex items-center gap-2 px-2 py-3">
-                  <MessagesSquare className="size-3.5 text-muted" />
-                  <Caption className="font-medium tracking-wider">Recent</Caption>
-                </div>
                 <div className="space-y-1">
                   {recentConversations.map(conv => (
                     <ConversationCard key={conv.id} conv={conv} />

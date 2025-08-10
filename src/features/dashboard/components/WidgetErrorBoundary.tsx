@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, ErrorState } from "../../../components/ui";
+import { Card } from '../../../components/ui/design-system/Card';
+import { ErrorState } from '../../../components/ui';
 
 interface Props {
   children: React.ReactNode;

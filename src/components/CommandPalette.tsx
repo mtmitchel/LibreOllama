@@ -226,11 +226,13 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           <Search className="size-5 text-muted" />
           <input
             id="command-input"
+            name="commandSearch"
             type="text"
             placeholder="Type a command or search..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            aria-label="Type a command or search"
             style={inputStyle}
           />
           <kbd style={kbdStyle}>

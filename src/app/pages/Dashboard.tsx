@@ -12,7 +12,7 @@ import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetE
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
 import { Settings2 } from 'lucide-react';
 import '../../styles/asana-core.css';
-import './styles/dashboard-asana-v3.css';
+import { Page, PageContent, PageCard, PageBody } from '../../components/ui/design-system/Page';
 
 // Widget configuration
 interface WidgetConfig {
@@ -49,22 +49,22 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="asana-app-layout">
-        <div className="asana-content-card">
+      <Page>
+        <PageCard>
           <div className="asana-loading">
             <div className="asana-spinner" />
             <span className="asana-loading-text">Loading your dashboard...</span>
           </div>
-        </div>
-      </div>
+        </PageCard>
+      </Page>
     );
   }
 
   return (
-    <div className="asana-app-layout">
-      <div className="asana-content">
-        <div className="asana-content-card">
-          <div className="asana-content-body">
+    <Page>
+      <PageContent>
+        <PageCard>
+          <PageBody>
             <div className="asana-grid asana-grid-3">
               {widgets.map((widget) => {
                 const WidgetComponent = widget.component;
@@ -77,10 +77,10 @@ export function Dashboard() {
                 );
               })}
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </PageBody>
+        </PageCard>
+      </PageContent>
+    </Page>
   );
 }
 

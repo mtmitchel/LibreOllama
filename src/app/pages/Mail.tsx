@@ -7,7 +7,7 @@ import { MailContextSidebar } from '../../features/mail/components/MailContextSi
 import { ComposeModal } from '../../features/mail/components';
 import { MessageViewModal } from '../../features/mail/components/MessageViewModal';
 import { useMailStore } from '../../features/mail/stores/mailStore';
-import './styles/mail-asana-v2.css';
+import { Page, PageCard } from '../../components/ui/design-system/Page';
 // Import debug utilities (only in dev mode)
 if (import.meta.env.DEV) {
   import('../../features/mail/utils/debugGmail');
@@ -38,13 +38,15 @@ export default function Mail() {
   const handleOpenLabelPicker = () => {};
 
   return (
+    <Page full>
+      <PageCard>
     <div
       className="asana-mail"
       style={{
         display: 'flex',
-        height: '100vh',
+        height: '100%',
         overflow: 'hidden',
-        background: '#FAFBFC',
+        background: 'var(--bg-page)',
         // Mirror canvas/chat: remove side padding when the corresponding panel is closed
         padding: `${24}px ${isContextOpen ? 24 : 0}px ${24}px ${isMailSidebarOpen ? 24 : 0}px`,
         gap: isMailSidebarOpen ? '24px' : '0px'
@@ -57,9 +59,9 @@ export default function Mail() {
       />
 
       {/* Main + Context grouped to keep inner 24px gap */}
-      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1 }}>
+      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1, alignItems: 'stretch', minWidth: 0 }}>
         {/* Main Content Area */}
-        <div className="asana-mail-content">
+        <div className="asana-mail-content" style={{ minWidth: 0 }}>
           
           {/* Enhanced Search Bar */}
           <div className="asana-mail-content-header">
@@ -96,5 +98,7 @@ export default function Mail() {
       {/* Message View Modal */}
       {currentMessage && <MessageViewModal />}
     </div>
+      </PageCard>
+    </Page>
   );
 } 

@@ -14,7 +14,7 @@ import { X, Hash } from 'lucide-react';
 const tagVariants = cva(
   `
     inline-flex items-center
-    text-[var(--text-small)]
+    asana-text-sm
     font-normal
     transition-[var(--transition-property)]
     duration-[var(--transition-duration)]
@@ -25,6 +25,7 @@ const tagVariants = cva(
         solid: '',
         outline: 'bg-transparent border',
         ghost: 'bg-transparent',
+        dot: 'bg-transparent', // New dot variant
       },
       color: {
         default: '',
@@ -34,11 +35,12 @@ const tagVariants = cva(
         warning: '',
         error: '',
         info: '',
+        muted: '', // New muted color
       },
       size: {
         sm: 'px-[var(--space-1-5)] py-[2px] text-[11px] rounded-[var(--radius-sm)]',
-        md: 'px-[var(--space-2)] py-[var(--space-0-5)] text-[var(--text-small)] rounded-[var(--radius-md)]',
-        lg: 'px-[var(--space-3)] py-[var(--space-1)] text-[var(--text-body)] rounded-[var(--radius-md)]',
+        md: 'px-[var(--space-2)] py-[var(--space-0-5)] asana-text-sm rounded-[var(--radius-md)]',
+        lg: 'px-[var(--space-3)] py-[var(--space-1)] asana-text-base rounded-[var(--radius-md)]',
       },
       interactive: {
         true: 'cursor-pointer',
@@ -50,17 +52,17 @@ const tagVariants = cva(
       {
         variant: 'solid',
         color: 'default',
-        className: 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]',
+        className: 'bg-[var(--bg-tertiary)] text-[color:var(--text-primary)]',
       },
       {
         variant: 'solid',
         color: 'primary',
-        className: 'bg-[var(--brand-primary)] text-[var(--text-on-brand)]',
+        className: 'bg-[var(--brand-primary)] text-[color:var(--text-on-brand)]',
       },
       {
         variant: 'solid',
         color: 'secondary',
-        className: 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]',
+        className: 'bg-[var(--bg-secondary)] text-[color:var(--text-secondary)]',
       },
       {
         variant: 'solid',
@@ -86,7 +88,7 @@ const tagVariants = cva(
       {
         variant: 'outline',
         color: 'default',
-        className: 'border-[var(--border-default)] text-[var(--text-primary)]',
+        className: 'border-[var(--border-default)] text-[color:var(--text-primary)]',
       },
       {
         variant: 'outline',
@@ -96,7 +98,7 @@ const tagVariants = cva(
       {
         variant: 'outline',
         color: 'secondary',
-        className: 'border-[var(--border-subtle)] text-[var(--text-secondary)]',
+        className: 'border-[var(--border-subtle)] text-[color:var(--text-secondary)]',
       },
       {
         variant: 'outline',
@@ -122,7 +124,7 @@ const tagVariants = cva(
       {
         variant: 'ghost',
         color: 'default',
-        className: 'text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]',
+        className: 'text-[color:var(--text-primary)] hover:bg-[var(--bg-secondary)]',
       },
       {
         variant: 'ghost',
@@ -132,7 +134,7 @@ const tagVariants = cva(
       {
         variant: 'ghost',
         color: 'secondary',
-        className: 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
+        className: 'text-[color:var(--text-secondary)] hover:bg-[var(--bg-secondary)]',
       },
       {
         variant: 'ghost',
@@ -153,6 +155,63 @@ const tagVariants = cva(
         variant: 'ghost',
         color: 'info',
         className: 'text-[var(--brand-primary)] hover:bg-[var(--brand-subtle)]',
+      },
+      // Muted color variants
+      {
+        variant: 'solid',
+        color: 'muted',
+        className: 'bg-[var(--bg-tertiary)] text-[color:var(--text-muted)]',
+      },
+      {
+        variant: 'outline',
+        color: 'muted',
+        className: 'border-[var(--border-subtle)] text-[color:var(--text-muted)]',
+      },
+      {
+        variant: 'ghost',
+        color: 'muted',
+        className: 'text-[color:var(--text-muted)] hover:bg-[var(--bg-secondary)]',
+      },
+      {
+        variant: 'dot',
+        color: 'muted',
+        className: 'text-[color:var(--text-muted)]',
+      },
+      // Dot variants (with status indicators)
+      {
+        variant: 'dot',
+        color: 'default',
+        className: 'text-[color:var(--text-primary)]',
+      },
+      {
+        variant: 'dot',
+        color: 'primary',
+        className: 'text-[var(--brand-primary)]',
+      },
+      {
+        variant: 'dot',
+        color: 'secondary',
+        className: 'text-[color:var(--text-secondary)]',
+      },
+      {
+        variant: 'dot',
+        color: 'success',
+        className: 'text-[var(--semantic-success)]',
+      },
+      {
+        variant: 'dot',
+        color: 'warning',
+        className: 'text-[var(--semantic-warning)]',
+      },
+      {
+        variant: 'dot',
+        color: 'error',
+        className: 'text-[var(--semantic-error)]',
+      },
+      {
+        variant: 'dot',
+        color: 'info',
+        className: 'text-[var(--brand-primary)]',
       },
       // Interactive hover states
       {
@@ -175,9 +234,10 @@ const tagVariants = cva(
   }
 );
 
+type TagVariantProps = VariantProps<typeof tagVariants>;
 export interface TagProps 
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof tagVariants> {
+  extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'>,
+    TagVariantProps {
   children: React.ReactNode;
   onRemove?: () => void;
   icon?: React.ReactNode;
@@ -200,13 +260,29 @@ export const Tag = React.forwardRef<HTMLSpanElement, TagProps>(
   }, ref) => {
     const isClickable = Boolean(onClick || onRemove);
     
+    // Add a dot indicator for dot variant
+    const showDot = variant === 'dot' && !icon;
+    const dotColor = color === 'success' ? '#14A454' : 
+                     color === 'error' ? '#E8384F' :
+                     color === 'warning' ? '#FFA93C' :
+                     color === 'info' ? '#2563EB' :
+                     color === 'primary' ? 'var(--brand-primary)' :
+                     color === 'muted' ? 'var(--text-muted)' :
+                     'var(--text-secondary)';
+    
     return (
       <span
         ref={ref}
-        className={`${tagVariants({ variant, color, size, interactive: interactive ?? isClickable })} ${className}`}
+        className={`${tagVariants({ variant, color: color as TagVariantProps['color'], size, interactive: interactive ?? isClickable })} ${className}`}
         onClick={onClick}
         {...props}
       >
+        {showDot && (
+          <span 
+            className="mr-[6px] flex-shrink-0 inline-block w-[6px] h-[6px] rounded-full"
+            style={{ backgroundColor: dotColor }}
+          />
+        )}
         {icon && (
           <span className="mr-[var(--space-0-5)] flex-shrink-0">
             {icon}
@@ -392,7 +468,7 @@ export const TagInput: React.FC<TagInputProps> = ({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={tags.length === 0 ? placeholder : ''}
-          className="flex-1 min-w-[100px] outline-none bg-transparent text-[var(--text-primary)] placeholder-[var(--text-muted)]"
+          className="flex-1 min-w-[100px] outline-none bg-transparent text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)]"
         />
       )}
     </div>

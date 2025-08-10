@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Calendar, Flag, Tag } from 'lucide-react';
-import { Button } from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { Badge } from '../ui/design-system/Badge';
+import { Popover, PopoverContent } from '../ui/design-system/Popover';
+import { Select } from '../ui/design-system/Select';
 import { Input } from '../ui';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Badge } from '../ui/badge';
 import { useCreateTask } from '../../hooks/useGoogleTasks';
 import { useUpdateTaskMetadata } from '../../hooks/useGoogleTasks';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
@@ -85,14 +85,11 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
   };
   
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button className="w-full justify-start" variant="outline">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Task
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="start">
+    <Popover 
+      open={isOpen} 
+      onOpenChange={setIsOpen}
+      content={
+        <PopoverContent className="w-96 p-0">
         <form onSubmit={handleSubmit} className="p-4 space-y-3">
           <Input
             ref={inputRef}
@@ -109,7 +106,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => setShowAdvanced(true)}
-              className="text-xs"
+              className="text-[11px]"
             >
               Add details...
             </Button>
@@ -131,17 +128,17 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
               {/* Priority */}
               <div className="flex items-center gap-2">
                 <Flag className="h-4 w-4 text-gray-500" />
-                <Select value={priority} onValueChange={(v) => setPriority(v as any)}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Select
+                  options={[
+                    { value: 'low', label: 'Low' },
+                    { value: 'normal', label: 'Normal' },
+                    { value: 'high', label: 'High' },
+                    { value: 'urgent', label: 'Urgent' },
+                  ]}
+                  value={priority}
+                  onChange={(value) => setPriority(value as any)}
+                  className="flex-1"
+                />
               </div>
               
               {/* Labels */}
@@ -172,7 +169,7 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
                       <Badge
                         key={label}
                         variant="secondary"
-                        className="text-xs cursor-pointer"
+                        className="text-[11px] cursor-pointer"
                         onClick={() => handleRemoveLabel(label)}
                       >
                         {label} ×
@@ -198,7 +195,14 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
             </Button>
           </div>
         </form>
-      </PopoverContent>
+        </PopoverContent>
+      }
+      trigger="click"
+    >
+      <Button className="w-full justify-start" variant="outline">
+        <Plus className="h-4 w-4 mr-2" />
+        Add Task
+      </Button>
     </Popover>
   );
 };

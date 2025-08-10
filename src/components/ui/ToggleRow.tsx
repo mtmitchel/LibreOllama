@@ -39,8 +39,8 @@ export function ToggleRow({
       thumb: 'w-3 h-3',
       thumbTranslate: 'translate-x-3',
       icon: 'w-4 h-4',
-      label: 'text-sm',
-      description: 'text-xs'
+      label: 'asana-text-sm',
+      description: 'text-[11px]'
     },
     md: {
       container: 'py-3',
@@ -48,8 +48,8 @@ export function ToggleRow({
       thumb: 'w-4 h-4',
       thumbTranslate: 'translate-x-4',
       icon: 'w-5 h-5',
-      label: 'text-base',
-      description: 'text-sm'
+      label: 'asana-text-base',
+      description: 'asana-text-sm'
     },
     lg: {
       container: 'py-4',
@@ -57,8 +57,8 @@ export function ToggleRow({
       thumb: 'w-5 h-5',
       thumbTranslate: 'translate-x-5',
       icon: 'w-6 h-6',
-      label: 'text-lg',
-      description: 'text-base'
+      label: 'asana-text-lg',
+      description: 'asana-text-base'
     }
   };
 

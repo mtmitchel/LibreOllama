@@ -6,11 +6,13 @@ import { ProjectsSidebar } from '../../features/projects/components/ProjectsSide
 import { NoProjectSelected } from '../../features/projects/components/NoProjectSelected';
 import NewProjectModal from '../../features/projects/components/NewProjectModal';
 import EditProjectModal from '../../features/projects/components/EditProjectModal';
-import { Card, Button, Text, Heading, Caption, FlexibleGrid } from '../../components/ui';
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { Button } from '../../components/ui/design-system/Button';
+import { Card } from '../../components/ui/design-system/Card';
+import { Text, Heading, Caption, FlexibleGrid } from '../../components/ui';
+import { ConfirmDialog } from '../../components/ui/design-system';
 import { FileText, CheckSquare, Image, Paperclip, MessageSquare, Users, Plus, Search } from 'lucide-react';
 import { useProjectStore, Project, ProjectGoal, ProjectAsset } from '../../features/projects/stores/projectStore';
-import './styles/page-asana-v2.css';
+import { Page, PageContent, PageCard, PageBody } from '../../components/ui/design-system/Page';
 
 interface FileItem {
   id: string;
@@ -118,7 +120,7 @@ export function Projects() {
       const newProjectId = await createProject(
         projectForm.name,
         projectForm.description,
-        '#3b82f6' // Default color
+        'var(--indigo-500)' // Default color aligned to DS token
       );
       
       // Select the newly created project
@@ -261,7 +263,7 @@ export function Projects() {
 
   // --- RENDER ---
   return (
-    <div className="asana-page">
+    <Page>
       {/* Projects Sidebar */}
       <div className="asana-projects-sidebar">
         <div className="asana-projects-header">
@@ -274,8 +276,11 @@ export function Projects() {
         <div className="asana-search-box">
           <Search size={16} className="asana-search-icon" />
           <input 
+            id="projects-search-input"
+            name="projectsSearch"
             type="search" 
             placeholder="Search projects..." 
+            aria-label="Search projects"
             className="asana-search-input"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -304,7 +309,7 @@ export function Projects() {
                     className={`asana-project-item ${selectedProjectId === project.id ? 'active' : ''}`}
                     onClick={() => handleSelectProject(project.id)}
                   >
-                    <div className="asana-project-icon" style={{ backgroundColor: project.color || '#796EFF' }} />
+                    <div className="asana-project-icon" style={{ backgroundColor: project.color || 'var(--indigo-500)' }} />
                     <span className="asana-project-name">{project.name}</span>
                     <span className="asana-project-count">{project.progress}%</span>
                   </div>
@@ -315,8 +320,9 @@ export function Projects() {
       </div>
 
       {/* Main Content Area */}
-      <div className="asana-page-content">
-        <div className="asana-page-container">
+      <PageContent>
+        <PageCard>
+          <PageBody>
           {selectedProject ? (
             <div className="asana-project-content">
               {/* Project Header */}
@@ -380,8 +386,9 @@ export function Projects() {
               )}
             </div>
           )}
-        </div>
-      </div>
+          </PageBody>
+        </PageCard>
+      </PageContent>
 
       {/* New Project Modal */}
       <NewProjectModal
@@ -405,15 +412,16 @@ export function Projects() {
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => setDeleteConfirmOpen(open)}
         onConfirm={handleDeleteProject}
         title="Delete project"
-        message={`Are you sure you want to delete "${projectToDelete?.name}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${projectToDelete?.name}"? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
+        variant="destructive"
       />
-    </div>
+    </Page>
   );
 }
 

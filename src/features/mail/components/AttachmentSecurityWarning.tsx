@@ -91,7 +91,7 @@ export const AttachmentSecurityWarning: React.FC<AttachmentSecurityWarningProps>
             <h3 className="font-semibold text-primary dark:text-gray-100">
               Security Warning
             </h3>
-            <p className={`text- text-sm${securityRisk.color}-600 dark:text-${securityRisk.color}-400 capitalize`}>
+            <p className={`text- asana-text-sm${securityRisk.color}-600 dark:text-${securityRisk.color}-400 capitalize`}>
               {securityRisk.level} Risk File
             </p>
           </div>
@@ -102,10 +102,10 @@ export const AttachmentSecurityWarning: React.FC<AttachmentSecurityWarningProps>
           {/* File Info */}
           <div className="flex items-center space-x-3 rounded-lg bg-surface p-3 dark:bg-gray-700">
             <div 
-              className="flex size-8 items-center justify-center rounded text-sm font-medium text-white"
+              className="flex size-8 items-center justify-center rounded asana-text-sm font-medium text-white"
               style={{ backgroundColor: fileTypeInfo.color }}
             >
-              <span className="material-icons-outlined text-base">
+              <span className="material-icons-outlined asana-text-base">
                 {fileTypeInfo.icon}
               </span>
             </div>
@@ -113,7 +113,7 @@ export const AttachmentSecurityWarning: React.FC<AttachmentSecurityWarningProps>
               <div className="truncate font-medium text-primary dark:text-gray-100">
                 {attachment.filename}
               </div>
-              <div className="text-sm text-secondary dark:text-muted">
+              <div className="asana-text-sm text-secondary dark:text-muted">
                 {formatFileSize(attachment.size)} • {fileTypeInfo.extension.toUpperCase()}
               </div>
             </div>
@@ -121,18 +121,18 @@ export const AttachmentSecurityWarning: React.FC<AttachmentSecurityWarningProps>
 
           {/* Security Description */}
           <div>
-            <p className="mb-3 text-sm text-primary dark:text-muted">
+            <p className="mb-3 asana-text-sm text-primary dark:text-muted">
               {securityRisk.description}
             </p>
             
             <div className="rounded-lg bg-surface p-3 dark:bg-gray-700">
-              <h4 className="mb-2 text-sm font-medium text-primary dark:text-gray-100">
+              <h4 className="mb-2 asana-text-sm font-medium text-primary dark:text-gray-100">
                 Potential Risks:
               </h4>
               <ul className="space-y-1">
                 {securityRisk.risks.map((risk, index) => (
-                  <li key={index} className="flex items-start space-x-2 text-sm text-secondary dark:text-muted">
-                    <span className="material-icons-outlined mt-0.5 text-xs text-muted">
+                  <li key={index} className="flex items-start space-x-2 asana-text-sm text-secondary dark:text-muted">
+                    <span className="material-icons-outlined mt-0.5 text-[11px] text-muted">
                       fiber_manual_record
                     </span>
                     <span>{risk}</span>
@@ -144,10 +144,10 @@ export const AttachmentSecurityWarning: React.FC<AttachmentSecurityWarningProps>
 
           {/* Safety Recommendations */}
           <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-            <h4 className="mb-2 text-sm font-medium text-blue-900 dark:text-blue-100">
+            <h4 className="mb-2 asana-text-sm font-medium text-blue-900 dark:text-blue-100">
               Safety Recommendations:
             </h4>
-            <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+            <ul className="space-y-1 asana-text-sm text-blue-800 dark:text-blue-200">
               <li>• Only download files from trusted sources</li>
               <li>• Scan the file with antivirus software</li>
               <li>• Don&apos;t open the file if you&apos;re unsure of its contents</li>
@@ -158,7 +158,7 @@ export const AttachmentSecurityWarning: React.FC<AttachmentSecurityWarningProps>
           </div>
 
           {/* MIME Type Info */}
-          <div className="text-xs text-secondary dark:text-muted">
+          <div className="text-[11px] text-secondary dark:text-muted">
             File type: <code className="rounded bg-surface px-1 py-0.5 dark:bg-gray-700">
               {attachment.mimeType}
             </code>
@@ -169,14 +169,14 @@ export const AttachmentSecurityWarning: React.FC<AttachmentSecurityWarningProps>
         <div className="border-border-default flex items-center justify-end space-x-3 border-t p-4 dark:border-gray-700">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-primary transition-colors hover:text-primary dark:text-muted dark:hover:text-gray-100"
+            className="px-4 py-2 asana-text-sm font-medium text-primary transition-colors hover:text-primary dark:text-muted dark:hover:text-gray-100"
           >
             Cancel
           </button>
           <button
             onClick={onContinue}
             className={`
-              rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors
+              rounded-lg px-4 py-2 asana-text-sm font-medium text-white transition-colors
               ${securityRisk.level === 'high' 
                 ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600' 
                 : securityRisk.level === 'medium'

@@ -13,7 +13,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { Button, Text } from '../../../components/ui';
-import { Tooltip } from '../../../components/ui/Tooltip';
+import { Tooltip } from '../../../components/ui/design-system';
 import { Check } from 'lucide-react';
 import { useMailStore } from '../stores/mailStore';
 import { logger } from '../../../core/lib/logger';
@@ -188,7 +188,7 @@ export function MailToolbar() {
         </Button>
 
         {/* Sync Status Indicator */}
-        <Tooltip content={`Last sync: ${formatLastSync(lastSyncTime)}`} position="bottom" delay={100}>
+        <Tooltip content={`Last sync: ${formatLastSync(lastSyncTime)}`} placement="bottom" delay={100}>
           <div className="flex items-center text-success">
             <Check size={16} />
           </div>

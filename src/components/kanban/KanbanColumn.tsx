@@ -3,7 +3,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import type { TaskColumn } from '../../stores/unifiedTaskStore.types';
 import { realtimeSync } from '../../services/realtimeSync';
-import '../../styles/asana-design-system.css';
+import '../../styles/asana-core.css';
 
 type KanbanColumnType = TaskColumn & {
   tasks: any[];
@@ -12,7 +12,9 @@ type KanbanColumnType = TaskColumn & {
 };
 import { UnifiedTaskCard } from '../tasks/UnifiedTaskCard';
 import { InlineTaskCreator } from './InlineTaskCreator';
-import { Card, ConfirmDialog, Button } from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { Card } from '../ui/design-system/Card';
+import { ConfirmDialog } from '../ui/design-system/ConfirmDialog';
 import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3, Flag, Eye, EyeOff } from 'lucide-react';
 import { parseGoogleTaskDate } from '../../utils/dateUtils';
 
@@ -130,7 +132,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     if (selectedLabels.length > 0) {
       tasks = tasks.filter(task => {
         if (!task.labels || task.labels.length === 0) return false;
-        const taskLabelNames = task.labels.map(label => 
+        const taskLabelNames = task.labels.map((label: string | { name: string }) => 
           typeof label === 'string' ? label : label.name
         );
         return selectedLabels.some(selectedLabel => taskLabelNames.includes(selectedLabel));
@@ -254,12 +256,12 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               />
             ) : (
               <>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1E1E1F', margin: 0, letterSpacing: '-0.01em' }}>{column.title}</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>{column.title}</h3>
                 <span style={{ 
                   fontSize: '14px', 
                   fontWeight: 500, 
-                  color: '#6B6F76',
-                  backgroundColor: '#F3F4F6',
+                  color: 'var(--text-secondary)',
+                  backgroundColor: 'var(--bg-secondary)',
                   padding: '2px 8px',
                   borderRadius: '12px'
                 }}>{sortedTasks.length}</span>
@@ -468,8 +470,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 15.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <p className="mb-1 text-sm font-medium text-error">Error loading tasks</p>
-              <p className="text-xs text-muted">{column.error}</p>
+              <p className="mb-1 asana-text-sm font-medium text-error">Error loading tasks</p>
+              <p className="text-[11px] text-muted">{column.error}</p>
             </div>
           ) : sortedTasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -480,8 +482,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
-                  <p className="mb-1 text-sm font-medium text-primary">No matching tasks</p>
-                  <p className="max-w-48 text-xs text-muted">No tasks match your search in this list</p>
+                  <p className="mb-1 asana-text-sm font-medium text-primary">No matching tasks</p>
+                  <p className="max-w-48 text-[11px] text-muted">No tasks match your search in this list</p>
                 </>
               ) : (
                 <></>
@@ -532,8 +534,10 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={!!deleteConfirm}
-        onClose={() => setDeleteConfirm(null)}
+        open={!!deleteConfirm}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirm(null);
+        }}
         onConfirm={async () => {
           if (deleteConfirm) {
             console.log('Deleting task:', deleteConfirm);
@@ -553,10 +557,10 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           }
         }}
         title="Delete Task"
-        message={`Are you sure you want to delete "${deleteConfirm?.title}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${deleteConfirm?.title}"? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
-        confirmVariant="destructive"
+        variant="destructive"
       />
     </>
   );

@@ -7,7 +7,10 @@ import { parseGoogleTaskDate, formatTaskDate } from '../../utils/dateUtils';
 type KanbanTask = UnifiedTask;
 import { TaskSidebar } from './TaskSidebar';
 import { InlineTaskCreator } from './InlineTaskCreator';
-import { Card, Button, Input, ContextMenu } from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { Card } from '../ui/design-system/Card';
+import { ContextMenu } from '../ui/design-system/ContextMenu';
+import { Input } from '../ui';
 import { Plus, Search, Filter, Calendar, CheckSquare, Tag, MoreHorizontal, RotateCcw, ArrowUpDown, GripVertical, Type, ChevronDown, Edit3, Copy, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -159,13 +162,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     if (!selectedTask || !selectedColumnId) return;
 
     try {
-      await updateTask(selectedTask.id, {
+        await updateTask(selectedTask.id, {
         ...updates,
         // Transform string labels to label objects
-        labels: updates.labels?.map(label => ({
-          name: label,
-          color: 'gray' as const
-        })),
+          labels: updates.labels?.map(label => ({
+            name: label,
+            color: 'gray' as const
+          })) as any,
         recurring: updates.recurring
       });
       setIsEditModalOpen(false);
@@ -201,11 +204,11 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
       // Use the selected column or fall back to first column
       const targetColumn = columns.find(c => c.id === selectedColumnId) || columns[0];
       if (targetColumn) {
-        await createTask({
+          await createTask({
           title: title,
           columnId: targetColumn.id,
           googleTaskListId: targetColumn.googleTaskListId,
-          labels: [],
+            labels: [],
           priority: 'none'
         });
         setIsCreateModalOpen(false);
@@ -232,14 +235,14 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
   return (
     <>
-      <div className={`flex h-full flex-col ${className}`} style={{ backgroundColor: '#FFFFFF' }}>
+      <div className={`flex h-full flex-col ${className}`} style={{ backgroundColor: 'var(--asana-bg-primary)' }}>
         {/* Column Headers */}
-        <div className="border-b sticky top-0 bg-white" style={{ borderColor: '#E8E8E9' }}>
-          <div className="flex items-center text-xs font-medium" style={{ padding: '8px 24px', color: '#6B6F76' }}>
+        <div className="border-b sticky top-0 bg-white" style={{ borderColor: 'var(--asana-border-default)' }}>
+          <div className="flex items-center text-[11px] font-medium" style={{ padding: '8px 24px', color: 'var(--asana-text-secondary)' }}>
             <div style={{ flex: '1', minWidth: '240px', paddingRight: '8px' }}>Task name</div>
-            <div style={{ width: '100px', paddingRight: '8px', borderLeft: '1px solid #D1D5DB', paddingLeft: '8px' }}>Due date</div>
-            <div style={{ width: '100px', paddingRight: '8px', borderLeft: '1px solid #D1D5DB', paddingLeft: '8px' }}>Priority</div>
-            <div style={{ width: '150px', paddingRight: '8px', borderLeft: '1px solid #D1D5DB', paddingLeft: '8px' }}>Labels</div>
+            <div style={{ width: '100px', paddingRight: '8px', borderLeft: '1px solid var(--asana-border-hover)', paddingLeft: '8px' }}>Due date</div>
+            <div style={{ width: '100px', paddingRight: '8px', borderLeft: '1px solid var(--asana-border-hover)', paddingLeft: '8px' }}>Priority</div>
+            <div style={{ width: '150px', paddingRight: '8px', borderLeft: '1px solid var(--asana-border-hover)', paddingLeft: '8px' }}>Labels</div>
           </div>
         </div>
 
@@ -247,13 +250,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
         <div className="flex-1 overflow-y-auto">
           {filteredTasks.length === 0 ? (
             <div className="p-12 text-center" style={{ marginTop: '2rem' }}>
-              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full" style={{ backgroundColor: '#F6F7F8' }}>
-                <CheckSquare size={24} style={{ color: '#6B6F76' }} />
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full" style={{ backgroundColor: 'var(--asana-bg-input)' }}>
+                <CheckSquare size={24} style={{ color: 'var(--asana-text-secondary)' }} />
               </div>
-              <h3 className="mb-2 text-lg font-medium" style={{ color: '#151B26' }}>
+              <h3 className="mb-2 asana-text-lg font-medium" style={{ color: 'var(--asana-text-primary)' }}>
                 {searchQuery || selectedListId !== 'all' ? 'No tasks found' : 'No tasks yet'}
               </h3>
-              <p className="mb-4 text-sm" style={{ color: '#6B6F76' }}>
+              <p className="mb-4 asana-text-sm" style={{ color: 'var(--asana-text-secondary)' }}>
                 {searchQuery || selectedListId !== 'all' 
                   ? 'Try adjusting your search or filters'
                   : 'Create your first task to get started'
@@ -290,12 +293,12 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                       <ChevronDown 
                         size={16} 
                         className={`mr-2 transition-transform ${expandedSections.has(column.id) ? '' : '-rotate-90'}`} 
-                        style={{ color: '#6B6F76' }} 
+                        style={{ color: 'var(--asana-text-secondary)' }} 
                       />
-                      <span className="font-medium text-sm" style={{ color: '#151B26' }}>
+                      <span className="font-medium asana-text-sm" style={{ color: 'var(--asana-text-primary)' }}>
                         {column.title}
                       </span>
-                      <span className="ml-2 text-xs" style={{ color: '#6B6F76' }}>
+                      <span className="ml-2 text-[11px]" style={{ color: 'var(--asana-text-secondary)' }}>
                         {columnTasks.length}
                       </span>
                     </div>
@@ -323,15 +326,15 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           label: 'Duplicate',
                           icon: <Copy size={14} />,
                           onClick: async () => {
-                            await createTask({
-                              title: `${task.title} (copy)`,
-                              notes: task.notes,
-                              due: task.due,
-                              columnId: task.columnId,
-                              googleTaskListId: column.googleTaskListId,
-                              labels: task.labels,
-                              priority: task.priority
-                            });
+                              await createTask({
+                                title: `${task.title} (copy)`,
+                                notes: task.notes,
+                                due: task.due,
+                                columnId: task.columnId,
+                                googleTaskListId: column.googleTaskListId,
+                                labels: task.labels,
+                                priority: task.priority
+                              } as any);
                           }
                         },
                         { separator: true },
@@ -351,11 +354,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                             className={`group flex items-center cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
                               isCompleted ? 'opacity-60' : ''
                             }`}
-                            style={{ 
-                              padding: '8px 24px',
-                              borderBottom: '1px solid #F6F7F8',
-                              minHeight: '44px'
-                            }}
+                          style={{ padding: '8px 24px', borderBottom: '1px solid var(--asana-bg-input)', minHeight: '44px' }}
                             onClick={() => handleTaskClick(task)}
                           >
                           {/* Task name column with checkbox - indented */}
@@ -366,14 +365,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                                 handleToggleComplete(task);
                               }}
                               className="flex-shrink-0 flex items-center justify-center"
-                              style={{
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                border: isCompleted ? '1.5px solid #796EFF' : '1.5px solid #D1D5DB',
-                                backgroundColor: isCompleted ? '#796EFF' : 'transparent',
-                                transition: 'all 0.2s ease'
-                              }}
+                              style={{ width: '16px', height: '16px', borderRadius: '50%', border: isCompleted ? '1.5px solid var(--indigo-500)' : '1.5px solid var(--asana-border-hover)', backgroundColor: isCompleted ? 'var(--indigo-500)' : 'transparent', transition: 'all 0.2s ease' }}
                               onMouseEnter={(e) => {
                                 if (!isCompleted) {
                                   e.currentTarget.style.borderColor = '#796EFF';
@@ -397,7 +389,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                               >
                                 <path 
                                   d="M13.5 4.5L6 12L2.5 8.5" 
-                                  stroke={isCompleted ? "white" : "#9CA3AF"} 
+                                  stroke={isCompleted ? 'white' : 'var(--asana-text-tertiary)'} 
                                   strokeWidth="2" 
                                   strokeLinecap="round" 
                                   strokeLinejoin="round"
@@ -405,16 +397,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                               </svg>
                             </button>
                             <div style={{ flex: '1' }}>
-                              <h3 className={`text-sm leading-tight ${
+                              <h3 className={`asana-text-sm leading-tight ${
                                 isCompleted ? 'line-through' : ''
-                              }`} style={{ 
-                                color: isCompleted ? '#9CA3AF' : '#151B26',
-                                fontWeight: 400
-                              }}>
+                                }`} style={{ color: isCompleted ? 'var(--asana-text-tertiary)' : 'var(--asana-text-primary)', fontWeight: 400 }}>
                                 {task.title}
                               </h3>
                               {task.notes && (
-                                <p className="mt-0.5 line-clamp-1 text-xs" style={{ color: '#9CA3AF' }}>
+                                <p className="mt-0.5 line-clamp-1 text-[11px]" style={{ color: 'var(--asana-text-tertiary)' }}>
                                   {task.notes}
                                 </p>
                               )}
@@ -422,10 +411,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           </div>
 
                           {/* Due date column */}
-                          <div style={{ width: '100px', paddingRight: '8px', borderLeft: '1px solid #D1D5DB', paddingLeft: '8px', minHeight: '28px', display: 'flex', alignItems: 'center' }}>
+                          <div style={{ width: '100px', paddingRight: '8px', borderLeft: '1px solid var(--asana-border-hover)', paddingLeft: '8px', minHeight: '28px', display: 'flex', alignItems: 'center' }}>
                             {task.due && (
                               <div className="flex items-center gap-1" style={{
-                                color: isOverdue ? '#DC2626' : '#6B6F76',
+                                color: isOverdue ? 'var(--status-error)' : 'var(--asana-text-secondary)',
                                 fontSize: '12px'
                               }}>
                                 <span>{formatTaskDate(parseGoogleTaskDate(task.due))}</span>
@@ -434,15 +423,15 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           </div>
 
                           {/* Priority column */}
-                          <div style={{ width: '100px', paddingRight: '8px', borderLeft: '1px solid #D1D5DB', paddingLeft: '8px', minHeight: '28px', display: 'flex', alignItems: 'center' }}>
+                          <div style={{ width: '100px', paddingRight: '8px', borderLeft: '1px solid var(--asana-border-hover)', paddingLeft: '8px', minHeight: '28px', display: 'flex', alignItems: 'center' }}>
                             {task.priority && task.priority !== 'none' && (
                               <span style={{
                                 fontSize: '11px',
                                 fontWeight: 500,
                                 padding: '2px 8px',
                                 borderRadius: '12px',
-                                backgroundColor: task.priority === 'high' ? 'var(--red-50)' : task.priority === 'medium' ? 'var(--amber-50)' : '#e0f2fe',
-                                color: task.priority === 'high' ? 'var(--red-600)' : task.priority === 'medium' ? 'var(--amber-600)' : '#0369a1'
+                                backgroundColor: task.priority === 'high' ? 'var(--red-50)' : task.priority === 'medium' ? 'var(--amber-50)' : 'var(--bg-secondary)',
+                                color: task.priority === 'high' ? 'var(--red-600)' : task.priority === 'medium' ? 'var(--amber-600)' : 'var(--text-secondary)'
                               }}>
                                 {task.priority === 'high' ? 'High' : task.priority === 'medium' ? 'Medium' : 'Low'}
                               </span>
@@ -481,7 +470,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                                   );
                                 })}
                                 {task.labels.length > 2 && (
-                                  <span className="text-xs" style={{ color: '#9CA3AF' }}>
+                                  <span className="text-[11px]" style={{ color: 'var(--asana-text-tertiary)' }}>
                                     +{task.labels.length - 2}
                                   </span>
                                 )}
@@ -510,7 +499,14 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                                     due: data.due,
                                     columnId: column.id,
                                     googleTaskListId: column.googleTaskListId,
-                                    labels: data.labels || [],
+                                    labels: (data.labels ?? []).map((label: any, index: number) =>
+                                      typeof label === 'string'
+                                        ? {
+                                            name: label,
+                                            color: 'gray' as const,
+                                          }
+                                        : label
+                                    ),
                                     priority: data.priority || 'none'
                                   });
                                   setShowInlineCreator(prev => ({ ...prev, [column.id]: false }));
@@ -524,9 +520,9 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                               />
                             </div>
                             {/* Empty columns to maintain layout */}
-                            <div style={{ width: '100px', borderLeft: '1px solid #D1D5DB', minHeight: '28px', paddingLeft: '8px' }}></div>
-                            <div style={{ width: '100px', borderLeft: '1px solid #D1D5DB', minHeight: '28px', paddingLeft: '8px' }}></div>
-                            <div style={{ width: '150px', borderLeft: '1px solid #D1D5DB', minHeight: '28px', paddingLeft: '8px' }}></div>
+                            <div style={{ width: '100px', borderLeft: '1px solid var(--asana-border-hover)', minHeight: '28px', paddingLeft: '8px' }}></div>
+                            <div style={{ width: '100px', borderLeft: '1px solid var(--asana-border-hover)', minHeight: '28px', paddingLeft: '8px' }}></div>
+                            <div style={{ width: '150px', borderLeft: '1px solid var(--asana-border-hover)', minHeight: '28px', paddingLeft: '8px' }}></div>
                           </div>
                         ) : (
                           <div
@@ -537,8 +533,8 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                             }}
                           >
                             <div style={{ flex: '1', minWidth: '240px', display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '24px' }}>
-                              <Plus size={14} className="opacity-0 group-hover:opacity-100 flex-shrink-0" style={{ color: '#6B6F76', width: '16px', height: '16px' }} />
-                              <span className="text-sm opacity-0 group-hover:opacity-100" style={{ color: '#6B6F76' }}>
+                               <Plus size={14} className="opacity-0 group-hover:opacity-100 flex-shrink-0" style={{ color: 'var(--asana-text-secondary)', width: '16px', height: '16px' }} />
+                               <span className="asana-text-sm opacity-0 group-hover:opacity-100" style={{ color: 'var(--asana-text-secondary)' }}>
                                 Add task...
                               </span>
                             </div>
@@ -553,14 +549,14 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               {/* Add section button */}
               <div 
                 className="flex items-center px-6 py-3 cursor-pointer hover:bg-gray-50 group border-t"
-                style={{ borderColor: '#E8E8E9' }}
+                style={{ borderColor: 'var(--asana-border-default)' }}
                 onClick={() => {
                   // TODO: Implement add section/list functionality
                   alert('Add section functionality needs to be implemented');
                 }}
               >
-                <Plus size={16} className="mr-2" style={{ color: '#6B6F76' }} />
-                <span className="text-sm font-medium" style={{ color: '#6B6F76' }}>
+                <Plus size={16} className="mr-2" style={{ color: 'var(--asana-text-secondary)' }} />
+                <span className="asana-text-sm font-medium" style={{ color: 'var(--asana-text-secondary)' }}>
                   Add section
                 </span>
               </div>

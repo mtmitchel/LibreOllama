@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { Card, Heading, Text, Button, Badge } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Badge } from '../../../components/ui/design-system/Badge';
+import { Heading, Text } from '../../../components/ui';
+import { ListItem, Tile } from '../../../components/ui/design-system';
 import { useChatStore } from '../stores/chatStore';
 import { 
   FileText, 
@@ -104,11 +108,11 @@ const getStatusBadge = (item: ContextItem) => {
   if (item.status) {
     const statusConfig = {
       pending: { variant: 'secondary' as const, text: 'Pending' },
-      'in-progress': { variant: 'accent' as const, text: 'In Progress' },
+      'in-progress': { variant: 'info' as const, text: 'In Progress' },
       completed: { variant: 'success' as const, text: 'Completed' }
     };
     const config = statusConfig[item.status];
-    return <Badge variant={config.variant} className="text-xs">{config.text}</Badge>;
+    return <Badge variant={config.variant} className="text-[11px]">{config.text}</Badge>;
   }
   
   if (item.priority) {
@@ -118,7 +122,7 @@ const getStatusBadge = (item: ContextItem) => {
       high: { variant: 'error' as const, text: 'High' }
     };
     const config = priorityConfig[item.priority];
-    return <Badge variant={config.variant} className="text-xs">{config.text}</Badge>;
+    return <Badge variant={config.variant} className="text-[11px]">{config.text}</Badge>;
   }
   
   return null;
@@ -172,18 +176,18 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
             borderRadius: '6px',
             background: 'transparent',
             border: 'none',
-            color: '#7B8794',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
             transition: 'all 150ms ease',
             padding: 0
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#F4F6F8';
-            e.currentTarget.style.color = '#323F4B';
+            e.currentTarget.style.background = 'var(--bg-secondary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = '#7B8794';
+            e.currentTarget.style.color = 'var(--text-muted)';
           }}
         >
           <PanelRight size={18} strokeWidth={2} />
@@ -215,56 +219,30 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
           {title}
         </Text>
         {items.length > 0 && (
-          <Badge variant="secondary" className="ml-2 text-xs">
+          <Badge variant="secondary" className="ml-2 text-[11px]">
             {items.length}
           </Badge>
         )}
       </div>
       
       {items.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {items.map(item => (
-            <Card
+            <ListItem
               key={item.id}
-              padding="sm"
-              className="border-border-default group cursor-pointer border transition-colors hover:bg-surface"
-            >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 text-secondary">
-                  {getItemIcon(item.type)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-start justify-between gap-2">
-                    <Text size="sm" weight="medium" className="line-clamp-2">
-                      {item.title}
-                    </Text>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="size-6 opacity-0 transition-opacity group-hover:opacity-100"
-                    >
-                      <ExternalLink size={12} />
-                    </Button>
-                  </div>
-                  {item.excerpt && (
-                    <Text size="xs" variant="tertiary" className="mb-2 line-clamp-2">
-                      {item.excerpt}
-                    </Text>
-                  )}
-                  <div className="flex items-center gap-2">
+              leading={<span className="text-secondary mt-0.5 inline-flex">{getItemIcon(item.type)}</span>}
+              primary={<Text as="span" size="sm" weight="medium" className="line-clamp-2">{item.title}</Text>}
+              secondary={item.excerpt ? <Text as="span" size="xs" variant="tertiary" className="line-clamp-2">{item.excerpt}</Text> : undefined}
+              meta={(
+                <span className="inline-flex items-center gap-2">
                     {getStatusBadge(item)}
-                    <Text variant="tertiary" size="xs">
-                      {item.date}
-                    </Text>
-                    {item.size && (
-                      <Text variant="tertiary" size="xs">
-                        {item.size}
-                      </Text>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
+                  {item.date && <Text as="span" variant="tertiary" size="xs">{item.date}</Text>}
+                  {item.size && <Text as="span" variant="tertiary" size="xs">{item.size}</Text>}
+                </span>
+              )}
+              interactive={false}
+              className="px-2 py-2"
+            />
           ))}
         </div>
       ) : (
@@ -384,39 +362,11 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
           }
         `}</style>
       <Card className="flex h-full w-80 shrink-0 flex-col" padding="none">
-        {/* Header with Tabs */}
-      <div className="border-border-default border-b">
-        <div className="p-4 pb-0">
-          <div className="flex items-start justify-between">
-            <div>
-              <Heading level={4} className="mb-1 text-primary">
-                {activeTab === 'context' ? 'Context' : 'Settings'}
-              </Heading>
-              <Text variant="secondary" size="sm">
-                {activeTab === 'context' 
-                  ? 'Related items for this conversation' 
-                  : 'Customize chat behavior'}
-              </Text>
-            </div>
-            
-            {/* Close Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggle}
-              title="Hide context panel"
-              className="size-8 p-0 -mt-1 text-secondary hover:text-primary"
-            >
-              <PanelRight size={18} strokeWidth={2} />
-            </Button>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="border-border-subtle mt-4 flex border-b">
+        {/* Tabs only (title removed) */}
+        <div className="border-border-subtle flex border-b p-2 pl-3">
           <button
             onClick={() => setActiveTab('context')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
               activeTab === 'context'
                 ? 'border-accent-primary text-primary'
                 : 'border-transparent text-secondary hover:text-primary'
@@ -427,7 +377,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
               activeTab === 'settings'
                 ? 'border-accent-primary text-primary'
                 : 'border-transparent text-secondary hover:text-primary'
@@ -436,7 +386,17 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
             <Settings size={14} />
             Settings
           </button>
-        </div>
+          <div className="ml-auto pr-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggle}
+              title="Hide context panel"
+              className="size-8 p-0 text-secondary hover:text-primary"
+            >
+              <PanelRight size={18} strokeWidth={2} />
+            </Button>
+          </div>
       </div>
 
       {/* Tab Content */}
@@ -445,87 +405,97 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
           <div className="space-y-6">
             {/* Quick Actions */}
             <div>
-              <Text size="sm" weight="semibold" variant="body" className="mb-3">
+              <Text size="lg" weight="semibold" variant="body" className="mb-3 asana-text-lg">
                 Quick actions
               </Text>
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="ghost" size="sm" className="justify-start">
-                  <CheckSquare size={14} className="mr-2" />
-                  Create task
-                </Button>
-                <Button variant="ghost" size="sm" className="justify-start">
-                  <FileText size={14} className="mr-2" />
-                  Take note
-                </Button>
-                <Button variant="ghost" size="sm" className="justify-start">
-                  <Calendar size={14} className="mr-2" />
-                  Schedule
-                </Button>
-                <Button variant="ghost" size="sm" className="justify-start">
-                  <Pin size={14} className="mr-2" />
-                  Pin chat
-                </Button>
-                <Button variant="ghost" size="sm" className="justify-start">
-                  <Share2 size={14} className="mr-2" />
-                  Share
-                </Button>
-                <Button variant="ghost" size="sm" className="justify-start">
-                  <Download size={14} className="mr-2" />
-                  Export
-                </Button>
+                <Tile icon={<CheckSquare size={16} />} label="Create task" />
+                <Tile icon={<FileText size={16} />} label="Take note" />
+                <Tile icon={<Calendar size={16} />} label="Create event" />
+                <Tile icon={<Pin size={16} />} label="Add to project" />
               </div>
             </div>
 
             {/* Separator */}
             <div className="border-border-subtle border-t" />
             
-            {/* Related Tasks */}
-            <ContextSection
-              title="Related tasks"
-              items={relatedTasks}
-              icon={<CheckSquare size={14} />}
-              emptyMessage="No related tasks yet"
-            />
+            {/* Related items (combined) */}
+            <div>
+              <div className="mb-3 flex items-center">
+                <Text size="lg" weight="semibold" variant="body" className="asana-text-lg">Related items</Text>
+                <Badge variant="secondary" className="ml-2 text-[11px]">
+                  {(relatedTasks.length + linkedNotes.length + relatedEvents.length + relatedChats.length + relatedMails.length + relatedProjects.length)}
+                </Badge>
+              </div>
 
-            {/* Linked Notes */}
-            <ContextSection
-              title="Linked notes"
-              items={linkedNotes}
-              icon={<FileText size={14} />}
-              emptyMessage="No linked notes yet"
-            />
-
-            {/* Related Events */}
-            <ContextSection
-              title="Related events"
-              items={relatedEvents}
-              icon={<CalendarDays size={14} />}
-              emptyMessage="No related events yet"
-            />
-
-            {/* Related Chats */}
-            <ContextSection
-              title="Related chats"
-              items={relatedChats}
-              icon={<MessageSquare size={14} />}
-              emptyMessage="No related chats yet"
-            />
-
-            {/* Related Emails */}
-            <ContextSection
-              title="Related emails"
-              items={relatedMails}
-              icon={<Inbox size={14} />}
-              emptyMessage="No related emails yet"
-            />
-
-            {/* Related Projects */}
-            <ContextSection
-              title="Related projects"
-              items={relatedProjects}
-              icon={<Pin size={14} />}
-              emptyMessage="No related projects yet"
-            />
+              <div className="space-y-3">
+                {relatedTasks.map(item => (
+                  <ListItem
+                    key={`task-${item.id}`}
+                    leading={<span className="asana-related-leading task"><CheckSquare size={18} /></span>}
+                    primary={<Text as="span" size="base" weight="semibold" className="asana-text-base" title={item.title}>{item.title}</Text>}
+                    secondary={<span className="asana-chips"><span className="asana-meta-chip is-warning">Pending</span>{item.date && <span className="asana-meta-chip is-danger">{item.date}</span>}</span>}
+                    interactive={false}
+                    className="asana-list-item--card asana-related-row"
+                    title={`Task${item.priority ? ` • Priority: ${item.priority}` : ''}${item.date ? ` • ${item.date}` : ''}`}
+                  />
+                ))}
+                {linkedNotes.map(item => (
+                  <ListItem
+                    key={`note-${item.id}`}
+                    leading={<span className="asana-related-leading note"><FileText size={18} /></span>}
+                    primary={<Text as="span" size="base" weight="semibold" className="asana-text-base" title={item.title}>{item.title}</Text>}
+                    secondary={<span className="asana-chips">{item.date && <span className="asana-meta-chip is-note">{item.date}</span>}</span>}
+                    interactive={false}
+                    className="asana-list-item--card asana-related-row"
+                    title={item.excerpt || ''}
+                  />
+                ))}
+                {relatedEvents.map(item => (
+                  <ListItem
+                    key={`event-${item.id}`}
+                    leading={<span className="asana-related-leading event"><CalendarDays size={18} /></span>}
+                    primary={<Text as="span" size="base" weight="semibold" className="asana-text-base" title={item.title}>{item.title}</Text>}
+                    secondary={item.date ? <span className="asana-chips"><span className="asana-meta-chip is-info">{item.date}</span></span> : undefined}
+                    interactive={false}
+                    className="asana-list-item--card asana-related-row"
+                    title={item.date || ''}
+                  />
+                ))}
+                {relatedChats.map(item => (
+                  <ListItem
+                    key={`chat-${item.id}`}
+                    leading={<span className="asana-related-leading"><MessageSquare size={18} /></span>}
+                    primary={<Text as="span" size="base" weight="semibold" className="asana-text-base" title={item.title}>{item.title}</Text>}
+                    secondary={item.date ? <span className="asana-chips"><span className="asana-meta-chip">{item.date}</span></span> : undefined}
+                    interactive={false}
+                    className="asana-list-item--card asana-related-row"
+                    title={item.excerpt || ''}
+                  />
+                ))}
+                {relatedMails.map(item => (
+                  <ListItem
+                    key={`mail-${item.id}`}
+                    leading={<span className="asana-related-leading"><Inbox size={18} /></span>}
+                    primary={<Text as="span" size="base" weight="semibold" className="asana-text-base" title={item.title}>{item.title}</Text>}
+                    secondary={item.date ? <span className="asana-chips"><span className="asana-meta-chip">{item.date}</span></span> : undefined}
+                    interactive={false}
+                    className="asana-list-item--card asana-related-row"
+                    title={item.date || ''}
+                  />
+                ))}
+                {relatedProjects.map(item => (
+                  <ListItem
+                    key={`project-${item.id}`}
+                    leading={<span className="asana-related-leading"><Pin size={18} /></span>}
+                    primary={<Text as="span" size="sm" weight="semibold">{item.title}</Text>}
+                    interactive={false}
+                    className="asana-list-item--card asana-related-row"
+                    title="Project"
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
@@ -534,17 +504,17 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
               
               {/* Model Info */}
               <div className="border-border-default border-b pb-3">
-                <Text size="sm" variant="tertiary" className="mb-1">
+                <Text size="base" variant="tertiary" className="mb-1 asana-text-base">
                   Settings for model
                 </Text>
-                <Text size="sm" weight="semibold" variant="body">
+                <Text size="base" weight="semibold" variant="body" className="asana-text-base">
                   {modelName}
                 </Text>
               </div>
 
               {/* System Prompt */}
               <div>
-                <Text size="sm" weight="semibold" variant="body" className="mb-3">
+                <Text size="base" weight="semibold" variant="body" className="mb-3 asana-text-base">
                   System prompt
                 </Text>
                 <div className="space-y-2">
@@ -552,7 +522,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                     value={currentSessionSettings.systemPrompt}
                     onChange={(e) => handleSettingsChange('systemPrompt', e.target.value)}
                     placeholder="Enter custom instructions..."
-                    className="border-border-default focus:ring-accent-primary h-20 w-full resize-none rounded-md border bg-surface px-3 py-2 text-sm text-primary focus:border-transparent focus:outline-none focus:ring-2"
+                    className="border-border-default focus:ring-accent-primary h-20 w-full resize-none rounded-md border bg-surface px-3 py-2 asana-text-sm text-primary focus:border-transparent focus:outline-none focus:ring-2"
                     maxLength={2000}
                   />
                   <div className="flex items-center justify-between">
@@ -580,8 +550,8 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                 {/* Creativity Slider */}
                 <div className="mb-4">
                   <div className="mb-2 flex items-center justify-between">
-                    <Text size="sm" variant="body">Creativity</Text>
-                    <Text size="sm" variant="secondary">{currentSessionSettings.creativity}</Text>
+                    <Text size="base" variant="body" className="asana-text-base">Creativity</Text>
+                    <Text size="base" variant="secondary" className="asana-text-base">{currentSessionSettings.creativity}</Text>
                   </div>
                   <input
                     type="range"
@@ -598,7 +568,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
 
                 {/* Max Response */}
                 <div>
-                  <Text size="sm" variant="body" className="mb-2">Max response</Text>
+                  <Text size="base" variant="body" className="mb-2 asana-text-base">Max response</Text>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -608,14 +578,14 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                       max={32000}
                       className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-surface px-3 py-2 text-primary focus:border-transparent focus:outline-none focus:ring-2"
                     />
-                    <Text size="sm" variant="secondary">tokens</Text>
+                    <Text size="base" variant="secondary" className="asana-text-base">tokens</Text>
                   </div>
                 </div>
               </div>
 
               {/* Actions */}
               <div>
-                <Text size="sm" weight="semibold" variant="body" className="mb-3">
+                <Text size="base" weight="semibold" variant="body" className="mb-3 asana-text-base">
                   Actions
                 </Text>
                 

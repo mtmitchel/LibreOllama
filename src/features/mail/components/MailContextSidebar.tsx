@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Card, Heading, Text, Button, Badge } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Badge } from '../../../components/ui/design-system/Badge';
+import { Heading, Text } from '../../../components/ui';
 import { 
   FileText, 
   CheckSquare, 
@@ -81,11 +84,11 @@ const getStatusBadge = (item: ContextItem) => {
   if (item.status) {
     const statusConfig = {
       'pending': { variant: 'secondary' as const, label: 'Pending' },
-      'in-progress': { variant: 'accent' as const, label: 'In Progress' },
+      'in-progress': { variant: 'info' as const, label: 'In Progress' },
       'completed': { variant: 'success' as const, label: 'Completed' }
     };
     const config = statusConfig[item.status];
-    return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
+    return <Badge variant={config.variant} className="text-[11px]">{config.label}</Badge>;
   }
   
   if (item.priority) {
@@ -95,7 +98,7 @@ const getStatusBadge = (item: ContextItem) => {
       'high': { variant: 'error' as const, label: 'High' }
     };
     const config = priorityConfig[item.priority];
-    return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
+    return <Badge variant={config.variant} className="text-[11px]">{config.label}</Badge>;
   }
   
   return null;
@@ -140,7 +143,8 @@ export function MailContextSidebar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginTop: '-24px'
+          marginTop: '-24px',
+          flexShrink: 0
         }}
       >
         <button
@@ -202,7 +206,7 @@ export function MailContextSidebar({
           <Text size="sm" weight="semibold" variant="body">
             {title}
           </Text>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-[11px]">
             {items.length}
           </Badge>
         </div>
@@ -313,7 +317,7 @@ export function MailContextSidebar({
         <div className="border-border-subtle mt-4 flex border-b">
           <button
             onClick={() => setActiveTab('context')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
               activeTab === 'context'
                 ? 'border-accent-primary text-primary'
                 : 'border-transparent text-secondary hover:text-primary'
@@ -324,7 +328,7 @@ export function MailContextSidebar({
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
               activeTab === 'settings'
                 ? 'border-accent-primary text-primary'
                 : 'border-transparent text-secondary hover:text-primary'

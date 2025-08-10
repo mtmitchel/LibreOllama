@@ -50,10 +50,12 @@ export const DialogTrigger: React.FC<{ children: React.ReactNode; asChild?: bool
   const { onOpenChange } = useContext(DialogContext);
   
   if (asChild) {
-    const child = React.Children.only(children) as React.ReactElement;
+    const child = React.Children.only(children) as React.ReactElement<any>;
     return React.cloneElement(child, {
       onClick: (e: React.MouseEvent) => {
-        child.props.onClick?.(e);
+        if (typeof child.props?.onClick === 'function') {
+          child.props.onClick(e);
+        }
         onOpenChange(true);
       },
     });
@@ -192,9 +194,9 @@ export const DialogContent: React.FC<DialogContentProps> = ({
                 absolute top-[var(--space-3)] right-[var(--space-3)]
                 p-[var(--space-1)]
                 rounded-[var(--radius-md)]
-                text-[var(--text-secondary)]
+                text-[color:var(--text-secondary)]
                 hover:bg-[var(--bg-secondary)]
-                hover:text-[var(--text-primary)]
+                hover:text-[color:var(--text-primary)]
                 transition-[var(--transition-property)]
                 duration-[var(--transition-duration)]
                 z-10
@@ -243,9 +245,9 @@ export const DialogTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = (
   return (
     <h2
       className={`
-        text-[var(--text-heading)]
+        asana-text-lg
         font-semibold
-        text-[var(--text-primary)]
+        text-[color:var(--text-primary)]
         ${className}
       `}
       {...props}
@@ -267,8 +269,8 @@ export const DialogDescription: React.FC<React.HTMLAttributes<HTMLParagraphEleme
     <p
       className={`
         mt-[var(--space-1)]
-        text-[var(--text-body)]
-        text-[var(--text-secondary)]
+        asana-text-base
+        text-[color:var(--text-secondary)]
         ${className}
       `}
       {...props}

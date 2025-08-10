@@ -147,12 +147,12 @@ export const ProgressRing = React.forwardRef<HTMLDivElement, ProgressRingProps>(
           {children ? (
             children
           ) : showValue ? (
-            <span className="font-medium text-[var(--text-primary)]">
+            <span className="font-medium text-[color:var(--text-primary)]">
               {Math.round(percentage)}%
             </span>
           ) : null}
           {label && !children && (
-            <span className="text-[0.85em] text-[var(--text-secondary)] mt-[2px]">
+            <span className="text-[0.85em] text-[color:var(--text-secondary)] mt-[2px]">
               {label}
             </span>
           )}
@@ -225,12 +225,12 @@ export const ProgressBar = React.forwardRef<HTMLDivElement, ProgressBarProps>(
         {(label || showValue) && (
           <div className="flex items-center justify-between mb-[var(--space-1)]">
             {label && (
-              <span className="text-[var(--text-small)] text-[var(--text-secondary)]">
+              <span className="asana-text-sm text-[color:var(--text-secondary)]">
                 {label}
               </span>
             )}
             {showValue && (
-              <span className="text-[var(--text-small)] font-medium text-[var(--text-primary)]">
+              <span className="asana-text-sm font-medium text-[color:var(--text-primary)]">
                 {Math.round(percentage)}%
               </span>
             )}
@@ -346,16 +346,16 @@ export const ProgressSteps: React.FC<ProgressStepsProps> = ({
                 rounded-full flex items-center justify-center
                 font-medium transition-colors duration-[var(--transition-duration)]
                 ${step.completed 
-                  ? 'bg-[var(--brand-primary)] text-[var(--text-on-brand)]'
+                  ? 'bg-[var(--brand-primary)] text-[color:var(--text-on-brand)]'
                   : step.current
                     ? 'bg-[var(--brand-subtle)] text-[var(--brand-primary)] border-2 border-[var(--brand-primary)]'
-                    : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] border-2 border-[var(--border-default)]'
+                    : 'bg-[var(--bg-tertiary)] text-[color:var(--text-muted)] border-2 border-[var(--border-default)]'
                 }
               `}
             >
               {variant === 'numbered' ? index + 1 : step.completed ? '✓' : ''}
             </div>
-            <span className="mt-[var(--space-1)] text-[var(--text-small)] text-[var(--text-secondary)]">
+            <span className="mt-[var(--space-1)] asana-text-sm text-[color:var(--text-secondary)]">
               {step.label}
             </span>
           </div>

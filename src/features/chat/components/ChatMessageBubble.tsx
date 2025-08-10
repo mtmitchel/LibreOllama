@@ -1,5 +1,8 @@
 import React from 'react';
-import { Text, Card, Caption, Button, Avatar } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Avatar } from '../../../components/ui/design-system/Avatar';
+import { Text, Caption } from '../../../components/ui';
 import { ChatMessage } from '../../../core/lib/chatMockData';
 import { formatTimestamp } from '../utils/formatTimestamp';
 import { User, Bot, Copy, Edit3, CheckSquare, RotateCcw } from 'lucide-react';
@@ -51,11 +54,12 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
       case 'muted':
         return 'bg-accent-primary text-white border-none';
       case 'ghost':
-        return 'bg-accent-soft text-accent-primary border border-accent-primary';
+        // Ghost style uses subtle tint with colored text
+        return 'bg-accent-soft text-accent-primary border border-accent-primary/30';
       case 'outlined':
-        return 'bg-secondary text-accent-primary border border-accent-primary';
+        return 'bg-secondary text-accent-primary border border-accent-primary/40';
       default:
-        return 'bg-accent-soft text-accent-primary border border-accent-primary';
+        return 'bg-accent-soft text-accent-primary border border-accent-primary/30';
     }
   };
 
@@ -73,7 +77,7 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
       <Avatar 
         name={isUser ? 'User' : 'LibreOllama'}
         size="sm"
-        fallbackIcon={isUser ? <User size={14} /> : <Bot size={14} />}
+        fallback={isUser ? <User size={14} /> : <Bot size={14} />}
         className="mt-1 shrink-0 shadow-sm"
       />
       
@@ -93,13 +97,13 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
           {/* Message Bubble using Card Component with proper elevation */}
           <Card 
             className={`relative ${getBubbleClasses()}`}
-            padding="default"
+            padding="md"
           >
           {/* Enhanced readability with proper line spacing and typography */}
           <Text 
-            size="sm" 
+            size="base" 
             lineHeight="relaxed" 
-            className="leading-relaxed"
+            className="leading-relaxed asana-text-base"
             as="div"
             variant={isUser ? undefined : "body"}
           >
@@ -126,7 +130,7 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
             size="icon"
             onClick={handleCopyMessage}
             title="Copy message"
-            className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
+            className="size-auto rounded-lg bg-content p-2 shadow-sm motion-safe:hover:scale-105"
           >
             <Copy className="text-text-secondary size-3" />
           </Button>
@@ -138,7 +142,7 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
               size="icon"
               onClick={handleRegenerate}
               title="Regenerate response"
-              className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
+              className="size-auto rounded-lg bg-content p-2 shadow-sm motion-safe:hover:scale-105"
             >
               <RotateCcw className="text-text-secondary size-3" />
             </Button>
@@ -151,7 +155,7 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
               size="icon"
               onClick={handleEditMessage}
               title="Edit message"
-              className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
+              className="size-auto rounded-lg bg-content p-2 shadow-sm motion-safe:hover:scale-105"
             >
               <Edit3 className="text-text-secondary size-3" />
             </Button>
@@ -164,7 +168,7 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
               size="icon"
               onClick={handleCreateTask}
               title="Create task from message"
-              className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
+              className="size-auto rounded-lg bg-content p-2 shadow-sm motion-safe:hover:scale-105"
             >
               <CheckSquare className="text-text-secondary size-3" />
             </Button>

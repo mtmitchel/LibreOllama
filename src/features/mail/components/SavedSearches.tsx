@@ -116,7 +116,7 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
     <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center">
       <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b p-4">
-          <h3 className="text-lg font-semibold">
+          <h3 className="asana-text-lg font-semibold">
             {initialData ? 'Edit Saved Search' : 'Save Search'}
           </h3>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -126,7 +126,7 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
 
         <div className="space-y-4 p-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Name *
             </label>
             <input
@@ -139,7 +139,7 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Description
             </label>
             <textarea
@@ -152,7 +152,7 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Search Query *
             </label>
             <textarea
@@ -160,19 +160,19 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
               onChange={(e) => setFormData(prev => ({ ...prev, query: e.target.value }))}
               placeholder="Enter search query"
               rows={3}
-              className="border-border-default w-full rounded-lg border px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-border-default w-full rounded-lg border px-3 py-2 font-mono asana-text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
+            <label className="mb-1 block asana-text-sm font-medium text-primary">
               Tags
             </label>
             <div className="mb-2 flex flex-wrap gap-2">
               {formData.tags.map(tag => (
                 <span
                   key={tag}
-                  className="flex items-center space-x-1 rounded-full bg-accent-soft px-2 py-1 text-sm text-accent-primary"
+                  className="flex items-center space-x-1 rounded-full bg-accent-soft px-2 py-1 asana-text-sm text-accent-primary"
                 >
                   <Hash className="size-3" />
                   <span>{tag}</span>
@@ -192,7 +192,7 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                 placeholder="Add tag"
-                className="border-border-default flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border-border-default flex-1 rounded-lg border px-3 py-2 asana-text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={addTag}
@@ -335,7 +335,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
           <div className="flex items-center justify-between border-b p-6">
             <div className="flex items-center space-x-2">
               <Star className="size-5 text-warning" />
-              <h2 className="text-xl font-semibold">Saved searches</h2>
+              <h2 className="asana-text-xl font-semibold">Saved searches</h2>
             </div>
             <div className="flex items-center space-x-2">
               {currentQuery && (
@@ -412,8 +412,8 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
             {filteredAndSortedSearches.length === 0 ? (
               <div className="py-12 text-center text-secondary">
                 <Star className="mx-auto mb-4 size-12 text-muted" />
-                <h3 className="mb-2 text-lg font-medium">No saved searches</h3>
-                <p className="mb-4 text-sm">
+                <h3 className="mb-2 asana-text-lg font-medium">No saved searches</h3>
+                <p className="mb-4 asana-text-sm">
                   {searchTerm || filterTag 
                     ? 'No searches match your current filters.' 
                     : 'Save your frequently used searches for quick access.'
@@ -443,7 +443,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
                           {search.name || 'Untitled Search'}
                         </h3>
                         {search.description && (
-                          <p className="mt-1 text-sm text-secondary">{search.description}</p>
+                          <p className="mt-1 asana-text-sm text-secondary">{search.description}</p>
                         )}
                       </div>
                       
@@ -481,13 +481,13 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
 
                     {/* Query Preview */}
                     <div className="mb-3">
-                      <code className="block truncate rounded bg-surface px-2 py-1 font-mono text-sm">
+                      <code className="block truncate rounded bg-surface px-2 py-1 font-mono asana-text-sm">
                         {search.query}
                       </code>
                     </div>
 
                     {/* Metadata */}
-                    <div className="flex items-center justify-between text-xs text-secondary">
+                    <div className="flex items-center justify-between text-[11px] text-secondary">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-1">
                           <Clock className="size-3" />
@@ -509,7 +509,7 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
 
           {/* Footer */}
           <div className="flex items-center justify-between border-t bg-surface p-6">
-            <div className="text-sm text-secondary">
+            <div className="asana-text-sm text-secondary">
               {filteredAndSortedSearches.length} of {savedSearches.length} saved searches
             </div>
             <button

@@ -5,7 +5,23 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-02-07
+## [Unreleased] - 2025-02-08
+
+### 🎨 UI/UX Improvements
+
+#### Sidebar Toggle Optimization
+- **Optimized collapsed sidebar state** ✅
+  - Main sidebar now collapses to minimal 40px width (only toggle visible)
+  - Sidebar completely hides when collapsed, showing only floating toggle
+  - Improved space utilization with ultra-thin collapsed state
+  
+- **Canvas sidebar toggle alignment** ✅
+  - Aligned canvas and main sidebar toggles horizontally
+  - Positioned canvas toggle centered in gap with equal breathing room
+  - Both toggles now have identical 32x32px size and styling
+  - Canvas toggle properly floats in page margin when sidebar is closed
+
+## [Previous Updates] - 2025-02-07
 
 ### 🎨 Design System Complete Overhaul
 

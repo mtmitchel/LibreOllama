@@ -319,11 +319,11 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Search className="size-4 text-secondary" />
-            <span className="text-sm font-medium text-primary">
+            <span className="asana-text-sm font-medium text-primary">
               Suggestions
             </span>
           </div>
-          <span className="text-xs text-secondary">
+          <span className="text-[11px] text-secondary">
             {suggestions.length} result{suggestions.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -367,12 +367,12 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
                   <span className="truncate font-medium text-primary">
                     {suggestion.text}
                   </span>
-                  <span className="rounded-full bg-surface px-2 py-1 text-xs text-secondary">
+                  <span className="rounded-full bg-surface px-2 py-1 text-[11px] text-secondary">
                     {suggestionTypeLabels[suggestion.type]}
                   </span>
                 </div>
                 {suggestion.description && (
-                  <p className="mt-1 truncate text-sm text-secondary">
+                  <p className="mt-1 truncate asana-text-sm text-secondary">
                     {suggestion.description}
                   </p>
                 )}
@@ -398,7 +398,7 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
 
       {/* Footer */}
       <div className="border-t border-gray-100 bg-surface px-4 py-2">
-        <div className="flex items-center justify-between text-xs text-secondary">
+        <div className="flex items-center justify-between text-[11px] text-secondary">
           <span>Use ↑↓ to navigate, Enter to select</span>
           <div className="flex items-center space-x-4">
             <span>ESC to close</span>

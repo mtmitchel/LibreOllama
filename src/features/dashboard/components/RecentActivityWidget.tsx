@@ -1,5 +1,7 @@
 import React from 'react';
 import { Activity, FileText, MessageSquare, CheckCircle, GitBranch, Upload } from 'lucide-react';
+import { WidgetHeader } from '../../../components/ui/design-system';
+import { Button } from '../../../components/ui/design-system/Button';
 
 interface ActivityItem {
   id: string;
@@ -90,14 +92,20 @@ export function RecentActivityWidget() {
   };
 
   return (
-    <div className="border-border-default flex h-full flex-col rounded-xl border bg-card p-4">
-      {/* Header */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-lg bg-indigo-500/10">
-          <Activity size={20} className="text-indigo-500" />
-        </div>
-        <h3 className="text-lg font-semibold">Recent activity</h3>
-      </div>
+    <div className="asana-card asana-card-padded">
+      <WidgetHeader
+        title={(
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-indigo-500/10">
+              <Activity size={20} className="text-indigo-500" />
+            </div>
+            <span>Recent activity</span>
+          </div>
+        )}
+        actions={(
+          <Button variant="ghost" size="sm" className="text-[11px]">View all activity</Button>
+        )}
+      />
 
       {/* Activity List */}
       <div className="flex-1 overflow-y-auto">
@@ -114,12 +122,12 @@ export function RecentActivityWidget() {
                   {getActivityIcon(activity.type)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm">
+                  <p className="asana-text-sm">
                     <span className="font-medium text-primary">{activity.user || 'System'}</span>
                     <span className="text-secondary"> {activity.action} </span>
                     <span className="font-medium text-primary">{activity.target}</span>
                   </p>
-                  <p className="mt-0.5 text-xs text-secondary">{activity.timestamp}</p>
+                  <p className="mt-0.5 text-[11px] text-secondary">{activity.timestamp}</p>
                 </div>
               </div>
             ))
@@ -127,12 +135,7 @@ export function RecentActivityWidget() {
         </div>
       </div>
 
-      {/* View All Link */}
-      <div className="border-border-default mt-3 border-t pt-2">
-        <button className="hover:text-primary-hover text-xs text-primary transition-colors">
-          View all activity →
-        </button>
-      </div>
+      {/* no footer link; action moved to header */}
     </div>
   );
 }

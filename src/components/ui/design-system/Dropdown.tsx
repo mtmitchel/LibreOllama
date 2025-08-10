@@ -55,7 +55,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         inline-flex items-center justify-center
         p-[var(--space-1)]
         rounded-[var(--radius-md)]
-        text-[var(--text-secondary)]
+        text-[color:var(--text-secondary)]
         hover:bg-[var(--bg-secondary)]
         transition-[var(--transition-property)]
         duration-[var(--transition-duration)]
@@ -91,14 +91,14 @@ export const Dropdown: React.FC<DropdownProps> = ({
                 className={`
                   w-full flex items-center gap-[var(--space-1)]
                   px-[var(--space-1-5)] py-[var(--space-1)]
-                  text-[var(--text-body)] text-left
+                  asana-text-base text-left
                   transition-[var(--transition-property)]
                   duration-[var(--transition-duration)]
                   ${item.disabled 
-                    ? 'text-[var(--text-muted)] cursor-not-allowed' 
+                    ? 'text-[color:var(--text-muted)] cursor-not-allowed' 
                     : item.destructive
                       ? 'text-[var(--semantic-error)] hover:bg-red-50'
-                      : 'text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+                      : 'text-[color:var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                   }
                 `}
               >
@@ -111,7 +111,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
               </button>
             );
           }) : (
-            <div className="px-[var(--space-1-5)] py-[var(--space-1)] text-[var(--text-secondary)] text-[var(--text-small)]">
+            <div className="px-[var(--space-1-5)] py-[var(--space-1)] text-[color:var(--text-secondary)] asana-text-sm">
               No options available
             </div>
           )}
@@ -202,7 +202,7 @@ export const SelectDropdown: React.FC<{
             bg-[var(--bg-secondary)]
             border border-[var(--border-default)]
             rounded-[var(--radius-md)]
-            text-[var(--text-body)] text-left
+            asana-text-base text-left
             hover:border-[var(--border-focus)]
             transition-[var(--transition-property)]
             duration-[var(--transition-duration)]
@@ -213,11 +213,11 @@ export const SelectDropdown: React.FC<{
             {selectedOption?.icon && (
               <span className="flex-shrink-0">{selectedOption.icon}</span>
             )}
-            <span className={!selectedOption ? 'text-[var(--text-secondary)]' : ''}>
+            <span className={!selectedOption ? 'text-[color:var(--text-secondary)]' : ''}>
               {selectedOption ? selectedOption.label : placeholder}
             </span>
           </span>
-          <ChevronDown size={16} className="text-[var(--text-secondary)]" />
+          <ChevronDown size={16} className="text-[color:var(--text-secondary)]" />
         </button>
       }
       placement="bottom-start"

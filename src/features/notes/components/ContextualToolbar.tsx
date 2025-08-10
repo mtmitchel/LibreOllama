@@ -20,7 +20,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { Button, Card } from '../../../components/ui';
-import { DropdownMenu } from '../../../components/ui/DropdownMenu';
+import { Dropdown } from '../../../components/ui/design-system';
 
 interface ContextualToolbarProps {
   isVisible?: boolean;
@@ -202,8 +202,8 @@ export function ContextualToolbar({
           {/* Colors and highlights */}
           <div className="border-border-default flex items-center gap-1 border-r pr-2">
             {/* Text Color */}
-            <DropdownMenu>
-              <DropdownMenu.Trigger asChild>
+            <Dropdown
+              trigger={(
                 <Button
                   variant="ghost"
                   size="icon"
@@ -212,28 +212,14 @@ export function ContextualToolbar({
                 >
                   <Type className="size-4" />
                 </Button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content>
-                <div className="p-2">
-                  <div className="mb-2 text-xs font-medium text-secondary">Text color</div>
-                  <div className="grid grid-cols-4 gap-1">
-                    {textColors.map((color) => (
-                      <button
-                        key={color.value}
-                        className="border-border-default size-6 rounded border hover:scale-110 motion-safe:transition-transform motion-safe:duration-150"
-                        style={{ backgroundColor: color.color }}
-                        onClick={() => handleCommand('textColor', color.value)}
-                        title={color.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </DropdownMenu.Content>
-            </DropdownMenu>
+              )}
+              items={textColors.map((c) => ({ value: c.value || 'default', label: c.label }))}
+              onSelect={(val) => handleCommand('textColor', val === 'default' ? '' : val)}
+            />
 
             {/* Highlight Color */}
-            <DropdownMenu>
-              <DropdownMenu.Trigger asChild>
+            <Dropdown
+              trigger={(
                 <Button
                   variant="ghost"
                   size="icon"
@@ -242,24 +228,10 @@ export function ContextualToolbar({
                 >
                   <Highlighter className="size-4" />
                 </Button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content>
-                <div className="p-2">
-                  <div className="mb-2 text-xs font-medium text-secondary">Highlight</div>
-                  <div className="grid grid-cols-4 gap-1">
-                    {highlightColors.map((color) => (
-                      <button
-                        key={color.value}
-                        className="border-border-default size-6 rounded border hover:scale-110 motion-safe:transition-transform motion-safe:duration-150"
-                        style={{ backgroundColor: color.color }}
-                        onClick={() => handleCommand('highlight', color.value)}
-                        title={color.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </DropdownMenu.Content>
-            </DropdownMenu>
+              )}
+              items={highlightColors.map((c) => ({ value: c.value || 'none', label: c.label }))}
+              onSelect={(val) => handleCommand('highlight', val === 'none' ? '' : val)}
+            />
           </div>
 
           {/* Additional actions */}
@@ -278,8 +250,8 @@ export function ContextualToolbar({
             ))}
 
             {/* More options */}
-            <DropdownMenu>
-              <DropdownMenu.Trigger asChild>
+            <Dropdown
+              trigger={(
                 <Button
                   variant="ghost"
                   size="icon"
@@ -288,40 +260,30 @@ export function ContextualToolbar({
                 >
                   <MoreHorizontal className="size-4" />
                 </Button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content>
-                <DropdownMenu.Item onSelect={() => handleCommand('alignLeft')}>
-                  <AlignLeft className="mr-2 size-4" />
-                  Align left
-                </DropdownMenu.Item>
-                <DropdownMenu.Item onSelect={() => handleCommand('alignCenter')}>
-                  <AlignCenter className="mr-2 size-4" />
-                  Align center
-                </DropdownMenu.Item>
-                <DropdownMenu.Item onSelect={() => handleCommand('alignRight')}>
-                  <AlignRight className="mr-2 size-4" />
-                  Align right
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator />
-                <DropdownMenu.Item onSelect={() => handleCommand('clearFormat')}>
-                  Clear formatting
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu>
+              )}
+              items={[
+                { value: 'alignLeft', label: 'Align left', icon: <AlignLeft className="mr-2 size-4" /> },
+                { value: 'alignCenter', label: 'Align center', icon: <AlignCenter className="mr-2 size-4" /> },
+                { value: 'alignRight', label: 'Align right', icon: <AlignRight className="mr-2 size-4" /> },
+                { separator: true, value: 'sep', label: '' } as any,
+                { value: 'clearFormat', label: 'Clear formatting' },
+              ]}
+              onSelect={(val) => handleCommand(val)}
+            />
           </div>
         </div>
 
         {/* Selected text indicator */}
         {selectedText && (
           <div className="border-border-default mt-2 border-t pt-2">
-            <div className="truncate text-xs text-secondary">
+            <div className="truncate text-[11px] text-secondary">
               "{selectedText.slice(0, 30)}{selectedText.length > 30 ? '...' : ''}"
             </div>
           </div>
         )}
-        <div className="text-subtle flex items-center gap-2 px-2 py-1 text-xs">
+        <div className="text-subtle flex items-center gap-2 px-2 py-1 text-[11px]">
           <span>Press</span>
-          <kbd className="bg-subtle rounded px-1 py-0.5 text-xs">Esc</kbd>
+          <kbd className="bg-subtle rounded px-1 py-0.5 text-[11px]">Esc</kbd>
           <span>to close or select text and use &quot;/&quot; for commands</span>
         </div>
       </Card>

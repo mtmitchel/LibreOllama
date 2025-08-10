@@ -45,7 +45,7 @@ function SecurityWarning({ warnings, onDismiss }: SecurityWarningProps) {
           <Text size="sm" weight="semibold" className="mb-1 text-warning-fg">
             Security Notice
           </Text>
-          <ul className="space-y-1 text-sm text-warning-fg">
+          <ul className="space-y-1 asana-text-sm text-warning-fg">
             {warnings.map((warning, index) => (
               <li key={index}>• {warning}</li>
             ))}
@@ -73,11 +73,11 @@ function QuotedText({ content, isExpanded, onToggle }: QuotedTextProps) {
     <div className="border-border-default dark:bg-surface/50 my-4 rounded-r-lg border-l-4 bg-surface pl-4 dark:border-gray-600">
       <div className="py-3">
         {isExpanded ? (
-          <div className="whitespace-pre-wrap text-sm text-primary dark:text-muted">
+          <div className="whitespace-pre-wrap asana-text-sm text-primary dark:text-muted">
             {content}
           </div>
         ) : (
-          <div className="text-sm text-secondary dark:text-muted">
+          <div className="asana-text-sm text-secondary dark:text-muted">
             {preview}
           </div>
         )}
@@ -85,7 +85,7 @@ function QuotedText({ content, isExpanded, onToggle }: QuotedTextProps) {
           variant="ghost"
           size="sm"
           onClick={onToggle}
-          className="mt-2 text-xs text-secondary hover:text-primary dark:text-muted dark:hover:text-gray-200"
+          className="mt-2 text-[11px] text-secondary hover:text-primary dark:text-muted dark:hover:text-gray-200"
         >
           {isExpanded ? (
             <>
@@ -167,7 +167,7 @@ function MessageContent({ content, contentType, enableImageLoading, enableLinkPr
       
       <div 
         ref={contentRef}
-        className={`message-content ${contentType === 'html' ? 'html-content' : 'text-content'} text-text-primary max-w-full break-words font-sans text-sm leading-relaxed`}
+        className={`message-content ${contentType === 'html' ? 'html-content' : 'text-content'} text-text-primary max-w-full break-words font-sans asana-text-sm leading-relaxed`}
       >
         {contentType === 'html' ? (
           <div
@@ -175,7 +175,7 @@ function MessageContent({ content, contentType, enableImageLoading, enableLinkPr
             className="prose prose-sm dark:prose-invert max-w-none"
           />
         ) : (
-          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+          <pre className="whitespace-pre-wrap font-sans asana-text-sm leading-relaxed">
             {processedContent}
           </pre>
         )}
@@ -252,7 +252,7 @@ export function EnhancedMessageRenderer({
             Content: {contentType.toUpperCase()} • {Math.ceil(content.length / 1000)}KB
           </Text>
           {enableImageLoading && (
-            <span className="text-xs text-green-600 dark:text-green-400">
+            <span className="text-[11px] text-green-600 dark:text-green-400">
               🖼️ Images enabled
             </span>
           )}
@@ -263,7 +263,7 @@ export function EnhancedMessageRenderer({
             variant="ghost"
             size="sm"
             onClick={handleCopyContent}
-            className="text-xs"
+            className="text-[11px]"
           >
             <Copy size={12} className="mr-1" />
             Copy
@@ -273,7 +273,7 @@ export function EnhancedMessageRenderer({
             variant="ghost"
             size="sm"
             onClick={() => setShowSource(!showSource)}
-            className="text-xs"
+            className="text-[11px]"
           >
             <ExternalLink size={12} className="mr-1" />
             {showSource ? 'Formatted' : 'Source'}

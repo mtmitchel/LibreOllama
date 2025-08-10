@@ -67,10 +67,12 @@ const boxVariants = cva('', {
   },
 });
 
+type HtmlTag = 'div' | 'section' | 'article' | 'main' | 'aside' | 'header' | 'footer' | 'nav';
+
 export interface BoxProps extends VariantProps<typeof boxVariants> {
   children?: React.ReactNode;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: HtmlTag;
   
   // Spacing props using design tokens
   padding?: SpacingToken;
@@ -121,19 +123,12 @@ export interface BoxProps extends VariantProps<typeof boxVariants> {
   'aria-hidden'?: boolean;
   id?: string;
   
-  // Event handlers
-  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
-  onMouseEnter?: (event: React.MouseEvent<HTMLElement>) => void;
-  onMouseLeave?: (event: React.MouseEvent<HTMLElement>) => void;
-  onFocus?: (event: React.FocusEvent<HTMLElement>) => void;
-  onBlur?: (event: React.FocusEvent<HTMLElement>) => void;
-  
   // Style props
   style?: React.CSSProperties;
   tabIndex?: number;
 }
 
-export const Box = forwardRef<HTMLElement, BoxProps>(({
+export const Box = forwardRef<HTMLElement, BoxProps>(({ 
   children,
   className = '',
   as: Component = 'div',
@@ -186,11 +181,6 @@ export const Box = forwardRef<HTMLElement, BoxProps>(({
   'aria-describedby': ariaDescribedBy,
   'aria-hidden': ariaHidden,
   id,
-  onClick,
-  onMouseEnter,
-  onMouseLeave,
-  onFocus,
-  onBlur,
   style,
   tabIndex,
   
@@ -318,9 +308,10 @@ export const Box = forwardRef<HTMLElement, BoxProps>(({
     className,
   ].filter(Boolean).join(' ');
   
+  const Comp = Component as any;
   return (
-    <Component
-      ref={ref}
+    <Comp
+      ref={ref as any}
       id={id}
       role={role}
       aria-label={ariaLabel}
@@ -329,16 +320,11 @@ export const Box = forwardRef<HTMLElement, BoxProps>(({
       aria-hidden={ariaHidden}
       className={allClasses}
       style={style}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      onFocus={onFocus}
-      onBlur={onBlur}
       tabIndex={tabIndex}
-      {...props}
+      {...(props as any)}
     >
       {children}
-    </Component>
+    </Comp>
   );
 });
 

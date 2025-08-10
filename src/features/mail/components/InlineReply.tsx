@@ -105,7 +105,7 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
             placeholder="To"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="border-border-default w-full rounded-lg border bg-white px-3 py-2 text-sm focus:border-accent-primary focus:outline-none"
+            className="border-border-default w-full rounded-lg border bg-white px-3 py-2 asana-text-sm focus:border-accent-primary focus:outline-none"
           />
         </div>
 
@@ -117,7 +117,7 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
               placeholder="Cc"
               value={cc}
               onChange={(e) => setCc(e.target.value)}
-              className="border-border-default w-full rounded-lg border bg-white px-3 py-2 text-sm focus:border-accent-primary focus:outline-none"
+              className="border-border-default w-full rounded-lg border bg-white px-3 py-2 asana-text-sm focus:border-accent-primary focus:outline-none"
             />
           </div>
         )}
@@ -129,7 +129,7 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
             placeholder="Subject"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            className="border-border-default w-full rounded-lg border bg-white px-3 py-2 text-sm focus:border-accent-primary focus:outline-none"
+            className="border-border-default w-full rounded-lg border bg-white px-3 py-2 asana-text-sm focus:border-accent-primary focus:outline-none"
           />
         </div>
 
@@ -140,7 +140,7 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
             placeholder="Write your message..."
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            className="border-border-default min-h-[150px] w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm focus:border-accent-primary focus:outline-none"
+            className="border-border-default min-h-[150px] w-full resize-none rounded-lg border bg-white px-3 py-2 asana-text-sm focus:border-accent-primary focus:outline-none"
           />
         </div>
 

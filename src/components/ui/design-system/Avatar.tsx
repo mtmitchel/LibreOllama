@@ -15,7 +15,7 @@ import { User, Users, Bot } from 'lucide-react';
 const avatarVariants = cva(
   `
     relative inline-flex items-center justify-center
-    font-medium text-[var(--text-on-brand)]
+    font-medium text-[color:var(--text-on-brand)]
     bg-[var(--bg-tertiary)]
     overflow-hidden
     transition-[var(--transition-property)]
@@ -26,9 +26,9 @@ const avatarVariants = cva(
       size: {
         xs: 'w-6 h-6 text-[10px]',
         sm: 'w-8 h-8 text-[11px]',
-        md: 'w-10 h-10 text-[var(--text-small)]',
-        lg: 'w-12 h-12 text-[var(--text-body)]',
-        xl: 'w-16 h-16 text-[var(--text-heading)]',
+        md: 'w-10 h-10 asana-text-sm',
+        lg: 'w-12 h-12 asana-text-base',
+        xl: 'w-16 h-16 asana-text-lg',
         '2xl': 'w-20 h-20 text-[20px]',
       },
       shape: {
@@ -202,9 +202,9 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
       {visibleChildren.map((child, index) => 
         React.isValidElement(child) ? (
           <div key={index} className="relative" style={{ zIndex: visibleChildren.length - index }}>
-            {React.cloneElement(child as React.ReactElement<AvatarProps>, {
+            {React.cloneElement(child as React.ReactElement<any>, {
               size,
-              className: `border-2 border-[var(--bg-primary)] ${(child as React.ReactElement).props.className || ''}`,
+              className: `border-2 border-[var(--bg-primary)] ${((child as React.ReactElement<any>).props?.className) || ''}`,
             })}
           </div>
         ) : null
@@ -213,7 +213,7 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
         <div className="relative" style={{ zIndex: 0 }}>
           <Avatar
             size={size}
-            className="border-2 border-[var(--bg-primary)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
+            className="border-2 border-[var(--bg-primary)] bg-[var(--bg-secondary)] text-[color:var(--text-secondary)]"
             fallback={<span className="text-[0.75em]">+{remainingCount}</span>}
           />
         </div>

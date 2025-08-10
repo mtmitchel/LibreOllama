@@ -17,8 +17,11 @@ import {
   StickyNote,
   Image as ImageIcon
 } from 'lucide-react';
-import { Button, Text, Card, Badge } from '../../../components/ui';
-import { DropdownMenu } from '../../../components/ui/DropdownMenu';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Badge } from '../../../components/ui/design-system/Badge';
+import { Text } from '../../../components/ui';
+import { Dropdown } from '../../../components/ui/design-system';
 import { useShallow } from 'zustand/react/shallow';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { CanvasElement, ElementId, isConnectorElement, isSectionElement } from '../types/enhanced.types';
@@ -110,7 +113,7 @@ function LayerItem({
         </div>
 
         {/* Element Type Badge */}
-        <Badge variant="outline" className="mr-2 text-xs">
+        <Badge variant="outline" className="mr-2 text-[11px]">
           {element.type}
         </Badge>
 
@@ -149,32 +152,29 @@ function LayerItem({
         </Button>
 
         {/* More Actions */}
-        <DropdownMenu>
-          <DropdownMenu.Trigger asChild>
+        <Dropdown
+          items={[
+            { value: 'duplicate', label: 'Duplicate', icon: <Copy className="mr-2 size-4" /> },
+            { separator: true, value: 'sep', label: '' } as any,
+            { value: 'delete', label: 'Delete', icon: <Trash2 className="mr-2 size-4" />, destructive: true }
+          ]}
+          onSelect={(v) => {
+            if (v === 'duplicate') onDuplicate(element.id as ElementId);
+            else if (v === 'delete') onDelete(element.id as ElementId);
+          }}
+          placement="bottom-end"
+          trigger={(
             <Button
               variant="ghost"
               size="icon"
               className="size-6 p-0"
               onClick={(e) => e.stopPropagation()}
+              aria-label="Layer actions"
             >
               <MoreHorizontal className="size-3" />
             </Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content>
-            <DropdownMenu.Item onSelect={() => onDuplicate(element.id as ElementId)}>
-              <Copy className="mr-2 size-4" />
-              Duplicate
-            </DropdownMenu.Item>
-            <DropdownMenu.Separator />
-            <DropdownMenu.Item 
-              onSelect={() => onDelete(element.id as ElementId)}
-              className="text-error"
-            >
-              <Trash2 className="mr-2 size-4" />
-              Delete
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>
+          )}
+        />
       </div>
 
       {/* Child Elements (for sections) */}

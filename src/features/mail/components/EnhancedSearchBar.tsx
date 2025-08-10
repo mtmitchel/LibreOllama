@@ -224,8 +224,8 @@ export function EnhancedSearchBar({
           <div 
             className={`relative flex items-center transition-all duration-200`}
             style={{
-              backgroundColor: isFocused ? '#FFFFFF' : '#F6F7F8',
-              borderColor: isFocused ? '#D1D5DB' : 'transparent',
+              backgroundColor: isFocused ? 'var(--bg-primary)' : 'var(--bg-secondary)',
+              borderColor: isFocused ? 'var(--border-default)' : 'transparent',
               borderRadius: '8px',
               padding: '0 12px 0 40px',
               height: '40px',
@@ -241,7 +241,7 @@ export function EnhancedSearchBar({
               style={{
                 position: 'absolute',
                 left: '12px',
-                color: isLoading ? '#796EFF' : '#9CA3AF',
+                color: isLoading ? 'var(--accent-primary)' : 'var(--text-tertiary)',
                 animation: isLoading ? 'spin 1s linear infinite' : 'none'
               }}
             />
@@ -259,7 +259,7 @@ export function EnhancedSearchBar({
               className="flex-1 border-none bg-transparent outline-none"
               style={{
                 fontSize: '14px',
-                color: '#323F4B',
+                color: 'var(--text-primary)',
                 paddingLeft: '0'
               }}
               disabled={isLoading}
@@ -293,10 +293,10 @@ export function EnhancedSearchBar({
               backgroundColor: 'transparent'
             }}
             title="Saved searches"
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F7F8'}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <Star size={18} style={{ color: '#6B6F76' }} />
+            <Star size={18} style={{ color: 'var(--text-secondary)' }} />
           </button>
           
           {/* Advanced Search Button */}
@@ -311,10 +311,10 @@ export function EnhancedSearchBar({
               backgroundColor: 'transparent'
             }}
             title="Advanced search"
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F7F8'}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <Filter size={18} style={{ color: '#6B6F76' }} />
+            <Filter size={18} style={{ color: 'var(--text-secondary)' }} />
           </button>
         </div>
       </div>

@@ -35,7 +35,7 @@ const stepIconVariants = cva(
     w-8 h-8
     rounded-full
     font-semibold
-    text-[var(--text-small)]
+    asana-text-sm
     transition-[var(--transition-property)]
     duration-[var(--transition-duration)]
     focus:outline-none
@@ -49,20 +49,20 @@ const stepIconVariants = cva(
         pending: `
           bg-[var(--bg-secondary)]
           border-2 border-[var(--border-default)]
-          text-[var(--text-secondary)]
+          text-[color:var(--text-secondary)]
         `,
         active: `
           bg-[var(--brand-primary)]
-          text-[var(--text-on-brand)]
+          text-[color:var(--text-on-brand)]
           shadow-[var(--shadow-md)]
         `,
         completed: `
           bg-[var(--status-success)]
-          text-[var(--text-on-brand)]
+          text-[color:var(--text-on-brand)]
         `,
         error: `
           bg-[var(--status-error)]
-          text-[var(--text-on-brand)]
+          text-[color:var(--text-on-brand)]
         `,
       },
       interactive: {
@@ -162,13 +162,13 @@ export const Stepper: React.FC<StepperProps> = ({
   const getStepTextColor = (status: StepperStep['status']) => {
     switch (status) {
       case 'completed':
-        return 'text-[var(--status-success)]';
+        return 'text-[color:var(--status-success)]';
       case 'active':
         return 'text-[var(--brand-primary)]';
       case 'error':
-        return 'text-[var(--status-error)]';
+        return 'text-[color:var(--status-error)]';
       default:
-        return 'text-[var(--text-secondary)]';
+        return 'text-[color:var(--text-secondary)]';
     }
   };
 
@@ -188,10 +188,10 @@ export const Stepper: React.FC<StepperProps> = ({
   };
 
   const sizeClasses = {
-    sm: 'text-[var(--text-small)]',
-    md: 'text-[var(--text-body)]',
-    lg: 'text-[var(--text-large)]',
-  };
+    sm: 'asana-text-sm',
+    md: 'asana-text-base',
+    lg: 'asana-text-lg',
+  } as const;
 
   if (isVertical) {
     return (
@@ -244,28 +244,28 @@ export const Stepper: React.FC<StepperProps> = ({
                   </h3>
                   
                   {step.optional && (
-                    <span
-                      className={`
-                        px-[var(--space-1-5)] py-[var(--space-0-5)]
-                        text-[var(--text-small)]
-                        text-[var(--text-muted)]
-                        bg-[var(--bg-muted)]
-                        rounded-[var(--radius-sm)]
-                      `}
-                    >
+                      <span
+                        className={`
+                          px-[var(--space-1-5)] py-[var(--space-0-5)]
+                          asana-text-sm
+                          text-[color:var(--text-muted)]
+                          bg-[var(--bg-muted)]
+                          rounded-[var(--radius-sm)]
+                        `}
+                      >
                       Optional
                     </span>
                   )}
                 </div>
 
                 {step.subtitle && !isCompact && (
-                  <p className="text-[var(--text-small)] text-[var(--text-secondary)] mb-[var(--space-1)]">
+                  <p className="asana-text-sm text-[color:var(--text-secondary)] mb-[var(--space-1)]">
                     {step.subtitle}
                   </p>
                 )}
 
                 {step.description && !isCompact && (
-                  <p className="text-[var(--text-small)] text-[var(--text-secondary)] leading-relaxed">
+                  <p className="asana-text-sm text-[color:var(--text-secondary)] leading-relaxed">
                     {step.description}
                   </p>
                 )}
@@ -307,7 +307,7 @@ export const Stepper: React.FC<StepperProps> = ({
                 <h3
                   className={`
                     font-medium
-                    ${isCompact ? 'text-[var(--text-small)]' : sizeClasses[size]}
+                    ${isCompact ? 'asana-text-sm' : sizeClasses[size]}
                     ${getStepTextColor(step.status)}
                     transition-[var(--transition-property)]
                     duration-[var(--transition-duration)]
@@ -318,13 +318,13 @@ export const Stepper: React.FC<StepperProps> = ({
                 </h3>
 
                 {step.optional && (
-                  <span className="text-[var(--text-small)] text-[var(--text-muted)]">
+                  <span className="asana-text-sm text-[color:var(--text-muted)]">
                     Optional
                   </span>
                 )}
 
                 {step.subtitle && !isCompact && (
-                  <p className="text-[var(--text-small)] text-[var(--text-secondary)] mt-[var(--space-1)]">
+                  <p className="asana-text-sm text-[color:var(--text-secondary)] mt-[var(--space-1)]">
                     {step.subtitle}
                   </p>
                 )}
@@ -344,7 +344,7 @@ export const Stepper: React.FC<StepperProps> = ({
                 ) : (
                   <ChevronRight 
                     size={16} 
-                    className="text-[var(--text-muted)]" 
+                    className="text-[color:var(--text-muted)]" 
                     aria-hidden="true"
                   />
                 )}
@@ -387,10 +387,10 @@ export const StepProgress: React.FC<StepProgressProps> = ({
     <div className={className}>
       {showLabels && (
         <div className="flex justify-between mb-[var(--space-2)]">
-          <span className="text-[var(--text-small)] text-[var(--text-secondary)]">
+          <span className="asana-text-sm text-[color:var(--text-secondary)]">
             Step {Math.max(1, completedSteps + (activeStepIndex >= 0 ? 1 : 0))} of {steps.length}
           </span>
-          <span className="text-[var(--text-small)] text-[var(--text-secondary)]">
+          <span className="asana-text-sm text-[color:var(--text-secondary)]">
             {Math.round(progress)}%
           </span>
         </div>

@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Sidebar } from './Sidebar';
 import BlockNoteEditor from './BlockNoteEditor'; // Primary editor
 import { useNotesStore } from '../store';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/design-system/Button';
 import { Block } from '@blocknote/core';
 import { NotesContextSidebar } from './NotesContextSidebar';
 import { useHeader } from '../../../app/contexts/HeaderContext';
@@ -106,12 +106,12 @@ const NotesPage: React.FC = () => {
 
   return (
     <div
-      className="flex h-full"
+      className="asana-app-layout"
       style={{
         display: 'flex',
         height: '100vh',
         overflow: 'hidden',
-        background: '#FAFBFC',
+        background: 'var(--bg-page)',
         padding: `${24}px ${isContextOpen ? 24 : 0}px ${24}px ${isNotesSidebarOpen ? 24 : 0}px`,
         gap: isNotesSidebarOpen ? '24px' : '0px'
       }}
@@ -122,7 +122,7 @@ const NotesPage: React.FC = () => {
         onSelectNote={handleNoteSelect}
         onCreateNote={handleCreateNote}
       />
-      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1 }}>
+      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1, minWidth: 0, alignItems: 'stretch' }}>
         <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
         {selectedNote ? (
           <div className="flex flex-1 flex-col overflow-y-auto">
@@ -134,7 +134,7 @@ const NotesPage: React.FC = () => {
                 onChange={(e) => updateNote({ id: selectedNote.id, title: e.target.value })}
                 onBlur={handleTitleBlur}
                 placeholder="Untitled Note"
-                className="w-full bg-transparent text-2xl font-bold text-primary outline-none"
+                className="w-full bg-transparent asana-text-2xl font-bold text-primary outline-none"
               />
             </div>
             <div className="flex-1 p-6">

@@ -328,6 +328,82 @@
   --accent-primary-alpha: rgba(121, 110, 255, 0.1);
 }
 
+/* ===== LEGACY/COMPATIBILITY TOKENS (from asana-tokens.css) ===== */
+:root {
+  /* Layout */
+  --header-h: var(--asana-header-height);
+  --header-x: clamp(16px, 2vw, 24px);
+  --column-width: 340px;
+  --column-gap: 24px;
+  --drawer-width: 500px;
+
+  /* Surface & Border tokens */
+  --surface-1: var(--asana-bg-secondary);
+  --surface-2: var(--asana-bg-hover);
+  --surface-subtle: var(--asana-bg-secondary);
+  --border-1: var(--asana-border-default);
+
+  /* Shadows */
+  --shadow-1: var(--asana-shadow-card);
+  --shadow-hover: var(--asana-shadow-card-hover);
+
+  /* Brand */
+  --brand-500: var(--asana-brand-purple);
+}
+
+/* Component label color variables (compat) */
+:root {
+  /* Red */
+  --label-red-bg: var(--red-50);
+  --label-red-text: var(--red-600);
+  --label-red-border: var(--red-200);
+
+  /* Orange/Amber */
+  --label-orange-bg: var(--amber-50);
+  --label-orange-text: var(--amber-600);
+  --label-orange-border: var(--amber-200);
+
+  /* Yellow */
+  --label-yellow-bg: #FEF3C7;
+  --label-yellow-text: #92400E;
+  --label-yellow-border: #FDE68A;
+
+  /* Green */
+  --label-green-bg: var(--green-50);
+  --label-green-text: var(--green-600);
+  --label-green-border: var(--green-200);
+
+  /* Blue/Indigo */
+  --label-blue-bg: var(--indigo-50);
+  --label-blue-text: var(--indigo-600);
+  --label-blue-border: var(--indigo-200);
+
+  /* Purple */
+  --label-purple-bg: #F3E8FF;
+  --label-purple-text: #6B21A8;
+  --label-purple-border: #DDD6FE;
+
+  /* Pink */
+  --label-pink-bg: #FCE7F3;
+  --label-pink-text: #BE185D;
+  --label-pink-border: #FBCFE8;
+
+  /* Gray */
+  --label-gray-bg: var(--gray-100);
+  --label-gray-text: var(--gray-600);
+  --label-gray-border: var(--gray-300);
+
+  /* Teal */
+  --label-teal-bg: #F0FDFA;
+  --label-teal-text: #0F766E;
+  --label-teal-border: #99F6E4;
+
+  /* Cyan */
+  --label-cyan-bg: #ECFEFF;
+  --label-cyan-text: #0E7490;
+  --label-cyan-border: #A5F3FC;
+}
+
 /* Dark theme - temporarily disabled during migration */
 .dark {
   /* Keep light theme values for now */

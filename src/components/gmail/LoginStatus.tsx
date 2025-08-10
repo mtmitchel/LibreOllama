@@ -73,7 +73,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
       return (
         <div className={`flex items-center gap-2 ${className}`}>
           <Loader2 size={14} className="animate-spin text-accent-primary" />
-          <span className="text-xs text-secondary">Checking...</span>
+          <span className="text-[11px] text-secondary">Checking...</span>
         </div>
       );
     }
@@ -82,7 +82,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
       return (
         <div className={`flex items-center gap-2 ${className}`}>
           <AlertCircle size={14} className="text-red-500" />
-          <span className="text-xs text-error">Error</span>
+          <span className="text-[11px] text-error">Error</span>
         </div>
       );
     }
@@ -98,7 +98,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
       return (
         <div className={`flex items-center gap-2 ${className}`}>
           <CheckCircle size={14} className={qualityColors[connectionQuality]} />
-          <span className="text-xs text-secondary">Connected</span>
+          <span className="text-[11px] text-secondary">Connected</span>
         </div>
       );
     }
@@ -106,7 +106,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
     return (
       <div className={`flex items-center gap-2 ${className}`}>
         <WifiOff size={14} className="text-muted" />
-        <span className="text-xs text-secondary">Disconnected</span>
+        <span className="text-[11px] text-secondary">Disconnected</span>
       </div>
     );
   }
@@ -116,7 +116,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
     <div className={`border-border-default rounded-lg border bg-white p-4 shadow-sm ${className}`}>
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-primary">Gmail Connection</h3>
+        <h3 className="asana-text-sm font-medium text-primary">Gmail Connection</h3>
         
         {/* Connection indicator */}
         <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
       {isLoading ? (
         <div className="flex items-center gap-3">
           <div className="flex-1">
-            <p className="text-sm text-secondary">Verifying authentication...</p>
+            <p className="asana-text-sm text-secondary">Verifying authentication...</p>
             <div className="mt-2 h-1.5 w-full rounded-full bg-surface">
               <div className="h-1.5 w-1/2 animate-pulse rounded-full bg-blue-500"></div>
             </div>
@@ -152,8 +152,8 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
         <div className="flex items-start gap-3">
           <AlertCircle size={20} className="mt-0.5 shrink-0 text-red-500" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-error">Authentication Error</p>
-            <p className="mt-1 text-xs text-error">{error}</p>
+            <p className="asana-text-sm font-medium text-error">Authentication Error</p>
+            <p className="mt-1 text-[11px] text-error">{error}</p>
           </div>
         </div>
       ) : isAuthenticated && user ? (
@@ -173,24 +173,24 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
             )}
             
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-primary">
+              <p className="truncate asana-text-sm font-medium text-primary">
                 {user.name || 'Unknown User'}
               </p>
-              <p className="truncate text-xs text-secondary">
+              <p className="truncate text-[11px] text-secondary">
                 {user.email}
               </p>
             </div>
 
             <div className="flex items-center gap-1">
               <CheckCircle size={16} className="text-green-500" />
-              <span className="text-xs font-medium text-green-600">Connected</span>
+              <span className="text-[11px] font-medium text-green-600">Connected</span>
             </div>
           </div>
 
           {/* Details */}
           {showDetails && tokens && (
             <div className="space-y-2 border-t border-gray-100 pt-2">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-[11px]">
                 <div className="flex items-center gap-1.5">
                   <Shield size={12} className="text-blue-500" />
                   <span className="text-secondary">Token Status</span>
@@ -202,7 +202,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-[11px]">
                 <div className="flex items-center gap-1.5">
                   <Clock size={12} className="text-muted" />
                   <span className="text-secondary">Expires In</span>
@@ -217,7 +217,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
               </div>
 
               {tokens.scope && (
-                <div className="flex items-start justify-between text-xs">
+                <div className="flex items-start justify-between text-[11px]">
                   <span className="text-secondary">Permissions</span>
                   <div className="max-w-32 text-right">
                     <span className="font-medium text-primary">
@@ -233,8 +233,8 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
         <div className="flex items-center gap-3">
           <WifiOff size={20} className="text-muted" />
           <div className="flex-1">
-            <p className="text-sm text-secondary">Not connected to Gmail</p>
-            <p className="mt-1 text-xs text-secondary">
+            <p className="asana-text-sm text-secondary">Not connected to Gmail</p>
+            <p className="mt-1 text-[11px] text-secondary">
               Click &quot;Connect Gmail&quot; to sign in
             </p>
           </div>

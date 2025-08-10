@@ -76,7 +76,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ className, style }) 
       {/* Zoom Level Display - Click to Reset to 100% */}
       <button
         onClick={resetTo100}
-        className="min-w-[3rem] px-2 py-1 text-xs font-medium text-secondary transition-colors hover:bg-surface hover:text-primary"
+        className="min-w-[3rem] px-2 py-1 text-[11px] font-medium text-secondary transition-colors hover:bg-surface hover:text-primary"
         title="Reset to 100%"
       >
         {currentZoom}%

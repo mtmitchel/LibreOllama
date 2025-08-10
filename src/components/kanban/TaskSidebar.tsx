@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
-import { Button, Input } from '../ui';
+import { Button } from '../ui/design-system/Button';
+import { Input } from '../ui';
 import { X, Calendar, Tag, AlertCircle, Trash2, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -10,19 +11,7 @@ interface TaskSidebarProps {
   isOpen: boolean;
   task: KanbanTask | null;
   onClose: () => void;
-  onSubmit: (data: { 
-    title: string; 
-    notes?: string; 
-    due?: string;
-    priority?: 'high' | 'medium' | 'low' | 'none';
-    labels?: string[];
-    recurring?: {
-      enabled: boolean;
-      frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-      interval?: number;
-      endDate?: string;
-    };
-  }) => Promise<void>;
+  onSubmit: (data: any) => Promise<void>;
   onDelete: () => Promise<void>;
 }
 
@@ -224,7 +213,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                       setIsSubmitting(false);
                     }
                   }}
-                  className="text-sm text-neutral-600 hover:text-neutral-800"
+                  className="asana-text-sm text-neutral-600 hover:text-neutral-800"
                 >
                   {task?.status === 'completed' ? 'Mark incomplete' : 'Mark complete'}
                 </button>
@@ -246,13 +235,15 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                 {error && (
                   <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-red-600">
                     <AlertCircle size={16} className="shrink-0" />
-                    <p className="text-sm">{error}</p>
+                    <p className="asana-text-sm">{error}</p>
                   </div>
                 )}
 
                 {/* Task Title */}
                 <div>
                   <input
+                    id="task-title-input"
+                    name="taskTitle"
                     type="text"
                     value={formData.title}
                     onChange={handleInputChange('title')}
@@ -270,12 +261,14 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                   <div className="grid grid-cols-[120px_1fr] gap-x-4 items-center py-2.5 border-b border-neutral-100">
                     <label className="text-[12px] text-neutral-500">Due date</label>
                     <input
+                      id="task-due-date-input"
+                      name="taskDueDate"
                       type="date"
                       value={formData.due}
                       onChange={handleInputChange('due')}
                       onBlur={handleSubmit}
                       disabled={isSubmitting}
-                      className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-sm text-neutral-900 focus:border-blue-500 focus:outline-none"
+                      className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 asana-text-sm text-neutral-900 focus:border-blue-500 focus:outline-none"
                       aria-label="Due date"
                     />
                   </div>
@@ -283,6 +276,9 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                   <div className="grid grid-cols-[120px_1fr] gap-x-4 items-center py-2.5 border-b border-neutral-100">
                     <label className="text-[12px] text-neutral-500">Priority</label>
                     <select
+                      id="task-priority-select"
+                      name="taskPriority"
+                      aria-label="Task priority"
                       value={priority}
                       onChange={async (e) => {
                         const newPriority = e.target.value as 'high' | 'medium' | 'low' | 'none';
@@ -310,8 +306,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                         }
                       }}
                       disabled={isSubmitting}
-                      className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-sm text-neutral-900 focus:border-blue-500 focus:outline-none"
-                      aria-label="Task priority"
+                      className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 asana-text-sm text-neutral-900 focus:border-blue-500 focus:outline-none"
                     >
                       <option value="none">None</option>
                       <option value="high">High</option>
@@ -326,6 +321,8 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                     <div className="space-y-2">
                       <div className="flex gap-2">
                         <input
+                          id="task-new-label-input"
+                          name="taskNewLabel"
                           type="text"
                           value={newLabel}
                           onChange={(e) => setNewLabel(e.target.value)}
@@ -338,12 +335,12 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                           placeholder="Add a label..."
                           aria-label="Add a new label"
                           disabled={isSubmitting}
-                          className="flex-1 rounded-lg border border-neutral-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                          className="flex-1 rounded-lg border border-neutral-200 px-3 py-1.5 asana-text-sm focus:border-blue-500 focus:outline-none"
                         />
                         <button
                           onClick={handleAddLabel}
                           disabled={!newLabel.trim() || isSubmitting}
-                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                          className="rounded-lg bg-blue-600 px-3 py-1.5 asana-text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                         >
                           Add
                         </button>
@@ -426,7 +423,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                             setIsSubmitting(false);
                           }
                         }}
-                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-1.5 asana-text-sm transition-colors ${
                           recurring.enabled
                             ? 'border-blue-200 bg-blue-50 text-blue-700'
                             : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50'
@@ -437,11 +434,14 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                           {recurring.enabled ? 'Repeating task' : 'Set to repeat'}
                         </span>
                         {recurring.enabled && (
-                          <span className="text-xs capitalize">{recurring.frequency}</span>
+                          <span className="text-[11px] capitalize">{recurring.frequency}</span>
                         )}
                       </button>
                       {recurring.enabled && (
                         <select
+                          id="task-recurring-frequency-select"
+                          name="taskRecurringFrequency"
+                          aria-label="Recurring frequency"
                           value={recurring.frequency}
                           onChange={async (e) => {
                             const newRecurring = { ...recurring, frequency: e.target.value as any };
@@ -468,7 +468,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                               setIsSubmitting(false);
                             }
                           }}
-                          className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-sm"
+                          className="w-full rounded-lg border border-neutral-200 px-3 py-1.5 asana-text-sm"
                         >
                           <option value="daily">Daily</option>
                           <option value="weekly">Weekly</option>
@@ -483,6 +483,8 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                   <div className="grid grid-cols-[120px_1fr] gap-x-4 items-start py-2.5 border-b border-neutral-100">
                     <label className="text-[12px] text-neutral-500 pt-1">Description</label>
                     <textarea
+                      id="task-description-textarea"
+                      name="taskDescription"
                       value={formData.notes}
                       onChange={handleInputChange('notes')}
                       onBlur={handleSubmit}
@@ -490,14 +492,14 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                       aria-label="Task description"
                       disabled={isSubmitting}
                       rows={4}
-                      className="w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm placeholder-neutral-400 focus:border-blue-500 focus:outline-none"
+                      className="w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 asana-text-sm placeholder-neutral-400 focus:border-blue-500 focus:outline-none"
                     />
                   </div>
 
                   {/* Subtasks */}
                   <div className="grid grid-cols-[120px_1fr] gap-x-4 items-start py-2.5">
                     <label className="text-[12px] text-neutral-500 pt-1">Subtasks</label>
-                    <button className="w-full rounded-lg border border-dashed border-neutral-300 py-2 text-sm text-neutral-500 hover:border-neutral-400 hover:bg-neutral-50" aria-label="Add subtask">
+                    <button className="w-full rounded-lg border border-dashed border-neutral-300 py-2 asana-text-sm text-neutral-500 hover:border-neutral-400 hover:bg-neutral-50" aria-label="Add subtask">
                       + Add subtask
                     </button>
                   </div>
@@ -510,7 +512,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
               <button
                 onClick={handleDelete}
                 disabled={isDeleting || isSubmitting}
-                className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 asana-text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
                 <Trash2 size={16} />
                 <span>{isDeleting ? 'Deleting...' : 'Delete task'}</span>

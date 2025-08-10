@@ -99,7 +99,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
       <div className={`border-border-default border-r bg-white ${className}`}>
         <div className="p-4 text-center">
           <Tag className="mx-auto mb-2 size-8 text-muted" />
-          <p className="text-sm text-secondary">
+          <p className="asana-text-sm text-secondary">
             Please sign in to Gmail to view labels
           </p>
         </div>
@@ -115,7 +115,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
           className="flex items-center space-x-2 rounded-lg bg-surface px-3 py-2 transition-colors hover:bg-surface"
         >
           <Filter className="size-4" />
-          <span className="text-sm">
+          <span className="asana-text-sm">
             {selectedLabels.length > 0 ? `${selectedLabels.length} filters` : 'Filter by labels'}
           </span>
           <ChevronDown className="size-4" />
@@ -123,7 +123,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
         {selectedLabels.length > 0 && (
           <button
             onClick={clearAllFilters}
-            className="px-2 py-1 text-xs text-error transition-colors hover:text-error"
+            className="px-2 py-1 text-[11px] text-error transition-colors hover:text-error"
           >
             Clear all
           </button>
@@ -171,7 +171,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
             placeholder="Search labels..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border-border-default w-full rounded-lg border py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border-border-default w-full rounded-lg border py-2 pl-10 pr-4 asana-text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -179,9 +179,9 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
       {/* Active Filters */}
       {selectedLabels.length > 0 && (
         <div className="border-border-default border-b bg-accent-soft p-4">
-          <span className="text-sm font-medium text-accent-primary">Active filters</span>
+          <span className="asana-text-sm font-medium text-accent-primary">Active filters</span>
           <button 
-            className="text-xs text-accent-primary transition-colors hover:text-accent-secondary"
+            className="text-[11px] text-accent-primary transition-colors hover:text-accent-secondary"
             onClick={clearAllFilters}
           >
             Clear All
@@ -191,7 +191,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
 
       {/* Error Display */}
       {error && (
-        <div className="border-b border-error bg-error-ghost p-4 text-sm text-error">
+        <div className="border-b border-error bg-error-ghost p-4 asana-text-sm text-error">
           {error}
           <button
             onClick={loadLabels}
@@ -212,7 +212,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
               onChange={(e) => setShowSystemLabels(e.target.checked)}
               className="border-border-default rounded text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm">Show system labels</span>
+            <span className="asana-text-sm">Show system labels</span>
           </label>
           <label className="flex items-center space-x-2">
             <input
@@ -221,7 +221,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
               onChange={(e) => setShowUserLabels(e.target.checked)}
               className="border-border-default rounded text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm">Show user labels</span>
+            <span className="asana-text-sm">Show user labels</span>
           </label>
         </div>
       </div>
@@ -238,7 +238,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
             {/* System Labels */}
             {systemLabels.length > 0 && showSystemLabels && (
               <div>
-                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-secondary">
+                <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-secondary">
                   System Labels
                 </h4>
                 <div className="space-y-1">
@@ -257,7 +257,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
             {/* User Labels */}
             {userLabels.length > 0 && showUserLabels && (
               <div>
-                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-secondary">
+                <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-secondary">
                   User Labels
                 </h4>
                 <div className="space-y-1">
@@ -277,7 +277,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
             {filteredLabels.length === 0 && !loading && (
               <div className="py-8 text-center text-secondary">
                 <Tag className="mx-auto mb-2 size-8 text-muted" />
-                <p className="text-sm">
+                <p className="asana-text-sm">
                   {searchTerm ? 'No labels found matching your search.' : 'No labels available.'}
                 </p>
               </div>
@@ -314,7 +314,7 @@ const LabelItem: React.FC<LabelItemProps> = ({ label, isSelected, onToggle }) =>
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className="flex-1 text-sm font-medium text-primary">
+          <span className="flex-1 asana-text-sm font-medium text-primary">
             {label.name}
           </span>
           <span className="rounded-full bg-accent-soft px-2 py-0.5 text-accent-primary">

@@ -193,7 +193,7 @@ export const HeatMapCalendar: React.FC<HeatMapCalendarProps> = ({
           {months.map((month, index) => (
             <div
               key={index}
-              className="text-[var(--text-secondary)] font-normal"
+              className="text-[color:var(--text-secondary)] font-normal"
               style={{ 
                 width: `${month.width * (config.cell + gap) - gap}px`,
                 fontSize: config.fontSize,
@@ -212,7 +212,7 @@ export const HeatMapCalendar: React.FC<HeatMapCalendarProps> = ({
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
               <div
                 key={index}
-                className="flex items-center justify-center text-[var(--text-secondary)]"
+                className="flex items-center justify-center text-[color:var(--text-secondary)]"
                 style={{ 
                   width: `${config.cell}px`,
                   height: `${config.cell}px`,
@@ -256,7 +256,7 @@ export const HeatMapCalendar: React.FC<HeatMapCalendarProps> = ({
       {/* Legend */}
       {showLegend && (
         <div className="mt-[var(--space-3)] flex items-center gap-[var(--space-2)]">
-          <span className="text-[var(--text-small)] text-[var(--text-secondary)]">Less</span>
+          <span className="asana-text-sm text-[color:var(--text-secondary)]">Less</span>
           <div className="flex" style={{ gap: `${Math.max(gap - 1, 1)}px` }}>
             <div
               className="rounded-[2px]"
@@ -278,7 +278,7 @@ export const HeatMapCalendar: React.FC<HeatMapCalendarProps> = ({
               />
             ))}
           </div>
-          <span className="text-[var(--text-small)] text-[var(--text-secondary)]">More</span>
+          <span className="asana-text-sm text-[color:var(--text-secondary)]">More</span>
         </div>
       )}
 
@@ -288,8 +288,8 @@ export const HeatMapCalendar: React.FC<HeatMapCalendarProps> = ({
           className="
             fixed z-[var(--z-tooltip)] pointer-events-none
             px-[var(--space-2)] py-[var(--space-1)]
-            bg-[var(--text-primary)] text-[var(--text-on-brand)]
-            text-[var(--text-small)] font-normal
+            bg-[var(--text-primary)] text-[color:var(--text-on-brand)]
+            asana-text-sm font-normal
             rounded-[var(--radius-sm)] shadow-[var(--shadow-popover)]
           "
           style={{

@@ -3,11 +3,8 @@ import { KanbanBoard } from '../../components/kanban';
 import { TaskListView } from '../../components/kanban/TaskListView';
 import { TaskSidePanel } from '../../components/tasks';
 import { useHeader } from '../contexts/HeaderContext';
-import { Button } from '../../components/ui';
-import { FilterDropdown } from '../../components/ui/FilterDropdown';
-import './styles/TasksAsanaClean.css';
-import '../../styles/asana-tokens.css';
-import '../../styles/asana-design-system.css';
+import { Button } from '../../components/ui/design-system/Button';
+import { FilterDropdown } from '../../components/ui/design-system';
 import { 
   LayoutGrid, List, RefreshCw, Plus, Search, X, ArrowUpDown, ChevronDown, 
   GripVertical, Calendar, Type, RotateCcw, Filter, MoreHorizontal, Eye, EyeOff
@@ -222,14 +219,11 @@ export default function TasksAsanaClean() {
   return (
     <>
       {/* Header - matching UnifiedHeader style */}
-      <header className="flex items-center justify-between px-8 py-4" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E8E9', position: 'relative', zIndex: 10 }}>
+      <header className="flex items-center justify-between px-8 py-4" style={{ backgroundColor: 'var(--asana-bg-primary)', borderBottom: '1px solid var(--asana-border-default)', position: 'relative', zIndex: 10 }}>
         {/* Left side - View toggle and title */}
         <div className="flex items-center gap-4">
           {/* View toggle buttons */}
-          <div className="flex items-center bg-secondary rounded-lg" style={{ 
-            padding: '2px', 
-            backgroundColor: '#F6F7F8'
-          }}>
+          <div className="flex items-center rounded-lg" style={{ padding: '2px', backgroundColor: 'var(--asana-bg-input)' }}>
             <button
               type="button"
               onClick={() => {
@@ -239,8 +233,8 @@ export default function TasksAsanaClean() {
                 padding: '6px 12px',
                 borderRadius: '6px',
                 border: 'none',
-                backgroundColor: viewMode === 'kanban' ? '#FFFFFF' : 'transparent',
-                color: viewMode === 'kanban' ? '#151B26' : '#6B6F76',
+                backgroundColor: viewMode === 'kanban' ? 'var(--asana-bg-primary)' : 'transparent',
+                color: viewMode === 'kanban' ? 'var(--asana-text-primary)' : 'var(--asana-text-secondary)',
                 fontSize: '14px', 
                 fontWeight: 500, 
                 cursor: 'pointer',
@@ -248,7 +242,7 @@ export default function TasksAsanaClean() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none'
+                boxShadow: viewMode === 'kanban' ? 'var(--asana-shadow-sm)' : 'none'
               }}
             >
               <LayoutGrid size={16} />
@@ -263,8 +257,8 @@ export default function TasksAsanaClean() {
                 padding: '6px 12px',
                 borderRadius: '6px',
                 border: 'none',
-                backgroundColor: viewMode === 'list' ? '#FFFFFF' : 'transparent',
-                color: viewMode === 'list' ? '#151B26' : '#6B6F76',
+                backgroundColor: viewMode === 'list' ? 'var(--asana-bg-primary)' : 'transparent',
+                color: viewMode === 'list' ? 'var(--asana-text-primary)' : 'var(--asana-text-secondary)',
                 fontSize: '14px', 
                 fontWeight: 500, 
                 cursor: 'pointer',
@@ -272,7 +266,7 @@ export default function TasksAsanaClean() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none'
+                boxShadow: viewMode === 'list' ? 'var(--asana-shadow-sm)' : 'none'
               }}
             >
               <List size={16} />
@@ -281,35 +275,38 @@ export default function TasksAsanaClean() {
           </div>
           
           {/* Page title */}
-          <h1 className="text-xl font-semibold" style={{ color: '#151B26' }}>Tasks</h1>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--asana-text-primary)' }}>Tasks</h1>
         </div>
 
         {/* Center - Search */}
         <div className="relative max-w-md flex-1 mx-6">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--asana-text-placeholder)' }} />
           <input
+            id="task-search-input"
+            name="taskSearch"
             type="search"
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search tasks"
             className="pl-10 pr-4 py-2 rounded-xl outline-none transition-all w-full"
             style={{ 
               fontSize: '14px',
-              backgroundColor: '#F6F7F8',
+              backgroundColor: 'var(--asana-bg-input)',
               border: '1px solid transparent'
             }}
             onFocus={(e) => {
-              e.currentTarget.style.backgroundColor = '#FFFFFF';
-              e.currentTarget.style.borderColor = '#D1D5DB';
+              e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+              e.currentTarget.style.borderColor = 'var(--asana-border-hover)';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.backgroundColor = '#F6F7F8';
+              e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
               e.currentTarget.style.borderColor = 'transparent';
             }}
           />
           {searchQuery && (
             <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-[color:var(--bg-hover)] transition-colors"
               onClick={() => setSearchQuery('')}
             >
               <X size={14} />
@@ -325,15 +322,18 @@ export default function TasksAsanaClean() {
             <>
               <div className="relative">
                 <select
+                  id="task-list-filter-select"
+                  name="selectedListId"
                   value={selectedListId}
                   onChange={(e) => {
                     setSelectedListId(e.target.value);
                   }}
+                  aria-label="Filter tasks by list"
                   className="h-8 cursor-pointer appearance-none rounded-lg border pl-3 pr-8 text-sm transition-colors"
                   style={{
-                    backgroundColor: '#F6F7F8',
+                    backgroundColor: 'var(--bg-input)',
                     borderColor: 'transparent',
-                    color: '#151B26'
+                    color: 'var(--text-primary)'
                   }}
                 >
                   <option value="all">All lists</option>
@@ -341,7 +341,7 @@ export default function TasksAsanaClean() {
                     <option key={column.id} value={column.id}>{column.title}</option>
                   ))}
                 </select>
-                <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: '#6B6F76' }} />
+                 <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: 'var(--asana-text-secondary)' }} />
               </div>
               
               <div className="relative" ref={sortMenuRef}>
@@ -349,15 +349,15 @@ export default function TasksAsanaClean() {
                   className="flex h-8 items-center gap-2 px-3 rounded-lg transition-colors"
                   onClick={() => setShowSortMenu(!showSortMenu)}
                   style={{
-                    backgroundColor: '#F6F7F8',
-                    color: '#6B6F76',
+                    backgroundColor: 'var(--asana-bg-input)',
+                    color: 'var(--asana-text-secondary)',
                     fontSize: '14px'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#E8E9EA';
+                    e.currentTarget.style.backgroundColor = 'var(--state-hover)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
+                    e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
                   }}
                 >
                   <ArrowUpDown size={14} />
@@ -365,14 +365,14 @@ export default function TasksAsanaClean() {
                 </button>
                 
                 {showSortMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border bg-white shadow-lg" style={{ borderColor: '#E8E8E9', zIndex: 1000 }}>
+                  <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border bg-white shadow-lg" style={{ borderColor: 'var(--asana-border-default)', zIndex: 1000 }}>
                     <button
                       onClick={() => {
                         setSortBy('created');
                         setShowSortMenu(false);
                       }}
-                      className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50 ${
-                        sortBy === 'created' ? 'bg-gray-100' : ''
+                      className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-[color:var(--bg-hover)] ${
+                        sortBy === 'created' ? 'bg-[color:var(--bg-selected-bg)]' : ''
                       }`}
                     >
                       <GripVertical size={14} className="mr-2" />
@@ -383,8 +383,8 @@ export default function TasksAsanaClean() {
                         setSortBy('due');
                         setShowSortMenu(false);
                       }}
-                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
-                        sortBy === 'due' ? 'bg-gray-100' : ''
+                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-[color:var(--bg-hover)] ${
+                        sortBy === 'due' ? 'bg-[color:var(--bg-selected-bg)]' : ''
                       }`}
                     >
                       <Calendar size={14} className="mr-2" />
@@ -395,8 +395,8 @@ export default function TasksAsanaClean() {
                         setSortBy('title');
                         setShowSortMenu(false);
                       }}
-                      className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-gray-50 ${
-                        sortBy === 'title' ? 'bg-gray-100' : ''
+                      className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-[color:var(--bg-hover)] ${
+                        sortBy === 'title' ? 'bg-[color:var(--bg-selected-bg)]' : ''
                       }`}
                     >
                       <Type size={14} className="mr-2" />
@@ -414,27 +414,27 @@ export default function TasksAsanaClean() {
             className="px-4 py-2 text-sm rounded-xl flex items-center gap-2 transition-colors"
             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
             style={{
-              backgroundColor: selectedLabels.length > 0 ? '#796EFF' : '#F6F7F8',
-              color: selectedLabels.length > 0 ? '#FFFFFF' : '#6B6F76',
+              backgroundColor: selectedLabels.length > 0 ? 'var(--accent-primary)' : 'var(--bg-input)',
+              color: selectedLabels.length > 0 ? 'var(--text-on-brand)' : 'var(--text-secondary)',
               fontWeight: 500,
               position: 'relative',
               zIndex: 10
             }}
             onMouseEnter={(e) => {
               if (selectedLabels.length === 0) {
-                e.currentTarget.style.backgroundColor = '#E8E9EA';
+                e.currentTarget.style.backgroundColor = 'var(--state-hover)';
               }
             }}
             onMouseLeave={(e) => {
               if (selectedLabels.length === 0) {
-                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
               }
             }}
           >
             <Filter size={16} />
             Filter
             {selectedLabels.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-white/20">
+              <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-[color:var(--bg-overlay)]">
                 {selectedLabels.length}
               </span>
             )}
@@ -445,15 +445,15 @@ export default function TasksAsanaClean() {
             disabled={isSyncing}
             className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl transition-colors"
             style={{
-              backgroundColor: '#F6F7F8',
-              color: '#6B6F76',
+              backgroundColor: 'var(--asana-bg-input)',
+              color: 'var(--asana-text-secondary)',
               fontWeight: 500
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#E8E9EA';
+              e.currentTarget.style.backgroundColor = 'var(--state-hover)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#F6F7F8';
+              e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
             }}
           >
             <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
@@ -476,8 +476,8 @@ export default function TasksAsanaClean() {
             }}
             disabled={!isAuthenticated}
             style={{
-              backgroundColor: '#796EFF',
-              color: '#FFFFFF',
+              backgroundColor: 'var(--accent-primary)',
+              color: 'var(--text-on-brand)',
               padding: '8px 16px',
               borderRadius: '12px',
               fontSize: '14px',
@@ -527,14 +527,14 @@ export default function TasksAsanaClean() {
 
       {/* Sync Status */}
       {isAuthenticated && (
-        <div className="px-6 pb-2 text-center text-xs text-gray-500">
+        <div className="px-6 pb-2 text-center text-xs text-[color:var(--text-muted)]">
           Connected to Google Tasks • Auto-sync enabled
         </div>
       )}
 
       {/* New List Dialog */}
       {showNewListDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--bg-overlay)] p-4 backdrop-blur-sm">
           <div className="border-border-default w-full max-w-md rounded-xl border bg-card shadow-2xl">
             <div className="p-6">
               <h3 className="mb-2 text-lg font-semibold text-primary">Create New Task List</h3>
@@ -598,7 +598,7 @@ export default function TasksAsanaClean() {
 
       {/* Delete List Dialog */}
       {showDeleteListDialog && listToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--bg-overlay)] p-4 backdrop-blur-sm">
           <div className="border-border-default w-full max-w-md rounded-xl border bg-card shadow-2xl">
             <div className="p-6">
               <h3 className="mb-2 text-lg font-semibold text-primary">Delete Task List</h3>
@@ -655,29 +655,31 @@ export default function TasksAsanaClean() {
       )}
       </div>
 
-      {/* Filter Dropdown */}
-      <FilterDropdown
-        isOpen={showFilterDropdown}
-        onClose={() => setShowFilterDropdown(false)}
-        options={availableLabels.map(label => ({
-          value: label.name,
-          label: label.name,
-          color: label.color
-        }))}
-        selectedValues={selectedLabels}
-        onSelectionChange={setSelectedLabels}
-        anchorEl={filterButtonRef.current}
-        title="Filter by labels"
-      />
+      {/* Filter Dropdown - Conditional rendering based on state */}
+      {showFilterDropdown && (
+        <div className="absolute z-50" style={{ top: filterButtonRef.current?.offsetTop, left: filterButtonRef.current?.offsetLeft }}>
+          <FilterDropdown
+            options={availableLabels.map(label => ({
+              value: label.name,
+              label: label.name,
+              color: label.color
+            }))}
+            selectedValues={selectedLabels}
+            onSelectionChange={setSelectedLabels}
+            title="Filter by labels"
+            onClose={() => setShowFilterDropdown(false)}
+          />
+        </div>
+      )}
 
       {/* Quick Task Creator Modal */}
       {showQuickTaskCreator && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--bg-overlay)]"
           onClick={() => setShowQuickTaskCreator(false)}
         >
           <div 
-            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
+            className="bg-[color:var(--bg-primary)] rounded-lg shadow-xl p-6 w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold mb-4">Create new task</h3>
@@ -696,7 +698,7 @@ export default function TasksAsanaClean() {
                 name="title"
                 placeholder="Task title..."
                 autoFocus
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-[color:var(--border-default)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-primary)] focus:border-transparent"
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {
                     setShowQuickTaskCreator(false);

@@ -27,7 +27,7 @@ export function CanvasFloatingToolbar({
       <Card className="flex items-center gap-1 p-1 shadow-lg">
         {/* Canvas Selector */}
         <select 
-          className="rounded-md border-none bg-transparent px-3 py-1.5 text-sm focus:outline-none"
+          className="rounded-md border-none bg-transparent px-3 py-1.5 asana-text-sm focus:outline-none"
           style={{ color: 'var(--text-primary)' }}
         >
           <option>Canvas 1</option>
@@ -51,7 +51,7 @@ export function CanvasFloatingToolbar({
           
           <button
             onClick={onResetZoom}
-            className="min-w-[60px] rounded px-2 py-1 text-sm font-medium transition-colors hover:bg-hover"
+            className="min-w-[60px] rounded px-2 py-1 asana-text-sm font-medium transition-colors hover:bg-hover"
             style={{ color: 'var(--text-primary)' }}
           >
             {zoomPercentage}%
@@ -115,7 +115,7 @@ export function CanvasFloatingTools({
               variant={selectedTool === tool.id ? 'primary' : 'ghost'}
               size="sm"
               onClick={() => onSelectTool(tool.id)}
-              className="size-10 p-0 text-lg"
+              className="size-10 p-0 asana-text-lg"
               title={tool.label}
             >
               {tool.icon}

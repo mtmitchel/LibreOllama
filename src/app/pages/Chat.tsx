@@ -10,7 +10,7 @@ import { ContextSidebar } from '../../features/chat/components/ContextSidebar';
 import { ConversationList } from '../../features/chat/components/ConversationList';
 import { EmptyState } from '../../features/chat/components/EmptyState';
 import { useChatStore } from '../../features/chat/stores/chatStore';
-import './styles/chat-asana.css';
+import { Page, PageCard } from '../../components/ui/design-system/Page';
 
 function Chat() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
@@ -218,17 +218,16 @@ function Chat() {
 
   // --- RENDER ---
   return (
+    <Page full>
+      <PageCard>
     <div
       className="asana-chat"
       style={{
         display: 'flex',
-        height: '100vh',
+        height: '100%',
         overflow: 'hidden',
-        background: '#FAFBFC',
-        // Remove left/right page padding when the corresponding panels are closed,
-        // so the closed-state handles own a dedicated 40px gutter like Canvas
+        background: 'var(--bg-page)',
         padding: `${24}px ${isContextOpen ? 24 : 0}px ${24}px ${isConvoListOpen ? 24 : 0}px`,
-        // Gap between left conversations panel (or its gutter) and the main+right wrapper
         gap: isConvoListOpen ? '24px' : '0px'
       }}
     >
@@ -325,6 +324,8 @@ function Chat() {
         />
       </div>
     </div>
+      </PageCard>
+    </Page>
   );
 }
 

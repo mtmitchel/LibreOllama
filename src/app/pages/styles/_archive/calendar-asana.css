@@ -1,7 +1,6 @@
 /* Calendar Page - Asana Style Design System */
 
-/* Import Asana design system */
-@import '../../../styles/asana-design-system.css';
+/* Uses global tokens/classes from asana-globals.css and asana-core.css (imported at app bootstrap) */
 
 /* ===== FullCalendar Event Styling ===== */
 /* Base event styles */

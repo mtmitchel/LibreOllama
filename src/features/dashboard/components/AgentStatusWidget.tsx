@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Card, StatusBadge, Heading, Text, Button } from '../../../components/ui';
-import { DropdownMenu } from '../../../components/ui/DropdownMenu';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { StatusBadge } from '../../../components/ui/design-system/Badge';
+import { Heading, Text } from '../../../components/ui';
+import { Dropdown } from '../../../components/ui/design-system';
 import { MoreHorizontal, Bot, Zap } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -79,25 +82,25 @@ export const AgentStatusWidget: React.FC = () => {
             <Button variant="secondary" size="sm" onClick={handleConfigureAgents}>
               Configure
             </Button>
-            <DropdownMenu>
-              <DropdownMenu.Trigger asChild>
-                <Button variant="ghost" size="icon" className="text-secondary hover:text-primary">
+            <Dropdown
+              items={[
+                { value: 'view-all', label: 'View all statuses', icon: null },
+                { separator: true, value: 'sep', label: '' } as any,
+                { value: 'restart', label: 'Restart agents' },
+                { value: 'settings', label: 'Agent settings' }
+              ]}
+              onSelect={(v) => {
+                if (v === 'view-all') handleViewAllStatuses();
+                else if (v === 'restart') handleRestartAgent();
+                else if (v === 'settings') handleAgentSettings();
+              }}
+              placement="bottom-end"
+              trigger={(
+                <Button variant="ghost" size="icon" className="text-secondary hover:text-primary" aria-label="More options">
                   <MoreHorizontal className="size-4" />
                 </Button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content>
-                <DropdownMenu.Item onSelect={handleViewAllStatuses}>
-                  View all statuses
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator />
-                <DropdownMenu.Item onSelect={handleRestartAgent}>
-                  Restart agents
-                </DropdownMenu.Item>
-                <DropdownMenu.Item onSelect={handleAgentSettings}>
-                  Agent settings
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu>
+              )}
+            />
           </div>
         </div>
         <div className="py-4 text-center">
@@ -115,25 +118,25 @@ export const AgentStatusWidget: React.FC = () => {
           <Button variant="secondary" size="sm" onClick={handleConfigureAgents}>
             Configure
           </Button>
-          <DropdownMenu>
-            <DropdownMenu.Trigger asChild>
-              <Button variant="ghost" size="icon" className="text-secondary hover:text-primary">
+          <Dropdown
+            items={[
+              { value: 'view-all', label: 'View all statuses' },
+              { separator: true, value: 'sep', label: '' } as any,
+              { value: 'restart', label: 'Restart agents' },
+              { value: 'settings', label: 'Agent settings' }
+            ]}
+            onSelect={(v) => {
+              if (v === 'view-all') handleViewAllStatuses();
+              else if (v === 'restart') handleRestartAgent();
+              else if (v === 'settings') handleAgentSettings();
+            }}
+            placement="bottom-end"
+            trigger={(
+              <Button variant="ghost" size="icon" className="text-secondary hover:text-primary" aria-label="More options">
                 <MoreHorizontal className="size-4" />
               </Button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content>
-              <DropdownMenu.Item onSelect={handleViewAllStatuses}>
-                View all statuses
-              </DropdownMenu.Item>
-              <DropdownMenu.Separator />
-              <DropdownMenu.Item onSelect={handleRestartAgent}>
-                Restart agents
-              </DropdownMenu.Item>
-              <DropdownMenu.Item onSelect={handleAgentSettings}>
-                Agent settings
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu>
+            )}
+          />
         </div>
       </div>
 
@@ -157,7 +160,7 @@ export const AgentStatusWidget: React.FC = () => {
                       {agent.name}
                     </Text>
                     <StatusBadge 
-                      status={agent.is_active ? 'success' : 'warning'}
+                      status={agent.is_active ? 'online' : 'offline'}
                       size="sm"
                     >
                       {agent.is_active ? 'Active' : 'Offline'}
@@ -178,9 +181,9 @@ export const AgentStatusWidget: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-3 flex items-center justify-between text-xs text-secondary">
+      <div className="mt-3 flex items-center justify-between text-[11px] text-secondary">
         <span>{agents.filter(a => a.is_active).length} active of {agents.length} total</span>
-        <Button variant="ghost" size="sm" className="h-auto p-1 text-xs text-secondary">
+        <Button variant="ghost" size="sm" className="h-auto p-1 text-[11px] text-secondary">
           Manage agents
         </Button>
       </div>

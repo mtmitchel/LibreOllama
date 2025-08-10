@@ -134,15 +134,11 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
       onOpenChange={handleOpenChange}
       placement={placement}
       trigger="click"
-    >
-      {trigger || defaultTrigger}
-      <PopoverContent
-        className="p-0 min-w-[280px]"
-        style={{ maxHeight: `${maxHeight}px` }}
-      >
+      content={
+        <PopoverContent className="p-0 min-w-[280px]">
         {/* Header */}
         <div className="flex items-center justify-between p-[var(--space-3)] border-b border-[var(--border-subtle)]">
-          <h3 className="text-[var(--text-body)] font-medium text-[var(--text-primary)]">
+          <h3 className="asana-text-base font-medium text-[color:var(--text-primary)]">
             {title}
           </h3>
           <button
@@ -150,9 +146,9 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
             className={`
               p-[var(--space-0-5)]
               rounded-[var(--radius-sm)]
-              text-[var(--text-secondary)]
+              text-[color:var(--text-secondary)]
               hover:bg-[var(--bg-secondary)]
-              hover:text-[var(--text-primary)]
+              hover:text-[color:var(--text-primary)]
               transition-[var(--transition-property)]
               duration-[var(--transition-duration)]
             `}
@@ -176,9 +172,9 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                 bg-[var(--bg-secondary)]
                 border border-[var(--border-default)]
                 rounded-[var(--radius-sm)]
-                text-[var(--text-body)]
-                text-[var(--text-primary)]
-                placeholder-[var(--text-muted)]
+                asana-text-base
+                text-[color:var(--text-primary)]
+                placeholder:text-[color:var(--text-muted)]
                 focus:border-[var(--border-focus)]
                 focus:outline-none
                 transition-[var(--transition-property)]
@@ -195,7 +191,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
               onClick={handleSelectAll}
               className={`
                 px-[var(--space-1)] py-[var(--space-0-5)]
-                text-[var(--text-small)]
+                 asana-text-sm
                 text-[var(--brand-primary)]
                 hover:bg-[var(--brand-subtle)]
                 rounded-[var(--radius-sm)]
@@ -210,8 +206,8 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
               disabled={!hasFilteredSelection}
               className={`
                 px-[var(--space-1)] py-[var(--space-0-5)]
-                text-[var(--text-small)]
-                text-[var(--text-secondary)]
+                 asana-text-sm
+                 text-[color:var(--text-secondary)]
                 hover:bg-[var(--bg-secondary)]
                 rounded-[var(--radius-sm)]
                 transition-[var(--transition-property)]
@@ -228,7 +224,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
         <div className="max-h-[200px] overflow-y-auto">
           {filteredOptions.length === 0 ? (
             <div className="py-[var(--space-6)] text-center">
-              <p className="text-[var(--text-small)] text-[var(--text-muted)]">
+              <p className="asana-text-sm text-[color:var(--text-muted)]">
                 {searchQuery ? 'No options match your search' : 'No options available'}
               </p>
             </div>
@@ -271,7 +267,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                         }
                       `}
                     >
-                      {isSelected && <Check size={10} className="text-[var(--text-on-brand)]" />}
+                      {isSelected && <Check size={10} className="text-[color:var(--text-on-brand)]" />}
                     </div>
 
                     {/* Option Content */}
@@ -283,13 +279,13 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                             style={{ backgroundColor: option.color }}
                           />
                         )}
-                        <span className="text-[var(--text-body)] text-[var(--text-primary)]">
+                        <span className="asana-text-base text-[color:var(--text-primary)]">
                           {option.label}
                         </span>
                       </div>
                       
                       {showCount && option.count !== undefined && (
-                        <span className="text-[var(--text-small)] text-[var(--text-muted)]">
+                        <span className="asana-text-sm text-[color:var(--text-muted)]">
                           {option.count}
                         </span>
                       )}
@@ -304,12 +300,15 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
         {/* Footer */}
         {selectedValues.length > 0 && (
           <div className="px-[var(--space-3)] py-[var(--space-2)] border-t border-[var(--border-subtle)]">
-            <p className="text-[var(--text-small)] text-[var(--text-secondary)]">
+             <p className="asana-text-sm text-[color:var(--text-secondary)]">
               {selectedValues.length} item{selectedValues.length !== 1 ? 's' : ''} selected
             </p>
           </div>
         )}
       </PopoverContent>
+      }
+    >
+      {trigger || defaultTrigger}
     </Popover>
   );
 };
@@ -334,10 +333,11 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
   variant = 'outline',
   size = 'sm',
 }) => {
+  const mappedSize: 'sm' | 'default' = size === 'md' ? 'default' : 'sm';
   return (
     <Button
       variant={active ? 'primary' : variant}
-      size={size}
+      size={mappedSize}
       onClick={onClick}
       className={active ? 'shadow-[var(--shadow-focus)]' : ''}
     >

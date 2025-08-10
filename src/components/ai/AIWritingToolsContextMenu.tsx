@@ -319,7 +319,7 @@ export function AIWritingToolsContextMenu({
       <div
         key={item.id}
         className={cn(
-          "group relative flex cursor-pointer items-center gap-3 px-3 py-1.5 text-sm transition-colors",
+          "group relative flex cursor-pointer items-center gap-3 px-3 py-1.5 asana-text-sm transition-colors",
           item.disabled 
             ? "cursor-not-allowed text-gray-400 dark:text-gray-600" 
             : "hover:bg-blue-50 dark:hover:bg-gray-800",
@@ -378,7 +378,7 @@ export function AIWritingToolsContextMenu({
           {item.label}
         </span>
         {item.shortcut && (
-          <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+          <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-400">
             {item.shortcut}
           </span>
         )}

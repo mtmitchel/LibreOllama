@@ -65,10 +65,12 @@ const stackVariants = cva(
   }
 );
 
+type StackTag = 'div' | 'section' | 'article' | 'main';
+
 export interface StackProps extends VariantProps<typeof stackVariants> {
   children: React.ReactNode;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: StackTag;
   role?: string;
   'aria-label'?: string;
   'aria-labelledby'?: string;
@@ -92,9 +94,10 @@ export const Stack = forwardRef<HTMLDivElement, StackProps>(({
   id,
   ...props
 }, ref) => {
+  const Comp = Component as any;
   return (
-    <Component
-      ref={ref}
+    <Comp
+      ref={ref as any}
       id={id}
       role={role}
       aria-label={ariaLabel}
@@ -108,10 +111,10 @@ export const Stack = forwardRef<HTMLDivElement, StackProps>(({
         wrap,
         className,
       })}
-      {...props}
+      {...(props as any)}
     >
       {children}
-    </Component>
+    </Comp>
   );
 });
 

@@ -30,8 +30,6 @@ import { navigateDate, getDateRange, getWeekDays } from './calendar/utils/dateUt
 import { useCalendarOperations } from './calendar/hooks/useCalendarOperations';
 
 // Import styles
-import './styles/calendar-asana.css';
-import './styles/calendar-custom.css';
 
 export default function CalendarCustom() {
   const navigate = useNavigate();
@@ -348,17 +346,17 @@ export default function CalendarCustom() {
   // Handle authentication
   if (!activeAccount || !isAuthenticated) {
     return (
-      <div className="flex h-full items-center justify-center" style={{ backgroundColor: '#FAFBFC' }}>
+      <div className="flex h-full items-center justify-center" style={{ backgroundColor: 'var(--bg-page)' }}>
         <div className="text-center">
-          <h2 className="mb-4 text-2xl font-semibold text-gray-800">
+          <h2 className="mb-4 text-2xl font-semibold text-[color:var(--text-primary)]">
             Connect Your Google Account
           </h2>
-          <p className="mb-6 text-gray-600">
+          <p className="mb-6 text-[color:var(--text-secondary)]">
             Please connect your Google account to view your calendar and tasks.
           </p>
           <button
             onClick={() => navigate('/settings')}
-            className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
+            className="rounded-lg bg-[color:var(--accent-primary)] px-6 py-3 text-[color:var(--text-on-brand)] hover:bg-[color:var(--brand-hover)]"
           >
             Go to Settings
           </button>
@@ -369,7 +367,7 @@ export default function CalendarCustom() {
   
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex h-full flex-col" style={{ backgroundColor: '#FAFBFC' }}>
+      <div className="flex h-full flex-col" style={{ backgroundColor: 'var(--bg-page)' }}>
         {/* Header */}
         <div>
           <CalendarHeader 
@@ -686,18 +684,18 @@ export default function CalendarCustom() {
         {/* Drag Overlay */}
         <DragOverlay>
           {draggedItem && (
-            <div className="bg-white shadow-xl rounded-lg p-3 opacity-90 border border-gray-200 cursor-grabbing">
+            <div className="bg-[color:var(--bg-primary)] shadow-xl rounded-lg p-3 opacity-90 border border-[color:var(--border-default)] cursor-grabbing">
               <div className="flex items-center gap-2">
                 {draggedItem.type === 'task' && (
-                  <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                  <div className="w-2 h-2 bg-[color:var(--brand-purple)] rounded-full" />
                 )}
-                <span className="text-sm font-medium text-gray-900 max-w-[200px] truncate">
+                <span className="text-sm font-medium text-[color:var(--text-primary)] max-w-[200px] truncate">
                   {draggedItem.type === 'task' 
                     ? (draggedItem.data as any).title 
                     : (draggedItem.data as any).title}
                 </span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-[color:var(--text-muted)] mt-1">
                 Drop to create time block
               </div>
             </div>

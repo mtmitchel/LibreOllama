@@ -78,16 +78,34 @@ LibreOllama uses an Asana-inspired design system focusing on clean minimalism, f
 --asana-small: 12px/1.5, 400 weight
 ```
 
-## CSS Architecture
+## CSS architecture
 
-### Core Files
-- `src/styles/asana-core.css` - Foundation classes and variables
-- `src/app/pages/styles/` - Page-specific styles
-  - `page-asana-v2.css` - Generic page layouts
-  - `dashboard-asana.css` - Dashboard specific
-  - `chat-asana.css` - Chat specific
-  - `mail-asana-v2.css` - Mail specific
-  - `settings-asana-v2.css` - Settings specific
+### Canonical global styles and import order
+Use this order at app bootstrap to ensure variables and classes resolve predictably:
+
+```ts
+// main.tsx (target import order)
+import '../styles/asana-globals.css';   // tokens + compatibility mappings
+import '../styles/asana-core.css';      // components and utilities
+import '../styles/asana-layout.css';    // page layout primitives
+```
+
+Note: `src/styles/asana-tokens.css` and `src/styles/asana-design-system.css` currently load for compatibility. They are slated for deprecation once all tokens/classes are migrated into the canonical files above.
+
+### Core files
+- `src/styles/asana-globals.css` – design tokens, semantic aliases, backwards-compat mappings
+- `src/styles/asana-core.css` – component classes and utilities (buttons, cards, inputs, grid, etc.)
+- `src/styles/asana-layout.css` – page layout primitives (page wrapper, dashboards, scroll containers)
+
+### Page-level styles in use
+- `src/app/pages/styles/page-asana-v2.css`
+- `src/app/pages/styles/dashboard-asana-v3.css`
+- `src/app/pages/styles/chat-asana.css`
+- `src/app/pages/styles/mail-asana-v2.css`
+- `src/app/pages/styles/settings-asana-v2.css`
+- `src/app/pages/styles/calendar-asana.css`
+- `src/app/pages/styles/calendar-custom.css` (calendar-only overrides)
+- `src/app/pages/styles/TasksAsanaClean.css` (reference implementation)
 
 ### Key Classes
 
@@ -136,6 +154,29 @@ LibreOllama uses an Asana-inspired design system focusing on clean minimalism, f
   height: 36px;
 }
 ```
+
+## Active components inventory
+
+Authoritative source: `src/components/ui/design-system/index.ts`
+
+- Interactive: `Button`, `Select` (and `NativeSelect`), `Toggle`, `ContextMenu`
+- Overlays: `Popover`, `Dropdown` (ActionMenu, SelectDropdown), `Tooltip`, `Dialog`, `ConfirmDialog`, `Toast`
+- Data/display: `Badge` (Count/Status/Group), `Tag` (Hash/Color/Group/Input), `Avatar` (Group/User/Bot/Team), `ProgressRing` (Bar/Spinner/Steps), `HeatMapCalendar` (ActivityCalendar)
+- Layout primitives: `Stack` (VStack/HStack/FormStack/ListStack/ButtonGroup), `Grid` (GridItem/CardGrid/DashboardGrid/SidebarLayout/MasonryGrid/AutoGrid), `Box` (Center/Square/Circle/Flex/AspectRatio), `Container` (Section/Page/Article/Hero)
+- Forms: `FormControl` (Label/Helper/Error/Success/Hint/Input/Textarea/Group, `useFormControl`)
+
+Additional UI stylesheet: `src/components/ui/ui-asana.css` (to be merged into `src/styles/asana-core.css` after a diff to avoid duplication).
+
+## Consolidation plan (non‑breaking)
+
+1. Keep current imports in `src/app/main.tsx` unchanged for now to ensure no regressions.
+2. Design tokens single source: treat `src/styles/asana-globals.css` as the only token authority. Diff `src/styles/asana-tokens.css` → copy any missing variables into `asana-globals.css`, then remove the extra file import.
+3. Component classes single source: merge unique rules from `src/components/ui/ui-asana.css` and `src/styles/asana-design-system.css` into `src/styles/asana-core.css`. Update component entry points to rely on global `asana-core.css`. Only then remove redundant imports.
+4. Page styles: standardize on `page-asana-v2.css` and `dashboard-asana-v3.css`. Remove older variants once each page is verified visually (no horizontal scroll, consistent 24px padding/gaps).
+5. Calendar/Tasks as the canonical reference: keep `calendar-asana.css` and `TasksAsanaClean.css` as the design exemplars; propagate their patterns into shared primitives where appropriate.
+6. Accessibility and motion: preserve focus rings, reduced‑motion behavior, and contrast variables during consolidation.
+
+Tracking for this consolidation lives in `docs/design-system/migrations/DESIGN_SYSTEM_MIGRATION_STATUS.md` and `docs/design-system/reports/CSS_CONSOLIDATION_REPORT.md`.
 
 ## Component Status
 

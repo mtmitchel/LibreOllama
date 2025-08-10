@@ -331,7 +331,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
       >
         <Heading 
           level={3} 
-          className="select-none text-lg font-semibold text-primary"
+          className="select-none asana-text-lg font-semibold text-primary"
         >
           Canvases
         </Heading>
@@ -375,7 +375,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
             placeholder="Search canvases..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 text-sm focus:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+            className="w-full pl-10 asana-text-sm focus:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
             aria-label="Search canvases"
           />
         </div>
@@ -460,7 +460,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                     }}
                     autoFocus
                     onClick={(e) => e.stopPropagation()}
-                    className="h-8 text-sm focus:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+                    className="h-8 asana-text-sm focus:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
                     aria-label="Edit canvas name"
                   />
                 ) : (
@@ -474,7 +474,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                   </Text>
                 )}
                 <Caption 
-                  className={`truncate text-xs transition-all duration-200 ${
+                  className={`truncate text-[11px] transition-all duration-200 ${
                     selectedCanvasId === canvas.id ? 'text-accent-primary' : 'text-muted'
                   }`}
                 >
@@ -510,7 +510,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                     <div className="p-1">
                       <div className="mb-2 flex items-center gap-2 px-1">
                         <Edit2 size={12} className="text-accent-primary" />
-                        <Caption className="text-xs font-bold uppercase tracking-wider text-muted">
+                        <Caption className="text-[11px] font-bold uppercase tracking-wider text-muted">
                           Edit
                         </Caption>
                       </div>
@@ -545,7 +545,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                     <div className="p-1">
                       <div className="mb-2 flex items-center gap-2 px-1">
                         <Download size={12} className="text-success" />
-                        <Caption className="text-xs font-bold uppercase tracking-wider text-muted">
+                        <Caption className="text-[11px] font-bold uppercase tracking-wider text-muted">
                           Export
                         </Caption>
                       </div>

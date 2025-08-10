@@ -361,7 +361,7 @@ export function EmailActionBar({
                       {canReply && (
                         <>
                           <button
-                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
+                            className="flex w-full items-center gap-3 px-4 py-2 asana-text-sm text-primary transition-colors hover:bg-secondary"
                             onClick={() => {
                               // Future Enhancement: Implement reply functionality (Phase 3.x)
                               setIsActionsMenuOpen(false);
@@ -371,7 +371,7 @@ export function EmailActionBar({
                             Reply
                           </button>
                           <button
-                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
+                            className="flex w-full items-center gap-3 px-4 py-2 asana-text-sm text-primary transition-colors hover:bg-secondary"
                             onClick={() => {
                               // Future Enhancement: Implement reply all functionality (Phase 3.x)
                               setIsActionsMenuOpen(false);
@@ -385,7 +385,7 @@ export function EmailActionBar({
                       
                       {canForward && (
                         <button
-                          className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
+                          className="flex w-full items-center gap-3 px-4 py-2 asana-text-sm text-primary transition-colors hover:bg-secondary"
                           onClick={() => {
                             // Future Enhancement: Implement forward functionality (Phase 3.x)
                             setIsActionsMenuOpen(false);
@@ -397,7 +397,7 @@ export function EmailActionBar({
                       )}
                       
                       <button
-                        className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
+                        className="flex w-full items-center gap-3 px-4 py-2 asana-text-sm text-primary transition-colors hover:bg-secondary"
                         onClick={() => {
                           // Future Enhancement: Implement label management functionality (Phase 3.x)
                           setIsActionsMenuOpen(false);
@@ -416,7 +416,7 @@ export function EmailActionBar({
 
         {/* Keyboard Shortcuts Help */}
         {selectedCount > 0 && !compactMode && (
-          <div className="px-4 pb-2 text-xs text-muted">
+          <div className="px-4 pb-2 text-[11px] text-muted">
             Shortcuts: R (read), U (unread), S (star), A (archive), Shift+Del (delete), Esc (clear)
           </div>
         )}
@@ -429,7 +429,7 @@ export function EmailActionBar({
             <div className="mb-4 flex items-start gap-4">
               <AlertTriangle size={24} className="mt-1 shrink-0 text-warning" />
               <div>
-                <h3 className="mb-2 text-lg font-semibold text-primary">
+                <h3 className="mb-2 asana-text-lg font-semibold text-primary">
                   {confirmation.type === 'delete' || confirmation.type === 'bulk_delete' 
                     ? 'Confirm Delete' 
                     : 'Confirm Archive'
@@ -454,7 +454,7 @@ export function EmailActionBar({
                 Cancel
               </Button>
               <Button
-                variant={confirmation.type?.includes('delete') ? 'destructive' : 'default'}
+                variant={confirmation.type?.includes('delete') ? 'destructive' : 'secondary'}
                 onClick={confirmation.onConfirm}
               >
                 {confirmation.type?.includes('delete') ? 'Delete' : 'Archive'}

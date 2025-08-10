@@ -47,7 +47,7 @@ const menuItemVariants = cva(
     px-[var(--space-2)]
     rounded-[var(--radius-md)]
     flex items-center gap-[var(--space-2)]
-    text-[var(--text-body)]
+    asana-text-base
     text-left
     border-none
     bg-transparent
@@ -62,15 +62,15 @@ const menuItemVariants = cva(
     variants: {
       variant: {
         default: `
-          text-[var(--text-primary)]
+          text-[color:var(--text-primary)]
           hover:bg-[var(--bg-secondary)]
-          hover:text-[var(--text-primary)]
+          hover:text-[color:var(--text-primary)]
           focus:bg-[var(--bg-secondary)]
         `,
         destructive: `
-          text-[var(--status-error)]
+          text-[color:var(--status-error)]
           hover:bg-[var(--status-error-subtle)]
-          hover:text-[var(--status-error)]
+          hover:text-[color:var(--status-error)]
           focus:bg-[var(--status-error-subtle)]
         `,
       },
@@ -315,7 +315,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     return (
       <button
         key={item.id || `item-${index}`}
-        ref={(el) => (itemsRef.current[index] = el)}
+        ref={(el) => { itemsRef.current[index] = el; }}
         type="button"
         className={menuItemVariants({
           variant: item.destructive ? 'destructive' : 'default',
@@ -328,7 +328,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         tabIndex={isFocused ? 0 : -1}
       >
         {item.icon && (
-          <span className="shrink-0 text-[var(--text-secondary)]">
+          <span className="shrink-0 text-[color:var(--text-secondary)]">
             {item.icon}
           </span>
         )}
@@ -338,7 +338,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         </span>
 
         {item.shortcut && (
-          <span className="text-[var(--text-small)] text-[var(--text-muted)] font-mono">
+          <span className="asana-text-sm text-[color:var(--text-muted)] font-mono">
             {item.shortcut}
           </span>
         )}

@@ -284,18 +284,18 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
   const sizeClasses = {
     sm: {
       icon: 'w-4 h-4',
-      label: 'text-[var(--text-body)]',
-      description: 'text-[var(--text-small)]',
+      label: 'asana-text-base',
+      description: 'asana-text-sm',
     },
     md: {
       icon: 'w-5 h-5',
-      label: 'text-[var(--text-body)]',
-      description: 'text-[var(--text-small)]',
+      label: 'asana-text-base',
+      description: 'asana-text-sm',
     },
     lg: {
       icon: 'w-6 h-6',
-      label: 'text-[var(--text-large)]',
-      description: 'text-[var(--text-body)]',
+      label: 'asana-text-lg',
+      description: 'asana-text-base',
     },
   };
 
@@ -315,7 +315,7 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
       {/* Left side - Icon, Label, Description */}
       <div className="flex min-w-0 flex-1 items-center gap-[var(--space-3)]">
         {icon && (
-          <div className={`shrink-0 ${sizes.icon} text-[var(--text-secondary)]`}>
+          <div className={`shrink-0 ${sizes.icon} text-[color:var(--text-secondary)]`}>
             {icon}
           </div>
         )}
@@ -327,7 +327,7 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
               className={`
                 font-medium truncate
                 ${sizes.label}
-                ${disabled ? 'text-[var(--text-muted)]' : 'text-[var(--text-primary)]'}
+                ${disabled ? 'text-[color:var(--text-muted)]' : 'text-[color:var(--text-primary)]'}
               `}
             >
               {label}
@@ -346,7 +346,7 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
                 mt-[var(--space-1)]
                 leading-relaxed
                 ${sizes.description}
-                text-[var(--text-secondary)]
+                text-[color:var(--text-secondary)]
               `}
             >
               {description}
@@ -401,12 +401,12 @@ export const ToggleGroup: React.FC<ToggleGroupProps> = ({
       {(title || description) && (
         <div className="mb-[var(--space-4)]">
           {title && (
-            <h3 className="text-[var(--text-large)] font-semibold text-[var(--text-primary)] mb-[var(--space-1)]">
+            <h3 className="asana-text-lg font-semibold text-[color:var(--text-primary)] mb-[var(--space-1)]">
               {title}
             </h3>
           )}
           {description && (
-            <p className="text-[var(--text-small)] text-[var(--text-secondary)]">
+            <p className="asana-text-sm text-[color:var(--text-secondary)]">
               {description}
             </p>
           )}
@@ -480,7 +480,7 @@ export const ToggleCard: React.FC<ToggleCardProps> = ({
       
       {description && (
         <div className="mt-[var(--space-3)] pt-[var(--space-3)] border-t border-[var(--border-subtle)]">
-          <p className="text-[var(--text-small)] text-[var(--text-secondary)] leading-relaxed">
+          <p className="asana-text-sm text-[color:var(--text-secondary)] leading-relaxed">
             {description}
           </p>
         </div>
@@ -531,16 +531,16 @@ const toggleButtonVariants = cva(
         default: `
           bg-[var(--bg-surface)]
           border border-[var(--border-default)]
-          text-[var(--text-primary)]
+          text-[color:var(--text-primary)]
           hover:bg-[var(--bg-secondary)]
           data-[state=on]:bg-[var(--brand-primary)]
-          data-[state=on]:text-[var(--text-on-brand)]
+          data-[state=on]:text-[color:var(--text-on-brand)]
           data-[state=on]:border-[var(--brand-primary)]
         `,
         outline: `
           border border-[var(--border-default)]
           bg-transparent
-          text-[var(--text-primary)]
+          text-[color:var(--text-primary)]
           hover:bg-[var(--bg-secondary)]
           data-[state=on]:bg-[var(--brand-subtle)]
           data-[state=on]:text-[var(--brand-primary)]
@@ -548,7 +548,7 @@ const toggleButtonVariants = cva(
         `,
         ghost: `
           bg-transparent
-          text-[var(--text-primary)]
+          text-[color:var(--text-primary)]
           hover:bg-[var(--bg-secondary)]
           data-[state=on]:bg-[var(--brand-subtle)]
           data-[state=on]:text-[var(--brand-primary)]
@@ -557,17 +557,17 @@ const toggleButtonVariants = cva(
       size: {
         sm: `
           h-8 px-[var(--space-2)]
-          text-[var(--text-small)]
+          asana-text-sm
           rounded-[var(--radius-sm)]
         `,
         md: `
           h-9 px-[var(--space-3)]
-          text-[var(--text-body)]
+          asana-text-base
           rounded-[var(--radius-md)]
         `,
         lg: `
           h-10 px-[var(--space-4)]
-          text-[var(--text-body)]
+          asana-text-base
           rounded-[var(--radius-md)]
         `,
       },

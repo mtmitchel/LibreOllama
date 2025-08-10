@@ -1,5 +1,7 @@
 import React from 'react';
-import { Card, Text, Button, Heading } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Text, Heading } from '../../../components/ui';
 import { PanelRight, FileText, Calendar, Tag, Clock, CheckSquare, Link } from 'lucide-react';
 
 interface NotesContextSidebarProps {
@@ -21,7 +23,8 @@ export const NotesContextSidebar: React.FC<NotesContextSidebarProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginTop: '-24px'
+          marginTop: '-24px',
+          flexShrink: 0
         }}
       >
         <button
@@ -37,18 +40,18 @@ export const NotesContextSidebar: React.FC<NotesContextSidebarProps> = ({
             borderRadius: '6px',
             background: 'transparent',
             border: 'none',
-            color: '#7B8794',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
             transition: 'all 150ms ease',
             padding: 0
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = '#F4F6F8';
-            (e.currentTarget as HTMLButtonElement).style.color = '#323F4B';
+            (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-secondary)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-            (e.currentTarget as HTMLButtonElement).style.color = '#7B8794';
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
           }}
         >
           <PanelRight size={18} strokeWidth={2} />
@@ -213,10 +216,10 @@ export const NotesContextSidebar: React.FC<NotesContextSidebarProps> = ({
                   Tags
                 </Text>
                 <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full bg-accent-soft px-2 py-1 text-xs font-medium text-accent-primary">
+                  <span className="rounded-full bg-accent-soft px-2 py-1 text-[11px] font-medium text-accent-primary">
                     Project X
                   </span>
-                  <span className="rounded-full bg-accent-soft px-2 py-1 text-xs font-medium text-accent-primary">
+                  <span className="rounded-full bg-accent-soft px-2 py-1 text-[11px] font-medium text-accent-primary">
                     Meeting
                   </span>
                 </div>

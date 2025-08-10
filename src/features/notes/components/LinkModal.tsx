@@ -71,11 +71,11 @@ export const LinkModal: React.FC<LinkModalProps> = ({
           <X size={18} />
         </button>
         
-        <h3 className="text-lg font-semibold mb-4">Insert Link</h3>
+        <h3 className="asana-text-lg font-semibold mb-4">Insert Link</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="link-text" className="block text-sm font-medium mb-1">
+            <label htmlFor="link-text" className="block asana-text-sm font-medium mb-1">
               Text to display
             </label>
             <input
@@ -94,7 +94,7 @@ export const LinkModal: React.FC<LinkModalProps> = ({
           </div>
           
           <div>
-            <label htmlFor="link-url" className="block text-sm font-medium mb-1">
+            <label htmlFor="link-url" className="block asana-text-sm font-medium mb-1">
               URL
             </label>
             <input

@@ -789,7 +789,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   // Use backend labels exactly as provided
                   labels: migrateLabelFormat(incomingTask.labels || []),
                   // Use backend priority exactly as provided
-                  priority: (!incomingTask.priority || incomingTask.priority === 'normal')
+                  priority: (!incomingTask.priority || (incomingTask as any).priority === 'normal')
                     ? 'none'
                     : incomingTask.priority as UnifiedTask['priority'],
                   // Use backend recurring exactly as provided  
@@ -804,7 +804,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   // Use backend labels exactly as provided
                   labels: migrateLabelFormat(incomingTask.labels || []),
                   // Use backend priority exactly as provided
-                  priority: (!incomingTask.priority || incomingTask.priority === 'normal')
+                  priority: (!incomingTask.priority || (incomingTask as any).priority === 'normal')
                     ? 'none'
                     : incomingTask.priority as UnifiedTask['priority'],
                 };

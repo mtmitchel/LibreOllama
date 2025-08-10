@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
-import { Button, Card, Text, Heading, Input } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Text, Heading, Input } from '../../../components/ui';
 import { X } from 'lucide-react';
 import { Project } from '../stores/projectStore';
 

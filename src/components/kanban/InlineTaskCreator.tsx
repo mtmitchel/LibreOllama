@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Calendar, Flag } from 'lucide-react';
-import { Button } from '../ui';
-import '../../styles/asana-design-system.css';
+import { Button } from '../ui/design-system/Button';
+import '../../styles/asana-core.css';
 
 interface InlineTaskCreatorProps {
   columnId: string;
@@ -155,7 +155,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
       {isExpanded && (
         <div className="mt-2 pl-6">
           {error && (
-            <div className="mb-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+            <div className="mb-2 text-[11px] text-red-600 bg-red-50 px-2 py-1 rounded">
               {error}
             </div>
           )}
@@ -205,12 +205,12 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                 
                 {showDatePicker && (
                   <div className="inline-date-picker absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 p-3" style={{ minWidth: '200px', zIndex: 10002 }}>
-                    <div className="text-xs font-medium text-gray-600 mb-2">Due Date</div>
+                    <div className="text-[11px] font-medium text-gray-600 mb-2">Due Date</div>
                     <input
                       type="date"
                       value={dueDate}
                       onChange={(e) => setDueDate(e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-blue-500"
+                      className="w-full px-2 py-1 asana-text-sm border border-gray-200 rounded-md focus:outline-none focus:border-blue-500"
                     />
                     <div className="flex justify-between mt-2">
                       <Button
@@ -221,7 +221,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                         }}
                         variant="ghost"
                         size="sm"
-                        className="text-xs"
+                        className="text-[11px]"
                       >
                         Clear
                       </Button>
@@ -230,7 +230,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                         onClick={() => setShowDatePicker(false)}
                         variant="primary"
                         size="sm"
-                        className="text-xs"
+                        className="text-[11px]"
                       >
                         Done
                       </Button>
@@ -278,7 +278,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                           setShowPriorityMenu(false);
                         }}
                         variant="ghost"
-                        className={`w-full justify-start text-sm ${
+                        className={`w-full justify-start asana-text-sm ${
                           priority === option.value ? 'bg-tertiary' : ''
                         }`}
                       >
@@ -294,7 +294,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                           setShowPriorityMenu(false);
                         }}
                         variant="ghost"
-                        className="w-full justify-start text-sm"
+                        className="w-full justify-start asana-text-sm"
                       >
                         <span className="w-[14px]"></span>
                         <span>None</span>

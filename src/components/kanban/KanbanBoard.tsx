@@ -15,9 +15,10 @@ import { useUnifiedTaskStore } from "../../stores/unifiedTaskStore";
 import type { UnifiedTask } from "../../stores/unifiedTaskStore.types";
 import { KanbanColumn } from "./KanbanColumn";
 import { UnifiedTaskCard } from "../tasks/UnifiedTaskCard";
-import { Button, Card } from "../ui";
+import { Button } from '../ui/design-system/Button';
+import { Card } from '../ui/design-system/Card';
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
-import '../../styles/asana-design-system.css';
+import '../../styles/asana-core.css';
 import { createTaskList } from "../../api/googleTasksApi";
 import { realtimeSync } from "../../services/realtimeSync";
 import { useFilteredColumns } from "../../hooks/useFilteredColumns";
@@ -195,7 +196,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       <Card className="p-6 text-center">
         <div className="mb-4 text-red-600">
           <p className="font-medium">Error loading kanban board</p>
-          <p className="text-sm">{error}</p>
+          <p className="asana-text-sm">{error}</p>
         </div>
         <div className="flex justify-center gap-2">
           <Button variant="outline" onClick={clearError}>
@@ -296,7 +297,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     onClick={() => handleCreateList(newColumnTitle)}
                     variant="primary"
                     size="sm"
-                    className="h-8 text-sm"
+                    className="h-8 asana-text-sm"
                   >
                     Add
                   </Button>
@@ -308,7 +309,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     }}
                     variant="ghost"
                     size="sm"
-                    className="h-8 text-sm"
+                    className="h-8 asana-text-sm"
                   >
                     Cancel
                   </Button>
@@ -356,13 +357,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
             </div>
-            <h3 className="mb-3 text-xl font-semibold text-primary">
+            <h3 className="mb-3 asana-text-xl font-semibold text-primary">
               Get organized with task lists
             </h3>
             <p className="mb-6 leading-relaxed text-muted">
               Create task lists to organize your work by project, priority, or any way that helps you stay focused.
             </p>
-            <p className="text-sm text-muted">
+            <p className="asana-text-sm text-muted">
               Click "New List" in the header to create your first task list.
             </p>
           </div>

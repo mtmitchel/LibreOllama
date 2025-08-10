@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Card } from '../ui';
+import { Card } from '../ui/design-system/Card';
 import { 
   RefreshCw,
   CheckCircle, 
@@ -195,7 +195,7 @@ function AIWritingToolsMenuComponent({ selection, onClose, onAction }: AIWriting
           }}
         >
           <RefreshCw size={16} className="text-purple-500" />
-          <span className="text-sm">Rephrase</span>
+          <span className="asana-text-sm">Rephrase</span>
         </button>
         
         {activeCategory === 'rewrite' && (
@@ -204,7 +204,7 @@ function AIWritingToolsMenuComponent({ selection, onClose, onAction }: AIWriting
               <button
                 key={item.id}
                 onClick={() => handleAction(item.id)}
-                className="w-full rounded px-2 py-1 text-left text-sm hover:bg-hover"
+                className="w-full rounded px-2 py-1 text-left asana-text-sm hover:bg-hover"
               >
                 {item.label}
               </button>
@@ -220,7 +220,7 @@ function AIWritingToolsMenuComponent({ selection, onClose, onAction }: AIWriting
             className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-hover"
           >
             {item.icon}
-            <span className="text-sm">{item.label}</span>
+            <span className="asana-text-sm">{item.label}</span>
           </button>
         ))}
 
@@ -234,7 +234,7 @@ function AIWritingToolsMenuComponent({ selection, onClose, onAction }: AIWriting
             className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-hover"
           >
             {item.icon}
-            <span className="text-sm">{item.label}</span>
+            <span className="asana-text-sm">{item.label}</span>
           </button>
         ))}
 
@@ -243,6 +243,8 @@ function AIWritingToolsMenuComponent({ selection, onClose, onAction }: AIWriting
         {/* AI Input Field */}
         <div className="flex items-center gap-1">
           <input
+            id="ai-writing-tools-question-input"
+            name="aiQuestion"
             type="text"
             value={aiQuestion}
             onChange={(e) => setAiQuestion(e.target.value)}
@@ -256,7 +258,8 @@ function AIWritingToolsMenuComponent({ selection, onClose, onAction }: AIWriting
               }
             }}
             placeholder="Ask AI anything..."
-            className="border-border-subtle flex-1 rounded border bg-transparent px-2 py-1 text-sm focus:border-accent-primary focus:outline-none"
+            aria-label="Ask AI anything"
+            className="border-border-subtle flex-1 rounded border bg-transparent px-2 py-1 asana-text-sm focus:border-accent-primary focus:outline-none"
           />
           <button
             onClick={() => {

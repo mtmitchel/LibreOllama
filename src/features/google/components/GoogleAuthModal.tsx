@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
-import { Card, Button, Text, Heading } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { Card } from '../../../components/ui/design-system/Card';
+import { Text, Heading } from '../../../components/ui';
 import { getSecureAuthHandler } from '../services/SecureAuthHandler';
 import { logger } from '../../../core/lib/logger';
 
@@ -206,15 +208,15 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                 We received your authorization. Setting up your account...
               </Text>
               <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                <div className="flex items-center justify-center gap-2 asana-text-sm text-muted">
                   <div className="size-2 rounded-full bg-blue-500 animate-pulse"></div>
                   <Text size="sm">Exchanging authorization code</Text>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                <div className="flex items-center justify-center gap-2 asana-text-sm text-muted">
                   <div className="size-2 rounded-full bg-blue-500 animate-pulse animation-delay-150"></div>
                   <Text size="sm">Fetching account details</Text>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                <div className="flex items-center justify-center gap-2 asana-text-sm text-muted">
                   <div className="size-2 rounded-full bg-blue-500 animate-pulse animation-delay-300"></div>
                   <Text size="sm">Securing your credentials</Text>
                 </div>
@@ -237,19 +239,19 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
                 Your Google account has been successfully linked.
               </Text>
               <div className="space-y-2 mb-4">
-                <div className="flex items-center justify-center gap-2 text-sm text-success">
+                <div className="flex items-center justify-center gap-2 asana-text-sm text-success">
                   <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   <Text size="sm">Gmail access granted</Text>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-success">
+                <div className="flex items-center justify-center gap-2 asana-text-sm text-success">
                   <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   <Text size="sm">Calendar access granted</Text>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-success">
+                <div className="flex items-center justify-center gap-2 asana-text-sm text-success">
                   <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>

@@ -72,10 +72,10 @@ export const withAuthGuard = <T extends object>(Component: React.ComponentType<T
       return (
         <div className="border-border-default flex h-32 items-center justify-center rounded-lg border-2 border-dashed bg-secondary">
           <div className="text-center">
-            <p className="mb-2 text-sm text-secondary">
+            <p className="mb-2 asana-text-sm text-secondary">
               Gmail authentication required
             </p>
-            <p className="text-xs text-muted">
+            <p className="text-[11px] text-muted">
               Please sign in to access mail features
             </p>
           </div>

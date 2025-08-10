@@ -176,9 +176,9 @@ Overall:     ████████░░░░░░░░░░░░ 40%
 
 ## 📚 Resources
 
-- [Complete Design System Spec](./ASANA_DESIGN_SYSTEM_COMPLETE.md)
-- [Migration Guide](./docs/ASANA_DESIGN_MIGRATION.md)
-- [Old Design System Archive](./docs/_archive/old-design-system/)
+ - [Complete Design System Spec](../ASANA_DESIGN_SYSTEM_COMPLETE.md)
+ - [Authoritative Design System Doc](../../DESIGN_SYSTEM.md)
+- [Old Design System Archive](../../_archive/old-design-system/)
 
 ---
 

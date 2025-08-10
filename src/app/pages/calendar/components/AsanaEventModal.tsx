@@ -9,27 +9,27 @@ const asanaTypography = {
     fontWeight: 600,
     letterSpacing: '-0.01em',
     lineHeight: 1.3,
-    color: '#151B26'
+    color: 'var(--asana-text-primary)'
   },
   h2: {
     fontSize: '16px',
     fontWeight: 600,
     letterSpacing: '0',
     lineHeight: 1.4,
-    color: '#151B26'
+    color: 'var(--asana-text-primary)'
   },
   body: {
     fontSize: '14px',
     fontWeight: 400,
     lineHeight: 1.6,
     letterSpacing: '0',
-    color: '#6B6F76'
+    color: 'var(--asana-text-secondary)'
   },
   label: {
     fontSize: '11px',
     fontWeight: 600,
     letterSpacing: '0.08em',
-    color: '#6B6F76'
+    color: 'var(--asana-text-secondary)'
   }
 };
 
@@ -184,7 +184,7 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }}>
       <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto bg-white rounded-2xl shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid #E8E8E9' }}>
+        <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--asana-border-default)' }}>
           <h2 style={asanaTypography.h1}>
             {event ? 'Edit event' : 'New event'}
           </h2>
@@ -206,20 +206,20 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Add title"
               className="w-full px-3 py-2 rounded-lg border transition-all text-base font-medium"
-              style={{ 
-                backgroundColor: '#F6F7F8',
-                borderColor: 'transparent',
+           style={{ 
+            backgroundColor: 'var(--asana-bg-input)',
+            borderColor: 'transparent',
                 outline: 'none',
                 fontSize: '18px',
-                fontWeight: 500,
-                color: '#151B26'
+            fontWeight: 500,
+            color: 'var(--asana-text-primary)'
               }}
               onFocus={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-                e.currentTarget.style.borderColor = '#796EFF';
+             e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+             e.currentTarget.style.borderColor = 'var(--accent-primary)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.backgroundColor = '#F6F7F8';
+             e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
                 e.currentTarget.style.borderColor = 'transparent';
               }}
               autoFocus
@@ -236,18 +236,18 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
               value={selectedCalendar} 
               onChange={(e) => setSelectedCalendar(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border transition-all cursor-pointer"
-              style={{ 
+               style={{ 
                 ...asanaTypography.body,
-                backgroundColor: '#F6F7F8',
+                backgroundColor: 'var(--asana-bg-input)',
                 borderColor: 'transparent',
                 outline: 'none'
               }}
               onFocus={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-                e.currentTarget.style.borderColor = '#796EFF';
+                e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+                e.currentTarget.style.borderColor = 'var(--accent-primary)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
                 e.currentTarget.style.borderColor = 'transparent';
               }}
             >
@@ -292,18 +292,18 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="flex-1 px-4 py-3 rounded-xl border transition-all"
-                  style={{ 
+                   style={{ 
                     ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
+                    backgroundColor: 'var(--asana-bg-input)',
                     borderColor: 'transparent',
                     outline: 'none'
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#796EFF';
+                    e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
+                    e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
                     e.currentTarget.style.borderColor = 'transparent';
                   }}
                 />
@@ -333,7 +333,7 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
               </div>
               
               <div className="flex items-center">
-                <span style={{ ...asanaTypography.body, color: '#9CA6AF', minWidth: '30px' }}>to</span>
+                 <span style={{ ...asanaTypography.body, color: 'var(--asana-text-tertiary)', minWidth: '30px' }}>to</span>
               </div>
               
               <div className="flex items-center gap-3">
@@ -342,18 +342,18 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="flex-1 px-4 py-3 rounded-xl border transition-all"
-                  style={{ 
+                   style={{ 
                     ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
+                    backgroundColor: 'var(--asana-bg-input)',
                     borderColor: 'transparent',
                     outline: 'none'
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#796EFF';
+                    e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
+                    e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
                     e.currentTarget.style.borderColor = 'transparent';
                   }}
                 />
@@ -363,19 +363,19 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
                     className="px-4 py-3 rounded-xl border transition-all"
-                    style={{ 
+                     style={{ 
                       ...asanaTypography.body,
-                      backgroundColor: '#F6F7F8',
+                      backgroundColor: 'var(--asana-bg-input)',
                       borderColor: 'transparent',
                       outline: 'none',
                       width: '140px'
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.backgroundColor = '#FFFFFF';
-                      e.currentTarget.style.borderColor = '#796EFF';
+                      e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+                      e.currentTarget.style.borderColor = 'var(--accent-primary)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F6F7F8';
+                      e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
                       e.currentTarget.style.borderColor = 'transparent';
                     }}
                   />
@@ -398,18 +398,18 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
                 setRecurring(e.target.value !== 'none');
               }}
               className="w-full px-3 py-2 rounded-lg border transition-all cursor-pointer"
-              style={{ 
-                ...asanaTypography.body,
-                backgroundColor: '#F6F7F8',
-                borderColor: 'transparent',
+                   style={{ 
+                    ...asanaTypography.body,
+                    backgroundColor: 'var(--asana-bg-input)',
+                    borderColor: 'transparent',
                 outline: 'none'
               }}
               onFocus={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-                e.currentTarget.style.borderColor = '#796EFF';
+                    e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                    e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
                 e.currentTarget.style.borderColor = 'transparent';
               }}
             >
@@ -436,18 +436,18 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Add location"
               className="w-full px-4 py-3 rounded-xl border transition-all"
-              style={{ 
-                ...asanaTypography.body,
-                backgroundColor: '#F6F7F8',
-                borderColor: 'transparent',
+                 style={{ 
+                  ...asanaTypography.body,
+                  backgroundColor: 'var(--asana-bg-input)',
+                  borderColor: 'transparent',
                 outline: 'none'
               }}
               onFocus={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-                e.currentTarget.style.borderColor = '#796EFF';
+                  e.currentTarget.style.backgroundColor = 'var(--asana-bg-primary)';
+                  e.currentTarget.style.borderColor = 'var(--accent-primary)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                  e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
                 e.currentTarget.style.borderColor = 'transparent';
               }}
             />
@@ -485,17 +485,15 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6" style={{ borderTop: '1px solid #E8E8E9' }}>
+          <div className="flex items-center justify-between p-6" style={{ borderTop: '1px solid var(--asana-border-default)' }}>
           <div>
             {event && onDelete && (
               <button
                 onClick={() => onDelete(event.id)}
                 className="px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
-                style={{ 
-                  color: '#D32F2F'
-                }}
+                style={{ color: 'var(--status-error)' }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFE5E5';
+                  e.currentTarget.style.backgroundColor = 'var(--error-ghost)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
@@ -512,15 +510,15 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
               className="px-5 py-2.5 rounded-xl transition-colors"
               style={{ 
                 ...asanaTypography.body,
-                backgroundColor: '#F6F7F8',
-                color: '#6B6F76',
+                backgroundColor: 'var(--asana-bg-input)',
+                color: 'var(--asana-text-secondary)',
                 fontWeight: 500
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#E8E9EA';
+                e.currentTarget.style.backgroundColor = 'var(--state-hover)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                e.currentTarget.style.backgroundColor = 'var(--asana-bg-input)';
               }}
             >
               Cancel
@@ -530,16 +528,16 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
               className="px-5 py-2.5 rounded-xl transition-all"
               style={{ 
                 ...asanaTypography.body,
-                backgroundColor: '#796EFF',
+                backgroundColor: 'var(--accent-primary)',
                 color: '#FFFFFF',
                 fontWeight: 500
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#6B5FE6';
+                e.currentTarget.style.backgroundColor = 'var(--accent-secondary)';
                 e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#796EFF';
+                e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >

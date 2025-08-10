@@ -1,6 +1,7 @@
 import React from 'react';
 import { Mail, Inbox, Send, Star } from 'lucide-react';
-import { Button } from '../../../components/ui';
+import { Button } from '../../../components/ui/design-system/Button';
+import { WidgetHeader, ListItem } from '../../../components/ui/design-system';
 import { useNavigate } from 'react-router-dom';
 
 interface MailStats {
@@ -51,72 +52,39 @@ export function MailWidget() {
   };
 
   return (
-    <div className="border-border-default flex h-full flex-col rounded-xl border bg-card p-4">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-purple-500/10">
-            <Mail size={20} className="text-purple-500" />
-          </div>
-          <h3 className="text-lg font-semibold">Mail</h3>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleViewAll}
-          className="text-xs"
-        >
-          View all
-        </Button>
-      </div>
+    <div className="asana-card asana-card-padded">
+      <WidgetHeader
+        title={(<span className="asana-text-primary">Mail</span>)}
+        actions={(
+          <Button variant="ghost" size="sm" onClick={handleViewAll} className="text-[11px]">
+            View all
+          </Button>
+        )}
+      />
 
-      {/* Stats - Compact inline version */}
-      <div className="mb-3 flex items-center gap-4 text-sm">
-        <div className="flex items-center gap-1">
-          <Inbox size={12} className="text-blue-500" />
-          <span className="font-medium">{mailStats.unread}</span>
-          <span className="text-xs text-secondary">unread</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Star size={12} className="text-yellow-500" />
-          <span className="font-medium">{mailStats.starred}</span>
-          <span className="text-xs text-secondary">starred</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Send size={12} className="text-green-500" />
-          <span className="font-medium">{mailStats.drafts}</span>
-          <span className="text-xs text-secondary">drafts</span>
+      <div className="asana-list-item asana-list-item--dense" aria-hidden>
+        <div className="asana-text-sm asana-text-muted" style={{ display: 'flex', gap: 16 }}>
+          <span><Inbox size={12} className="inline" /> <strong>{mailStats.unread}</strong> unread</span>
+          <span><Star size={12} className="inline" /> <strong>{mailStats.starred}</strong> starred</span>
+          <span><Send size={12} className="inline" /> <strong>{mailStats.drafts}</strong> drafts</span>
         </div>
       </div>
 
-      {/* Recent Emails */}
-      <div className="flex-1 overflow-y-auto">
-        <h4 className="mb-2 text-sm font-medium text-secondary">Recent</h4>
-        <div className="space-y-2">
+      <div>
+        <div className="asana-text-sm asana-text-muted" style={{ margin: '4px 0 8px' }}>Recent</div>
+        <div className="asana-flex asana-flex-col asana-gap-sm">
           {recentEmails.map((email) => (
-            <div
+            <ListItem
               key={email.id}
-              className="bg-tertiary/50 cursor-pointer rounded-lg p-3 transition-colors hover:bg-tertiary"
-              onClick={handleViewAll}
-            >
-              <div className="flex items-start gap-2">
-                {email.unread && (
-                  <div className="mt-1.5 size-2 rounded-full bg-blue-500" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h5 className={`truncate text-sm font-medium ${email.unread ? 'text-primary' : 'text-secondary'}`}>
-                      {email.sender}
-                    </h5>
-                    <span className="whitespace-nowrap text-xs text-secondary">{email.time}</span>
-                  </div>
-                  <p className={`truncate text-sm ${email.unread ? 'font-medium text-primary' : 'text-secondary'}`}>
-                    {email.subject}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-secondary">{email.preview}</p>
-                </div>
-              </div>
-            </div>
+              leading={email.unread ? <span className="asana-list-dot" aria-hidden style={{ width: 8, height: 8, borderRadius: 8, background: 'var(--asana-info)' }} /> : null}
+              primary={(<span className={email.unread ? 'asana-font-medium asana-text-primary' : 'asana-text-secondary'}>{email.sender}</span>)}
+              secondary={(<>
+                <span className={email.unread ? 'asana-font-medium asana-text-primary' : 'asana-text-secondary'}>{email.subject}</span>
+                <span className="asana-text-muted"> — {email.preview}</span>
+              </>)}
+              meta={<span className="asana-text-muted asana-text-sm">{email.time}</span>}
+              onActivate={handleViewAll}
+            />
           ))}
         </div>
       </div>

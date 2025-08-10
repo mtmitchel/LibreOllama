@@ -92,21 +92,21 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
       }}
     >
       <button 
-        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
+        className="flex w-full items-center gap-3 px-4 py-2 text-left asana-text-sm text-secondary hover:bg-surface hover:text-primary"
         onClick={() => handleAction(() => onEdit(project))}
       >
         <Edit3 size={16} />
         Edit project
       </button>
       <button 
-        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
+        className="flex w-full items-center gap-3 px-4 py-2 text-left asana-text-sm text-secondary hover:bg-surface hover:text-primary"
         onClick={() => handleAction(() => onDuplicate(project))}
       >
         <Copy size={16} />
         Duplicate
       </button>
       <button 
-        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
+        className="flex w-full items-center gap-3 px-4 py-2 text-left asana-text-sm text-secondary hover:bg-surface hover:text-primary"
         onClick={() => handleAction(() => onArchive(project))}
       >
         <Archive size={16} />
@@ -114,7 +114,7 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
       </button>
       <hr className="border-border my-2" />
       <button 
-        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+        className="flex w-full items-center gap-3 px-4 py-2 text-left asana-text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
         onClick={() => handleAction(() => onDelete(project))}
       >
         <Trash2 size={16} />

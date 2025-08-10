@@ -64,7 +64,7 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
       {isOpen && (
         <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 z-[1200] mb-2 w-44 -translate-x-1/2 rounded-xl border p-2 shadow-xl backdrop-blur-sm">
           <div className="flex flex-col gap-1">
-            <div className="text-text-muted px-2 py-1 text-center text-xs font-semibold uppercase tracking-wide">
+            <div className="text-text-muted px-2 py-1 text-center text-[11px] font-semibold uppercase tracking-wide">
               Connectors
             </div>
             <div className="flex flex-col gap-1">
@@ -80,7 +80,7 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
                     title={tool.name}
                   >
                     <IconComponent size={16} />
-                    <span className="text-sm font-medium">{tool.name}</span>
+                    <span className="asana-text-sm font-medium">{tool.name}</span>
                   </Button>
                 );
               })}

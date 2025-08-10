@@ -2,11 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { CanvasContainer } from '../../features/canvas/components/CanvasContainer';
 import { useHeader } from '../contexts/HeaderContext';
-import { Button } from '../../components/ui';
+import { Button } from '../../components/ui/design-system/Button';
 import { PanelRight } from 'lucide-react';
 import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
 import Konva from 'konva';
-import './styles/page-asana-v2.css';
+import { Page, PageCard } from '../../components/ui/design-system/Page';
 
 /**
  * This component establishes the two-pane layout for the Canvas feature,
@@ -29,12 +29,14 @@ import './styles/page-asana-v2.css';
   }, [clearHeaderProps]);
 
   return (
+    <Page full>
+      <PageCard>
     <div style={{ 
       display: 'flex', 
-      height: '100vh', 
+      height: '100%', 
       overflow: 'hidden', 
-      background: '#FAFBFC',
-      padding: isCanvasSidebarOpen ? '24px' : '24px 24px 24px 0', // remove left padding when closed so gutter is owned by the toggle container
+      background: 'var(--bg-page)',
+      padding: isCanvasSidebarOpen ? '24px' : '24px 24px 24px 0',
       gap: isCanvasSidebarOpen ? '24px' : '0px'
     }}>
       {/* Sidebar - only renders when open */}
@@ -67,7 +69,7 @@ import './styles/page-asana-v2.css';
               borderRadius: '6px',
               background: 'transparent',
               border: 'none',
-              color: '#7B8794',
+              color: 'var(--text-muted)',
               cursor: 'pointer',
               transition: 'all 150ms ease',
               padding: 0,
@@ -76,12 +78,12 @@ import './styles/page-asana-v2.css';
             title="Show canvas sidebar"
             aria-label="Show canvas sidebar"
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#F4F6F8';
-              e.currentTarget.style.color = '#323F4B';
+              e.currentTarget.style.background = 'var(--bg-secondary)';
+              e.currentTarget.style.color = 'var(--text-primary)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#7B8794';
+              e.currentTarget.style.color = 'var(--text-muted)';
             }}
           >
             <PanelRight size={18} strokeWidth={2} />
@@ -94,7 +96,7 @@ import './styles/page-asana-v2.css';
         minWidth: 0, 
         position: 'relative', 
         overflow: 'visible',
-        background: '#FFFFFF',
+        background: 'var(--bg-content)',
         borderRadius: '8px',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
       }}>
@@ -102,6 +104,8 @@ import './styles/page-asana-v2.css';
         <CanvasContainer onStageReady={handleStageReady} />
       </main>
     </div>
+      </PageCard>
+    </Page>
   );
 }
 

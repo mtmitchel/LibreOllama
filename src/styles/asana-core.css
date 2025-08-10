@@ -84,7 +84,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 14px;
+  font-size: 14px; /* primary reading size */
   line-height: 1.5;
   color: var(--asana-text-primary);
   background: var(--asana-bg-secondary);
@@ -236,6 +236,14 @@ body {
   align-items: center;
   justify-content: space-between;
 }
+.asana-card-header--no-divider {
+  border-bottom: none;
+}
+.asana-card-header-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.asana-card-subtitle { font-size: 12px; color: var(--asana-text-muted); }
+.asana-card-header-actions { display: flex; align-items: center; gap: var(--asana-spacing-sm); }
+/* Ensure header actions are visible and hit-target sized */
+.asana-card-header-actions .asana-btn-icon { width: 36px; height: 36px; }
 
 .asana-card-title {
   font-size: 16px;
@@ -331,6 +339,30 @@ body {
   height: 32px;
   padding: 0;
   border-radius: var(--asana-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Action button variant */
+.asana-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--asana-brand-purple);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--asana-radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-action-btn:hover {
+  background: #6B5FE6;
+  transform: translateY(-1px);
 }
 
 /* ============================================
@@ -509,7 +541,7 @@ body {
 .asana-text-base { font-size: 14px; }
 .asana-text-lg { font-size: 16px; }
 .asana-text-xl { font-size: 18px; }
-.asana-text-2xl { font-size: 24px; }
+.asana-text-2xl { font-size: 18px; }
 
 .asana-font-normal { font-weight: 400; }
 .asana-font-medium { font-weight: 500; }
@@ -522,6 +554,106 @@ body {
 .asana-text-purple { color: var(--asana-brand-purple); }
 .asana-text-error { color: var(--asana-error); }
 .asana-text-success { color: var(--asana-success); }
+
+/* ============================================
+   12b. LIST + TILE PRIMITIVES
+   ============================================ */
+
+/* ListItem */
+.asana-list-item { 
+  display: flex; align-items: center; gap: var(--asana-spacing-sm);
+  width: 100%; background: transparent; border: 0; text-align: left;
+  padding: 8px 10px; border-radius: var(--asana-radius-md);
+  transition: background 120ms ease; cursor: pointer;
+}
+.asana-list-item--card { padding: 10px 12px; background: var(--asana-bg-primary); border: 1px solid var(--asana-border-primary); border-radius: var(--asana-radius-lg); }
+.asana-list-item--card:hover { background: var(--asana-bg-secondary); border-color: var(--asana-border-secondary); }
+
+/* Related items visuals */
+.asana-related-leading {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--asana-bg-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--asana-text-secondary);
+}
+.asana-related-leading.task { color: var(--asana-brand-purple); }
+.asana-related-leading.note { color: var(--asana-brand-purple); }
+.asana-related-leading.event { color: var(--asana-info); }
+
+.asana-meta-right { margin-left: auto; display: inline-flex; align-items: flex-end; gap: 8px; flex-direction: column; }
+.asana-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  background: var(--asana-bg-tertiary);
+  color: var(--asana-text-muted);
+  white-space: nowrap;
+}
+.asana-meta-chip.is-warning { background: rgba(255, 169, 60, 0.15); color: var(--asana-warning); }
+.asana-meta-chip.is-danger { background: rgba(232, 56, 79, 0.15); color: var(--asana-error); }
+.asana-meta-chip.is-info { background: rgba(37, 99, 235, 0.12); color: var(--asana-info); }
+.asana-meta-chip.is-note { background: rgba(121, 110, 255, 0.12); color: var(--asana-brand-purple); }
+
+/* Related row layout */
+.asana-related-row { 
+  display: grid; 
+  grid-template-columns: 56px 1fr auto; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 12px 14px; 
+}
+.asana-related-row .asana-list-leading { justify-self: start; }
+.asana-related-row .asana-list-content { min-width: 0; }
+.asana-related-row .asana-list-primary { font-size: 14px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asana-related-row .asana-list-secondary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.asana-related-row .asana-list-meta { justify-self: end; }
+
+/* Inline chips used in secondary line */
+.asana-chips { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.asana-list-item--dense { padding: 6px 8px; }
+.asana-list-item:hover { background: var(--asana-bg-tertiary); }
+.asana-list-leading { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.asana-list-content { min-width: 0; flex: 1; }
+.asana-list-primary { font-size: 13px; color: var(--asana-text-primary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asana-list-secondary { font-size: 12px; color: var(--asana-text-muted); white-space: normal; overflow: hidden; display: block; margin-top: 2px; line-height: 1.35; }
+.asana-list-meta { margin-left: auto; font-size: 12px; color: var(--asana-text-muted); flex-shrink: 0; }
+
+/* Tile */
+.asana-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 16px; border-radius: var(--asana-radius-lg);
+  background: var(--asana-bg-secondary); border: 1px solid var(--asana-border-primary);
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.asana-tile:hover { transform: translateY(-1px); box-shadow: var(--asana-shadow-sm); background: var(--asana-bg-tertiary); }
+.asana-tile:focus-visible { outline: 2px solid var(--asana-border-focus); outline-offset: 2px; }
+.asana-tile-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--asana-brand-purple); }
+.asana-tile-label { font-size: 12px; color: var(--asana-text-secondary); }
+
+/* Dropdown menu visibility and polish */
+.asana-dropdown-menu {
+  background: var(--asana-bg-primary);
+  border: 1px solid var(--asana-border-primary);
+  border-radius: var(--asana-radius-md);
+  box-shadow: 0 16px 28px rgba(0,0,0,0.14), 0 10px 10px rgba(0,0,0,0.12), 0 5px 5px rgba(0,0,0,0.2);
+  padding: 4px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: min(60vh, 480px);
+  overflow: auto;
+}
+.asana-dropdown-item { 
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  font-size: 13px; color: var(--asana-text-primary);
+  padding: 8px 10px; border-radius: 6px; background: transparent; border: 0; text-align: left;
+}
+.asana-dropdown-item:hover { background: var(--asana-bg-tertiary); }
+.asana-dropdown-separator { height: 1px; background: var(--asana-border-primary); margin: 4px 6px; }
 
 /* ============================================
    13. RESPONSIVE DESIGN
@@ -575,6 +707,392 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--asana-text-disabled);
 }
+
+/* ============================================
+   LEGACY DS CLASS MAPPINGS (consolidated)
+   Pulled from ui-asana.css and asana-design-system.css
+   to preserve existing visuals without extra imports
+   ============================================ */
+
+/* Labels */
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 200ms ease;
+  border: 1px solid transparent;
+}
+.label-red { background-color: var(--label-red-bg); color: var(--label-red-text); border-color: var(--label-red-border); }
+.label-orange { background-color: var(--label-orange-bg); color: var(--label-orange-text); border-color: var(--label-orange-border); }
+.label-yellow { background-color: var(--label-yellow-bg); color: var(--label-yellow-text); border-color: var(--label-yellow-border); }
+.label-green { background-color: var(--label-green-bg); color: var(--label-green-text); border-color: var(--label-green-border); }
+.label-blue { background-color: var(--label-blue-bg); color: var(--label-blue-text); border-color: var(--label-blue-border); }
+.label-purple { background-color: var(--label-purple-bg); color: var(--label-purple-text); border-color: var(--label-purple-border); }
+.label-pink { background-color: var(--label-pink-bg); color: var(--label-pink-text); border-color: var(--label-pink-border); }
+.label-gray { background-color: var(--label-gray-bg); color: var(--label-gray-text); border-color: var(--label-gray-border); }
+.label-teal { background-color: var(--label-teal-bg); color: var(--label-teal-text); border-color: var(--label-teal-border); }
+.label-cyan { background-color: var(--label-cyan-bg); color: var(--label-cyan-text); border-color: var(--label-cyan-border); }
+.label:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+
+/* ============================================
+   15. PAGE-SPECIFIC LAYOUTS
+   Essential layouts for Chat, Mail, Projects pages
+   ============================================ */
+
+/* Chat Page Layout */
+.asana-chat {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  background: var(--asana-bg-secondary);
+  gap: var(--asana-component-gap);
+}
+
+.asana-chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: var(--asana-shadow-sm);
+  overflow: hidden;
+}
+
+.asana-chat-messages {
+  flex: 1;
+  padding: var(--asana-spacing-xl);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.asana-chat-input-container {
+  border-top: 1px solid var(--asana-border-primary);
+  padding: var(--asana-spacing-lg);
+  background: var(--asana-bg-primary);
+}
+
+/* Chat Typing Indicator */
+.asana-chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+
+.asana-chat-typing-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.asana-chat-typing-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--asana-text-muted);
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+}
+
+.asana-chat-typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.asana-chat-typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Mail Page Layout */
+.asana-mail {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  background: var(--asana-bg-secondary);
+  gap: var(--asana-component-gap);
+}
+
+.asana-mail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.asana-mail-empty-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.asana-mail-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--asana-text-primary);
+  margin: 0;
+}
+
+.asana-mail-empty-description {
+  font-size: 14px;
+  color: var(--asana-text-muted);
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* Projects Page Layout */
+.asana-projects-sidebar {
+  width: 280px;
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: var(--asana-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.asana-projects-header {
+  padding: var(--asana-spacing-lg);
+  border-bottom: 1px solid var(--asana-border-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--asana-bg-primary);
+}
+
+.asana-projects-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--asana-text-primary);
+  margin: 0;
+}
+
+.asana-projects-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--asana-spacing-md);
+}
+
+.asana-projects-group {
+  margin-bottom: var(--asana-spacing-xl);
+}
+
+.asana-projects-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--asana-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--asana-spacing-sm);
+  padding: 0 var(--asana-spacing-sm);
+}
+
+.asana-project-item {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-sm);
+  padding: var(--asana-spacing-sm) var(--asana-spacing-sm);
+  border-radius: var(--asana-radius-md);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.asana-project-item:hover {
+  background: var(--asana-bg-tertiary);
+}
+
+.asana-project-item.active {
+  background: rgba(121, 110, 255, 0.08);
+}
+
+.asana-project-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.asana-project-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--asana-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asana-project-count {
+  font-size: 12px;
+  color: var(--asana-text-muted);
+}
+
+.asana-project-content {
+  flex: 1;
+  padding: var(--asana-spacing-2xl);
+}
+
+.asana-project-header {
+  margin-bottom: var(--asana-spacing-2xl);
+}
+
+.asana-project-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--asana-text-primary);
+  margin: 0 0 var(--asana-spacing-sm) 0;
+}
+
+.asana-project-description {
+  font-size: 14px;
+  color: var(--asana-text-secondary);
+  line-height: 1.5;
+  margin: 0 0 var(--asana-spacing-lg) 0;
+}
+
+.asana-project-meta {
+  display: flex;
+  gap: var(--asana-spacing-2xl);
+}
+
+.asana-project-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--asana-spacing-xs);
+}
+
+.asana-project-stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--asana-text-primary);
+}
+
+.asana-project-stat-label {
+  font-size: 12px;
+  color: var(--asana-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Add New Card Component */
+.asana-add-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--asana-spacing-md);
+  padding: var(--asana-spacing-2xl);
+  background: var(--asana-bg-secondary);
+  border: 2px dashed var(--asana-border-primary);
+  border-radius: var(--asana-radius-lg);
+  cursor: pointer;
+  transition: all 150ms ease;
+  min-height: 160px;
+}
+
+.asana-add-card:hover {
+  background: var(--asana-bg-tertiary);
+  border-color: var(--asana-brand-purple);
+}
+
+.asana-add-icon {
+  color: var(--asana-text-muted);
+}
+
+.asana-add-text {
+  font-size: 14px;
+  color: var(--asana-text-secondary);
+  font-weight: 500;
+}
+
+/* Generic Page Layout (fallback) */
+.asana-page {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  background: var(--asana-bg-secondary);
+  padding: var(--asana-page-padding);
+  gap: var(--asana-component-gap);
+}
+
+/* Search Box Component */
+.asana-search-box {
+  position: relative;
+  padding: 0 var(--asana-spacing-lg);
+  margin-bottom: var(--asana-spacing-md);
+}
+
+.asana-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  background: var(--asana-bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: var(--asana-radius-md);
+  font-size: 14px;
+  color: var(--asana-text-primary);
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.asana-search-input:focus {
+  background: var(--asana-bg-primary);
+  border-color: var(--asana-brand-purple);
+}
+
+.asana-search-icon {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--asana-text-disabled);
+  pointer-events: none;
+}
+
+/* Checkbox */
+.asana-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #D4D6DA;
+  background: var(--asana-bg-primary);
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.asana-checkbox:hover { border-color: #848B98; background-color: rgba(0, 0, 0, 0.02); }
+.asana-checkbox.checked { background: var(--indigo-500); border-color: var(--indigo-500); }
+
+/* Task title */
+.asana-task-title { font-size: 14px; font-weight: 400; color: var(--asana-text-primary); line-height: 20px; word-break: break-word; margin: 0; }
+.asana-task-title.completed { color: var(--asana-text-muted); text-decoration: line-through; }
+
+/* Card drag state */
+.asana-card.dragging { box-shadow: var(--asana-shadow-lg); opacity: 0.95; cursor: grabbing; }
+
+/* Scroll containers */
+.asana-board-scroll { scroll-behavior: smooth; scroll-snap-type: x proximity; }
+.asana-board-scroll > * { scroll-snap-align: start; }
+.asana-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.asana-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.asana-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: var(--asana-radius-sm); }
+.asana-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.3); }
 
 /* ============================================
    END OF ASANA CORE CSS

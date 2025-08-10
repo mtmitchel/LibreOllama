@@ -95,7 +95,7 @@ export function SyncStatus({ className = '', showDetails = true }: SyncStatusPro
   }
 
   return (
-    <div className={`flex items-center gap-2 text-sm ${className}`}>
+    <div className={`flex items-center gap-2 asana-text-sm ${className}`}>
       {isSyncing ? (
         <>
           <RefreshCw size={16} className="animate-spin text-accent-primary" />

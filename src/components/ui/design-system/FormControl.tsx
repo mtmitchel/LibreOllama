@@ -38,9 +38,9 @@ const formControlVariants = cva(
   {
     variants: {
       size: {
-        sm: 'text-[var(--text-small)]',
-        md: 'text-[var(--text-body)]',
-        lg: 'text-[var(--text-large)]',
+        sm: 'asana-text-sm',
+        md: 'asana-text-base',
+        lg: 'asana-text-lg',
       },
     },
     defaultVariants: {
@@ -73,8 +73,7 @@ export const FormControl = forwardRef<HTMLDivElement, FormControlProps>(({
   
   // Check if children contain helper text or error messages
   const hasError = React.Children.toArray(children).some((child) =>
-    React.isValidElement(child) && 
-    (child.type === FormErrorMessage || (child.props && child.props.isError))
+    React.isValidElement(child) && child.type === FormErrorMessage
   );
   
   const hasHelper = React.Children.toArray(children).some((child) =>
@@ -112,19 +111,19 @@ FormControl.displayName = 'FormControl';
 const labelVariants = cva(
   `
     block font-medium
-    text-[var(--text-primary)]
+    text-[color:var(--text-primary)]
     transition-[var(--transition-property)]
     duration-[var(--transition-duration)]
   `,
   {
     variants: {
       size: {
-        sm: 'text-[var(--text-small)]',
-        md: 'text-[var(--text-body)]',
-        lg: 'text-[var(--text-large)]',
+        sm: 'asana-text-sm',
+        md: 'asana-text-base',
+        lg: 'asana-text-lg',
       },
       disabled: {
-        true: 'text-[var(--text-muted)] cursor-not-allowed',
+        true: 'text-[color:var(--text-muted)] cursor-not-allowed',
         false: '',
       },
     },
@@ -148,7 +147,7 @@ export const FormLabel = forwardRef<HTMLLabelElement, FormLabelProps>(({
   className = '',
   htmlFor,
   size = 'md',
-  requiredIndicator = <span className="text-[var(--status-error)] ml-1">*</span>,
+  requiredIndicator = <span className="text-[color:var(--status-error)] ml-1">*</span>,
   showOptional = true,
   ...props
 }, ref) => {
@@ -168,7 +167,7 @@ export const FormLabel = forwardRef<HTMLLabelElement, FormLabelProps>(({
       {formControl?.isRequired && requiredIndicator}
       
       {!formControl?.isRequired && showOptional && (
-        <span className="text-[var(--text-muted)] ml-1 font-normal">
+        <span className="text-[color:var(--text-muted)] ml-1 font-normal">
           (optional)
         </span>
       )}
@@ -183,14 +182,14 @@ FormLabel.displayName = 'FormLabel';
  */
 const helperVariants = cva(
   `
-    text-[var(--text-small)]
-    text-[var(--text-secondary)]
+    asana-text-sm
+    text-[color:var(--text-secondary)]
     leading-relaxed
   `,
   {
     variants: {
       disabled: {
-        true: 'text-[var(--text-muted)]',
+        true: 'text-[color:var(--text-muted)]',
         false: '',
       },
     },
@@ -236,8 +235,8 @@ FormHelperText.displayName = 'FormHelperText';
 const errorVariants = cva(
   `
     flex items-start gap-[var(--space-1)]
-    text-[var(--text-small)]
-    text-[var(--status-error)]
+    asana-text-sm
+    text-[color:var(--status-error)]
     leading-relaxed
   `,
   {
@@ -320,8 +319,8 @@ export const FormSuccessMessage = forwardRef<HTMLDivElement, FormSuccessMessageP
       id={successId}
       className={`
         flex items-start gap-[var(--space-1)]
-        text-[var(--text-small)]
-        text-[var(--status-success)]
+        asana-text-sm
+        text-[color:var(--status-success)]
         leading-relaxed
         ${className}
       `}
@@ -363,8 +362,8 @@ export const FormHint = forwardRef<HTMLDivElement, FormHintProps>(({
       id={hintId}
       className={`
         flex items-start gap-[var(--space-1)]
-        text-[var(--text-small)]
-        text-[var(--text-muted)]
+        asana-text-sm
+        text-[color:var(--text-muted)]
         leading-relaxed
         ${className}
       `}
@@ -388,9 +387,9 @@ const inputVariants = cva(
     bg-[var(--bg-surface)]
     border border-[var(--border-default)]
     rounded-[var(--radius-md)]
-    text-[var(--text-body)]
-    text-[var(--text-primary)]
-    placeholder-[var(--text-muted)]
+    asana-text-base
+    text-[color:var(--text-primary)]
+    placeholder:text-[color:var(--text-muted)]
     transition-[var(--transition-property)]
     duration-[var(--transition-duration)]
     
@@ -400,16 +399,16 @@ const inputVariants = cva(
     focus:ring-[var(--border-focus)]
     
     disabled:bg-[var(--bg-muted)]
-    disabled:text-[var(--text-muted)]
+    disabled:text-[color:var(--text-muted)]
     disabled:cursor-not-allowed
     disabled:border-[var(--border-subtle)]
   `,
   {
     variants: {
       size: {
-        sm: 'h-8 px-[var(--space-2)] text-[var(--text-small)]',
-        md: 'h-10 px-[var(--space-3)] text-[var(--text-body)]',
-        lg: 'h-12 px-[var(--space-4)] text-[var(--text-large)]',
+        sm: 'h-8 px-[var(--space-2)] asana-text-sm',
+        md: 'h-10 px-[var(--space-3)] asana-text-base',
+        lg: 'h-12 px-[var(--space-4)] asana-text-lg',
       },
       isInvalid: {
         true: `
@@ -487,10 +486,13 @@ FormInput.displayName = 'FormInput';
 /**
  * Enhanced Textarea with FormControl integration
  */
-export interface FormTextareaProps extends Omit<FormInputProps, 'type'> {
+export interface FormTextareaProps extends Omit<FormInputProps, 'type' | 'onFocus' | 'onBlur' | 'onChange'> {
   rows?: number;
   cols?: number;
   resize?: 'none' | 'vertical' | 'horizontal' | 'both';
+  onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onFocus?: (event: React.FocusEvent<HTMLTextAreaElement>) => void;
+  onBlur?: (event: React.FocusEvent<HTMLTextAreaElement>) => void;
 }
 
 export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(({
@@ -532,7 +534,7 @@ export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>((
       required={isRequired}
       aria-invalid={isInvalid}
       aria-describedby={ariaDescribedBy}
-      onChange={onChange as any}
+      onChange={onChange}
       className={`
         ${inputVariants({ size, isInvalid })}
         ${resizeClasses[resize]}
@@ -579,12 +581,12 @@ export const FormGroup = forwardRef<HTMLFieldSetElement, FormGroupProps>(({
       {...props}
     >
       {title && (
-        <legend className="text-[var(--text-large)] font-semibold text-[var(--text-primary)] mb-[var(--space-2)]">
+        <legend className="asana-text-lg font-semibold text-[color:var(--text-primary)] mb-[var(--space-2)]">
           {title}
         </legend>
       )}
       {description && (
-        <p className="text-[var(--text-small)] text-[var(--text-secondary)] mb-[var(--space-4)]">
+        <p className="asana-text-sm text-[color:var(--text-secondary)] mb-[var(--space-4)]">
           {description}
         </p>
       )}

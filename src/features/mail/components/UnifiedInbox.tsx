@@ -152,15 +152,15 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
     return (
       <div className={`flex h-64 items-center justify-center ${className}`}>
         <div className="text-center">
-          <h3 className="mb-2 text-lg font-medium text-primary">
+          <h3 className="mb-2 asana-text-lg font-medium text-primary">
             Unified Inbox Disabled
           </h3>
-          <p className="mb-4 text-sm text-secondary dark:text-muted">
+          <p className="mb-4 asana-text-sm text-secondary dark:text-muted">
             Enable unified inbox in settings to view emails from all accounts in one place.
           </p>
           <button
             onClick={() => useMailStore.getState().updateSettings({ enableUnifiedInbox: true })}
-            className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-secondary"
+            className="rounded-lg bg-accent-primary px-4 py-2 asana-text-sm font-medium text-white transition-colors hover:bg-accent-secondary"
           >
             Enable Unified Inbox
           </button>
@@ -174,10 +174,10 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
       {/* Header */}
       <div className="border-border-default flex items-center justify-between border-b p-4 dark:border-gray-700">
         <div className="flex items-center space-x-4">
-          <h2 className="text-lg font-semibold text-primary">
+          <h2 className="asana-text-lg font-semibold text-primary">
             Unified Inbox
           </h2>
-          <span className="text-sm text-secondary dark:text-muted">
+          <span className="asana-text-sm text-secondary dark:text-muted">
             {filteredAndSortedMessages.length} message{filteredAndSortedMessages.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -188,7 +188,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
           <select
             value={selectedAccountFilter || ''}
             onChange={(e) => setSelectedAccountFilter(e.target.value || null)}
-            className="border-border-default focus:ring-accent-primary rounded-lg border bg-white px-3 py-1 text-sm text-primary focus:outline-none focus:ring-2 dark:border-gray-600 dark:bg-surface dark:text-gray-100"
+            className="border-border-default focus:ring-accent-primary rounded-lg border bg-white px-3 py-1 asana-text-sm text-primary focus:outline-none focus:ring-2 dark:border-gray-600 dark:bg-surface dark:text-gray-100"
           >
             <option value="">All accounts</option>
             {accounts.map(account => (
@@ -199,7 +199,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
           </select>
 
           {/* Show Only Unread */}
-          <label className="flex items-center space-x-2 text-sm text-primary dark:text-muted">
+          <label className="flex items-center space-x-2 asana-text-sm text-primary dark:text-muted">
             <input
               type="checkbox"
               checked={showOnlyUnread}
@@ -214,7 +214,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'date' | 'sender' | 'subject')}
-              className="border-border-default focus:ring-accent-primary rounded-lg border bg-white px-3 py-1 text-sm text-primary focus:outline-none focus:ring-2 dark:border-gray-600 dark:bg-surface dark:text-gray-100"
+              className="border-border-default focus:ring-accent-primary rounded-lg border bg-white px-3 py-1 asana-text-sm text-primary focus:outline-none focus:ring-2 dark:border-gray-600 dark:bg-surface dark:text-gray-100"
             >
                           <option value="date">Sort by date</option>
             <option value="sender">Sort by sender</option>
@@ -246,7 +246,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
         <div className="flex items-center justify-center p-8">
           <div className="flex items-center space-x-3">
             <div className="size-6 animate-spin rounded-full border-2 border-accent-primary border-t-transparent"></div>
-            <span className="text-sm text-secondary dark:text-muted">Loading messages...</span>
+            <span className="asana-text-sm text-secondary dark:text-muted">Loading messages...</span>
           </div>
         </div>
       )}
@@ -259,10 +259,10 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
               <svg className="mx-auto mb-4 size-12 text-muted dark:text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m13-8v.01M6 5v.01" />
               </svg>
-              <h3 className="mb-2 text-lg font-medium text-primary">
+              <h3 className="mb-2 asana-text-lg font-medium text-primary">
                 No messages found
               </h3>
-              <p className="text-sm text-secondary dark:text-muted">
+              <p className="asana-text-sm text-secondary dark:text-muted">
                 {showOnlyUnread ? 'No unread messages' : 'Your unified inbox is empty'}
               </p>
             </div>
@@ -292,7 +292,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
                   {/* Account Indicator */}
                   <div className="flex items-center space-x-2">
                     <div className={`size-3 rounded-full ${getAccountColor(message.accountId)}`} title={account?.email}></div>
-                    <span className="hidden text-xs text-secondary dark:text-muted sm:inline">
+                    <span className="hidden text-[11px] text-secondary dark:text-muted sm:inline">
                       {account?.displayName?.substring(0, 10)}
                     </span>
                   </div>
@@ -314,27 +314,27 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
                   {/* Sender */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center space-x-2">
-                      <span className={`truncate text-sm ${!message.isRead ? 'font-semibold text-primary' : 'text-primary'}`}>
+                      <span className={`truncate asana-text-sm ${!message.isRead ? 'font-semibold text-primary' : 'text-primary'}`}>
                         {message.from.name || message.from.email}
                       </span>
                       {!message.isRead && (
                         <div className="size-2 rounded-full bg-accent-primary"></div>
                       )}
                     </div>
-                    <div className="truncate text-sm text-secondary dark:text-muted">
+                    <div className="truncate asana-text-sm text-secondary dark:text-muted">
                       {message.subject}
                     </div>
                   </div>
 
                   {/* Snippet */}
                   <div className="hidden min-w-0 flex-1 md:block">
-                    <div className="truncate text-sm text-secondary dark:text-muted">
+                    <div className="truncate asana-text-sm text-secondary dark:text-muted">
                       {message.snippet}
                     </div>
                   </div>
 
                   {/* Date */}
-                  <div className="text-sm text-secondary dark:text-muted">
+                  <div className="asana-text-sm text-secondary dark:text-muted">
                     {formatDate(message.date)}
                   </div>
 

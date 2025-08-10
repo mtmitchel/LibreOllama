@@ -140,23 +140,23 @@ export const AttachmentDownloadButton: React.FC<AttachmentDownloadButtonProps> =
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xs font-bold">{download.progress}</span>
+            <span className="text-[11px] font-bold">{download.progress}</span>
           </div>
         </div>
       ) : (
-        <span className="material-icons-outlined text-base">
+        <span className="material-icons-outlined asana-text-base">
           {buttonContent.icon}
         </span>
       )}
 
       {/* Text */}
       {!compact && buttonContent.text && (
-        <span className="text-sm">{buttonContent.text}</span>
+        <span className="asana-text-sm">{buttonContent.text}</span>
       )}
 
       {/* Download speed and ETA for active downloads */}
       {download?.status === 'downloading' && !compact && (
-        <div className="text-xs text-secondary dark:text-muted">
+        <div className="text-[11px] text-secondary dark:text-muted">
           {formatFileSize(download.downloadedSize)} / {formatFileSize(download.size)}
         </div>
       )}

@@ -69,7 +69,7 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
       {isOpen && (
         <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 z-[1200] mb-2 min-w-max -translate-x-1/2 rounded-xl border p-2 shadow-xl backdrop-blur-sm">
           <div className="flex flex-col gap-1">
-            <div className="text-text-muted px-2 py-1 text-center text-xs font-semibold uppercase tracking-wide">
+            <div className="text-text-muted px-2 py-1 text-center text-[11px] font-semibold uppercase tracking-wide">
               Shapes
             </div>
             <div className="flex items-center justify-center gap-1">
