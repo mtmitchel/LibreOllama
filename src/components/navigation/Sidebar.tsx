@@ -26,6 +26,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const location = useLocation();
 
   const workspaceItems = [
+    { name: 'Spaces', path: '/spaces', icon: FolderOpen },
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Chat', path: '/chat', icon: MessageSquare },
     { name: 'Mail', path: '/mail', icon: Mail },

@@ -19,6 +19,7 @@ import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
 import Mail from './pages/Mail';
 import { Projects } from './pages/Projects';
+import Spaces from './pages/Spaces';
 import Notes from './pages/Notes';
 import CanvasPage from './pages/Canvas';
 import CalendarCustom from './pages/CalendarCustom';
@@ -40,6 +41,7 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
       <Route path="/chat" element={<Chat />} />
       <Route path="/mail" element={<Mail />} />
       <Route path="/projects" element={<Projects />} />
+      <Route path="/spaces" element={<Spaces />} />
       <Route path="/notes" element={<Notes />} />
       <Route path="/canvas" element={<CanvasPage />} />
       {/* Custom Calendar Implementation */}
