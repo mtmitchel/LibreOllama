@@ -5,6 +5,29 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-08-10
+
+### 🎨 Design system migration finalized
+- Consolidated design tokens and core styles into `src/styles/asana-globals.css`, `src/styles/asana-core.css`, and `src/styles/asana-layout.css`.
+- Enforced typography scale across app: 14px body, 12–13px secondary, 16–18px headings.
+- Replaced Tailwind size utilities with `asana-text-*` classes; removed conflicting utilities.
+- Purged hardcoded colors in Tasks/Kanban/Mail; standardized on semantic tokens `var(--text-*)`, `var(--bg-*)`, `var(--border-*)`, `var(--status-*)`, `var(--accent-*)`.
+- Migrated to DS-only UI imports; replaced legacy `DropdownMenu` usage with `Dropdown`/`ActionMenu`.
+- Aligned dialogs to DS APIs (`ConfirmDialog`, `SimpleDialog`).
+- Added accessibility ids/names/aria-labels to inputs, including hidden file inputs.
+
+### 🧹 Repository cleanup
+- Archived page-level CSS variants to `src/app/pages/styles/_archive/`.
+- Removed unused UI wrappers and stories (`Tag`, `ProgressRing`, `Stepper`, `Toast`, `Tooltip`, old `select`/`popover`).
+- Moved design docs to `docs/design-system` with status and reports under `docs/design-system/migrations` and `docs/design-system/reports`.
+- Archived legacy design references to `docs/_archive/legacy-design/`.
+
+### ✅ Quality gate
+- TypeScript: 0 errors.
+- Runtime: app builds and runs; chat typography verified at 14px body, headings 16–18px.
+
+---
+
 ## [Unreleased] - 2025-02-08
 
 ### 🎨 UI/UX Improvements
