@@ -1,3 +1,4 @@
+#![cfg(feature = "folders")]
 //! Folder Management Commands
 //!
 //! This module provides commands for managing folders in the application.

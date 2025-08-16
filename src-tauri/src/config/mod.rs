@@ -432,6 +432,7 @@ pub fn get_config_manager() -> Result<&'static ConfigManager> {
 
 /// Initialize configuration manager with custom config (for testing)
 #[cfg(test)]
+#[allow(dead_code)]
 pub fn init_config_manager_with_config(config: AppConfig) -> &'static ConfigManager {
     CONFIG_MANAGER.get_or_init(|| ConfigManager::with_config(config))
 }

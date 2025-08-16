@@ -6,9 +6,11 @@
 // Service modules
 pub mod auth_service;
 pub mod api_service;
+#[cfg(feature = "gmail-compose")]
 pub mod compose_service;
 pub mod attachment_service;
 pub mod cache_service;
+#[cfg(feature = "gmail-compose")]
 pub mod sync_service;
 
 // Test modules
@@ -16,9 +18,12 @@ pub mod sync_service;
 pub mod tests;
 
 // Re-export only the actively used services and types
+// Export tokens type only when required externally; otherwise avoid unused warnings
+#[allow(unused_imports)]
 pub use auth_service::GmailTokens;
 pub use api_service::{ProcessedGmailMessage, EmailAddress};
 pub use cache_service::GmailCacheService;
+#[cfg(feature = "gmail-compose")]
 pub use sync_service::GmailSyncService;
 
 /// Gmail Services Module

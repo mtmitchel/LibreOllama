@@ -148,9 +148,24 @@ pub async fn start_gmail_oauth_with_callback(
     
     println!("[OAuth] Opening browser with auth URL: {}", auth_request.auth_url);
     
-    // Open browser
-    if let Err(e) = open::that(&auth_request.auth_url) {
-        return Err(format!("Failed to open browser: {}", e));
+    // Open browser - use system default properly on Windows
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, use cmd /c start to respect system default browser
+        use std::process::Command;
+        if let Err(e) = Command::new("cmd")
+            .args(&["/c", "start", "", &auth_request.auth_url])
+            .spawn() 
+        {
+            return Err(format!("Failed to open browser: {}", e));
+        }
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Err(e) = open::that(&auth_request.auth_url) {
+            return Err(format!("Failed to open browser: {}", e));
+        }
     }
     
     // Wait for callback
@@ -246,6 +261,7 @@ pub async fn remove_gmail_account_secure(
 
 /// Debug command to check secure table existence and contents
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn debug_gmail_secure_table(
     _auth_service: State<'_, Arc<GmailAuthService>>,
     db_manager: State<'_, crate::database::connection::DatabaseManager>,
@@ -284,6 +300,7 @@ pub async fn debug_gmail_secure_table(
 
 /// Debug Gmail token expiration times
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn debug_gmail_token_expiration(
     db_manager: State<'_, crate::database::connection::DatabaseManager>,
 ) -> Result<String, String> {
@@ -353,6 +370,7 @@ pub async fn debug_gmail_token_expiration(
 
 /// Clean up corrupted Gmail token expiration times
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn cleanup_corrupted_gmail_tokens(
     db_manager: State<'_, crate::database::connection::DatabaseManager>,
 ) -> Result<String, String> {
@@ -413,6 +431,7 @@ pub async fn cleanup_corrupted_gmail_tokens(
 
 /// Debug command to list all Gmail accounts in database
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn debug_list_all_gmail_accounts(
     db_manager: State<'_, crate::database::connection::DatabaseManager>,
 ) -> Result<String, String> {
@@ -450,6 +469,7 @@ pub async fn debug_list_all_gmail_accounts(
 
 /// Clear all Gmail tokens to force re-authentication
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn clear_all_gmail_tokens(
     db_manager: State<'_, crate::database::connection::DatabaseManager>,
 ) -> Result<String, String> {

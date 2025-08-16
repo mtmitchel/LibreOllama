@@ -45,7 +45,8 @@
       "mcp__sequential-thinking__sequentialthinking",
       "Bash(claude mcp:*)",
       "Bash(git log:*)",
-      "mcp__exa__web_search_exa"
+      "mcp__exa__web_search_exa",
+      "Bash(git push:*)"
     ],
     "deny": []
   },

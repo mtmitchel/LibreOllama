@@ -1,13 +1,11 @@
-use crate::models::task_metadata::*;
 use crate::{
     database::DatabaseManager,
-    models::task_metadata::{TaskMetadata, TaskMetadataWithRelations, TimeBlock},
+    models::task_metadata::TimeBlock,
     services::google::tasks_service::GoogleTasksService,
 };
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use super::metadata::get_task_metadata;
 use super::metadata_simple::SimpleLabel;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

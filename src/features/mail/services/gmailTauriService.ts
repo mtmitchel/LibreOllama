@@ -209,7 +209,7 @@ export async function removeAccount(accountId: string): Promise<{
   try {
     logger.debug(`[TauriService] Removing Gmail account: ${accountId}`);
     
-    await invoke('remove_gmail_tokens_secure', {
+    await invoke('remove_gmail_account_secure', {
       accountId
     });
     

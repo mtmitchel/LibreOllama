@@ -58,6 +58,12 @@ const buttonVariants = cva(
           hover:bg-[var(--brand-primary)]
           hover:text-[color:var(--text-on-brand)]
         `,
+        link: `
+          bg-transparent border-0 p-0 h-auto
+          text-[var(--brand-primary)] hover:text-[var(--brand-hover)]
+          underline decoration-[var(--brand-primary)]/40 underline-offset-2
+          hover:decoration-[var(--brand-hover)]/60
+        `,
         destructive: `
           bg-[var(--status-error)]
           text-[color:var(--text-on-brand)]

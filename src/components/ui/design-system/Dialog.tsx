@@ -92,7 +92,7 @@ export const DialogOverlay: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
     <div
       className={`
         fixed inset-0 z-[var(--z-modal-overlay)]
-        bg-black/40 backdrop-blur-sm
+        bg-[color:var(--bg-overlay)]
         animate-in fade-in-0
         duration-[var(--transition-duration)]
         ${className}
@@ -182,6 +182,7 @@ export const DialogContent: React.FC<DialogContentProps> = ({
             shadow-[var(--shadow-modal)]
             animate-in zoom-in-95 fade-in-0
             duration-[var(--transition-duration)]
+            outline-none focus:outline-none focus:ring-0
             ${className}
           `}
           onClick={(e) => e.stopPropagation()}

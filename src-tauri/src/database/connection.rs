@@ -131,6 +131,7 @@ impl DatabaseManager {
     }
 
     /// Get the database file path
+    #[allow(dead_code)]
     pub fn get_db_path(&self) -> &PathBuf {
         &self.db_path
     }
@@ -158,6 +159,7 @@ fn get_or_create_encryption_key() -> Result<String> {
 }
 
 /// Helper function to get a database connection (for use by other modules)
+#[allow(dead_code)]
 pub fn get_connection() -> Result<Connection> {
     // This is a simplified version that creates a new connection each time
     // In practice, you'd want to use the DatabaseManager instance

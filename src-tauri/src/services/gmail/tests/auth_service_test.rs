@@ -30,6 +30,7 @@ mod tests {
         GmailAuthService::new(db_manager, encryption_key)
     }
 
+    #[allow(dead_code)]
     async fn setup_test_auth_service_with_account() -> Result<(GmailAuthService, String)> {
         let service = setup_test_auth_service().await?;
         let account_id = "test@gmail.com".to_string();

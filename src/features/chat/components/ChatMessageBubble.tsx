@@ -7,6 +7,44 @@ import { ChatMessage } from '../../../core/lib/chatMockData';
 import { formatTimestamp } from '../utils/formatTimestamp';
 import { User, Bot, Copy, Edit3, CheckSquare, RotateCcw } from 'lucide-react';
 
+// Function to detect and linkify URLs in text
+function linkifyText(text: string): (string | JSX.Element)[] {
+  // Regex to match URLs
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = urlRegex.exec(text)) !== null) {
+    // Add text before the URL
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    
+    // Add the URL as a link
+    const url = match[0];
+    parts.push(
+      <a 
+        key={match.index}
+        href={url}
+        className="text-accent-primary underline underline-offset-2 hover:text-accent-primary-hover transition-colors"
+        rel="noopener noreferrer"
+      >
+        {url}
+      </a>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add any remaining text after the last URL
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+  
+  return parts.length > 0 ? parts : [text];
+}
+
 interface ChatMessageBubbleProps {
   message: ChatMessage;
   variant?: 'default' | 'ghost' | 'muted' | 'outlined';
@@ -111,7 +149,7 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
               <p key={index} className={`whitespace-pre-wrap ${index > 0 ? 'mt-3' : ''}`}>
                 {paragraph.split('\n').map((line, lineIndex) => (
                   <React.Fragment key={lineIndex}>
-                    {line}
+                    {linkifyText(line)}
                     {lineIndex < paragraph.split('\n').length - 1 && <br />}
                   </React.Fragment>
                 ))}

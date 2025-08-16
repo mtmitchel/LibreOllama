@@ -29,6 +29,7 @@ pub async fn init_database() -> Result<DatabaseManager> {
 }
 
 /// Get conversation context by session ID
+#[allow(dead_code)]
 pub async fn get_conversation_context(session_id: &str) -> Result<Option<ConversationContext>> {
     let db_manager = DatabaseManager::new().await?;
     let conn = db_manager.get_connection()?;
@@ -36,6 +37,7 @@ pub async fn get_conversation_context(session_id: &str) -> Result<Option<Convers
 }
 
 /// Get chat templates
+#[allow(dead_code)]
 pub async fn get_chat_templates(active_only: bool) -> Result<Vec<ChatTemplate>> {
     let db_manager = DatabaseManager::new().await?;
     let conn = db_manager.get_connection()?;
@@ -47,6 +49,7 @@ pub async fn get_chat_templates(active_only: bool) -> Result<Vec<ChatTemplate>> 
 }
 
 /// Get chat template by ID
+#[allow(dead_code)]
 pub async fn get_chat_template_by_id(template_id: &i32) -> Result<Option<ChatTemplate>> {
     let db_manager = DatabaseManager::new().await?;
     let conn = db_manager.get_connection()?;
@@ -54,6 +57,7 @@ pub async fn get_chat_template_by_id(template_id: &i32) -> Result<Option<ChatTem
 }
 
 /// Get application logs
+#[allow(dead_code)]
 pub async fn get_application_logs(
     level: Option<LogLevel>,
     component: Option<String>,

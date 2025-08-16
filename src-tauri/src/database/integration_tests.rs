@@ -6,16 +6,18 @@
 use anyhow::Result;
 
 use crate::database::{self, DatabaseManager};
+#[cfg(feature = "agents-admin")]
 use crate::commands::agents::{CreateAgentRequest, UpdateAgentRequest};
-use uuid::Uuid;
-use std::fs;
+#[allow(unused_imports)] use uuid::Uuid;
+#[allow(unused_imports)] use std::fs;
 
 /// Test helper functions that work with DatabaseManager directly
 mod test_helpers {
     use super::*;
     use crate::database::operations;
+    #[cfg(feature = "agents-admin")]
     use crate::commands::agents::{Agent, AgentExecution};
-    use crate::database::{AgentExecution as DbAgentExecution, ChatSession as DbChatSession, ChatMessage as DbChatMessage};
+    #[allow(unused_imports)] use crate::database::{AgentExecution as DbAgentExecution, ChatSession as DbChatSession, ChatMessage as DbChatMessage};
     
     /// Setup test environment variables (call this at the start of each test)
     pub fn setup_test_env() {
@@ -84,6 +86,7 @@ mod test_helpers {
     }
 
     /// Test helper for creating agents
+    #[cfg(feature = "agents-admin")]
     pub async fn create_agent_helper(request: CreateAgentRequest) -> Result<Agent> {
         let db_manager = create_test_db_manager().await?;
         let conn = db_manager.get_connection()?;
@@ -109,6 +112,7 @@ mod test_helpers {
     }
 
     /// Test helper for getting all agents
+    #[cfg(feature = "agents-admin")]
     pub async fn get_agents_helper() -> Result<Vec<Agent>> {
         let db_manager = create_test_db_manager().await?;
         let conn = db_manager.get_connection()?;
@@ -118,6 +122,7 @@ mod test_helpers {
     }
 
     /// Test helper for getting a specific agent
+    #[cfg(feature = "agents-admin")]
     pub async fn get_agent_helper(agent_id: String) -> Result<Agent> {
         let db_manager = create_test_db_manager().await?;
         let conn = db_manager.get_connection()?;
@@ -130,6 +135,7 @@ mod test_helpers {
     }
 
     /// Test helper for updating agents
+    #[cfg(feature = "agents-admin")]
     pub async fn update_agent_helper(agent_id: String, request: UpdateAgentRequest) -> Result<Agent> {
         let db_manager = create_test_db_manager().await?;
         let conn = db_manager.get_connection()?;
@@ -169,6 +175,7 @@ mod test_helpers {
     }
 
     /// Test helper for deleting agents
+    #[cfg(feature = "agents-admin")]
     pub async fn delete_agent_helper(agent_id: String) -> Result<bool> {
         let db_manager = create_test_db_manager().await?;
         let conn = db_manager.get_connection()?;
@@ -185,6 +192,7 @@ mod test_helpers {
     }
 
     /// Test helper for executing agents
+    #[cfg(feature = "agents-admin")]
     pub async fn execute_agent_helper(agent_id: String, input: String) -> Result<AgentExecution> {
         let db_manager = create_test_db_manager().await?;
         let conn = db_manager.get_connection()?;
@@ -394,7 +402,7 @@ mod database_health_tests {
 #[cfg(test)]
 mod chat_functionality_tests {
     use super::*;
-    use super::test_helpers::*;
+    #[allow(unused_imports)] use super::test_helpers::*;
     use uuid::Uuid;
 
     #[tokio::test]
@@ -525,10 +533,10 @@ mod chat_functionality_tests {
 }
 
 /// Test suite for agent functionality end-to-end
-#[cfg(test)]
+#[cfg(all(test, feature = "agents-admin"))]
 mod agent_functionality_tests {
     use super::*;
-    use super::test_helpers::*;
+    #[allow(unused_imports)] use super::test_helpers::*;
     use crate::commands::agents::*;
 
     #[tokio::test]
@@ -654,7 +662,7 @@ mod agent_functionality_tests {
 #[cfg(test)]
 mod error_handling_tests {
     use super::*;
-    use super::test_helpers::*;
+    #[allow(unused_imports)] use super::test_helpers::*;
 
     #[tokio::test]
     async fn test_nonexistent_session_operations() {
@@ -679,6 +687,7 @@ mod error_handling_tests {
         println!("✅ Non-existent session operations test passed");
     }
 
+    #[cfg(feature = "agents-admin")]
     #[tokio::test]
     async fn test_nonexistent_agent_operations() {
         println!("🔧 Testing operations on non-existent agents...");
@@ -736,6 +745,7 @@ mod error_handling_tests {
         println!("✅ Invalid input handling test passed");
     }
 
+    #[cfg(feature = "agents-admin")]
     #[tokio::test]
     async fn test_agent_inactive_execution() {
         println!("🔧 Testing execution of inactive agent...");
@@ -781,7 +791,7 @@ mod error_handling_tests {
 #[cfg(test)]
 mod performance_tests {
     use super::*;
-    use super::test_helpers::*;
+    #[allow(unused_imports)] use super::test_helpers::*;
 
     #[tokio::test]
     async fn test_concurrent_operations() {
@@ -879,6 +889,7 @@ mod performance_tests {
 }
 
 /// Integration test runner - runs all test suites
+#[allow(dead_code)]
 pub async fn run_integration_tests() -> Result<()> {
     println!("🚀 Starting LibreOllama Phase 2.3 Integration Tests");
     println!("{}", "=".repeat(60));

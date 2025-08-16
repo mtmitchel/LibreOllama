@@ -1,3 +1,4 @@
+#![cfg(feature = "system-advanced")]
 //! Debug database commands
 use crate::database::DatabaseManager;
 use tauri::State;

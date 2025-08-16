@@ -345,10 +345,13 @@ export const useSettingsStore = create<SettingsStore>()(
             
             logger.info(`[Settings] Successfully removed Google account: ${accountId}`);
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to remove account';
+            const errorMessage = typeof error === 'string' 
+              ? error 
+              : (error instanceof Error ? error.message : 'Failed to remove account');
             logger.error(`[Settings] Failed to remove account ${accountId}:`, error);
             set({ error: errorMessage });
-            throw error;
+            // Re-throw as Error to ensure UI shows a meaningful message
+            throw new Error(errorMessage);
           } finally {
             set({ isLoading: false });
           }

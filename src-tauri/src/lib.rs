@@ -17,6 +17,9 @@ mod services;
 // Import setup module
 mod setup;
 
+// Re-export commonly used commands at the crate root for tests and external callers
+pub use crate::commands::system::health::database_health_check;
+
 // Re-export commands for easy access
 use commands::tasks::all_task_data::*;
 use commands::tasks::metadata::*;
@@ -28,7 +31,9 @@ use std::sync::Arc;
 
 // Import required services and configuration
 use crate::config::ConfigManager;
-use crate::services::gmail::{auth_service::GmailAuthService, api_service::GmailApiService, GmailCacheService, GmailSyncService};
+use crate::services::gmail::{auth_service::GmailAuthService, api_service::GmailApiService, GmailCacheService};
+#[cfg(feature = "gmail-compose")]
+use crate::services::gmail::GmailSyncService;
 use crate::services::google::tasks_service::GoogleTasksService;
 use crate::commands::rate_limiter::RateLimiter;
 use tauri::Manager;
@@ -125,8 +130,11 @@ pub fn run() {
             let gmail_cache_service = GmailCacheService::new(db_manager_arc.clone());
             app.manage(gmail_cache_service);
 
-            let gmail_sync_service = GmailSyncService::new(db_manager_arc.clone());
-            app.manage(gmail_sync_service);
+            #[cfg(feature = "gmail-compose")]
+            {
+                let gmail_sync_service = GmailSyncService::new(db_manager_arc.clone());
+                app.manage(gmail_sync_service);
+            }
             
             let encryption_key = [0u8; 32]; // Placeholder key
             let auth_service = GmailAuthService::new(db_manager_arc.clone(), encryption_key).expect("Failed to create auth service");
@@ -169,10 +177,10 @@ pub fn run() {
             commands::gmail::api::modify_gmail_messages,
             commands::gmail::api::trash_gmail_messages,
             commands::gmail::api::get_gmail_attachment,
-            // Project commands
-            commands::projects::get_projects,
-            // Agent commands
-            commands::agents::lifecycle::get_agents,
+            // Project commands (gated)
+            #[cfg(feature = "projects-admin")] commands::projects::get_projects,
+            // Agent commands (gated)
+            #[cfg(feature = "agents-admin")] commands::agents::lifecycle::get_agents,
             // Task commands
             get_task_metadata,
             create_task_metadata,
@@ -201,6 +209,11 @@ pub fn run() {
             commands::chat::update_session_title,
             // Text processing commands
             commands::text_processing::clean_text,
+            // LLM settings persistence
+            commands::llm::save_llm_provider_settings,
+            commands::llm::get_llm_provider_settings,
+            commands::llm::set_enabled_models,
+            commands::llm::get_enabled_models,
             // Ollama commands
             commands::ollama::ollama_health_check,
             commands::ollama::ollama_get_status,
@@ -213,7 +226,7 @@ pub fn run() {
             commands::ollama::ollama_chat,
             commands::ollama::ollama_chat_stream,
             commands::ollama::ollama_generate,
-            // LLM commands
+            // LLM commands (model listing and chat)
             commands::llm::llm_chat_openai,
             commands::llm::llm_list_openai_models,
             commands::llm::llm_chat_anthropic,
@@ -231,14 +244,23 @@ pub fn run() {
             commands::notes::create_note,
             commands::notes::update_note,
             commands::notes::delete_note,
-            // Folders commands
-            commands::folders::get_folders,
-            commands::folders::create_folder,
-            commands::folders::update_folder,
-            commands::folders::delete_folder,
-            // System commands
-            commands::system::force_run_migrations,
-            commands::system::debug_check_timeblock_data,
+            // Folders commands (gated)
+            #[cfg(feature = "folders")] commands::folders::get_folders,
+            #[cfg(feature = "folders")] commands::folders::create_folder,
+            #[cfg(feature = "folders")] commands::folders::update_folder,
+            #[cfg(feature = "folders")] commands::folders::delete_folder,
+            // System commands (these may be gated in their module; keep only if compiled)
+            #[cfg(feature = "system-advanced")] commands::system::force_run_migrations,
+            #[cfg(feature = "system-advanced")] commands::system::debug_check_timeblock_data,
+            // Browser commands
+            commands::browser::open_browser_window,
+            commands::browser::close_browser_window,
+            commands::browser::navigate_browser_window,
+            commands::browser::get_browser_window_url,
+            commands::browser::open_browser_controller_window,
+            commands::browser::open_browser_shell_window,
+            commands::browser::open_url_in_system_browser,
+            commands::browser::fetch_url_html,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

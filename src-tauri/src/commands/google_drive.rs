@@ -1,3 +1,4 @@
+#![cfg(feature = "google-drive")]
 use reqwest;
 use serde::{Deserialize, Serialize};
 

@@ -60,7 +60,7 @@ export class OllamaService {
 
   // Get current endpoint from settings
   private getEndpoint(): string {
-    return useSettingsStore.getState().ollama.endpoint;
+    return useSettingsStore.getState().ollama.endpoint || 'http://localhost:11434';
   }
 
   // Get current default model from settings
@@ -71,9 +71,19 @@ export class OllamaService {
   // Health and Status
   async checkHealth(): Promise<OllamaHealthResponse> {
     try {
-      return await invoke<OllamaHealthResponse>('ollama_health_check');
+      // Prefer backend command; if it fails, fall back to direct fetch using configured endpoint
+      return await invoke<OllamaHealthResponse>('ollama_health_check', { endpoint: this.getEndpoint() });
     } catch (error) {
-      throw new Error(`Failed to check Ollama health: ${error}`);
+      try {
+        const url = `${this.getEndpoint()}/api/tags`;
+        const res = await fetch(url);
+        if (res.ok) {
+          return { status: 'healthy', message: 'reachable' } as OllamaHealthResponse;
+        }
+        return { status: 'error', message: `status ${res.status}` } as OllamaHealthResponse;
+      } catch (e) {
+        throw new Error(`Failed to check Ollama health: ${error}`);
+      }
     }
   }
 
@@ -105,23 +115,40 @@ export class OllamaService {
   // Model Management
   async listModels(): Promise<ModelInfo[]> {
     try {
-      return await invoke<ModelInfo[]>('ollama_list_models');
+      // Try tauri command first
+      return await invoke<ModelInfo[]>('ollama_list_models', { endpoint: this.getEndpoint() });
     } catch (error) {
-      throw new Error(`Failed to list models: ${error}`);
+      // Fallback to direct HTTP using configured endpoint
+      try {
+        const url = `${this.getEndpoint()}/api/tags`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json() as { models?: ModelInfo[] };
+        return data.models || [];
+      } catch (e) {
+        throw new Error(`Failed to list models: ${error}`);
+      }
     }
   }
 
   async getModelInfo(modelName: string): Promise<any> {
     try {
-      return await invoke('ollama_get_model_info', { modelName });
+      return await invoke('ollama_get_model_info', { modelName, endpoint: this.getEndpoint() });
     } catch (error) {
-      throw new Error(`Failed to get model info for ${modelName}: ${error}`);
+      try {
+        const url = `${this.getEndpoint()}/api/show`;
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: modelName }) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (e) {
+        throw new Error(`Failed to get model info for ${modelName}: ${error}`);
+      }
     }
   }
 
   async deleteModel(modelName: string): Promise<string> {
     try {
-      return await invoke<string>('ollama_delete_model', { modelName });
+      return await invoke<string>('ollama_delete_model', { modelName, endpoint: this.getEndpoint() });
     } catch (error) {
       throw new Error(`Failed to delete model ${modelName}: ${error}`);
     }
@@ -142,7 +169,8 @@ export class OllamaService {
       }
 
       const result = await invoke<string>('ollama_pull_model', { 
-        model: modelName 
+        model: modelName,
+        endpoint: this.getEndpoint(),
       });
 
       // Clean up listener

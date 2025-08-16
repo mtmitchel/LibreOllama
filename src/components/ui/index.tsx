@@ -136,6 +136,7 @@ export function Caption({ children, className = '', as = 'p', ...props }: Captio
 
 // Re-export Button from design system
 export { Button, type ButtonProps } from './design-system/Button';
+export { default as MetricPill, type MetricPillProps } from './design-system/MetricPill';
 
 // Input Component - Uses Tailwind utilities with design system variables
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {

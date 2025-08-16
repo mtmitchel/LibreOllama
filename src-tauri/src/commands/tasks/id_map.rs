@@ -5,14 +5,16 @@ use crate::{
 use std::sync::Arc;
 use tauri::State;
 use uuid::Uuid;
-use rusqlite::{params, Result as SqlResult};
+use rusqlite::params;
 
 /// Generate a new stable local ID for a task
+#[allow(dead_code)]
 pub fn generate_local_id() -> String {
     format!("local-task-{}", Uuid::new_v4())
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn create_task_id_mapping(
     mapping: CreateTaskIdMap,
     db_manager: State<'_, Arc<DatabaseManager>>,
@@ -49,6 +51,7 @@ pub async fn create_task_id_mapping(
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn get_task_id_mapping_by_local(
     local_id: String,
     db_manager: State<'_, Arc<DatabaseManager>>,
@@ -79,6 +82,7 @@ pub async fn get_task_id_mapping_by_local(
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn get_task_id_mapping_by_google(
     google_task_id: String,
     db_manager: State<'_, Arc<DatabaseManager>>,
@@ -109,6 +113,7 @@ pub async fn get_task_id_mapping_by_google(
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn update_task_id_mapping(
     local_id: String,
     updates: UpdateTaskIdMap,
@@ -160,6 +165,7 @@ pub async fn update_task_id_mapping(
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub async fn delete_task_id_mapping(
     local_id: String,
     db_manager: State<'_, Arc<DatabaseManager>>,

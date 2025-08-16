@@ -1,3 +1,4 @@
+#![cfg(feature = "system-advanced")]
 //! Database migration commands
 use crate::database::DatabaseManager;
 use tauri::State;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../core/lib/utils';
 import { Button } from './index';
 import type { LucideIcon } from 'lucide-react';
@@ -11,6 +12,7 @@ interface FloatingActionButtonProps {
   variant?: 'primary' | 'secondary';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  usePortal?: boolean;
 }
 
 export function FloatingActionButton({
@@ -20,7 +22,8 @@ export function FloatingActionButton({
   position = 'bottom-right',
   variant = 'primary',
   size = 'md',
-  className
+  className,
+  usePortal = true,
 }: FloatingActionButtonProps) {
   const positionClasses = {
     'bottom-right': 'bottom-6 right-6',
@@ -41,8 +44,8 @@ export function FloatingActionButton({
     lg: 24
   };
 
-  return (
-    <div className={cn('fixed z-50', positionClasses[position], className)}>
+  const content = (
+    <div className={cn('fixed z-[1000] pointer-events-auto', positionClasses[position], className)}>
       <Button
         variant={variant}
         onClick={onClick}
@@ -60,6 +63,8 @@ export function FloatingActionButton({
       </Button>
     </div>
   );
+
+  return usePortal ? createPortal(content, document.body) : content;
 }
 
 // Extended FAB with menu options
@@ -79,9 +84,29 @@ export function FloatingActionMenu({
   position = 'bottom-right',
   variant = 'primary',
   size = 'md',
-  className
+  className,
+  usePortal = true,
 }: FloatingActionMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      console.log('FloatingActionMenu opened with items:', items);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, items]);
 
   const positionClasses = {
     'bottom-right': 'bottom-6 right-6',
@@ -90,27 +115,53 @@ export function FloatingActionMenu({
     'top-left': 'top-6 left-6'
   };
 
-  const menuDirection = position.includes('bottom') ? 'bottom-full mb-2' : 'top-full mt-2';
+  const menuDirection = position.includes('bottom') ? 'bottom-full mb-3' : 'top-full mt-3';
 
-  return (
-    <div className={cn('fixed z-50', positionClasses[position], className)}>
+  const content = (
+    <div ref={menuRef} className={cn('fixed z-[1000] pointer-events-auto', positionClasses[position], className)}>
       {/* Menu items */}
       {isOpen && (
-        <div className={cn('absolute', menuDirection, 'right-0 space-y-2')}>
+        <div 
+          className={cn('absolute', menuDirection, 'right-0')} 
+          style={{ 
+            minWidth: '200px',
+            zIndex: 99999,
+          }}
+        >
+          <div 
+            className="rounded-lg border-2 p-3 shadow-2xl"
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.98)',
+              borderColor: 'rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <div className="flex flex-col gap-2">
           {items.map((item, index) => (
-            <Button
+            <button
               key={index}
-              variant="secondary"
               onClick={() => {
                 item.onClick();
                 setIsOpen(false);
               }}
-              className="flex w-auto items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 shadow-md hover:shadow-lg"
+              className="flex w-full items-center justify-start gap-3 whitespace-nowrap rounded-md px-4 py-2.5 transition-all text-left"
+              style={{
+                backgroundColor: 'transparent',
+                color: '#1f2937',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
-              <item.icon size={16} />
-              <span className="asana-text-sm">{item.label}</span>
-            </Button>
+              <item.icon size={18} />
+              <span className="text-sm font-semibold">{item.label}</span>
+            </button>
           ))}
+            </div>
+          </div>
         </div>
       )}
       
@@ -120,8 +171,11 @@ export function FloatingActionMenu({
         onClick={() => setIsOpen(!isOpen)}
         variant={variant}
         size={size}
-        className={cn(isOpen && 'rotate-45')}
+        className={cn('transition-transform duration-200', isOpen && 'rotate-45')}
+        usePortal={false}
       />
     </div>
   );
+
+  return usePortal ? createPortal(content, document.body) : content;
 }

@@ -73,9 +73,10 @@ pub async fn open_browser(url: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
+        // Empty string as title parameter is important for Windows start command
         let result = Command::new("cmd")
-            .args(&["/C", "start", &url])
-            .output();
+            .args(&["/C", "start", "", &url])
+            .spawn();
         
         if result.is_ok() {
             return Ok(());

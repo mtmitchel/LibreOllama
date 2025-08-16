@@ -1,3 +1,4 @@
+#![cfg(feature = "gmail-migration")]
 //! Gmail Account Migration Commands
 //!
 //! This module provides commands to migrate existing Gmail accounts

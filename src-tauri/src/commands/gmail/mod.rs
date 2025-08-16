@@ -9,8 +9,5 @@ pub mod sync;
 pub mod cache;
 pub mod migration;
 
-// Re-export all Gmail commands for easy access
-pub use auth::*;
-pub use api::*;
-pub use compose::*;
-pub use migration::*; 
+// Do not re-export wildcard modules here to avoid unused import warnings.
+// Commands are imported explicitly at call sites (e.g., in lib.rs generate_handler!).

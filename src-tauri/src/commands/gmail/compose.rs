@@ -1,3 +1,4 @@
+#![cfg(feature = "gmail-compose")]
 //! Gmail Compose Commands
 //!
 //! This module provides Tauri command handlers for Gmail email composition,

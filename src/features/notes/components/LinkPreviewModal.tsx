@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import { cn } from '../../../core/lib/utils';
+import { browserModalService } from '../../../services/browserModalService';
 
 interface LinkPreviewModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const navigationHistoryRef = useRef<string[]>([]);
   const currentIndexRef = useRef(0);
+  const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
 
   // Reset state when URL changes
   useEffect(() => {
@@ -41,6 +43,25 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
       setLoadError(false);
     }
   }, [url]);
+
+  // In Tauri, open a native browser window instead of iframing
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!url) return;
+    if (!isTauri) return;
+
+    (async () => {
+      try {
+        await browserModalService.openModal({ url, title: 'Browser' });
+        // Don't close the modal - let the LinkPreviewProvider handle it
+        // This keeps the state alive for the BrowserModalController
+      } catch (err) {
+        // If native window fails, stay in modal and allow user to open externally
+        setLoadError(true);
+        // Still don't close - let user decide
+      }
+    })();
+  }, [isOpen, url, isTauri]);
 
   // Handle iframe load events
   useEffect(() => {
@@ -207,10 +228,16 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
                 <AlertCircle className="h-12 w-12 text-gray-400" />
                 <div>
                   <p className="asana-text-lg font-medium text-gray-700 dark:text-gray-300">
-                    Unable to load this page
+                    This site can't be embedded
                   </p>
                   <p className="mt-1 asana-text-sm text-gray-500 dark:text-gray-400">
-                    Some websites don't allow embedding for security reasons.
+                    {currentUrl.includes('instacart') ? 'Instacart' : 
+                     currentUrl.includes('amazon') ? 'Amazon' :
+                     currentUrl.includes('netflix') ? 'Netflix' :
+                     currentUrl.includes('facebook') ? 'Facebook' :
+                     currentUrl.includes('instagram') ? 'Instagram' :
+                     currentUrl.includes('twitter') || currentUrl.includes('x.com') ? 'X/Twitter' :
+                     'This website'} blocks embedding for security and privacy reasons.
                   </p>
                   <Button
                     size="sm"
@@ -226,13 +253,16 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
             </div>
           )}
 
-          <iframe
-            ref={iframeRef}
-            src={currentUrl}
-            className="h-full w-full"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            title="Link preview"
-          />
+          {!isTauri && currentUrl && (
+            <iframe
+              ref={iframeRef}
+              src={currentUrl}
+              className="h-full w-full"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              title="Link preview"
+            />
+          )}
         </div>
       </div>
     </div>,

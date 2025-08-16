@@ -1,3 +1,3 @@
 pub mod tasks_service;
 
-pub use tasks_service::GoogleTasksService;
+// Re-export only when needed to avoid unused warnings

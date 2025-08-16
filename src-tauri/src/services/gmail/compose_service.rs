@@ -1,3 +1,4 @@
+#![cfg(feature = "gmail-compose")]
 //! Gmail Compose Service
 //!
 //! This module provides email composition, sending, and draft management

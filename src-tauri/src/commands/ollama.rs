@@ -9,6 +9,13 @@ use sysinfo::{System, Pid};
 use tauri::{AppHandle, Emitter};
 use tokio::time::{sleep, Duration};
 use futures_util::StreamExt;
+fn base_url(endpoint: Option<String>) -> String {
+    let mut url = endpoint.unwrap_or_else(|| "http://localhost:11434".to_string());
+    if url.ends_with('/') {
+        url.pop();
+    }
+    url
+}
 // use bytes::Bytes; // Will be used when implementing streaming
 
 // Global sidecar process management
@@ -181,9 +188,9 @@ pub async fn ollama_stop_sidecar() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn ollama_get_status() -> Result<OllamaHealthResponse, String> {
+pub async fn ollama_get_status(endpoint: Option<String>) -> Result<OllamaHealthResponse, String> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:11434/api/tags";
+    let url = format!("{}/api/tags", base_url(endpoint));
     
     let pid_lock = OLLAMA_PID.lock().await;
     let process_info = if let Some(pid) = *pid_lock {
@@ -220,14 +227,14 @@ pub async fn ollama_get_status() -> Result<OllamaHealthResponse, String> {
 
 // Enhanced model management commands
 #[tauri::command]
-pub async fn ollama_health_check() -> Result<OllamaHealthResponse, String> {
-    ollama_get_status().await
+pub async fn ollama_health_check(endpoint: Option<String>) -> Result<OllamaHealthResponse, String> {
+    ollama_get_status(endpoint).await
 }
 
 #[tauri::command]
-pub async fn ollama_list_models() -> Result<Vec<ModelInfo>, String> {
+pub async fn ollama_list_models(endpoint: Option<String>) -> Result<Vec<ModelInfo>, String> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:11434/api/tags";
+    let url = format!("{}/api/tags", base_url(endpoint));
     
     match client.get(url).send().await {
         Ok(response) => {
@@ -245,9 +252,9 @@ pub async fn ollama_list_models() -> Result<Vec<ModelInfo>, String> {
 }
 
 #[tauri::command]
-pub async fn ollama_get_model_info(model_name: String) -> Result<ModelDetails, String> {
+pub async fn ollama_get_model_info(model_name: String, endpoint: Option<String>) -> Result<ModelDetails, String> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:11434/api/show";
+    let url = format!("{}/api/show", base_url(endpoint));
     
     let request_body = serde_json::json!({
         "name": model_name
@@ -273,9 +280,9 @@ pub async fn ollama_get_model_info(model_name: String) -> Result<ModelDetails, S
 }
 
 #[tauri::command]
-pub async fn ollama_delete_model(model_name: String) -> Result<String, String> {
+pub async fn ollama_delete_model(model_name: String, endpoint: Option<String>) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:11434/api/delete";
+    let url = format!("{}/api/delete", base_url(endpoint));
     
     let request_body = serde_json::json!({
         "name": model_name
@@ -299,9 +306,9 @@ pub async fn ollama_delete_model(model_name: String) -> Result<String, String> {
 
 // Enhanced pull with progress tracking
 #[tauri::command]
-pub async fn ollama_pull_model(app_handle: AppHandle, model: String) -> Result<String, String> {
+pub async fn ollama_pull_model(app_handle: AppHandle, model: String, endpoint: Option<String>) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:11434/api/pull";
+    let url = format!("{}/api/pull", base_url(endpoint));
     
     let request_body = serde_json::json!({
         "name": model,
@@ -363,9 +370,10 @@ pub async fn ollama_chat_stream(
     messages: Vec<serde_json::Value>,
     model: String,
     stream_id: String,
+    endpoint: Option<String>,
 ) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:11434/api/chat";
+    let url = format!("{}/api/chat", base_url(endpoint));
     
     let request_body = serde_json::json!({
         "model": model,
@@ -439,9 +447,9 @@ pub async fn ollama_chat_stream(
 
 // Legacy commands (keeping for backward compatibility)
 #[tauri::command]
-pub async fn ollama_generate(prompt: String, model: String) -> Result<String, String> {
+pub async fn ollama_generate(prompt: String, model: String, endpoint: Option<String>) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:11434/api/generate";
+    let url = format!("{}/api/generate", base_url(endpoint));
     
     let request_body = OllamaGenerateRequest {
         model,
@@ -471,9 +479,9 @@ pub async fn ollama_generate(prompt: String, model: String) -> Result<String, St
 }
 
 #[tauri::command]
-pub async fn ollama_chat(messages: Vec<serde_json::Value>, model: String) -> Result<String, String> {
+pub async fn ollama_chat(messages: Vec<serde_json::Value>, model: String, endpoint: Option<String>) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:11434/api/chat";
+    let url = format!("{}/api/chat", base_url(endpoint));
     
     let request_body = serde_json::json!({
         "model": model,

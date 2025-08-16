@@ -22,6 +22,7 @@ struct LlmSettings {
     enabled_models: HashMap<String, Vec<String>>,
 }
 
+#[allow(dead_code)]
 fn get_settings_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
     let path = app_handle.path()
         .app_data_dir()
@@ -30,6 +31,7 @@ fn get_settings_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+#[allow(dead_code)]
 fn read_settings(path: &PathBuf) -> Result<LlmSettings, String> {
     if !path.exists() {
         return Ok(LlmSettings::default());
@@ -38,6 +40,7 @@ fn read_settings(path: &PathBuf) -> Result<LlmSettings, String> {
     serde_json::from_str(&data).map_err(|e| e.to_string())
 }
 
+#[allow(dead_code)]
 fn write_settings(path: &PathBuf, settings: &LlmSettings) -> Result<(), String> {
     let data = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
     fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;

@@ -183,6 +183,7 @@ pub struct MessageSearchResult {
 
 /// Gmail API Service for all Gmail operations
 pub struct GmailApiService {
+    #[allow(dead_code)]
     client: Client,
     auth_service: Arc<GmailAuthService>,
     db_manager: std::sync::Arc<DatabaseManager>,
@@ -544,6 +545,7 @@ impl GmailApiService {
         );
 
         #[derive(Deserialize)]
+            #[allow(dead_code)]
             struct AttachmentResponse {
             data: String,
             size: Option<i32>,
@@ -1003,6 +1005,7 @@ impl GmailApiService {
     }
 
     /// Make API request with detailed logging for debugging
+    #[allow(dead_code)]
     async fn make_api_request_with_logging(&self, account_id: &str, endpoint: &str) -> Result<String> {
         println!("🔍 [GMAIL-API] Making request to endpoint: {}", endpoint);
         

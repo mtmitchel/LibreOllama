@@ -1,7 +1,7 @@
 use crate::database::DatabaseManager;
 use crate::models::task_metadata::{TimeBlock};
 use rusqlite::params;
-use tauri::State;
+// Note: This module is internal; no tauri::State used here
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 

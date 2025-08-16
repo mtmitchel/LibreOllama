@@ -1,3 +1,4 @@
+#![cfg(feature = "agents-admin")]
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc, TimeZone};
 use tauri::State;

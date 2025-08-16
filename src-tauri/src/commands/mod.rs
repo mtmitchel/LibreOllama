@@ -6,9 +6,11 @@
 pub mod gmail;    // Gmail authentication and operations
 pub mod tasks;    // Google Tasks API operations
 pub mod calendar; // Google Calendar API operations
+#[cfg(feature = "google-drive")]
 pub mod google_drive; // Google Drive API operations
 pub mod agents;   // Agent lifecycle and execution  
 pub mod chat;     // Chat sessions and messages
+#[cfg(feature = "projects-admin")]
 pub mod projects; // Project management
 pub mod system;   // System health and advanced features
 pub mod text_processing;
@@ -16,6 +18,7 @@ pub mod llm;
 
 // Legacy flat modules (to be reorganized)
 pub mod ollama;
+#[cfg(feature = "folders")]
 pub mod folders;
 pub mod notes;
 pub mod mcp;
@@ -23,6 +26,7 @@ pub mod n8n;
 pub mod links;
 pub mod canvas;
 pub mod rate_limiter;
+pub mod browser;
 
 // Re-exports removed - commands are imported directly in lib.rs
 // This eliminates unused import warnings and makes dependencies clearer

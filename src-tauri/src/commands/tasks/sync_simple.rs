@@ -1,3 +1,4 @@
+#![cfg(feature = "tasks-simple")]
 use crate::{
     database::DatabaseManager,
     services::google::tasks_service::{GoogleTasksService, CreateTaskInput, UpdateTaskInput},

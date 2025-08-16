@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Cog,
   User,
@@ -17,6 +17,7 @@ import {
   CheckCircle,
   UserMinus,
   Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '../../components/ui/design-system/Button';
 import { Card } from '../../components/ui/design-system/Card';
@@ -27,7 +28,8 @@ import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModa
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
 // Google Tasks now managed through unified task store
 import { useMailStore } from '../../features/mail/stores/mailStore';
-import { Page, PageContent } from '../../components/ui/design-system/Page';
+import { Page, PageContent, PageCard, PageBody } from '../../components/ui/design-system/Page';
+import { ToggleRow } from '../../components/ui/design-system/Toggle';
 import { 
   useGeneralSettings, 
   useAppearanceSettings, 
@@ -48,42 +50,9 @@ import {
 import { useChatStore } from '../../features/chat/stores/chatStore';
 import { type LLMProvider } from '../../services/llmProviders';
 import { useSearchParams } from 'react-router-dom';
+import { ollamaService, type ModelInfo } from '../../services/ollamaService';
 
-// Design system aligned Toggle Switch Component
-interface ToggleSwitchProps {
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
-  labelId?: string;
-}
-
-const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, labelId }) => {
-  return (
-    <button
-      type="button"
-      aria-pressed={enabled}
-      aria-labelledby={labelId}
-      onClick={() => onChange(!enabled)}
-      className="focus:ring-accent-primary relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2"
-      style={{
-        height: 'var(--space-6)',
-        width: 'calc(var(--space-8) + var(--space-3))',
-        backgroundColor: enabled ? 'var(--accent-primary)' : 'var(--bg-tertiary)'
-      }}
-    >
-      <span className="sr-only">Toggle setting</span>
-      <span
-        aria-hidden="true"
-        className="inline-block rounded-full shadow ring-0 transition duration-200 ease-in-out"
-        style={{
-          width: 'var(--space-5)',
-          height: 'var(--space-5)',
-          backgroundColor: 'white',
-          transform: enabled ? 'translateX(var(--space-5))' : 'translateX(0)'
-        }}
-      />
-    </button>
-  );
-};
+// Removed custom ToggleSwitch in favor of design-system ToggleRow
 
 // New component to handle image fetching with fallback
 const UserAvatar = ({ src, alt }: { src?: string, alt: string }) => {
@@ -176,6 +145,18 @@ const Settings: React.FC = () => {
   const integrationSettings = useIntegrationSettings();
   const aiWritingSettings = useSettingsStore(state => state.aiWriting);
   const chatStore = useChatStore();
+  const isTauri = typeof window !== 'undefined' && (
+    // Tauri v2 global
+    (window as any).__TAURI__ ||
+    // Some builds expose internals
+    (window as any).__TAURI_INTERNALS__ ||
+    // Env flag injected by Vite when bundled for Tauri
+    (import.meta as any)?.env?.TAURI_PLATFORM ||
+    // UA fallback
+    (navigator?.userAgent || '').toLowerCase().includes('tauri')
+  );
+  const [sectionsOpen, setSectionsOpen] = useState({ server: true, local: true, writing: true, cloud: true });
+  const toggleSection = (key: 'server' | 'local' | 'writing' | 'cloud') => setSectionsOpen((s) => ({ ...s, [key]: !s[key] }));
   
   // Individual action hooks
   const updateGeneralSettings = useUpdateGeneralSettings();
@@ -254,9 +235,12 @@ const Settings: React.FC = () => {
     try {
       await removeGoogleAccount(accountToRemove.id);
       console.log('[Settings] Account removed:', accountToRemove.email);
+      // Close dialog after successful removal
+      setAccountToRemove(null);
     } catch (error) {
       console.error('[Settings] Failed to remove account:', error);
-      alert(`Failed to remove account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = typeof error === 'string' ? error : (error instanceof Error ? error.message : 'Unknown error');
+      alert(`Failed to remove account: ${message}`);
     }
   };
 
@@ -455,19 +439,134 @@ const Settings: React.FC = () => {
     { id: 'general', label: 'General', icon: SlidersHorizontal },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'agents-and-models', label: 'Agents and models', icon: Cpu },
-    { id: 'integrations', label: 'Integrations', icon: LinkIcon },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security-and-privacy', label: 'Security and privacy', icon: Shield },
     { id: 'account', label: 'Account', icon: User },
     { id: 'about', label: 'About', icon: Info },
   ];
 
+  // Local models state (Ollama)
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+  const [localModels, setLocalModels] = useState<ModelInfo[]>([]);
+  const [pullStatus, setPullStatus] = useState<string | null>(null);
+  const [modelToDelete, setModelToDelete] = useState<string | null>(null);
+  const [isPullDialogOpen, setIsPullDialogOpen] = useState(false);
+  const [pullModelName, setPullModelName] = useState('');
+  const [isPulling, setIsPulling] = useState(false);
+
+  const fetchLocalModels = useCallback(async () => {
+    try {
+      setModelsLoading(true);
+      setModelsError(null);
+      let models = await ollamaService.listModels();
+      if (!models || models.length === 0) {
+        // Fallback to the same discovery path used by Chat model selector
+        try {
+          await chatStore.fetchAvailableModels();
+          const chatModels = useChatStore.getState().availableModels
+            .filter((m: any) => m.provider === 'ollama');
+          if (chatModels.length > 0) {
+            models = chatModels.map((m: any) => ({ name: m.name || m.id })) as ModelInfo[];
+          }
+        } catch {}
+      }
+      setLocalModels(models || []);
+    } catch (err: any) {
+      // If invoke failed (e.g., not a Tauri build), show a neutral message
+      const msg = String(err?.message || err || '')
+        .replace(/InvokeError:\s*/i, '')
+        .trim();
+      setModelsError(msg || 'Failed to load local models');
+      setLocalModels([]);
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [chatStore]);
+
+  const handleConfirmDeleteModel = useCallback(async () => {
+    if (!modelToDelete) return;
+    try {
+      await ollamaService.deleteModel(modelToDelete);
+      await fetchLocalModels();
+    } catch (e) {
+      console.error('Failed to delete model', e);
+    } finally {
+      setModelToDelete(null);
+    }
+  }, [modelToDelete, fetchLocalModels]);
+
+  const startPullModel = useCallback(async () => {
+    if (!isTauri || !pullModelName.trim()) return;
+    setIsPulling(true);
+    setPullStatus('Starting pull...');
+    try {
+      await ollamaService.pullModel(pullModelName.trim(), (p) => {
+        if (p.total && p.completed) {
+          const pct = Math.floor((p.completed / p.total) * 100);
+          setPullStatus(`${p.status || 'Pulling'} ${pct}%`);
+        } else {
+          setPullStatus(p.status || 'Pulling...');
+        }
+      });
+      setPullStatus('Pull complete');
+      await fetchLocalModels();
+      setTimeout(() => setPullStatus(null), 1200);
+      setIsPullDialogOpen(false);
+      setPullModelName('');
+    } catch (e: any) {
+      setPullStatus(`Failed: ${e?.message || 'Unknown error'}`);
+    } finally {
+      setIsPulling(false);
+    }
+  }, [isTauri, pullModelName, fetchLocalModels]);
+
+  useEffect(() => {
+    // Load on first mount and whenever the section becomes active
+    if (activeSection === 'agents-and-models') {
+      fetchLocalModels();
+    }
+  }, [activeSection, fetchLocalModels]);
+
+  
+
+  const handleDeleteModel = useCallback((name: string) => {
+    setModelToDelete(name);
+  }, []);
+
+  const formatBytes = (bytes?: number | string): string => {
+    if (bytes == null) return '—';
+    if (typeof bytes === 'string') return bytes;
+    const thresh = 1024;
+    if (Math.abs(bytes) < thresh) return `${bytes} B`;
+    const units = ['KB','MB','GB','TB'];
+    let u = -1;
+    let b = bytes;
+    do { b /= thresh; ++u; } while (Math.abs(b) >= thresh && u < units.length - 1);
+    return `${b.toFixed(1)} ${units[u]}`;
+  };
+
+  const formatWhen = (iso?: string): string => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    const diff = Date.now() - d.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days <= 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 30) return `${days} days ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} month${months > 1 ? 's' : ''} ago`;
+    const years = Math.floor(months / 12);
+    return `${years} year${years > 1 ? 's' : ''} ago`;
+  };
+
   const renderSection = () => {
     switch (activeSection) {
       case 'general':
         return (
-          <div className="h-full p-6">
-            <Card className="p-6">
+          <PageCard>
+            <PageBody>
             <div className="mb-6">
               <Heading level={1}>General</Heading>
               <Text variant="muted">Configure general application preferences and behavior.</Text>
@@ -484,21 +583,12 @@ const Settings: React.FC = () => {
                     </div>
                     {/* Select component removed */}
                   </div>
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex-1">
-                      <Text as="label" id="check-updates-label" weight="medium" className="mb-1 block">
-                        Check for updates on startup
-                      </Text>
-                      <Text variant="muted" size="sm">
-                        Automatically check for new versions when the application launches.
-                      </Text>
-                    </div>
-                    <ToggleSwitch 
-                      enabled={generalSettings.checkForUpdates} 
-                      onChange={(enabled) => updateGeneralSettings({ checkForUpdates: enabled })} 
-                      labelId="check-updates-label" 
-                    />
-                  </div>
+                  <ToggleRow
+                    label="Check for updates on startup"
+                    description="Automatically check for new versions when the application launches."
+                    checked={generalSettings.checkForUpdates}
+                    onChange={(enabled) => updateGeneralSettings({ checkForUpdates: enabled })}
+                  />
                 </div>
               </Card>
               
@@ -530,13 +620,13 @@ const Settings: React.FC = () => {
                 </div>
               </Card>
             </div>
-          </Card>
-          </div>
+            </PageBody>
+          </PageCard>
         );
       case 'agents-and-models':
         return (
-          <div className="h-full p-6">
-            <Card className="p-6">
+          <PageCard>
+            <PageBody>
             <div className="mb-6">
               <Heading level={1}>Agents and models</Heading>
               <Text variant="muted">Manage your local AI models and agent configurations.</Text>
@@ -544,13 +634,24 @@ const Settings: React.FC = () => {
             <div className="flex flex-col gap-8">
               <Card className="p-6">
                 <div className="mb-6 flex items-center justify-between">
-                  <Heading level={2}>Ollama Server</Heading>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-expanded={sectionsOpen.server}
+                      onClick={() => toggleSection('server')}
+                      className={`transition-transform text-secondary p-1 rounded hover:bg-secondary ${sectionsOpen.server ? '' : '-rotate-90'}`}
+                      title={sectionsOpen.server ? 'Collapse' : 'Expand'}
+                    >
+                      <ChevronDown size={20} />
+                    </button>
+                    <Heading level={2}>Ollama Server</Heading>
+                  </div>
                   <div className="flex items-center gap-2 text-sm text-success">
                     <span className="size-2.5 rounded-full bg-success" />
                     Connected
                   </div>
                 </div>
-                
+                {sectionsOpen.server && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
                     <div className="space-y-2">
@@ -575,68 +676,153 @@ const Settings: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                )}
               </Card>
+
+              {/* Delete Local Model Confirmation */}
+              <ConfirmationModal
+                open={!!modelToDelete}
+                onOpenChange={(open) => { if (!open) setModelToDelete(null); }}
+                title="Delete local model"
+                description={modelToDelete ? `Delete model "${modelToDelete}" from local storage? This cannot be undone.` : ''}
+                footer={(
+                  <div className="flex items-center justify-end gap-2 w-full">
+                    <Button variant="ghost" onClick={() => setModelToDelete(null)}>Cancel</Button>
+                    <Button variant="destructive" onClick={handleConfirmDeleteModel}>Delete</Button>
+                  </div>
+                )}
+                size="sm"
+              />
 
               <Card className="p-6">
                 <div className="mb-4 flex items-center justify-between">
-                  <Heading level={2}>Local Models</Heading>
-                  <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                    <Download size={16} /> Pull a new model
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-expanded={sectionsOpen.local}
+                      onClick={() => toggleSection('local')}
+                      className={`transition-transform text-secondary p-1 rounded hover:bg-secondary ${sectionsOpen.local ? '' : '-rotate-90'}`}
+                      title={sectionsOpen.local ? 'Collapse' : 'Expand'}
+                    >
+                      <ChevronDown size={20} />
+                    </button>
+                    <Heading level={2}>Local models</Heading>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {pullStatus && <Text size="sm" className="text-secondary">{pullStatus}</Text>}
+                    <Button onClick={() => setIsPullDialogOpen(true)} variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                      <Download size={16} /> Pull a new model
+                    </Button>
+                  </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="text-left text-muted">
-                      <tr>
-                        <th className="border-border-default border-b p-2 font-medium">Model Name</th>
-                        <th className="border-border-default border-b p-2 font-medium">Size</th>
-                        <th className="border-border-default border-b p-2 font-medium">Last Modified</th>
-                        <th className="border-border-default border-b p-2 text-right font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[ /* Mock data for table */
-                        { name: 'llama3:8b', size: '4.7 GB', modified: '2 weeks ago' },
-                        { name: 'codellama:7b', size: '3.8 GB', modified: '1 month ago' },
-                        { name: 'mixtral:latest', size: '26 GB', modified: '3 days ago' },
-                      ].map(model => (
-                        <tr key={model.name} className="border-border-subtle border-b">
-                          <td className="whitespace-nowrap p-2 font-medium text-primary">{model.name}</td>
-                          <td className="whitespace-nowrap p-2 text-muted">{model.size}</td>
-                          <td className="whitespace-nowrap p-2 text-muted">{model.modified}</td>
-                          <td className="whitespace-nowrap p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="size-8 text-muted focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                                title="Update model"
-                              >
-                                <RefreshCw size={16} />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="size-8 text-muted hover:bg-error-ghost hover:text-error focus:ring-2 focus:ring-error focus:ring-offset-2"
-                                title="Remove model"
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                            </div>
-                          </td>
+                {sectionsOpen.local && (modelsError ? (
+                  <Text size="sm" className="text-error">{modelsError}</Text>
+                ) : modelsLoading ? (
+                  <Text size="sm" className="text-secondary">Loading models…</Text>
+                ) : localModels.length === 0 ? (
+                  <Text size="sm" className="text-secondary">No local models found</Text>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-left text-muted">
+                        <tr>
+                          <th className="border-border-default border-b p-2 font-medium">Model</th>
+                          <th className="border-border-default border-b p-2 font-medium">Size</th>
+                          <th className="border-border-default border-b p-2 font-medium">Last modified</th>
+                          <th className="border-border-default border-b p-2 text-right font-medium">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {localModels.map(model => (
+                          <tr key={model.name} className="border-border-subtle border-b">
+                            <td className="whitespace-nowrap p-2 font-medium text-primary">{model.name}</td>
+                            <td className="whitespace-nowrap p-2 text-muted">{formatBytes(model.size)}</td>
+                            <td className="whitespace-nowrap p-2 text-muted">{formatWhen(model.modified_at)}</td>
+                            <td className="whitespace-nowrap p-2 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="size-8 text-muted hover:bg-error-ghost hover:text-error focus:ring-2 focus:ring-error focus:ring-offset-2"
+                                  title="Remove model"
+                                  onClick={() => handleDeleteModel(model.name)}
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
               </Card>
 
+              {/* Delete Local Model Confirmation */}
+              <ConfirmationModal
+                open={!!modelToDelete}
+                onOpenChange={(open) => { if (!open) setModelToDelete(null); }}
+                title="Delete local model"
+                description={modelToDelete ? `Delete model "${modelToDelete}" from local storage? This cannot be undone.` : ''}
+                footer={(
+                  <div className="flex items-center justify-end gap-2 w-full">
+                    <Button variant="ghost" onClick={() => setModelToDelete(null)}>Cancel</Button>
+                    <Button variant="destructive" onClick={handleConfirmDeleteModel}>Delete</Button>
+                  </div>
+                )}
+                size="sm"
+              />
+
+              {/* Pull Model Dialog (Design System) */}
+              <ConfirmationModal
+                open={isPullDialogOpen}
+                onOpenChange={(open) => { setIsPullDialogOpen(open); if (!open) { setPullModelName(''); setPullStatus(null); setIsPulling(false); } }}
+                title="Pull a model"
+                description="Enter an Ollama model name to download (e.g., llama3:8b)."
+                footer={(
+                  <div className="flex items-center justify-end gap-2 w-full">
+                    <Button variant="ghost" onClick={() => setIsPullDialogOpen(false)} disabled={isPulling}>Cancel</Button>
+                    <Button onClick={startPullModel} disabled={isPulling || !pullModelName.trim()}>
+                      {isPulling ? 'Pulling…' : 'Pull model'}
+                    </Button>
+                  </div>
+                )}
+                size="sm"
+              >
+                <div className="space-y-2">
+                  <label htmlFor="pull-model-input" className="text-sm font-medium">Model name</label>
+                  <Input
+                    id="pull-model-input"
+                    value={pullModelName}
+                    onChange={(e) => setPullModelName(e.target.value)}
+                    placeholder="llama3:8b"
+                    disabled={isPulling}
+                  />
+                  {pullStatus && (
+                    <Text size="sm" className="text-secondary">{pullStatus}</Text>
+                  )}
+                </div>
+              </ConfirmationModal>
+
               <Card className="p-6">
-                <div className="mb-4">
-                  <Heading level={2}>AI Writing Assistant</Heading>
-                  <Text variant="muted" size="sm">Configure default settings for AI-powered writing tools.</Text>
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-expanded={sectionsOpen.writing}
+                      onClick={() => toggleSection('writing')}
+                      className={`transition-transform text-secondary p-1 rounded hover:bg-secondary ${sectionsOpen.writing ? '' : '-rotate-90'}`}
+                      title={sectionsOpen.writing ? 'Collapse' : 'Expand'}
+                    >
+                      <ChevronDown size={20} />
+                    </button>
+                    <Heading level={2}>AI Writing Assistant</Heading>
+                  </div>
+                  <Text variant="muted" size="sm" className="hidden md:block">Configure default settings for AI-powered writing tools.</Text>
                 </div>
                 
+                {sectionsOpen.writing && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
                     <div className="space-y-2">
@@ -737,53 +923,24 @@ const Settings: React.FC = () => {
                   </div>
 
                   <div className="space-y-4 pt-4 border-t border-border-subtle">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <Text as="label" id="auto-replace-label" weight="medium" className="mb-1 block">
-                          Auto-replace for simple edits
-                        </Text>
-                        <Text variant="muted" size="sm">
-                          Skip the preview modal for simple corrections like grammar fixes.
-                        </Text>
-                      </div>
-                      <ToggleSwitch 
-                        enabled={aiWritingSettings.autoReplace} 
-                        onChange={(enabled) => updateAIWritingSettings({ autoReplace: enabled })} 
-                        labelId="auto-replace-label" 
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <Text as="label" id="show-confidence-label" weight="medium" className="mb-1 block">
-                          Show confidence scores
-                        </Text>
-                        <Text variant="muted" size="sm">
-                          Display AI confidence levels for suggestions.
-                        </Text>
-                      </div>
-                      <ToggleSwitch 
-                        enabled={aiWritingSettings.showConfidenceScores} 
-                        onChange={(enabled) => updateAIWritingSettings({ showConfidenceScores: enabled })} 
-                        labelId="show-confidence-label" 
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <Text as="label" id="keep-history-label" weight="medium" className="mb-1 block">
-                          Keep conversation history
-                        </Text>
-                        <Text variant="muted" size="sm">
-                          Maintain context across multiple AI interactions.
-                        </Text>
-                      </div>
-                      <ToggleSwitch 
-                        enabled={aiWritingSettings.keepConversationHistory} 
-                        onChange={(enabled) => updateAIWritingSettings({ keepConversationHistory: enabled })} 
-                        labelId="keep-history-label" 
-                      />
-                    </div>
+                    <ToggleRow
+                      label="Auto-replace for simple edits"
+                      description="Skip the preview modal for simple corrections like grammar fixes."
+                      checked={aiWritingSettings.autoReplace}
+                      onChange={(enabled) => updateAIWritingSettings({ autoReplace: enabled })}
+                    />
+                    <ToggleRow
+                      label="Show confidence scores"
+                      description="Display AI confidence levels for suggestions."
+                      checked={aiWritingSettings.showConfidenceScores}
+                      onChange={(enabled) => updateAIWritingSettings({ showConfidenceScores: enabled })}
+                    />
+                    <ToggleRow
+                      label="Keep conversation history"
+                      description="Maintain context across multiple AI interactions."
+                      checked={aiWritingSettings.keepConversationHistory}
+                      onChange={(enabled) => updateAIWritingSettings({ keepConversationHistory: enabled })}
+                    />
                   </div>
 
                   <div className="pt-4 border-t border-border-subtle">
@@ -806,14 +963,251 @@ const Settings: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                )}
               </Card>
+
+    {/* Cloud providers (API keys and model enablement) */}
+    <Card className="p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-expanded={sectionsOpen.cloud}
+            onClick={() => toggleSection('cloud')}
+            className={`transition-transform text-secondary p-1 rounded hover:bg-secondary ${sectionsOpen.cloud ? '' : '-rotate-90'}`}
+            title={sectionsOpen.cloud ? 'Collapse' : 'Expand'}
+          >
+            <ChevronDown size={20} />
+          </button>
+          <Heading level={2}>Cloud providers</Heading>
+        </div>
+      </div>
+
+      {sectionsOpen.cloud && (
+      <div className="flex flex-col gap-6">
+        {[
+          {
+            key: 'openai' as keyof typeof integrationSettings.apiKeys,
+            label: 'OpenAI',
+            description: 'Access GPT models (GPT-4, GPT-3.5-turbo, etc.)',
+            placeholder: 'sk-...',
+            baseUrlPlaceholder: 'https://api.openai.com/v1',
+            website: 'https://platform.openai.com/api-keys'
+          },
+          {
+            key: 'anthropic' as keyof typeof integrationSettings.apiKeys,
+            label: 'Anthropic',
+            description: 'Access Claude models (Claude-3, Claude-2, etc.)',
+            placeholder: 'sk-ant-...',
+            baseUrlPlaceholder: 'https://api.anthropic.com/v1',
+            website: 'https://console.anthropic.com/'
+          },
+          {
+            key: 'openrouter' as keyof typeof integrationSettings.apiKeys,
+            label: 'OpenRouter',
+            description: 'Access many models through a single API (GPT, Claude, Llama, etc.)',
+            placeholder: 'sk-or-...',
+            baseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+            website: 'https://openrouter.ai/keys'
+          },
+          {
+            key: 'deepseek' as keyof typeof integrationSettings.apiKeys,
+            label: 'DeepSeek',
+            description: 'Access DeepSeek models',
+            placeholder: 'sk-...',
+            baseUrlPlaceholder: 'https://api.deepseek.com/v1',
+            website: 'https://platform.deepseek.com/api_keys'
+          },
+          {
+            key: 'mistral' as keyof typeof integrationSettings.apiKeys,
+            label: 'Mistral AI',
+            description: 'Access Mistral models (Mistral-7B, Mixtral, etc.)',
+            placeholder: 'sk-...',
+            baseUrlPlaceholder: 'https://api.mistral.ai/v1',
+            website: 'https://console.mistral.ai/'
+          },
+          {
+            key: 'gemini' as keyof typeof integrationSettings.apiKeys,
+            label: 'Google Gemini',
+            description: "Access Google's Gemini models",
+            placeholder: 'AIza...',
+            baseUrlPlaceholder: 'https://generativelanguage.googleapis.com/v1beta',
+            website: 'https://makersuite.google.com/app/apikey'
+          }
+        ].map((provider) => {
+          const config = integrationSettings.apiKeys[provider.key];
+          const currentValue = config?.key || '';
+          const baseUrl = config?.baseUrl || '';
+          const maskedValue = currentValue ? '••••••••••••••••' : '';
+
+          const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const newKey = formData.get(`${provider.key}-api-key`) as string;
+            const newBaseUrl = formData.get(`${provider.key}-base-url`) as string;
+
+            setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
+            try {
+              const keyToSave = (newKey === maskedValue && currentValue) ? currentValue : newKey;
+              await setApiKey(provider.key, keyToSave, newBaseUrl);
+              setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: true, error: null } }));
+              setTimeout(() => setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } })), 3000);
+            } catch (error) {
+              setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: error instanceof Error ? error.message : 'Failed to save' } }));
+            }
+          };
+
+          const handleClear = async () => {
+            setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
+            try {
+              await setApiKey(provider.key, '');
+              const form = document.getElementById(`${provider.key}-form`) as HTMLFormElement;
+              if (form) {
+                const keyInput = form.querySelector(`input[name="${provider.key}-api-key"]`) as HTMLInputElement;
+                const urlInput = form.querySelector(`input[name="${provider.key}-base-url"]`) as HTMLInputElement;
+                if (keyInput) keyInput.value = '';
+                if (urlInput) urlInput.value = '';
+              }
+              setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: true, error: null } }));
+              setTimeout(() => setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } })), 3000);
+            } catch (error) {
+              setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: error instanceof Error ? error.message : 'Failed to clear' } }));
+            }
+          };
+
+          return (
+            <Card key={provider.key} className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <Heading level={2}>{provider.label}</Heading>
+                  <Text variant="muted" size="sm">{provider.description}</Text>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(provider.website, '_blank')}
+                >
+                  <LinkIcon size={16} className="mr-2" />
+                  Get API key
+                </Button>
+              </div>
+
+                       <form id={`${provider.key}-form`} onSubmit={handleSave} className="grid gap-4 md:grid-cols-2" aria-labelledby={`${provider.key}-form-title`}>
+                <div className="space-y-2">
+                  <label htmlFor={`${provider.key}-api-key`} className="text-sm font-medium">API Key</label>
+                  <Input
+                    id={`${provider.key}-api-key`}
+                    name={`${provider.key}-api-key`}
+                    type="password"
+                    placeholder={provider.placeholder}
+                    defaultValue={maskedValue}
+                    autoComplete="new-password"
+                                    disabled={apiOperations[provider.key]?.saving}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor={`${provider.key}-base-url`} className="text-sm font-medium">Base URL (optional)</label>
+                  <Input
+                    id={`${provider.key}-base-url`}
+                    name={`${provider.key}-base-url`}
+                    type="text"
+                    placeholder={provider.baseUrlPlaceholder}
+                    defaultValue={baseUrl}
+                                    disabled={apiOperations[provider.key]?.saving}
+                  />
+                </div>
+                             <div className="flex items-center gap-2 md:col-span-2 md:justify-end">
+                               {currentValue && (
+                                <Button type="button" variant="ghost" className="text-error hover:text-error" onClick={handleClear} disabled={apiOperations[provider.key]?.saving}>
+                                  Clear
+                                </Button>
+                              )}
+                              <Button type="submit" disabled={apiOperations[provider.key]?.saving} aria-label="Save API key">
+                                {apiOperations[provider.key]?.saving ? (
+                                  <span className="inline-flex items-center gap-2">
+                                    <RefreshCw size={14} className="animate-spin" /> Saving…
+                                  </span>
+                                ) : apiOperations[provider.key]?.success ? (
+                                  <span className="inline-flex items-center gap-2">
+                                    <Check size={14} /> Saved
+                                  </span>
+                                ) : (
+                                  'Save'
+                                )}
+                              </Button>
+                            </div>
+                            <div className="md:col-span-2" aria-live="polite" aria-atomic="true">
+                              {apiOperations[provider.key]?.error && (
+                                <Text size="sm" className="text-error mt-1">{apiOperations[provider.key]?.error}</Text>
+                              )}
+                              {apiOperations[provider.key]?.success && (
+                                <Text size="sm" className="text-success mt-1 inline-flex items-center gap-1"><Check size={12} /> Settings saved</Text>
+                              )}
+                            </div>
+              </form>
+
+              {currentValue && (
+                <div className="border-border-default bg-background-secondary border-t p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Heading level={4}>Model management</Heading>
+                      <Text variant="muted" size="sm">Choose which models to make available in chats.</Text>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleFetchModels(provider.key)}
+                      disabled={modelOperations[provider.key]?.fetching}
+                    >
+                      {modelOperations[provider.key]?.fetching ? 'Loading...' : 'Load models'}
+                    </Button>
+                  </div>
+
+                  {modelOperations[provider.key]?.error && (
+                    <Text size="sm" className="mt-2 text-error">{modelOperations[provider.key]?.error}</Text>
+                  )}
+
+                  {(providerModels[provider.key] || []).length > 0 && (
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => handleSelectAllModels(provider.key)}>Select all</Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeselectAllModels(provider.key)}>Select none</Button>
+                      </div>
+                      <div className="border-border-default bg-background-primary grid max-h-48 grid-cols-1 gap-1 overflow-y-auto rounded-md border p-2 md:grid-cols-2">
+                        {(providerModels[provider.key] || []).map(model => (
+                          <label key={model.id} className="hover:bg-background-secondary flex items-center gap-3 rounded p-2 text-sm">
+                            <Checkbox
+                              checked={(selectedModels[provider.key] || []).includes(model.id)}
+                              onCheckedChange={() => handleModelToggle(provider.key, model.id)}
+                              id={`model-${provider.key}-${model.id}`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <span className="block truncate font-medium" title={model.name}>{model.name}</span>
+                              {model.description && <Text variant="muted" size="xs" className="truncate" title={model.description}>{model.description}</Text>}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          );
+        })}
+
+        
+      </div>
+      )}
+    </Card>
             </div>
-          </Card>
-          </div>
+            </PageBody>
+          </PageCard>
         );
       case 'integrations':
         return (
-          <div className="h-full p-6">
+          <PageCard>
+            <PageBody>
             <div className="mb-6">
               <Heading level={1}>Integrations</Heading>
               <Text variant="muted">Configure API keys for cloud-based language model providers. Some providers require a Base URL.</Text>
@@ -1019,12 +1413,13 @@ const Settings: React.FC = () => {
                 </p>
               </div>
             </div>
-          </div>
+            </PageBody>
+          </PageCard>
         );
       case 'account':
         return (
-          <div className="h-full p-6">
-            <Card className="p-6">
+          <PageCard>
+            <PageBody>
               <div className="mb-6">
                 <Heading level={1}>Account</Heading>
                 <Text variant="muted">Manage your Google accounts and authentication settings.</Text>
@@ -1112,13 +1507,13 @@ const Settings: React.FC = () => {
                   )}
                 </Card>
               </div>
-            </Card>
-          </div>
+            </PageBody>
+          </PageCard>
         );
       case 'appearance':
         return (
-          <div className="h-full p-6">
-            <Card className="p-6">
+          <PageCard>
+            <PageBody>
             <div className="mb-6">
               <Heading level={1}>Appearance</Heading>
               <Text variant="muted">Customize the visual appearance and theme of the application.</Text>
@@ -1200,13 +1595,13 @@ const Settings: React.FC = () => {
                 </div>
               </Card>
             </div>
-          </Card>
-          </div>
+            </PageBody>
+          </PageCard>
         );
       default:
         return (
-          <div className="h-full p-6">
-            <Card className="p-6">
+          <PageCard>
+            <PageBody>
               <div className="flex h-full flex-col items-center justify-center text-muted">
                 <Cog size={48} className="mb-4 opacity-50" />
                 <Heading level={2} className="mb-2 text-xl font-semibold text-primary">
@@ -1216,8 +1611,8 @@ const Settings: React.FC = () => {
                   Settings for this section are not yet implemented.
                 </Text>
               </div>
-            </Card>
-          </div>
+            </PageBody>
+          </PageCard>
         );
     }
   };
@@ -1259,34 +1654,34 @@ const Settings: React.FC = () => {
   return (
     <Page>
       <PageContent>
-    <div className="asana-settings">
+    <div className="grid grid-cols-12 gap-4">
       {/* Left Navigation */}
-      <div className="asana-settings-sidebar">
-        <h3 className="asana-settings-title">Categories</h3>
-        <nav className="asana-settings-nav">
-          {navItems.map(item => {
-            const IconComponent = item.icon;
-            const isActive = activeSection === item.id;
-            return (
-              <a
-                key={item.id}
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveSection(item.id);
-                }}
-                className={`asana-settings-nav-item ${isActive ? 'active' : ''}`}
-              >
-                <IconComponent className="asana-settings-nav-icon" />
-                <span>{item.label}</span>
-              </a>
-            );
-          })}
-        </nav>
-      </div>
+      <PageCard className="col-span-3 h-[calc(100vh-2rem)] sticky top-4 self-start overflow-y-auto">
+        <PageBody>
+          <h3 className="asana-text-sm font-semibold text-secondary mb-2">Categories</h3>
+          <nav role="tablist" aria-label="Settings categories" className="flex flex-col gap-1">
+            {navItems.map(item => {
+              const IconComponent = item.icon;
+              const isActive = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`flex items-center gap-2 rounded-md px-2 py-2 text-left transition-colors ${isActive ? 'bg-secondary text-primary' : 'hover:bg-secondary text-secondary'}`}
+                  onClick={() => setActiveSection(item.id)}
+                >
+                  <IconComponent size={16} />
+                  <span className="truncate">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </PageBody>
+      </PageCard>
 
       {/* Main Content Area */}
-      <div className="asana-settings-content">
+      <div className="col-span-9 h-[calc(100vh-2rem)] overflow-y-auto">
         {renderSection()}
 
         {/* Google Authentication Modal - positioned relative to main content area */}

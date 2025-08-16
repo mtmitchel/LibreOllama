@@ -61,6 +61,22 @@ webbrowser = "0.8"
 strip_markdown = "0.2.0"
 async-openai = "0.19.1"
 
+[features]
+# Default app runtime excludes debug/experimental command modules that cause unused warnings
+default = [
+]
+
+# Optional features to include additional command surfaces
+system-advanced = []
+gmail-compose = []
+gmail-migration = []
+google-drive = []
+tasks-simple = []
+agents-admin = []
+projects-admin = []
+folders = []
+llm-settings = []
+
 # Process management for sidecar
 
 # Database dependencies - Using bundled SQLite for now, will add encryption later

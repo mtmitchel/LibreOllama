@@ -1,3 +1,4 @@
+#![cfg(test)]
 // Gmail Services Test Suite
 // Comprehensive unit and integration tests for all Gmail services
 
@@ -10,6 +11,7 @@ use crate::database::connection::DatabaseManager;
 use std::sync::Arc;
 
 /// Create a test database manager for all Gmail service tests
+#[allow(dead_code)]
 pub async fn create_test_db_manager() -> Result<Arc<DatabaseManager>, Box<dyn std::error::Error>> {
     // Set test environment variables
     std::env::set_var("GMAIL_CLIENT_ID", "test_client_id");
@@ -21,10 +23,11 @@ pub async fn create_test_db_manager() -> Result<Arc<DatabaseManager>, Box<dyn st
 }
 
 /// Test encryption key for all services
+#[allow(dead_code)]
 pub const TEST_ENCRYPTION_KEY: [u8; 32] = [42u8; 32];
 
 /// Common test account data
-pub const TEST_ACCOUNT_ID: &str = "test_account_123";
-pub const TEST_USER_EMAIL: &str = "test@gmail.com";
-pub const TEST_ACCESS_TOKEN: &str = "ya29.test_access_token";
-pub const TEST_REFRESH_TOKEN: &str = "1//test_refresh_token"; 
+#[allow(dead_code)] pub const TEST_ACCOUNT_ID: &str = "test_account_123";
+#[allow(dead_code)] pub const TEST_USER_EMAIL: &str = "test@gmail.com";
+#[allow(dead_code)] pub const TEST_ACCESS_TOKEN: &str = "ya29.test_access_token";
+#[allow(dead_code)] pub const TEST_REFRESH_TOKEN: &str = "1//test_refresh_token";

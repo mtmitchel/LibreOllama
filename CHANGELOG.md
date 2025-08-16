@@ -16,6 +16,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Aligned dialogs to DS APIs (`ConfirmDialog`, `SimpleDialog`).
 - Added accessibility ids/names/aria-labels to inputs, including hidden file inputs.
 
+### 🔧 Backend hardening and account removal fix
+- Gmail account removal is now resilient to corrupted/undecryptable tokens.
+  - Backend: `remove_gmail_account_secure` proceeds with DB deletion even if token decryption fails; token revocation is attempted best-effort.
+  - Frontend: unified on the correct command (`remove_gmail_account_secure`), improved error propagation, and the confirmation dialog now closes on success.
+
+### 🧱 Module gating and warning cleanup (Rust)
+- Introduced feature flags to compile only the surfaces we use by default:
+  - `gmail-compose`, `system-advanced`, `google-drive`, `tasks-simple`, `agents-admin`, `projects-admin`, `folders`, `llm-settings`.
+- Removed wildcard re-exports in command barrels; handlers are registered explicitly.
+- Gated debug/experimental modules and tests behind the corresponding features.
+- Reduced Rust warnings significantly; default build is clean and passes.
+
+### 🧪 Tests
+- Gated agent-related integration tests and helpers under `agents-admin`.
+- Marked internal test utilities/constants with `#[allow(dead_code)]` to keep them available without polluting default builds.
+
 ### 🧹 Repository cleanup
 - Archived page-level CSS variants to `src/app/pages/styles/_archive/`.
 - Removed unused UI wrappers and stories (`Tag`, `ProgressRing`, `Stepper`, `Toast`, `Tooltip`, old `select`/`popover`).

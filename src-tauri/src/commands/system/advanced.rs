@@ -1,3 +1,4 @@
+#![cfg(feature = "system-advanced")]
 //! Advanced features commands for Phase 3.3
 //!
 //! This module contains Tauri commands for context management,

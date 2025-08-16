@@ -112,8 +112,10 @@ pub struct RequestQueue {
 
 pub struct RateLimiter {
     pub config: RateLimitConfig,
+    #[allow(dead_code)]
     pub quota_status: ApiQuotaStatus,
     pub request_queue: Arc<Mutex<RequestQueue>>,
+    #[allow(dead_code)]
     pub adaptive_delay: u64,
     pub client: Client,
 }

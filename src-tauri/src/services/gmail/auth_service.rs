@@ -119,6 +119,7 @@ struct PendingAuthorization {
 pub struct GmailAuthService {
     config: AuthConfig,
     pending_authorizations: Arc<RwLock<HashMap<String, PendingAuthorization>>>,
+    #[allow(dead_code)]
     callback_sender: Arc<RwLock<Option<oneshot::Sender<CallbackResult>>>>,
     db_manager: Arc<DatabaseManager>,
     encryption_key: [u8; 32],
@@ -567,8 +568,19 @@ impl GmailAuthService {
 
     /// Remove an account (delete from database and revoke tokens)
     pub async fn remove_account(&self, account_id: &str) -> Result<()> {
-        // Get tokens to revoke them first
-        if let Some(tokens) = self.get_account_tokens(account_id).await? {
+        // Try to fetch tokens to revoke them first, but don't block deletion if decryption fails
+        let tokens_opt = match self.get_account_tokens(account_id).await {
+            Ok(tokens) => tokens,
+            Err(e) => {
+                eprintln!(
+                    "⚠️  [AUTH-WARNING] Could not retrieve tokens for account {} during removal: {}. Proceeding to delete account without revocation.",
+                    account_id, e
+                );
+                None
+            }
+        };
+
+        if let Some(tokens) = tokens_opt {
             // Revoke access token
             let _ = self.revoke_token(tokens.access_token).await;
             
@@ -739,6 +751,7 @@ impl GmailAuthService {
     }
 
     /// Update last sync timestamp for an account
+    #[allow(dead_code)]
     pub async fn update_sync_timestamp(&self, account_id: &str) -> Result<()> {
         let conn = self.db_manager.get_connection()
             .map_err(|e| LibreOllamaError::DatabaseQuery {
@@ -761,7 +774,8 @@ impl GmailAuthService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::database::connection;
+#[allow(unused_imports)]
+use crate::database::connection;
 
     // Test helpers
     async fn setup_test_auth_service() -> Result<GmailAuthService> {

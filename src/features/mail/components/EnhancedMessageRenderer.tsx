@@ -130,31 +130,8 @@ function MessageContent({ content, contentType, enableImageLoading, enableLinkPr
     }
   }, [content, contentType, enableImageLoading]);
 
-  // Handle link clicks
-  useEffect(() => {
-    if (!contentRef.current) return;
-
-    const handleLinkClick = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'A') {
-        e.preventDefault();
-        const href = target.getAttribute('href');
-        if (href && onLinkClick) {
-          onLinkClick(href);
-        } else if (href) {
-          // Default behavior - open in new tab with security
-          window.open(href, '_blank', 'noopener,noreferrer');
-        }
-      }
-    };
-
-    contentRef.current.addEventListener('click', handleLinkClick);
-    return () => {
-      if (contentRef.current) {
-        contentRef.current.removeEventListener('click', handleLinkClick);
-      }
-    };
-  }, [onLinkClick]);
+  // Link clicks are now handled globally by LinkPreviewProvider
+  // No need for local link handling here
 
   return (
     <div>
@@ -227,11 +204,7 @@ export function EnhancedMessageRenderer({
     return { main: content, quoted: null };
   }, [content, contentType, showSource]);
 
-  const handleLinkClick = (url: string) => {
-    logger.debug('External link clicked:', url);
-    // Could add link preview functionality here
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+  // Link handling is now done globally by LinkPreviewProvider
 
   const handleCopyContent = () => {
     const textContent = contentType === 'html' 
@@ -287,7 +260,7 @@ export function EnhancedMessageRenderer({
         contentType={showSource ? 'text' : contentType}
         enableImageLoading={enableImageLoading}
         enableLinkPreview={enableLinkPreview}
-        onLinkClick={handleLinkClick}
+        onLinkClick={undefined}
       />
 
       {/* Quoted text */}

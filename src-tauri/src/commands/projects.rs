@@ -1,3 +1,4 @@
+#![cfg(feature = "projects-admin")]
 //! Project Management Commands
 //!
 //! This module contains all project-related Tauri commands.

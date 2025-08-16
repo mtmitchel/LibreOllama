@@ -4,7 +4,7 @@ use crate::services::gmail::auth_service::GmailAuthService;
 use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use chrono::Utc;
+// use chrono::Utc; // not used
 
 const GOOGLE_TASKS_API_BASE: &str = "https://tasks.googleapis.com/tasks/v1";
 
@@ -235,6 +235,7 @@ impl GoogleTasksService {
         self.make_api_request_with_body(account_id, &endpoint, Method::POST, Some(body)).await
     }
 
+    #[allow(dead_code)]
     pub async fn get_single_task(&self, account_id: &str, task_list_id: &str, task_id: &str) -> Result<GoogleTask> {
         let endpoint = format!("lists/{}/tasks/{}", task_list_id, task_id);
         self.make_api_request(account_id, &endpoint).await
@@ -313,6 +314,7 @@ impl GoogleTasksService {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn update_task_list(&self, account_id: &str, task_list_id: &str, new_title: String) -> Result<GoogleTaskList> {
         let endpoint = format!("users/@me/lists/{}", task_list_id);
         let body = serde_json::json!({

@@ -455,6 +455,7 @@ pub struct PerformanceMetric {
 }
 
 impl PerformanceMetric {
+    #[allow(dead_code)]
     pub fn new(metric_type: MetricType, value: f64, timestamp: NaiveDateTime, metadata: Option<String>) -> Self {
         PerformanceMetric {
             id: 0,
@@ -480,6 +481,7 @@ pub struct ConversationContext {
 }
 
 impl ConversationContext {
+    #[allow(dead_code)]
     pub fn new(context_name: String, context_window_size: i32) -> Self {
         ConversationContext {
             id: 0,
@@ -505,6 +507,7 @@ pub struct ChatTemplate {
 }
 
 impl ChatTemplate {
+    #[allow(dead_code)]
     pub fn new(name: String, _description: String, template_content: String) -> Self {
         let now = chrono::Local::now().naive_local();
         ChatTemplate {
