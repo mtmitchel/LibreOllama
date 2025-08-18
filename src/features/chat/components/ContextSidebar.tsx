@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
 import { Card } from '../../../components/ui/design-system/Card';
 import { Badge } from '../../../components/ui/design-system/Badge';
-import { Heading, Text } from '../../../components/ui';
+import { Heading, Text, Input, Textarea } from '../../../components/ui';
 import { ListItem, Tile } from '../../../components/ui/design-system';
 import { useChatStore } from '../stores/chatStore';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../../../components/ui/design-system/Dialog';
+import { Link } from 'react-router-dom';
 import { 
   FileText, 
   CheckSquare, 
@@ -14,7 +16,6 @@ import {
   PanelRight,
   MessageSquare,
   Inbox,
-  Link,
   Tag,
   Clock,
   Archive,
@@ -130,6 +131,15 @@ const getStatusBadge = (item: ContextItem) => {
 
 export function ContextSidebar({ isOpen = false, conversationId, onToggle }: ContextSidebarProps) {
   const [activeTab, setActiveTab] = useState<'context' | 'settings'>('context');
+  const [quickAction, setQuickAction] = useState<null | 'task' | 'note' | 'event' | 'label'>(null);
+  const [qaState, setQaState] = useState({
+    title: '',
+    notes: '',
+    due: '',
+    startTime: '',
+    endTime: '',
+    label: ''
+  });
   
   // Get chat store state and actions
   const {
@@ -409,10 +419,10 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                 Quick actions
               </Text>
               <div className="grid grid-cols-2 gap-2">
-                <Tile icon={<CheckSquare size={16} />} label="Create task" />
-                <Tile icon={<FileText size={16} />} label="Take note" />
-                <Tile icon={<Calendar size={16} />} label="Create event" />
-                <Tile icon={<Pin size={16} />} label="Add to project" />
+                <Tile icon={<CheckSquare size={16} />} label="Create task" onClick={() => setQuickAction('task')} />
+                <Tile icon={<FileText size={16} />} label="Take note" onClick={() => setQuickAction('note')} />
+                <Tile icon={<Calendar size={16} />} label="Create event" onClick={() => setQuickAction('event')} />
+                <Tile icon={<Tag size={16} />} label="Add label" onClick={() => setQuickAction('label')} />
               </div>
             </div>
 
@@ -625,6 +635,105 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
         )}
       </div>
     </Card>
+
+    {/* Quick Action Centered Modals (Design System) */}
+    {quickAction && (
+      <Dialog open={true} onOpenChange={(open) => { if (!open) setQuickAction(null); }}>
+        <DialogContent size="sm" className="overflow-x-hidden">
+          <DialogHeader>
+            <DialogTitle>
+              {quickAction === 'task' && 'Quick task'}
+              {quickAction === 'note' && 'Quick note'}
+              {quickAction === 'event' && 'Quick event'}
+              {quickAction === 'label' && 'Add label'}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div className="space-y-3">
+              {quickAction !== 'label' && (
+                <Input
+                  type="text"
+                  placeholder={quickAction === 'note' ? 'Title (optional)' : 'Title'}
+                  value={qaState.title}
+                  onChange={(e) => setQaState({ ...qaState, title: e.target.value })}
+                />
+              )}
+              {quickAction === 'note' && (
+                <Textarea
+                  placeholder="Write a quick note..."
+                  value={qaState.notes}
+                  onChange={(e) => setQaState({ ...qaState, notes: e.target.value })}
+                  className="min-h-[100px]"
+                />
+              )}
+              {(quickAction === 'task' || quickAction === 'event') && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="date"
+                    value={qaState.due}
+                    onChange={(e) => setQaState({ ...qaState, due: e.target.value })}
+                  />
+                  {quickAction === 'event' ? (
+                    <div className="grid grid-cols-2 gap-2 min-w-0">
+                      <Input
+                        type="time"
+                        value={qaState.startTime}
+                        onChange={(e) => setQaState({ ...qaState, startTime: e.target.value })}
+                        className="min-w-0"
+                      />
+                      <Input
+                        type="time"
+                        value={qaState.endTime}
+                        onChange={(e) => setQaState({ ...qaState, endTime: e.target.value })}
+                        className="min-w-0"
+                      />
+                    </div>
+                  ) : <div />}
+                </div>
+              )}
+              {quickAction === 'label' && (
+                <Input
+                  type="text"
+                  placeholder="Label name"
+                  value={qaState.label}
+                  onChange={(e) => setQaState({ ...qaState, label: e.target.value })}
+                />
+              )}
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <div className="mr-auto flex items-center gap-2">
+              {quickAction === 'task' && (
+                <Link to="/tasks" className="asana-text-sm text-[color:var(--brand-primary)] hover:underline">Go to tasks</Link>
+              )}
+              {quickAction === 'note' && (
+                <Link to="/notes" className="asana-text-sm text-[color:var(--brand-primary)] hover:underline">Go to notes</Link>
+              )}
+              {quickAction === 'event' && (
+                <Link to="/calendar" className="asana-text-sm text-[color:var(--brand-primary)] hover:underline">Go to calendar</Link>
+              )}
+              {/* No CTA for label; quick add only */}
+            </div>
+            <Button variant="ghost" onClick={() => setQuickAction(null)}>Cancel</Button>
+            <Button
+              variant="primary"
+              disabled={
+                (quickAction === 'task' && !qaState.title.trim()) ||
+                (quickAction === 'event' && !qaState.title.trim()) ||
+                (quickAction === 'label' && !qaState.label.trim())
+              }
+              onClick={() => {
+                console.log('Quick action submitted:', quickAction, qaState);
+                setQuickAction(null);
+                setQaState({ title: '', notes: '', due: '', startTime: '', endTime: '', label: '' });
+              }}
+            >
+              {quickAction === 'label' ? 'Add' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
     </>
   );
 } 

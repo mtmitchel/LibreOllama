@@ -27,8 +27,8 @@ export function ChatHeader({ selectedChat }: ChatHeaderProps) {
           </Heading>
         </div>
         
-        {/* Model Selector */}
-        <ModelSelector />
+        {/* Model Selector bound to this conversation */}
+        <ModelSelector conversationId={selectedChat.id} />
       </div>
     </header>
   );

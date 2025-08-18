@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
 import { Card } from '../../../components/ui/design-system/Card';
-import { Caption, Text, Heading, Input, EmptyState } from '../../../components/ui';
+import { Caption, Text, Heading, Input } from '../../../components/ui';
 import { ListItem, SimpleDialog as Dialog } from '../../../components/ui/design-system';
 import { ChatConversation } from "../../../core/lib/chatMockData";
 import { ConversationContextMenu } from "./ConversationContextMenu";
@@ -193,12 +193,15 @@ export function ConversationList({
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         {filteredConversations.length === 0 ? (
-          <EmptyState
-            icon="💬"
-            title="No conversations found"
-            message={searchQuery ? "Try adjusting your search terms" : "Start a new conversation to get started"}
-            size="sm"
-          />
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="from-accent-primary/15 to-accent-primary/5 border-accent-primary/20 mb-3 flex size-12 items-center justify-center rounded-xl border bg-gradient-to-br">
+              <MessagesSquare size={18} className="text-accent-primary" />
+            </div>
+            <Heading level={4} className="mb-1">No conversations found</Heading>
+            <Text variant="secondary" className="asana-text-sm">
+              {searchQuery ? 'Try adjusting your search terms' : 'Start a new conversation to get started'}
+            </Text>
+          </div>
         ) : (
           <div className="space-y-6">
             {/* Pinned Section */}
@@ -263,7 +266,7 @@ export function ConversationList({
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog — polished per design system */}
       {deleteDialogConversation && (
         <Dialog
           open={true}
@@ -271,8 +274,7 @@ export function ConversationList({
             if (!open) setDeleteDialogConversation(null);
           }}
           title="Delete conversation"
-          description="This action cannot be undone."
-          size="sm"
+          size="md"
           footer={(
             <div className="flex items-center justify-end gap-2 w-full">
               <Button
@@ -282,7 +284,8 @@ export function ConversationList({
                 Cancel
               </Button>
               <Button
-                variant="destructive"
+                variant="secondary"
+                className="text-[color:var(--status-error)] border-[var(--status-error)] hover:bg-[var(--status-error-subtle)] hover:text-[color:var(--status-error)]"
                 onClick={() => {
                   if (deleteDialogConversation) {
                     onDeleteConversation(deleteDialogConversation.id);
@@ -295,12 +298,12 @@ export function ConversationList({
             </div>
           )}
         >
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-8 items-center justify-center rounded-full bg-error-ghost">
-              <AlertTriangle className="size-4 text-error" />
-            </div>
-            <p className="asana-text-sm text-secondary">
-              Are you sure you want to delete "{deleteDialogConversation.title}"? This will permanently remove the conversation and all its messages.
+          <div>
+            <p className="asana-text-base text-primary">
+              Are you sure you want to delete <span className="font-medium">"{deleteDialogConversation.title}"</span>?
+            </p>
+            <p className="asana-text-sm text-secondary mt-1">
+              This will permanently remove the conversation and all its messages.
             </p>
           </div>
         </Dialog>

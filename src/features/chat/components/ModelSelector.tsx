@@ -1,16 +1,22 @@
 import React, { useEffect } from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
-import { Dropdown } from '../../../components/ui/design-system';
-import { ChevronDown, RefreshCw } from 'lucide-react';
+import { SelectDropdown } from '../../../components/ui/design-system';
+import { RefreshCw } from 'lucide-react';
 import { useChatStore } from '../stores/chatStore';
 
-export function ModelSelector() {
+interface Props {
+  conversationId?: string;
+}
+
+export function ModelSelector({ conversationId }: Props) {
   const {
     availableModels,
     selectedModel,
     isLoadingModels,
+    isHydrated,
     fetchAvailableModels,
     setSelectedModel,
+    setConversationModel,
     error
   } = useChatStore();
 
@@ -20,7 +26,11 @@ export function ModelSelector() {
   }, [fetchAvailableModels]);
 
   const handleModelSelect = async (modelName: string) => {
-    await setSelectedModel(modelName);
+    if (conversationId && setConversationModel) {
+      setConversationModel(conversationId, modelName);
+    } else {
+      await setSelectedModel(modelName);
+    }
   };
 
   const handleRefreshModels = (e: React.MouseEvent) => {
@@ -71,27 +81,26 @@ export function ModelSelector() {
     );
   }
 
-  const currentModel = availableModels.find(model => (model.id || model.name) === selectedModel);
-  const displayName = currentModel?.name || 'Select Model';
+  // Wait for hydration to avoid flash of wrong value
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center gap-2 text-secondary">
+        <span className="asana-text-sm">Loading...</span>
+        <RefreshCw size={14} className="animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <Dropdown
-      items={availableModels.map((model, index) => ({
+    <SelectDropdown
+      options={availableModels.map((model) => ({
         value: model.id || model.name,
         label: model.name,
       }))}
-      onSelect={(value) => handleModelSelect(value)}
-      placement="bottom-start"
-      trigger={(
-        <Button
-          variant="ghost"
-          className="flex h-8 items-center gap-2 px-3 asana-text-sm font-medium"
-          title={`Current model: ${displayName}`}
-        >
-          <span className="max-w-32 truncate">{displayName}</span>
-          <ChevronDown size={14} />
-        </Button>
-      )}
+      value={selectedModel || undefined}
+      onChange={handleModelSelect}
+      placeholder="Select Model"
+      className="min-w-[180px]"
     />
   );
 } 

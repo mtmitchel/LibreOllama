@@ -21,6 +21,8 @@ export interface ChatConversation {
   timestamp: string;
   isPinned?: boolean;
   participants: number;
+  modelId?: string; // Track which model was used for this conversation
+  provider?: LLMProvider; // Track which provider was used
 }
 
 // Backend API types
@@ -52,6 +54,7 @@ interface ChatState {
   selectedModel: string | null;
   selectedProvider: LLMProvider;
   isLoadingModels: boolean;
+  isHydrated: boolean; // Track hydration state
   
   // Conversation settings
   conversationSettings: {
@@ -119,6 +122,9 @@ interface ChatState {
   // Utilities
   clearError: () => void;
   reset: () => void;
+  // Model helpers
+  refreshEnabledModels?: () => void;
+  setConversationModel?: (conversationId: string, modelId: string, provider?: LLMProvider) => void;
 }
 
 // Helper functions for type conversion
@@ -147,6 +153,7 @@ const initialState = {
   selectedModel: null,
   selectedProvider: 'ollama' as LLMProvider,
   isLoadingModels: false,
+  isHydrated: false, // Add hydration tracking
   conversationSettings: {
     autoCleanResponses: true,
     maxResponseLength: 2000,
@@ -211,14 +218,17 @@ export const useChatStore = create<ChatState>()(
             const sessionId: string = await invoke('create_session', { title });
             logger.debug('chatStore: Received new session ID:', sessionId); 
             
-            // Create new conversation object
+            // Create new conversation object with current model
+            const currentState = get();
             const newConversation: ChatConversation = {
               id: sessionId,
               title,
               lastMessage: '',
               timestamp: new Date().toISOString(),
               isPinned: false,
-              participants: 1
+              participants: 1,
+              modelId: currentState.selectedModel,
+              provider: currentState.selectedProvider
             };
             logger.debug('chatStore: Created new conversation object:', newConversation); 
 
@@ -270,11 +280,30 @@ export const useChatStore = create<ChatState>()(
         },
 
         selectConversation(conversationId: string | null) {
+          const state = get();
           set({ selectedConversationId: conversationId });
           
-          // Auto-fetch messages if not already loaded
-          if (conversationId && !get().messages[conversationId]) {
-            get().fetchMessages(conversationId);
+          // Restore the model used for this conversation
+          if (conversationId) {
+            const conversation = state.conversations.find(c => c.id === conversationId);
+            if (conversation?.modelId && conversation?.provider) {
+              // Check if the model still exists in available models
+              const modelExists = state.availableModels.find(m => m.id === conversation.modelId);
+              if (modelExists) {
+                set(state => {
+                  state.selectedModel = conversation.modelId!;
+                  state.selectedProvider = conversation.provider!;
+                });
+                logger.debug('chatStore: Restored model for conversation:', conversation.modelId);
+              } else {
+                logger.warn('chatStore: Conversation model no longer available:', conversation.modelId);
+              }
+            }
+            
+            // Auto-fetch messages if not already loaded
+            if (!state.messages[conversationId]) {
+              get().fetchMessages(conversationId);
+            }
           }
         },
 
@@ -433,7 +462,7 @@ export const useChatStore = create<ChatState>()(
             set(state => {
               state.messages[conversationId].push(aiMessage);
               
-              // Update conversation's last message with truncated version
+              // Update conversation's last message and model info
               const conversation = state.conversations.find(c => c.id === conversationId);
               if (conversation) {
                 const truncatedLastMessage = aiResponse.length > 50 
@@ -441,6 +470,9 @@ export const useChatStore = create<ChatState>()(
                   : aiResponse;
                 conversation.lastMessage = truncatedLastMessage;
                 conversation.timestamp = new Date().toISOString();
+                // Save the model used for this conversation
+                conversation.modelId = selectedModel || undefined;
+                conversation.provider = selectedProvider;
               }
               
               state.isSending = false;
@@ -618,9 +650,19 @@ export const useChatStore = create<ChatState>()(
               state.availableModels = enabledModels;
               state.isLoadingModels = false;
               
-              // Auto-select first model if none selected or if current selection is not enabled
+              // Check if persisted model is still available
               const currentModelEnabled = enabledModels.find(m => m.id === state.selectedModel);
-              if (!state.selectedModel || !currentModelEnabled) {
+              
+              if (currentModelEnabled) {
+                // Persisted model is still available, ensure provider matches
+                if (state.selectedProvider !== currentModelEnabled.provider) {
+                  state.selectedProvider = currentModelEnabled.provider;
+                  logger.debug('chatStore: Corrected provider for persisted model:', state.selectedModel);
+                } else {
+                  logger.debug('chatStore: Using persisted model:', state.selectedModel, 'provider:', state.selectedProvider);
+                }
+              } else if (!state.selectedModel || !currentModelEnabled) {
+                // No persisted model or it's no longer available
                 if (enabledModels.length > 0) {
                   // Prioritize non-Ollama models that the user specifically enabled
                   const userEnabledModel = enabledModels.find(m => {
@@ -631,7 +673,7 @@ export const useChatStore = create<ChatState>()(
                   const modelToSelect = userEnabledModel || enabledModels[0];
                   state.selectedModel = modelToSelect.id;
                   state.selectedProvider = modelToSelect.provider;
-                  logger.debug('chatStore: Auto-selected model:', modelToSelect.id, 'provider:', modelToSelect.provider);
+                  logger.debug('chatStore: Auto-selected model (no valid persisted):', modelToSelect.id, 'provider:', modelToSelect.provider);
                 }
               }
             });
@@ -686,6 +728,17 @@ export const useChatStore = create<ChatState>()(
               logger.debug('chatStore: Available models:', state.availableModels.map(m => m.id));
             }
             
+            // Persist selection immediately on the active conversation
+            if (state.selectedConversationId) {
+              const active = state.conversations.find(c => c.id === state.selectedConversationId);
+              if (active) {
+                active.modelId = modelId;
+                // Ensure provider saved alongside model
+                const model = state.availableModels.find(m => m.id === modelId);
+                active.provider = model ? model.provider : state.selectedProvider;
+              }
+            }
+
             // Load model defaults if they exist
             const modelDefaults = state.modelDefaults[modelId];
             if (modelDefaults) {
@@ -716,8 +769,39 @@ export const useChatStore = create<ChatState>()(
             if (providerModels.length > 0) {
               state.selectedModel = providerModels[0].id;
             }
+
+            // Persist provider/model to the active conversation immediately
+            if (state.selectedConversationId) {
+              const active = state.conversations.find(c => c.id === state.selectedConversationId);
+              if (active) {
+                active.provider = provider;
+                if (state.selectedModel) {
+                  active.modelId = state.selectedModel;
+                }
+              }
+            }
           });
           logger.debug('chatStore: Selected provider:', provider);
+        },
+
+        // Optional explicit setter to wire UI directly per-conversation
+        setConversationModel(conversationId: string, modelId: string, provider?: LLMProvider) {
+          set(state => {
+            const convo = state.conversations.find(c => c.id === conversationId);
+            if (!convo) return;
+            convo.modelId = modelId;
+            if (provider) {
+              convo.provider = provider;
+            } else {
+              const model = state.availableModels.find(m => m.id === modelId);
+              convo.provider = model ? model.provider : convo.provider;
+            }
+            // If this is the active convo, also update the global selection
+            if (state.selectedConversationId === conversationId) {
+              state.selectedModel = modelId;
+              if (convo.provider) state.selectedProvider = convo.provider;
+            }
+          });
         },
 
         // Conversation settings
@@ -802,13 +886,59 @@ export const useChatStore = create<ChatState>()(
         name: 'chat-store',
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
-          // Only persist data, not loading states
+          // Persist only essential, serializable state
           conversations: state.conversations,
-          messages: state.messages,
-          selectedConversationId: state.selectedConversationId,
-          searchQuery: state.searchQuery,
-          selectedModel: state.selectedModel, // Persist selected model
-        })
+          selectedModel: state.selectedModel,
+          selectedProvider: state.selectedProvider,
+        }),
+        merge: (persistedState: any, currentState: any) => {
+          // Custom merge to prevent stale data conflicts
+          return {
+            ...currentState,
+            ...persistedState,
+            // Always use current loading/error states
+            isLoading: false,
+            isLoadingMessages: false,
+            isLoadingModels: false,
+            isSending: false,
+            error: null,
+            // Merge arrays more carefully
+            availableModels: currentState.availableModels || [],
+          };
+        },
+        onRehydrateStorage: () => (state) => {
+          if (state) {
+            // Mark as hydrated immediately
+            state.isHydrated = true;
+            
+            // Log what was restored from localStorage
+            logger.info('chatStore: Rehydrated from localStorage', {
+              selectedModel: state.selectedModel,
+              selectedProvider: state.selectedProvider,
+              conversationsCount: state.conversations.length
+            });
+            
+            // If we have a persisted model, fetch available models to validate it
+            if (state.selectedModel) {
+              // Fetch models after a short delay to ensure providers are initialized
+              setTimeout(() => {
+                state.fetchAvailableModels().then(() => {
+                  // Validate that the persisted model still exists
+                  const modelExists = state.availableModels.find(m => m.id === state.selectedModel);
+                  if (!modelExists && state.availableModels.length > 0) {
+                    logger.warn('chatStore: Persisted model no longer available, selecting default');
+                    // Model doesn't exist anymore, select the first available
+                    state.setSelectedModel(state.availableModels[0].id);
+                  } else if (modelExists && modelExists.provider !== state.selectedProvider) {
+                    // Provider mismatch, correct it
+                    logger.info('chatStore: Correcting provider for persisted model');
+                    state.setSelectedProvider(modelExists.provider);
+                  }
+                });
+              }, 100);
+            }
+          }
+        }
       }
     ),
     { name: 'chat-store' }
