@@ -1,4 +1,3 @@
-#![cfg(feature = "system-advanced")]
 //! Advanced features commands for Phase 3.3
 //!
 //! This module contains Tauri commands for context management,
@@ -7,6 +6,11 @@
 use serde::{Deserialize, Serialize};
 use crate::database::models::{ConversationContext, ChatTemplate, UserPreference, ApplicationLog, PerformanceMetric, MetricType, RequestCache, PreferenceType, LogLevel, ChatSession, ChatMessage};
 use tauri::State;
+// PDF export deps
+use printpdf::*;
+use std::io::{BufWriter, Write};
+use std::fs::File;
+use std::sync::Arc;
 
 // ===== Context Management Commands =====
 
@@ -425,7 +429,7 @@ pub struct ChatExport {
 #[tauri::command]
 pub async fn export_chat_session(
     session_id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<ChatExport, String> {
     let session_id_int = session_id.parse().unwrap_or_default();
     let db_manager_clone = db_manager.inner().clone();
@@ -458,9 +462,9 @@ pub async fn export_chat_session(
 #[tauri::command]
 pub async fn export_chat_session_markdown(
     session_id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<String, String> {
-    let export = export_chat_session(session_id, db_manager).await?;
+    let export = export_chat_session(session_id, db_manager.clone()).await?;
     
     let mut markdown = format!("# {}\n\n", export.session.session_name); // Use session_name
     markdown.push_str(&format!("**Created:** {}\n", export.session.created_at.format("%Y-%m-%d %H:%M:%S")));
@@ -492,6 +496,83 @@ pub async fn export_chat_session_markdown(
     markdown.push_str(&format!("\n*Exported on {} UTC*\n", export.export_timestamp.format("%Y-%m-%d %H:%M:%S")));
     
     Ok(markdown)
+}
+
+// ===== Chat Export: PDF =====
+
+#[tauri::command]
+pub async fn export_chat_session_pdf(
+    session_id: String,
+    output_path: String,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
+) -> Result<(), String> {
+    let export = export_chat_session(session_id, db_manager.clone()).await?;
+
+    let (doc, page1, layer1) = PdfDocument::new(
+        export.session.session_name.clone(),
+        Mm(210.0),
+        Mm(297.0),
+        "Layer 1",
+    );
+    let current_layer = doc.get_page(page1).get_layer(layer1);
+    let font = doc.add_builtin_font(BuiltinFont::Helvetica).map_err(|e| e.to_string())?;
+
+    let mut cursor_y = 285.0;
+    let left = 15.0;
+    let lh = 5.0;
+
+    let mut write_text = |text: &str, size: f32, cursor_y: &mut f32| {
+        if *cursor_y < 15.0 { *cursor_y = 285.0; }
+        current_layer.begin_text_section();
+        current_layer.set_font(&font, size);
+        current_layer.set_text_cursor(Mm(left), Mm(*cursor_y));
+        current_layer.set_line_height(lh as f32);
+        current_layer.write_text(text, &font);
+        current_layer.end_text_section();
+        *cursor_y -= lh;
+    };
+
+    write_text(&export.session.session_name, 14.0, &mut cursor_y);
+    write_text(
+        &format!("Updated: {}", export.session.updated_at.format("%Y-%m-%d %H:%M:%S")),
+        10.0,
+        &mut cursor_y
+    );
+    cursor_y -= 2.0;
+
+    for msg in export.messages {
+        write_text(&format!("{}:", msg.role.to_uppercase()), 11.0, &mut cursor_y);
+        for line in msg.content.split('\n') {
+            write_text(line, 10.0, &mut cursor_y);
+        }
+        cursor_y -= 2.0;
+    }
+
+    // Log the path for debugging
+    println!("PDF Export: Attempting to save to: {}", &output_path);
+    
+    // Create the file and ensure parent directory exists
+    let path = std::path::Path::new(&output_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+    
+    let file = File::create(&output_path).map_err(|e| format!("Failed to create file '{}': {}", output_path, e))?;
+    let mut buf = BufWriter::new(file);
+    doc.save(&mut buf).map_err(|e| format!("Failed to save PDF: {}", e))?;
+    
+    // Ensure all data is written to disk
+    buf.flush().map_err(|e| format!("Failed to flush PDF to disk: {}", e))?;
+    
+    // Verify the file was created
+    if !path.exists() {
+        return Err(format!("PDF file was not created at: {}", output_path));
+    }
+    
+    let metadata = std::fs::metadata(&output_path).map_err(|e| format!("Failed to get file metadata: {}", e))?;
+    println!("PDF Export: Successfully saved {} bytes to: {}", metadata.len(), &output_path);
+    
+    Ok(())
 }
 
 // ===== System Health Commands =====

@@ -156,19 +156,6 @@ function Chat() {
     }
   }, [conversations, fetchConversations]);
 
-  const handleArchiveConversation = useCallback(async (conversationId: string) => {
-    // For now, archiving will delete the conversation
-    // In the future, we could add a proper archive feature
-    console.log('Archive conversation:', conversationId);
-    if (confirm('Archive this conversation? (This will remove it from your active conversations)')) {
-      try {
-        await deleteConversation(conversationId);
-      } catch (error) {
-        console.error('Failed to archive conversation:', error);
-      }
-    }
-  }, [deleteConversation]);
-
   const handleExportConversation = useCallback((conversationId: string) => {
     // Export is now handled in the ConversationContextMenu component
     console.log('Export conversation:', conversationId);
@@ -200,21 +187,7 @@ function Chat() {
   }, [clearHeaderProps]);
 
   // --- ERROR DISPLAY ---
-  if (error) {
-    return (
-      <div className="asana-chat">
-        <div className="asana-empty">
-          <p className="asana-empty-title" style={{ color: 'var(--asana-status-blocked)' }}>{error}</p>
-          <button 
-            onClick={clearError}
-            className="asana-action-btn"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Render error as an overlay instead of replacing the entire UI
 
   // --- RENDER ---
   return (
@@ -226,7 +199,7 @@ function Chat() {
         display: 'flex',
         height: '100%',
         overflow: 'hidden',
-        background: 'var(--bg-page)',
+        background: 'var(--asana-bg-secondary)',
         padding: `${24}px ${isContextOpen ? 24 : 0}px ${24}px ${isConvoListOpen ? 24 : 0}px`,
         gap: isConvoListOpen ? '24px' : '0px'
       }}
@@ -245,7 +218,6 @@ function Chat() {
         onDeleteConversation={handleDeleteConversation}
         onToggle={() => setIsConvoListOpen(!isConvoListOpen)}
         onRenameConversation={handleRenameConversation}
-        onArchiveConversation={handleArchiveConversation}
         onExportConversation={handleExportConversation}
       />
 
@@ -324,6 +296,53 @@ function Chat() {
         />
       </div>
     </div>
+      
+      {/* Error Notification Overlay */}
+      {error && (
+        <div 
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/20 backdrop-blur-sm"
+          onClick={clearError}
+        >
+          <div 
+            className="max-w-md rounded-lg bg-white p-6 shadow-2xl border border-red-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg 
+                  className="h-6 w-6 text-red-500" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-gray-900">
+                  Error
+                </h3>
+                <p className="mt-1 text-sm text-gray-600">
+                  {error}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={clearError}
+                className="rounded-md bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </PageCard>
     </Page>
   );

@@ -5,7 +5,21 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-08-10
+## [Unreleased] - 2025-08-18
+
+### ✨ Chat Experience Enhancements
+- **Fixed rename/delete dialogs** in conversation context menu - lifted state to parent component to prevent unmounting issues
+- **Fixed regenerate response** functionality - now correctly identifies model provider and keeps regenerated messages in place
+- **Improved AI response formatting** - added comprehensive text formatter for clean, well-structured responses
+  - Markdown-like rendering with headers, lists, code blocks, and inline formatting
+  - Consistent formatting across all model types (local and API)
+  - Professional code block display with syntax highlighting and copy buttons
+- **Centered error notifications** - replaced inline errors with centered modal overlays for better visibility
+- **Fixed PDF export** - properly registered export commands and fixed parameter naming
+- **Improved export success notifications** - centered modals with file locations for all export formats
+- **Removed archive button** from context menu to simplify interface
+- **Fixed Space page navigation** - added proper state management for spaces with persistence
+- **Added browser modal service** for embedded browser windows (experimental)
 
 ### 🎨 Design system migration finalized
 - Consolidated design tokens and core styles into `src/styles/asana-globals.css`, `src/styles/asana-core.css`, and `src/styles/asana-layout.css`.

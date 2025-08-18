@@ -522,7 +522,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                     value={currentSessionSettings.systemPrompt}
                     onChange={(e) => handleSettingsChange('systemPrompt', e.target.value)}
                     placeholder="Enter custom instructions..."
-                    className="border-border-default focus:ring-accent-primary h-20 w-full resize-none rounded-md border bg-surface px-3 py-2 asana-text-sm text-primary focus:border-transparent focus:outline-none focus:ring-2"
+                    className="border-border-default focus:ring-accent-primary h-36 w-full resize-vertical rounded-md border bg-surface px-3 py-2 asana-text-base text-primary focus:border-transparent focus:outline-none focus:ring-2"
                     maxLength={2000}
                   />
                   <div className="flex items-center justify-between">

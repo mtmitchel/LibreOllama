@@ -417,8 +417,8 @@ export const useChatStore = create<ChatState>()(
             logger.debug('chatStore: Sending message with provider:', selectedProvider, 'model:', selectedModel);
             const rawAiResponse = await providerManager.chat(selectedProvider, llmMessages, selectedModel || undefined);
 
-            // Clean up the AI response using the backend service
-            const aiResponse = await invoke('clean_text', { text: rawAiResponse }) as string;
+            // Format the AI response for better presentation
+            const aiResponse = await invoke('format_ai_response', { text: rawAiResponse }) as string;
             
             // 4. Save AI response to backend
             const aiMessageApi: ChatMessageApi = await invoke('send_message', {
@@ -469,34 +469,48 @@ export const useChatStore = create<ChatState>()(
             return;
           }
 
-          // Find the last AI message and the user message before it
-          let lastAiMessageIndex = -1;
-          let lastUserMessage = '';
+          // Find the AI message to regenerate
+          let aiMessageIndex = -1;
           
-          for (let i = conversationMessages.length - 1; i >= 0; i--) {
-            if (conversationMessages[i].id === messageId) {
-              lastAiMessageIndex = i;
-            } else if (conversationMessages[i].sender === 'user' && lastAiMessageIndex !== -1) {
-              lastUserMessage = conversationMessages[i].content;
+          for (let i = 0; i < conversationMessages.length; i++) {
+            if (conversationMessages[i].id === messageId && conversationMessages[i].sender !== 'user') {
+              aiMessageIndex = i;
               break;
             }
           }
 
-          if (lastAiMessageIndex === -1 || !lastUserMessage) {
-            logger.warn('Cannot regenerate: no AI response to regenerate');
+          if (aiMessageIndex === -1) {
+            logger.warn('Cannot regenerate: AI message not found');
             return;
           }
 
+          // Find the last user message before this AI message
+          let lastUserMessageIndex = -1;
+          for (let i = aiMessageIndex - 1; i >= 0; i--) {
+            if (conversationMessages[i].sender === 'user') {
+              lastUserMessageIndex = i;
+              break;
+            }
+          }
+
+          if (lastUserMessageIndex === -1) {
+            logger.warn('Cannot regenerate: no user message found before AI response');
+            return;
+          }
+
+          // Save the original message in case we need to restore it on error
+          const originalMessage = conversationMessages[aiMessageIndex];
+          
           set({ isSending: true, error: null });
 
           try {
-            // Remove the last AI message from UI
+            // Remove the AI message from UI
             set(state => {
-              state.messages[conversationId].splice(lastAiMessageIndex, 1);
+              state.messages[conversationId].splice(aiMessageIndex, 1);
             });
 
-            // Get conversation history up to the user message (excluding the removed AI response)
-            const conversationHistory = get().messages[conversationId] || [];
+            // Get conversation history up to and including the last user message
+            const conversationHistory = get().messages[conversationId].slice(0, aiMessageIndex) || [];
             
             // Convert to LLM format
             const llmMessages: LLMMessage[] = conversationHistory.map(msg => ({
@@ -506,11 +520,20 @@ export const useChatStore = create<ChatState>()(
 
             // Generate new AI response
             const providerManager = LLMProviderManager.getInstance();
-            const { selectedProvider, selectedModel, conversationSettings } = get();
+            let { selectedProvider, selectedModel, conversationSettings } = get();
+            
+            // Double-check provider matches model to avoid mismatches
+            const modelInList = get().availableModels.find(m => m.id === selectedModel);
+            if (modelInList && modelInList.provider !== selectedProvider) {
+              selectedProvider = modelInList.provider;
+              logger.warn('chatStore: Provider mismatch detected in regenerate. Correcting to:', selectedProvider);
+            }
+            
+            logger.debug('chatStore: Regenerating with provider:', selectedProvider, 'model:', selectedModel);
             const rawAiResponse = await providerManager.chat(selectedProvider, llmMessages, selectedModel || undefined);
 
-            // Clean up the AI response using the backend service
-            const aiResponse = await invoke('clean_text', { text: rawAiResponse }) as string;
+            // Format the AI response for better presentation
+            const aiResponse = await invoke('format_ai_response', { text: rawAiResponse }) as string;
             
             // Save new AI response to backend
             const aiMessageApi: ChatMessageApi = await invoke('send_message', {
@@ -521,18 +544,22 @@ export const useChatStore = create<ChatState>()(
 
             const aiMessage = convertApiMessageToChatMessage(aiMessageApi);
 
-            // Add new AI message to UI
+            // Insert new AI message at the same position as the old one
             set(state => {
-              state.messages[conversationId].push(aiMessage);
+              // Insert at the same index where we removed the old message
+              state.messages[conversationId].splice(aiMessageIndex, 0, aiMessage);
               
-              // Update conversation's last message with truncated version
-              const conversation = state.conversations.find(c => c.id === conversationId);
-              if (conversation) {
-                const truncatedLastMessage = aiResponse.length > 50 
-                  ? aiResponse.substring(0, 50) + '...' 
-                  : aiResponse;
-                conversation.lastMessage = truncatedLastMessage;
-                conversation.timestamp = new Date().toISOString();
+              // Update conversation's last message only if this was the last message
+              const isLastMessage = aiMessageIndex === state.messages[conversationId].length - 1;
+              if (isLastMessage) {
+                const conversation = state.conversations.find(c => c.id === conversationId);
+                if (conversation) {
+                  const truncatedLastMessage = aiResponse.length > 50 
+                    ? aiResponse.substring(0, 50) + '...' 
+                    : aiResponse;
+                  conversation.lastMessage = truncatedLastMessage;
+                  conversation.timestamp = new Date().toISOString();
+                }
               }
               
               state.isSending = false;
@@ -540,8 +567,28 @@ export const useChatStore = create<ChatState>()(
 
           } catch (error) {
             logger.error('Failed to regenerate response:', error);
+            
+            // Restore the original message since regeneration failed
+            set(state => {
+              state.messages[conversationId].splice(aiMessageIndex, 0, originalMessage);
+            });
+            
+            // Extract more detailed error message
+            let errorMessage = 'Failed to regenerate response';
+            if (error instanceof Error) {
+              errorMessage = error.message;
+              // Make error messages more user-friendly
+              if (errorMessage.includes('model') && errorMessage.includes('not found')) {
+                errorMessage = `Model "${selectedModel}" is not available. Please select a different model in the settings.`;
+              } else if (errorMessage.includes('not configured')) {
+                errorMessage = `The selected AI provider is not configured. Please check your API keys in settings.`;
+              } else if (errorMessage.includes('API error')) {
+                errorMessage = `AI service error: ${errorMessage}`;
+              }
+            }
+            
             set({ 
-              error: 'Failed to regenerate response', 
+              error: errorMessage, 
               isSending: false 
             });
           }

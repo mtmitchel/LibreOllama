@@ -25,6 +25,7 @@ tauri-plugin-dialog = "2.0.0-beta.7"
 tauri-plugin-fs = "2.0.0-beta.5"
 tauri-plugin-opener = "2.0"
 tauri-plugin-shell = "2.0"
+printpdf = "0.7"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -62,9 +63,8 @@ strip_markdown = "0.2.0"
 async-openai = "0.19.1"
 
 [features]
-# Default app runtime excludes debug/experimental command modules that cause unused warnings
-default = [
-]
+# Enable system-advanced by default so PDF export is available
+default = ["system-advanced"]
 
 # Optional features to include additional command surfaces
 system-advanced = []

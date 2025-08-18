@@ -1,11 +1,11 @@
 import React from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
 import { Card } from '../../../components/ui/design-system/Card';
-import { Avatar } from '../../../components/ui/design-system/Avatar';
 import { Text, Caption } from '../../../components/ui';
 import { ChatMessage } from '../../../core/lib/chatMockData';
 import { formatTimestamp } from '../utils/formatTimestamp';
-import { User, Bot, Copy, Edit3, CheckSquare, RotateCcw } from 'lucide-react';
+import { Copy, Edit3, CheckSquare, RotateCcw } from 'lucide-react';
+import { FormattedMessage } from './FormattedMessage';
 
 // Function to detect and linkify URLs in text
 function linkifyText(text: string): (string | JSX.Element)[] {
@@ -93,36 +93,33 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
         return 'bg-accent-primary text-white border-none';
       case 'ghost':
         // Ghost style uses subtle tint with colored text
-        return 'bg-accent-soft text-accent-primary border border-accent-primary/30';
+        return 'bg-accent-soft text-accent-primary border border-accent-primary/40 shadow-sm';
       case 'outlined':
         return 'bg-secondary text-accent-primary border border-accent-primary/40';
       default:
-        return 'bg-accent-soft text-accent-primary border border-accent-primary/30';
+        return 'bg-accent-soft text-accent-primary border border-accent-primary/40 shadow-sm';
     }
+  };
+
+  const getAssistantBubbleClasses = () => {
+    // Subtle white card with border and small shadow to separate from gray canvas
+    return 'bg-[color:var(--bg-primary)] text-[color:var(--text-primary)] border border-[color:var(--border-default)] shadow-sm';
   };
 
   const getBubbleClasses = () => {
     const baseRadius = 'rounded-xl';
     const userSpecific = isUser 
       ? `${baseRadius} rounded-br-md ${getUserBubbleClasses()}` 
-      : `${baseRadius} rounded-bl-md`;
+      : `${baseRadius} rounded-bl-md ${getAssistantBubbleClasses()}`;
     return userSpecific;
   };
 
   return (
-    <div className={`flex max-w-4xl gap-3 ${isUser ? 'ml-auto flex-row-reverse' : ''}`}>
-      {/* Avatar */}
-      <Avatar 
-        name={isUser ? 'User' : 'LibreOllama'}
-        size="sm"
-        fallback={isUser ? <User size={14} /> : <Bot size={14} />}
-        className="mt-1 shrink-0 shadow-sm"
-      />
-      
+    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
       {/* Message Content */}
       <div className={`flex max-w-[80%] flex-col ${isUser ? 'items-end' : 'items-start'}`}>
         {/* Message Header */}
-        <Caption className={`mb-2 ${isUser ? 'mr-2' : 'ml-2'}`}>
+        <Caption className={`mb-2 ${isUser ? '' : ''}`}>
           <Text as="span" weight="medium" size="xs" variant="secondary">
             {isUser ? 'You' : 'LibreOllama'}
           </Text>
@@ -138,24 +135,31 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
             padding="md"
           >
           {/* Enhanced readability with proper line spacing and typography */}
-          <Text 
-            size="base" 
-            lineHeight="relaxed" 
-            className="leading-relaxed asana-text-base"
-            as="div"
-            variant={isUser ? undefined : "body"}
-          >
-            {message.content.split('\n\n').map((paragraph, index) => (
-              <p key={index} className={`whitespace-pre-wrap ${index > 0 ? 'mt-3' : ''}`}>
-                {paragraph.split('\n').map((line, lineIndex) => (
-                  <React.Fragment key={lineIndex}>
-                    {linkifyText(line)}
-                    {lineIndex < paragraph.split('\n').length - 1 && <br />}
-                  </React.Fragment>
-                ))}
-              </p>
-            ))}
-          </Text>
+          {isUser ? (
+            <Text 
+              size="base" 
+              lineHeight="relaxed" 
+              className="leading-relaxed asana-text-base"
+              as="div"
+              variant={undefined}
+            >
+              {message.content.split('\n\n').map((paragraph, index) => (
+                <p key={index} className={`whitespace-pre-wrap ${index > 0 ? 'mt-3' : ''}`}>
+                  {paragraph.split('\n').map((line, lineIndex) => (
+                    <React.Fragment key={lineIndex}>
+                      {linkifyText(line)}
+                      {lineIndex < paragraph.split('\n').length - 1 && <br />}
+                    </React.Fragment>
+                  ))}
+                </p>
+              ))}
+            </Text>
+          ) : (
+            <FormattedMessage 
+              content={message.content}
+              className="leading-relaxed asana-text-base"
+            />
+          )}
           
 
         </Card>

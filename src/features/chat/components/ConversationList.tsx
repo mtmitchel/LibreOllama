@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
 import { Card } from '../../../components/ui/design-system/Card';
 import { Caption, Text, Heading, Input, EmptyState } from '../../../components/ui';
-import { ListItem } from '../../../components/ui/design-system';
+import { ListItem, SimpleDialog as Dialog } from '../../../components/ui/design-system';
 import { ChatConversation } from "../../../core/lib/chatMockData";
 import { ConversationContextMenu } from "./ConversationContextMenu";
 import { formatConversationTimestamp } from "../utils/formatTimestamp";
 import { 
-  Plus, Search, Pin, MessagesSquare, PanelLeft, PanelRight
+  Plus, Search, Pin, MessagesSquare, PanelLeft, PanelRight, AlertTriangle
 } from 'lucide-react';
 
 // TypeScript interfaces provide prop validation - PropTypes not needed in TS projects
@@ -24,7 +24,6 @@ interface ConversationListProps {
   onDeleteConversation: (conversationId: string) => void;
   onToggle: () => void;
   onRenameConversation?: (conversationId: string) => void;
-  onArchiveConversation?: (conversationId: string) => void;
   onExportConversation?: (conversationId: string) => void;
 }
 
@@ -41,7 +40,6 @@ export function ConversationList({
   onDeleteConversation,
   onToggle,
   onRenameConversation,
-  onArchiveConversation,
   onExportConversation,
 }: ConversationListProps) {
   // Context menu state
@@ -49,6 +47,10 @@ export function ConversationList({
     conversation: ChatConversation;
     position: { x: number; y: number };
   } | null>(null);
+  
+  // Dialog states (persisted at this level to survive context menu unmounting)
+  const [deleteDialogConversation, setDeleteDialogConversation] = useState<ChatConversation | null>(null);
+  const [renameDialogConversation, setRenameDialogConversation] = useState<ChatConversation | null>(null);
   
   // Filter conversations based on search query
   const filteredConversations = conversations.filter(conv => {
@@ -239,13 +241,115 @@ export function ConversationList({
           onAction={(action, conversationId) => {
             console.log(`Context menu action: ${action} for conversation: ${conversationId}`);
           }}
-          onRename={onRenameConversation}
+          onRename={(conversationId) => {
+            // Find the conversation and show rename dialog
+            const conv = conversations.find(c => c.id === conversationId);
+            if (conv) {
+              setRenameDialogConversation(conv);
+              setContextMenu(null);
+            }
+          }}
           onPin={onTogglePin}
           onUnpin={onTogglePin}
-          onDelete={onDeleteConversation}
-          onArchive={onArchiveConversation}
+          onDelete={(conversationId) => {
+            // Find the conversation and show delete dialog
+            const conv = conversations.find(c => c.id === conversationId);
+            if (conv) {
+              setDeleteDialogConversation(conv);
+              setContextMenu(null);
+            }
+          }}
           onExport={onExportConversation}
         />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialogConversation && (
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setDeleteDialogConversation(null);
+          }}
+          title="Delete conversation"
+          description="This action cannot be undone."
+          size="sm"
+          footer={(
+            <div className="flex items-center justify-end gap-2 w-full">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteDialogConversation(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (deleteDialogConversation) {
+                    onDeleteConversation(deleteDialogConversation.id);
+                    setDeleteDialogConversation(null);
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex size-8 items-center justify-center rounded-full bg-error-ghost">
+              <AlertTriangle className="size-4 text-error" />
+            </div>
+            <p className="asana-text-sm text-secondary">
+              Are you sure you want to delete "{deleteDialogConversation.title}"? This will permanently remove the conversation and all its messages.
+            </p>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Rename Dialog */}
+      {renameDialogConversation && (
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setRenameDialogConversation(null);
+          }}
+          title="Rename conversation"
+          description="Enter a new name for this conversation"
+          size="sm"
+          footer={(
+            <div className="flex items-center justify-end gap-2 w-full">
+              <Button
+                variant="ghost"
+                onClick={() => setRenameDialogConversation(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (renameDialogConversation && onRenameConversation) {
+                    onRenameConversation(renameDialogConversation.id);
+                    setRenameDialogConversation(null);
+                  }
+                }}
+              >
+                Rename
+              </Button>
+            </div>
+          )}
+        >
+          <Input
+            defaultValue={renameDialogConversation.title}
+            placeholder="Enter conversation name"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && onRenameConversation) {
+                onRenameConversation(renameDialogConversation.id);
+                setRenameDialogConversation(null);
+              }
+            }}
+          />
+        </Dialog>
       )}
     </>
   );

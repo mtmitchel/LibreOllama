@@ -116,6 +116,9 @@ pub fn run() {
     println!("🎨 [BACKEND-DEBUG] WebView2 hardware acceleration enabled for canvas rendering");
 
     tauri::Builder::default()
+        // Register Tauri plugins used by the frontend for save dialogs and filesystem
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create async runtime");
             rt.block_on(async {
@@ -209,6 +212,7 @@ pub fn run() {
             commands::chat::update_session_title,
             // Text processing commands
             commands::text_processing::clean_text,
+            commands::text_processing::format_ai_response,
             // LLM settings persistence
             commands::llm::save_llm_provider_settings,
             commands::llm::get_llm_provider_settings,
@@ -250,8 +254,8 @@ pub fn run() {
             #[cfg(feature = "folders")] commands::folders::update_folder,
             #[cfg(feature = "folders")] commands::folders::delete_folder,
             // System commands (these may be gated in their module; keep only if compiled)
-            #[cfg(feature = "system-advanced")] commands::system::force_run_migrations,
-            #[cfg(feature = "system-advanced")] commands::system::debug_check_timeblock_data,
+            #[cfg(feature = "system-advanced")] commands::system::migrations::force_run_migrations,
+            #[cfg(feature = "system-advanced")] commands::system::debug_db::debug_check_timeblock_data,
             // Browser commands
             commands::browser::open_browser_window,
             commands::browser::close_browser_window,
@@ -261,6 +265,10 @@ pub fn run() {
             commands::browser::open_browser_shell_window,
             commands::browser::open_url_in_system_browser,
             commands::browser::fetch_url_html,
+            // Chat export commands
+            commands::system::advanced::export_chat_session,
+            commands::system::advanced::export_chat_session_markdown,
+            commands::system::advanced::export_chat_session_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
