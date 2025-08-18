@@ -153,9 +153,11 @@ pub async fn start_gmail_oauth_with_callback(
     {
         // On Windows, use cmd /c start to respect system default browser
         use std::process::Command;
+        // Escape ampersands so cmd doesn't split the URL into commands
+        let escaped_url = auth_request.auth_url.replace("&", "^&");
         if let Err(e) = Command::new("cmd")
-            .args(&["/c", "start", "", &auth_request.auth_url])
-            .spawn() 
+            .args(&["/c", "start", "", &escaped_url])
+            .spawn()
         {
             return Err(format!("Failed to open browser: {}", e));
         }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Page, PageContent, PageCard, PageBody } from '../../components/ui/design-system/Page';
 import { Card } from '../../components/ui/design-system/Card';
 import { Button, Skeleton, ToggleButton, Input, Heading, Text, CountBadge, MetricPill } from '../../components/ui';
@@ -10,77 +10,60 @@ import { SimpleDialog as Dialog } from '../../components/ui/design-system';
 import { Grid } from '../../components/ui/design-system/Grid';
 import { Dropdown } from '../../components/ui/design-system';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui';
-import { Plus, LayoutGrid, List, FileText, CheckSquare, Users, Calendar, Image as ImageIcon, MessageSquare, Mail as MailIcon, Clock, Sun, TrendingUp, Activity, Target, Zap, BookOpen, Rocket } from 'lucide-react';
+import { Plus, LayoutGrid, List, FileText, CheckSquare, Users, Calendar, Image as ImageIcon, MessageSquare, Mail as MailIcon, Clock, Sun, TrendingUp, Activity, Target, Zap, BookOpen, Rocket, Folder, Search, Filter } from 'lucide-react';
 import { FloatingActionMenu } from '../../components/ui/FloatingActionButton';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
+import { useSpacesStore, type Space } from '../../stores/spacesStore';
 
-type Space = {
-  id: string;
-  name: string;
-  description?: string;
-  color?: string; // token or hex – used to tint gradient
-  stats: {
-    tasks: number;
-    notes: number;
-    canvas: number;
-    agents: number;
-  };
-};
+// Icons per unified item type
+const typeIconMap = {
+  note: FileText,
+  task: CheckSquare,
+  canvas: ImageIcon,
+  calendar: Calendar,
+  mail: MailIcon,
+  chat: MessageSquare,
+  agent: Users,
+} as const;
 
-const mockSpaces: Space[] = [
-  {
-    id: 'space-1',
-    name: 'Marketing',
-    description: 'Campaign planning and assets',
-    color: 'var(--accent-primary)',
-    stats: { tasks: 42, notes: 18, canvas: 4, agents: 2 },
-  },
-  {
-    id: 'space-2',
-    name: 'Product',
-    description: 'Feature specs and delivery',
-    color: 'var(--indigo-500)',
-    stats: { tasks: 73, notes: 25, canvas: 6, agents: 3 },
-  },
-  {
-    id: 'space-3',
-    name: 'Research',
-    description: 'Insights, studies, and analysis',
-    color: 'var(--purple-500)',
-    stats: { tasks: 15, notes: 40, canvas: 3, agents: 1 },
-  },
-];
 
-function SpaceCard({ space, onOpen }: { space: Space; onOpen: (id: string) => void }) {
-  // Use a stronger gradient for better visibility
-  const cardGradient = space.name === 'Research' 
-    ? `linear-gradient(135deg, rgba(168, 85, 247, 0.15), transparent)` // Purple with direct rgba
-    : `linear-gradient(135deg, color-mix(in oklab, ${space.color || 'var(--accent-primary)'} 20%, transparent), transparent)`;
-  
-  const statGradient = space.name === 'Research'
-    ? `linear-gradient(135deg, rgba(168, 85, 247, 0.12), transparent)` // Purple stats
-    : `linear-gradient(135deg, color-mix(in oklab, ${space.color || 'var(--accent-primary)'} 15%, transparent), transparent)`;
-  
+function SpaceCard({ space, onOpen }: { space: Space; onOpen: () => void }) {
+  // Use a subtle tokenized tint; remove multi-user stats in favor of resume + quick actions
+  const cardGradient = space.name === 'Research'
+    ? `linear-gradient(135deg, rgba(168, 85, 247, 0.12), transparent)`
+    : `linear-gradient(135deg, color-mix(in oklab, ${space.color || 'var(--accent-primary)'} 14%, transparent), transparent)`;
+
   return (
-    <button
-      onClick={() => onOpen(space.id)}
-      className="text-left w-full transition-all duration-300 hover:scale-[1.02] focus:outline-none group"
+    <div
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
+      className="text-left w-full h-full transition-all duration-300 hover:scale-[1.02] focus:outline-none group"
       aria-label={`Open space ${space.name}`}
     >
-      <Card className="p-5 hover:shadow-xl transition-all duration-300 border-opacity-50 group-hover:border-accent/30" style={{ backgroundImage: cardGradient }}>
-        <div className="min-w-0">
+      <Card className="p-5 hover:shadow-xl transition-all duration-300 border-opacity-50 group-hover:border-accent/30 h-full flex flex-col min-h-[140px]" style={{ backgroundImage: cardGradient }}>
+        <div className="min-w-0 flex-1">
           <div className="asana-text-lg font-bold text-primary truncate">{space.name}</div>
-          <div className="asana-text-sm text-secondary opacity-90 truncate">{space.description}</div>
+          <div className="asana-text-base text-secondary opacity-90 truncate h-6">
+            {space.description || '\u00A0'}
+          </div>
         </div>
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          <MetricPill value={space.stats.tasks} label="Tasks" className="w-full" />
-          <MetricPill value={space.stats.notes} label="Notes" className="w-full" />
-          <MetricPill value={space.stats.canvas} label="Canvas" className="w-full" />
-          <MetricPill value={space.stats.agents} label="Agents" className="w-full" />
+
+        {/* Primary action only: View */}
+        <div className="mt-4 flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={(e) => { e.stopPropagation(); onOpen(); }}
+            aria-label={`View ${space.name}`}
+          >
+            View
+          </Button>
         </div>
       </Card>
-    </button>
+    </div>
   );
 }
 
@@ -88,7 +71,7 @@ function SpacesList({ spaces, onOpen, onAction }: { spaces: Space[]; onOpen: (id
   return (
     <Card className="p-0 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" style={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
           <thead className="text-left text-muted">
             <tr className="border-b border-border-default bg-secondary/30">
               <th className="p-3 font-medium">Space</th>
@@ -100,36 +83,43 @@ function SpacesList({ spaces, onOpen, onAction }: { spaces: Space[]; onOpen: (id
             </tr>
           </thead>
           <tbody>
-        {spaces.map((s) => (
+            {spaces.map((s, idx) => (
               <tr
                 key={s.id}
-                className="border-b border-border-subtle hover:bg-secondary/50 cursor-pointer transition-colors"
+                className={`cursor-pointer transition-all bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg hover:shadow-[var(--shadow-sm)] hover:bg-[var(--hover-bg)]`}
                 onClick={() => onOpen(s.id)}
                 tabIndex={0}
                 aria-label={`Open space ${s.name}`}
               >
-                <td className="p-3 min-w-0">
-                  <div className="asana-text-base font-semibold text-primary truncate">{s.name}</div>
-              <div className="text-[11px] text-tertiary truncate">{s.description}</div>
+                <td className="p-3 min-w-0 rounded-l-lg">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="inline-flex items-center justify-center size-6 rounded-md bg-[var(--hover-bg)] text-[color:var(--brand-primary)]">
+                      <Folder size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="asana-text-lg font-semibold text-primary truncate">{s.name}</div>
+                      <div className="asana-text-sm text-tertiary truncate">{s.description}</div>
+                    </div>
+                  </div>
                 </td>
                 <td className="p-3 text-right font-semibold text-primary">{s.stats.tasks}</td>
                 <td className="p-3 text-right font-semibold text-primary">{s.stats.notes}</td>
                 <td className="p-3 text-right font-semibold text-primary">{s.stats.canvas}</td>
                 <td className="p-3 text-right font-semibold text-primary">{s.stats.agents}</td>
-                <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
-              <Dropdown
-                items={[
-                  { value: 'open', label: 'Open' },
-                  { value: 'rename', label: 'Rename' },
-                  { value: 'archive', label: 'Archive', destructive: true },
-                ]}
+                <td className="p-3 text-right rounded-r-lg" onClick={(e) => e.stopPropagation()}>
+                  <Dropdown
+                    items={[
+                      { value: 'open', label: 'Open' },
+                      { value: 'rename', label: 'Rename' },
+                      { value: 'archive', label: 'Archive', destructive: true },
+                    ]}
                     onSelect={(val) => {
                       if (val === 'open') onAction('open', s.id);
                       if (val === 'rename') onAction('rename', s.id);
                       if (val === 'archive') onAction('archive', s.id);
                     }}
                     aria-label={`Actions for ${s.name}`}
-              />
+                  />
                 </td>
               </tr>
             ))}
@@ -141,10 +131,9 @@ function SpacesList({ spaces, onOpen, onAction }: { spaces: Space[]; onOpen: (id
 }
 
 export default function Spaces() {
+  const navigate = useNavigate();
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [spaces, setSpaces] = useState<Space[]>(mockSpaces);
-  const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
-  const activeSpace = useMemo(() => spaces.find((s) => s.id === activeSpaceId) || null, [activeSpaceId, spaces]);
+  const { spaces, addSpace, updateSpace, deleteSpace } = useSpacesStore();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
@@ -153,6 +142,60 @@ export default function Spaces() {
   const [formDescription, setFormDescription] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [widgetView, setWidgetView] = useState<'cards' | 'list'>('cards');
+  const tasksState = useUnifiedTaskStore((s) => s.tasks);
+  const eventsState = useGoogleCalendarStore((s) => s.events);
+  
+  // Get notes store if available
+  const notesState = (() => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { useNotesStore } = require('../../features/notes/store');
+      return useNotesStore.getState().notes as Array<any>;
+    } catch {
+      return [] as Array<any>;
+    }
+  })();
+  
+  // Calculate actual space stats based on label filtering
+  const spacesWithStats = useMemo(() => {
+    return spaces.map(space => {
+      const spaceLabel = space.name.toLowerCase();
+      let taskCount = 0;
+      let noteCount = 0;
+      let canvasCount = 0;
+      let agentCount = 0;
+      
+      // Count tasks with matching label
+      Object.values(tasksState || {}).forEach((t: any) => {
+        const hasSpaceLabel = t.labels && t.labels.some((label: any) => {
+          const labelName = typeof label === 'string' ? label : label.name;
+          return labelName.toLowerCase() === spaceLabel;
+        });
+        if (hasSpaceLabel) taskCount++;
+      });
+      
+      // Count notes with matching tag
+      (notesState || []).forEach((n: any) => {
+        const hasSpaceLabel = n.tags && n.tags.some((tag: string) => 
+          tag.toLowerCase() === spaceLabel
+        );
+        if (hasSpaceLabel) noteCount++;
+      });
+      
+      // Canvas and agents would be counted similarly when implemented
+      // For now, keep the existing counts from the space data
+      
+      return {
+        ...space,
+        stats: {
+          tasks: taskCount,
+          notes: noteCount,
+          canvas: space.stats.canvas || 0,
+          agents: space.stats.agents || 0
+        }
+      };
+    });
+  }, [spaces, tasksState, notesState]);
 
   // Subtle gradient backgrounds per widget (card + list views)
   const gradient = {
@@ -193,320 +236,6 @@ export default function Spaces() {
     </div>
   );
 
-  if (activeSpace) {
-    // Detail view
-    return (
-      <Page>
-      <PageContent>
-          <PageCard className="relative">
-            <PageBody>
-              <div className="flex items-center justify-between mb-4">
-                <div className="min-w-0">
-                  <div className="text-[11px] text-tertiary">
-                    <Link
-                      to="/spaces"
-                      className="underline decoration-dotted hover:decoration-solid"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setActiveSpaceId(null);
-                      }}
-                    >
-                      Spaces
-                    </Link>
-                    {' '}/ {activeSpace.name}
-                  </div>
-                  <h1 className="asana-text-2xl font-semibold text-primary truncate">{activeSpace.name}</h1>
-                  {activeSpace.description && (
-                    <p className="asana-text-base text-secondary mt-1 truncate">{activeSpace.description}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2"> 
-                  <Dropdown
-                    items={[
-                      { value: 'rename', label: 'Rename' },
-                      { value: 'archive', label: 'Archive', destructive: true },
-                    ]}
-                    onSelect={(val) => {
-                      if (val === 'rename') {
-                        setEditingId(activeSpace.id);
-                        setFormName(activeSpace.name);
-                        setFormDescription(activeSpace.description || '');
-                        setIsRenameOpen(true);
-                      }
-                      if (val === 'archive') {
-                        setArchiveId(activeSpace.id);
-                      }
-                    }}
-                    aria-label={`Actions for ${activeSpace.name}`}
-                  />
-                </div>
-              </div>
-
-              {/* Single overview with widgets */}
-              <div className="mt-2 space-y-6">
-                {/* Widget layout toggle */}
-                <div className="flex items-center justify-end">
-                  <div role="group" aria-label="Widget layout" className="inline-flex rounded-md border border-[var(--border-default)] bg-[var(--bg-surface)]">
-                    <ToggleButton pressed={widgetView === 'cards'} onPressedChange={() => setWidgetView('cards')} size="md" variant="ghost" aria-label="Card view"><LayoutGrid size={16} /></ToggleButton>
-                    <ToggleButton pressed={widgetView === 'list'} onPressedChange={() => setWidgetView('list')} size="md" variant="ghost" aria-label="List view"><List size={16} /></ToggleButton>
-                  </div>
-                </div>
-                {/* Remove top metrics pills; counts will be shown on cards */}
-
-                {/* Widgets container: 3 cards per row in card view */}
-                <div className={widgetView === 'cards' ? 'grid grid-cols-1 md:grid-cols-3 gap-4' : 'space-y-4'}>
-
-                {/* Tasks widget */}
-                    {widgetView === 'cards' ? (
-                    <Card
-                      variant="elevated"
-                      className="p-0 overflow-hidden"
-                      style={{
-                        borderTop: '4px solid var(--brand-primary, #796EFF)',
-                        backgroundImage: gradient.tasks,
-                      }}
-                    >
-                  <WidgetHeader
-                    className="px-4 py-3"
-                    title={<span className="inline-flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--brand-primary, #796EFF)'}} />Tasks<CountBadge count={Object.values(useUnifiedTaskStore.getState().tasks).filter((t: any) => t.status !== 'completed').length} /></span>}
-                    subtitle={<span className="asana-text-sm text-tertiary">Due today and overdue</span>}
-                    actions={<Link to="/tasks" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">View all</Link>}
-                  />
-                  <div className="p-4">
-                  <div className="space-y-2">
-                    {(() => {
-                      const allTasks = Object.values(useUnifiedTaskStore.getState().tasks || {}) as any[];
-                      const important = getImportantTasks(allTasks).slice(0, 4);
-                      const toRender = important.length > 0
-                        ? important
-                        : allTasks
-                            .filter(t => t.status !== 'completed')
-                            .sort((a, b) => (a.due || '').localeCompare(b.due || ''))
-                            .slice(0, 5);
-                      if (toRender.length === 0) return <Text variant="tertiary" size="sm">No tasks</Text>;
-                      return (
-                        <ul className="space-y-1">
-                          {toRender.map((t: any) => (
-                            <li key={t.id}>
-                              <ListItem title={t.title || 'Untitled task'} subtitle={formatTaskMeta(t)} />
-                            </li>
-                          ))}
-                        </ul>
-                      );
-                    })()}
-                      </div>
-                    </div>
-                </Card>) : (
-                <div className="rounded-md border border-[var(--border-default)] p-4" style={{ borderLeft: '4px solid var(--brand-primary, #796EFF)', backgroundImage: gradient.tasks }}>
-                  <WidgetHeader className="px-4 py-3" withDivider={false} title={<span className="inline-flex items-center gap-2 asana-text-base font-semibold"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--brand-primary, #796EFF)'}} />Tasks<CountBadge count={Object.values(useUnifiedTaskStore.getState().tasks).filter((t: any) => t.status !== 'completed').length} /></span>} subtitle={<span className="asana-text-sm text-tertiary">Due today and overdue</span>} actions={<Link to="/tasks" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">View all</Link>} />
-                  <div className="mt-2">
-                    {(() => {
-                      const allTasks = Object.values(useUnifiedTaskStore.getState().tasks || {}) as any[];
-                      const important = getImportantTasks(allTasks).slice(0, 4);
-                      const toRender = important.length > 0
-                        ? important
-                        : allTasks
-                            .filter(t => t.status !== 'completed')
-                            .sort((a, b) => (a.due || '').localeCompare(b.due || ''))
-                            .slice(0, 5);
-                      if (toRender.length === 0) return <Text variant="tertiary" size="sm">No tasks</Text>;
-                      return (
-                        <ul className="space-y-1">
-                          {toRender.map((t: any) => (
-                            <li key={t.id}><ListItem title={t.title || 'Untitled task'} subtitle={formatTaskMeta(t)} /></li>
-                          ))}
-                        </ul>
-                      );
-                    })()}
-                  </div>
-                </div>
-                )}
-
-                {/* Notes widget */}
-                {widgetView === 'cards' ? (<Card variant="elevated" className="p-0 overflow-hidden" style={{ borderTop: '3px solid var(--accent-secondary)', backgroundImage: gradient.notes }}>
-                  <WidgetHeader
-                    className="px-4 py-3"
-                    title={<span className="inline-flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--accent-secondary, #6B6F76)'}} />Notes<CountBadge count={activeSpace.stats.notes} /></span>}
-                    subtitle={<span className="asana-text-sm text-tertiary">Recent notes</span>}
-                    actions={<Link to="/notes" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">View all</Link>}
-                  />
-                  <div className="p-4"><Text variant="tertiary" size="sm">No recent notes</Text></div>
-                </Card>) : (
-                <div className="rounded-md border border-[var(--border-default)] p-4" style={{ borderLeft: '4px solid var(--accent-secondary)', backgroundImage: gradient.notes }}>
-                  <WidgetHeader className="px-4 py-3" withDivider={false} title={<span className="inline-flex items-center gap-2 asana-text-base font-semibold"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--accent-secondary, #6B6F76)'}} />Notes<CountBadge count={activeSpace.stats.notes} /></span>} subtitle={<span className="asana-text-sm text-tertiary">Recent notes</span>} actions={<Link to="/notes" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">View all</Link>} />
-                  <Text variant="tertiary" size="sm">No recent notes</Text>
-                </div>
-                )}
-
-                {/* Canvas widget */}
-                {widgetView === 'cards' ? (<Card variant="elevated" className="p-0 overflow-hidden" style={{ borderTop: '3px solid var(--indigo-400, #7DA7F9)', backgroundImage: gradient.canvas }}>
-                  <WidgetHeader
-                    className="px-4 py-3"
-                    title={<span className="inline-flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--indigo-400, #7DA7F9)'}} />Canvas<CountBadge count={activeSpace.stats.canvas} /></span>}
-                    subtitle={<span className="asana-text-sm text-tertiary">Recent boards</span>}
-                    actions={<Link to="/canvas" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">Open canvas</Link>}
-                  />
-                  <div className="p-4"><Text variant="tertiary" size="sm">No recent canvas</Text></div>
-                </Card>) : (
-                <div className="rounded-md border border-[var(--border-default)] p-4" style={{ borderLeft: '4px solid var(--indigo-400, #7DA7F9)', backgroundImage: gradient.canvas }}>
-                  <WidgetHeader className="px-4 py-3" withDivider={false} title={<span className="inline-flex items-center gap-2 asana-text-base font-semibold"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--indigo-400, #7DA7F9)'}} />Canvas<CountBadge count={activeSpace.stats.canvas} /></span>} subtitle={<span className="asana-text-sm text-tertiary">Recent boards</span>} actions={<Link to="/canvas" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">Open canvas</Link>} />
-                  <Text variant="tertiary" size="sm">No recent canvas</Text>
-                </div>
-                )}
-
-                {/* Projects widget */}
-                {widgetView === 'cards' ? (<Card variant="elevated" className="p-0 overflow-hidden" style={{ borderTop: '3px solid var(--teal-400, #4ECBC4)', backgroundImage: gradient.projects }}>
-                  <WidgetHeader
-                    className="px-4 py-3"
-                    title={<span className="inline-flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--teal-400, #4ECBC4)'}} />Projects<CountBadge count={0} /></span>}
-                    subtitle={<span className="asana-text-sm text-tertiary">Active projects</span>}
-                    actions={<Link to="/projects" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">View all</Link>}
-                  />
-                  <div className="p-4"><Text variant="tertiary" size="sm">No projects yet</Text></div>
-                    </Card>) : (
-                <div className="rounded-md border border-[var(--border-default)] p-4" style={{ borderLeft: '4px solid var(--teal-400, #4ECBC4)', backgroundImage: gradient.projects }}>
-                  <WidgetHeader className="px-4 py-3" withDivider={false} title={<span className="inline-flex items-center gap-2 asana-text-base font-semibold"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--teal-400, #4ECBC4)'}} />Projects<CountBadge count={0} /></span>} subtitle={<span className="asana-text-sm text-tertiary">Active projects</span>} actions={<Link to="/projects" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">View all</Link>} />
-                  <Text variant="tertiary" size="sm">No projects yet</Text>
-                </div>
-                )}
-
-                {/* Events widget */}
-                    {widgetView === 'cards' ? (<Card variant="elevated" className="p-0 overflow-hidden" style={{ borderTop: '3px solid var(--purple-400, #A78BFA)', backgroundImage: gradient.events }}>
-                  <WidgetHeader
-                    className="px-4 py-3"
-                        title={<span className="inline-flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--purple-400, #A78BFA)'}} />Events</span>}
-                    subtitle={<span className="asana-text-sm text-tertiary">Today</span>}
-                    actions={<Link to="/calendar" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">Open calendar</Link>}
-                  />
-                  <div className="p-4">
-                  {useGoogleCalendarStore.getState().isLoading ? (
-                    <div className="space-y-2" aria-busy>
-                      <Skeleton variant="text" className="h-4 w-40" />
-                      <Skeleton variant="text" className="h-4 w-56" />
-                    </div>
-                  ) : (
-                    (() => {
-                      const todays = getTodaysEvents(useGoogleCalendarStore.getState().events).slice(0, 3);
-                      if (todays.length === 0) return <Text variant="tertiary" size="sm">No events today</Text>;
-                      return (
-                        <ul className="space-y-1">
-                          {todays.map((ev: any) => (
-                            <li key={`${ev.id}-${ev.start?.dateTime || ev.start?.date}`}>
-                              <ListItem title={ev.summary || 'Untitled event'} subtitle={formatEventTimeRange(ev)} />
-                            </li>
-                          ))}
-                        </ul>
-                      );
-                    })()
-                  )}
-                  </div>
-                 </Card>) : (
-                <div className="rounded-md border border-[var(--border-default)] p-4" style={{ borderLeft: '4px solid var(--purple-400, #A78BFA)', backgroundImage: gradient.events }}>
-                  <WidgetHeader className="px-4 py-3" withDivider={false} title={<span className="inline-flex items-center gap-2 asana-text-base font-semibold"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--purple-400, #A78BFA)'}} />Events</span>} subtitle={<span className="asana-text-sm text-tertiary">Today</span>} actions={<Link to="/calendar" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">Open calendar</Link>} />
-                  {useGoogleCalendarStore.getState().isLoading ? (
-                    <div className="mt-2 space-y-2" aria-busy>
-                      <Skeleton variant="text" className="h-4 w-40" />
-                      <Skeleton variant="text" className="h-4 w-56" />
-                    </div>
-                  ) : (
-                    (() => {
-                      const todays = getTodaysEvents(useGoogleCalendarStore.getState().events).slice(0, 3);
-                      if (todays.length === 0) return <Text variant="tertiary" size="sm">No events today</Text>;
-                      return (
-                        <ul className="mt-2 space-y-1">
-                          {todays.map((ev: any) => (
-                            <li key={`${ev.id}-${ev.start?.dateTime || ev.start?.date}`}><ListItem title={ev.summary || 'Untitled event'} subtitle={formatEventTimeRange(ev)} /></li>
-                          ))}
-                        </ul>
-                      );
-                    })()
-                  )}
-                </div>
-                 )}
-
-                {/* Mail widget */}
-                {widgetView === 'cards' ? (<Card variant="elevated" className="p-0 overflow-hidden" style={{ borderTop: '3px solid var(--orange-400, #F6AD55)', backgroundImage: gradient.mail }}>
-                  <WidgetHeader
-                    className="px-4 py-3"
-                    title={<span className="inline-flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--orange-400, #F6AD55)'}} />Mail</span>}
-                    subtitle={<span className="asana-text-sm text-tertiary">Recent messages</span>}
-                    actions={<Link to="/mail" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">Open mail</Link>}
-                  />
-                  <div className="p-4"><Text variant="tertiary" size="sm">Connect a mail account in Settings to see messages here.</Text></div>
-                    </Card>) : (
-                <div className="rounded-md border border-[var(--border-default)] p-4" style={{ borderLeft: '4px solid var(--orange-400, #F6AD55)', backgroundImage: gradient.mail }}>
-                  <WidgetHeader className="px-4 py-3" withDivider={false} title={<span className="inline-flex items-center gap-2 asana-text-base font-semibold"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--orange-400, #F6AD55)'}} />Mail</span>} subtitle={<span className="asana-text-sm text-tertiary">Recent messages</span>} actions={<Link to="/mail" className="text-[color:var(--brand-primary)] underline decoration-[var(--brand-primary)]/40">Open mail</Link>} />
-                  <Text variant="tertiary" size="sm">Connect a mail account in Settings to see messages here.</Text>
-                </div>
-                 )}
-
-                {/* Activity widget */}
-                    {widgetView === 'cards' ? (<Card variant="elevated" className="p-0 overflow-hidden" style={{ borderTop: '3px solid var(--pink-400, #F472B6)', backgroundImage: gradient.activity }}>
-                  <WidgetHeader
-                    className="px-4 py-3"
-                        title={<span className="inline-flex items-center gap-2"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--pink-400, #F472B6)'}} />Activity</span>}
-                    subtitle={<span className="asana-text-sm text-tertiary">Latest changes</span>}
-                  />
-                  <div className="p-4"><Text variant="tertiary" size="sm">No recent activity</Text></div>
-                </Card>) : (
-                <div className="rounded-md border border-[var(--border-default)] p-4" style={{ borderLeft: '4px solid var(--pink-400, #F472B6)', backgroundImage: gradient.activity }}>
-                  <WidgetHeader className="px-4 py-3" withDivider={false} title={<span className="inline-flex items-center gap-2 asana-text-base font-semibold"><span className="inline-block h-2 w-2 rounded-full" style={{backgroundColor:'var(--pink-400, #F472B6)'}} />Activity</span>} subtitle={<span className="asana-text-sm text-tertiary">Latest changes</span>} />
-                  <Text variant="tertiary" size="sm">No recent activity</Text>
-                </div>
-                 )}
-                </div>
-              </div>
-
-              {/* Rename Dialog (detail view) */}
-              <Dialog
-                open={isRenameOpen}
-                onOpenChange={(open) => { setIsRenameOpen(open); if (!open) setEditingId(null); }}
-                title="Rename space"
-                description="Update the space name and description."
-                footer={(
-                  <div className="flex items-center justify-end gap-2 w-full">
-                    <Button variant="ghost" onClick={() => setIsRenameOpen(false)}>Cancel</Button>
-                    <Button onClick={() => {
-                      if (!editingId) return;
-                      const name = formName.trim();
-                      if (!name) return;
-                      setSpaces(prev => prev.map(sp => sp.id === editingId ? { ...sp, name, description: formDescription.trim() || undefined } : sp));
-                      setIsRenameOpen(false);
-                      setEditingId(null);
-                    }} disabled={!formName.trim()}>Save</Button>
-                      </div>
-                )}
-                size="sm"
-              >
-                <div className="space-y-3">
-                  <Input label="Name" value={formName} onChange={(e) => setFormName(e.target.value)} />
-                  <Input label="Description" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
-                      </div>
-              </Dialog>
-
-              {/* Archive Dialog (detail view) */}
-              <Dialog
-                open={!!archiveId}
-                onOpenChange={(open) => { if (!open) setArchiveId(null); }}
-                title="Archive space"
-                description="Archived spaces are hidden from the list. You can restore them later."
-                footer={(
-                  <div className="flex items-center justify-end gap-2 w-full">
-                    <Button variant="ghost" onClick={() => setArchiveId(null)}>Cancel</Button>
-                    <Button variant="destructive" onClick={() => { if (!archiveId) return; setSpaces(prev => prev.filter(sp => sp.id !== archiveId)); setArchiveId(null); setActiveSpaceId(null); }}>Archive</Button>
-                  </div>
-                )}
-                size="sm"
-              />
-
-              {/* Escape to navigate back to Spaces root */}
-              <EscapeHandler onEscape={() => setActiveSpaceId(null)} />
-            </PageBody>
-          </PageCard>
-        </PageContent>
-      </Page>
-    );
-  }
 
   // List/Grid selection view
   return (
@@ -527,15 +256,15 @@ export default function Spaces() {
 
             {view === 'grid' ? (
               <Grid columns="auto-md" gap="6">
-                {spaces.map((s) => (
-                  <SpaceCard key={s.id} space={s} onOpen={setActiveSpaceId} />
+                {spacesWithStats.map((s) => (
+                  <SpaceCard key={s.id} space={s} onOpen={() => navigate(`/spaces/${s.id}`)} />
                 ))}
               </Grid>
             ) : (
-              <SpacesList spaces={spaces} onOpen={setActiveSpaceId} onAction={(action, id) => {
-                const sp = spaces.find(x => x.id === id);
+              <SpacesList spaces={spacesWithStats} onOpen={(id) => navigate(`/spaces/${id}`)} onAction={(action, id) => {
+                const sp = spacesWithStats.find(x => x.id === id);
                 if (!sp) return;
-                if (action === 'open') setActiveSpaceId(id);
+                if (action === 'open') navigate(`/spaces/${id}`);
                 if (action === 'rename') {
                   setEditingId(id);
                   setFormName(sp.name);
@@ -558,14 +287,12 @@ export default function Spaces() {
                   <Button onClick={() => {
                     const name = formName.trim();
                     if (!name) return;
-                    const newSpace: Space = {
-                      id: `space-${Date.now()}`,
+                    addSpace({
                       name,
                       description: formDescription.trim() || undefined,
                       color: 'var(--accent-primary)',
                       stats: { tasks: 0, notes: 0, canvas: 0, agents: 0 },
-                    };
-                    setSpaces(prev => [newSpace, ...prev]);
+                    });
                     setIsCreateOpen(false);
                     setFormName('');
                     setFormDescription('');
@@ -593,7 +320,7 @@ export default function Spaces() {
                     if (!editingId) return;
                     const name = formName.trim();
                     if (!name) return;
-                    setSpaces(prev => prev.map(sp => sp.id === editingId ? { ...sp, name, description: formDescription.trim() || undefined } : sp));
+                    updateSpace(editingId, { name, description: formDescription.trim() || undefined });
                     setIsRenameOpen(false);
                     setEditingId(null);
                   }} disabled={!formName.trim()}>Save</Button>
@@ -616,7 +343,7 @@ export default function Spaces() {
               footer={(
                 <div className="flex items-center justify-end gap-2 w-full">
                   <Button variant="ghost" onClick={() => setArchiveId(null)}>Cancel</Button>
-                  <Button variant="destructive" onClick={() => { if (!archiveId) return; setSpaces(prev => prev.filter(sp => sp.id !== archiveId)); setArchiveId(null); }}>Archive</Button>
+                  <Button variant="destructive" onClick={() => { if (!archiveId) return; deleteSpace(archiveId); setArchiveId(null); }}>Archive</Button>
                 </div>
               )}
               size="sm"
@@ -640,18 +367,6 @@ export default function Spaces() {
   );
 }
 
-// Utility to handle Esc for back navigation within the Spaces page
-function EscapeHandler({ onEscape }: { onEscape: () => void }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onEscape();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onEscape]);
-  return null;
-}
-
 // FloatingQuickActions removed for simplified personal layout prototype
 
 function TodayStrip() {
@@ -660,6 +375,8 @@ function TodayStrip() {
   const events = useGoogleCalendarStore((s) => s.events);
   const isCalLoading = useGoogleCalendarStore((s) => s.isLoading);
   const tasks = useUnifiedTaskStore((s) => s.tasks);
+  const spaces = useSpacesStore((s) => s.spaces);
+  
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000); // Update every second for smooth time
@@ -674,7 +391,7 @@ function TodayStrip() {
   const importantTasks = getImportantTasks(Object.values(tasks)).slice(0, 5);
   
   // Calculate stats
-  const activeProjects = mockSpaces.length;
+  const activeProjects = spaces.length;
   const totalTasks = Object.values(tasks).filter(t => t.status !== 'completed').length;
   const completedToday = Object.values(tasks).filter(t => {
     if (t.status !== 'completed') return false;
@@ -695,9 +412,9 @@ function TodayStrip() {
               <div className="flex items-center justify-between mb-3 gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <Calendar size={16} className="text-indigo-500 flex-shrink-0" />
-                <div className="text-sm font-semibold text-primary truncate">Today's events</div>
+                <div className="asana-text-xl font-semibold text-primary truncate">Today's events</div>
               </div>
-                <Link to="/calendar" className="text-xs text-[color:var(--brand-primary)] hover:text-[var(--brand-hover)] underline decoration-[var(--brand-primary)]/40 hover:decoration-[var(--brand-hover)]/60 whitespace-nowrap">Open calendar</Link>
+                <Link to="/calendar" className="asana-text-base text-[color:var(--brand-primary)] hover:text-[var(--brand-hover)] underline decoration-[var(--brand-primary)]/40 hover:decoration-[var(--brand-hover)]/60 whitespace-nowrap">Open calendar</Link>
             </div>
               {isCalLoading ? (
               <div className="space-y-2" aria-busy>
@@ -707,15 +424,15 @@ function TodayStrip() {
               </div>
             ) : todaysEvents.length === 0 ? (
               <div className="py-3 text-center">
-                <div className="text-xs text-tertiary">No events today</div>
+                <div className="asana-text-sm text-tertiary">No events today</div>
               </div>
             ) : (
               <ul className="space-y-2">
                 {todaysEvents.slice(0, 3).map((ev) => (
                   <li key={`${ev.id}-${ev.start?.dateTime || ev.start?.date}`} className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-secondary/50 transition-colors">
-                    <span className="text-xs text-indigo-600 font-medium shrink-0 w-[70px]">{formatEventTimeRange(ev)}</span>
+                    <span className="asana-text-lg text-indigo-600 font-medium shrink-0 w-[84px]">{formatEventTimeRange(ev)}</span>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs text-primary font-medium truncate">{ev.summary || 'Untitled event'}</div>
+                      <div className="asana-text-lg text-primary font-medium truncate">{ev.summary || 'Untitled event'}</div>
                     </div>
                   </li>
                 ))}
@@ -725,42 +442,57 @@ function TodayStrip() {
 
           {/* Central circular clock (reduced glow per DS elevation scale) */}
           <div className="flex justify-center px-4 lg:px-8 order-1 lg:order-2">
-            <div className="relative">
-              {/* Subtle aura */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 rounded-full blur-xl scale-105" />
-              
-              {/* Clock circle */}
-              <div className="relative size-48 sm:size-56 lg:size-64 rounded-full bg-gradient-to-br from-indigo-500/10 via-blue-500/5 to-purple-500/10 border border-[var(--border-default)] shadow-[var(--shadow-card)] flex flex-col items-center justify-center backdrop-blur-sm">
-                <div className="text-center">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-light text-primary tracking-tight">
-                    {timeLabel}
-                  </div>
-                  <div className="mt-2 text-xs sm:text-sm text-secondary">
-                    {dateLabel}
-                  </div>
-                  
-                  {/* Weather placeholder */}
-                  <div className="mt-3 lg:mt-4 flex items-center justify-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full bg-secondary/30 backdrop-blur-sm">
-                    <Sun size={14} className="text-yellow-500 lg:size-4" />
-                    <span className="text-[10px] lg:text-xs text-secondary font-medium">72°F · Sunny</span>
+            <div className="relative flex flex-col items-center">
+              {/* Progress ring around the clock using conic-gradient */}
+              <div
+                className="rounded-full p-1.5"
+                style={{
+                  background: `conic-gradient(var(--brand-primary, #796EFF) ${focusScore}%, var(--border-default) ${focusScore}% 100%)`,
+                }}
+                aria-label={`Today's progress ${focusScore}%`}
+              >
+                {/* Subtle aura */}
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 rounded-full blur-xl scale-105" />
+                  {/* Clock circle */}
+                  <div className="relative size-48 sm:size-56 lg:size-64 rounded-full bg-gradient-to-br from-indigo-500/10 via-blue-500/5 to-purple-500/10 border border-[var(--border-default)] shadow-[var(--shadow-card)] flex flex-col items-center justify-center backdrop-blur-sm">
+                    <div className="text-center">
+                      <div className="text-3xl sm:text-4xl lg:text-5xl font-light text-primary tracking-tight">
+                        {timeLabel}
+                      </div>
+                      <div className="mt-2 text-xs sm:text-sm text-secondary">
+                        {dateLabel}
+                      </div>
+                      {/* Weather placeholder */}
+                      <div className="mt-3 lg:mt-4 flex items-center justify-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 rounded-full bg-secondary/30 backdrop-blur-sm">
+                        <Sun size={14} className="text-yellow-500 lg:size-4" />
+                        <span className="text-[10px] lg:text-xs text-secondary font-medium">72°F · Sunny</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
+              {/* Quick controls beneath clock */}
+              <div className="mt-3 flex items-center gap-2">
+                <Link to="/calendar" className="asana-btn asana-btn-secondary asana-btn-sm">Plan my day</Link>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+
+          
 
           {/* Important tasks - Right side */}
           <Card className="p-5 hover:shadow-lg transition-all duration-300 border-purple-500/10 order-3 lg:order-3 min-w-0">
               <div className="flex items-center justify-between mb-3 gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <CheckSquare size={16} className="text-purple-500 flex-shrink-0" />
-                <div className="text-sm font-semibold text-primary truncate">Important tasks</div>
+                <div className="asana-text-xl font-semibold text-primary truncate">Important tasks</div>
               </div>
-                <Link to="/tasks" className="text-xs text-[color:var(--brand-primary)] hover:text-[var(--brand-hover)] underline decoration-[var(--brand-primary)]/40 hover:decoration-[var(--brand-hover)]/60 whitespace-nowrap">View tasks</Link>
+                <Link to="/tasks" className="asana-text-base text-[color:var(--brand-primary)] hover:text-[var(--brand-hover)] underline decoration-[var(--brand-primary)]/40 hover:decoration-[var(--brand-hover)]/60 whitespace-nowrap">View tasks</Link>
             </div>
             {importantTasks.length === 0 ? (
               <div className="py-3 text-center">
-                <div className="text-xs text-tertiary">You're all caught up!</div>
+                <div className="asana-text-sm text-tertiary">You're all caught up!</div>
               </div>
             ) : (
               <>
@@ -790,10 +522,10 @@ function TodayStrip() {
                           aria-hidden 
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="text-xs text-primary font-medium truncate">{t.title || 'Untitled task'}</div>
+                          <div className="asana-text-lg text-primary font-medium truncate">{t.title || 'Untitled task'}</div>
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                             {t.priority && t.priority !== 'none' && (
-                              <span className={`inline-flex px-1.5 py-0.5 text-[9px] font-medium rounded whitespace-nowrap ${
+                              <span className={`inline-flex px-1.5 py-0.5 text-[12px] font-medium rounded whitespace-nowrap ${
                                 t.priority === 'high' 
                                   ? 'bg-red-500/10 text-red-600 dark:text-red-400' 
                                   : t.priority === 'medium'
@@ -806,7 +538,7 @@ function TodayStrip() {
                               </span>
                             )}
                             {formattedDate && (
-                              <span className={`text-[10px] whitespace-nowrap ${isOverdue ? 'text-red-500 font-medium' : 'text-tertiary'}`}>
+                              <span className={`asana-text-sm whitespace-nowrap ${isOverdue ? 'text-red-500 font-medium' : 'text-tertiary'}`}>
                                 {formattedDate}
                               </span>
                             )}
@@ -820,7 +552,7 @@ function TodayStrip() {
                   <div className="mt-2 flex justify-center">
                     <Link 
                       to="/tasks" 
-                      className="px-3 py-1 text-[11px] text-secondary bg-secondary/30 hover:bg-secondary/50 rounded-full transition-colors"
+                      className="px-3 py-1 asana-text-sm text-secondary bg-secondary/30 hover:bg-secondary/50 rounded-full transition-colors"
                     >
                       +{importantTasks.length - 4} more
                     </Link>

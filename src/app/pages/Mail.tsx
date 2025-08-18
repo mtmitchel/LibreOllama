@@ -97,6 +97,8 @@ export default function Mail() {
       
       {/* Message View Modal */}
       {currentMessage && <MessageViewModal />}
+
+      
     </div>
       </PageCard>
     </Page>

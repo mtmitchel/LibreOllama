@@ -104,7 +104,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--asana-text-placeholder)' }} />
         <input
           type="search"
-          placeholder="Search tasks..."
+          placeholder="Search events"
           value={searchQuery}
           onChange={(e) => onSearchChange?.(e.target.value)}
           className="pl-10 pr-4 py-2 rounded-xl outline-none transition-all w-full"

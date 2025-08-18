@@ -44,7 +44,7 @@ export class SecureAuthHandler {
         }
       }
       
-      // Use the same redirect URI as configured in the backend
+      // Use original redirect URI
       const redirectUri = 'http://localhost:1423/auth/gmail/callback';
       authServiceInstance = new GmailAuthService(cachedClientId, redirectUri);
     }

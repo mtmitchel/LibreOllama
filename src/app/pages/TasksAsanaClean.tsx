@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { KanbanBoard } from '../../components/kanban';
 import { TaskListView } from '../../components/kanban/TaskListView';
 import { TaskSidePanel } from '../../components/tasks';
@@ -17,6 +18,7 @@ import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 type ViewMode = 'kanban' | 'list';
 
 export default function TasksAsanaClean() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { clearHeaderProps } = useHeader();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('tasks-view-mode') as ViewMode;
@@ -98,6 +100,17 @@ export default function TasksAsanaClean() {
     realtimeSync.initialize().catch(console.error);
     return () => clearHeaderProps();
   }, [clearHeaderProps]);
+
+  // Open a specific task when taskId is present in the URL
+  useEffect(() => {
+    const deepLinkId = searchParams.get('taskId');
+    if (!deepLinkId) return;
+    const task = tasks[deepLinkId];
+    if (task) {
+      setSelectedTask(task);
+      setIsTaskPanelOpen(true);
+    }
+  }, [searchParams, tasks]);
 
   useEffect(() => {
     if (activeAccount) {
@@ -477,7 +490,7 @@ export default function TasksAsanaClean() {
             disabled={!isAuthenticated}
             style={{
               backgroundColor: 'var(--accent-primary)',
-              color: 'var(--text-on-brand)',
+              color: '#FFFFFF',
               padding: '8px 16px',
               borderRadius: '12px',
               fontSize: '14px',
@@ -638,6 +651,11 @@ export default function TasksAsanaClean() {
           onClose={() => {
             setIsTaskPanelOpen(false);
             setSelectedTask(null);
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.delete('taskId');
+              return next;
+            });
           }}
           onUpdate={async (taskId, updates) => {
             await updateTask(taskId, updates);

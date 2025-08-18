@@ -16,6 +16,80 @@ import { ParsedEmail } from '../types';
 import { logger } from '../../../core/lib/logger';
 import './mail-scrollbar.css';
 
+interface ErrorBannerProps {
+  error: string | null;
+  onRefresh: () => void | Promise<void>;
+  onReconnect?: () => void;
+}
+
+function ErrorBanner({ error, onRefresh, onReconnect }: ErrorBannerProps) {
+  const [showBanner, setShowBanner] = React.useState<boolean>(!!error);
+  const [fading, setFading] = React.useState<boolean>(false);
+  const [lastError, setLastError] = React.useState<string | null>(error || null);
+  const [lastErrorAt, setLastErrorAt] = React.useState<number | null>(error ? Date.now() : null);
+
+  useEffect(() => {
+    if (error) {
+      setLastError(error);
+      setLastErrorAt(Date.now());
+      setFading(false);
+      setShowBanner(true);
+    } else if (showBanner) {
+      setFading(true);
+      const t = setTimeout(() => setShowBanner(false), 200);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
+
+  if (!showBanner || !lastError) return null;
+  const isAuthError = lastError.toLowerCase().includes('authentication failed') || lastError.toLowerCase().includes('no refresh token');
+  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  const recentAuthError = isAuthError && lastErrorAt !== null && Date.now() - lastErrorAt < 60000;
+
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      className={`mb-3 rounded-md border px-3 py-2 shadow-sm transition-opacity duration-200 ${fading ? 'opacity-0' : 'opacity-100'} bg-error/10 border-error/40`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="text-error shrink-0"><AlertCircle size={16} /></span>
+          <Text as="div" size="sm" weight="semibold" className="text-error truncate">
+            {isAuthError ? 'Connection expired' : 'Unable to load messages'}
+          </Text>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {isAuthError && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (onReconnect) {
+                  onReconnect();
+                } else {
+                  window.location.href = '/settings?tab=account&reconnect=1';
+                }
+              }}
+            >
+              Reconnect
+            </Button>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            disabled={!isOnline || recentAuthError}
+            onClick={() => { void onRefresh(); }}
+            title={!isOnline ? 'You are offline' : recentAuthError ? 'Please sign in again to continue' : 'Try again'}
+          >
+            Try again
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface EnhancedMessageListProps {
   compactMode?: boolean;
   showActionBar?: boolean;
@@ -182,6 +256,10 @@ export function EnhancedMessageList({
     }
   }, [isLoadingMessages, currentAccountId]);
 
+  const handleReconnect = useCallback(() => {
+    window.location.href = '/settings?tab=account&reconnect=1';
+  }, []);
+
   // Loading state
   if (isLoadingMessages && messages.length === 0) {
     return (
@@ -192,32 +270,25 @@ export function EnhancedMessageList({
     );
   }
 
-  // Error state
-  if (error && messages.length === 0) {
-    // Parse error to provide better user experience
-    const isAuthError = error.toLowerCase().includes('authentication failed') || 
-                       error.toLowerCase().includes('no refresh token');
-    
+  // Empty state
+  if (processedMessages.length === 0) {
     return (
-      <div className={`flex h-full w-full flex-col items-center justify-center ${className}`}>
-        <AlertCircle size={32} className="mb-4 text-error" />
-        <Text size="lg" weight="medium" className="mb-2">
-          {isAuthError ? 'Connection expired' : 'Unable to load messages'}
-        </Text>
-        <div className="flex gap-2">
-          {isAuthError ? (
-            <Button 
-              variant="primary" 
-              onClick={() => {
-                // Open settings to reconnect account
-                window.location.href = '/settings?tab=account';
-              }}
-            >
-              Reconnect account
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={handleRefresh}>
-              Try again
+      <div className={`flex h-full flex-col ${className}`}>
+        <ErrorBanner error={error} onRefresh={handleRefresh} onReconnect={handleReconnect} />
+        <div className="flex h-64 flex-col items-center justify-center">
+          <Inbox size={48} className="mb-4 text-muted" />
+          <Text size="lg" weight="medium" className="mb-2">
+            {filterUnread ? 'No unread messages' : 'No messages'}
+          </Text>
+          <Text size="sm" variant="secondary" className="mb-4">
+            {filterUnread 
+              ? 'All your messages have been read'
+              : 'Your inbox is empty'
+            }
+          </Text>
+          {filterUnread && (
+            <Button variant="outline" onClick={() => setFilterUnread(false)}>
+              Show all messages
             </Button>
           )}
         </div>
@@ -225,31 +296,9 @@ export function EnhancedMessageList({
     );
   }
 
-  // Empty state
-  if (processedMessages.length === 0) {
-    return (
-      <div className={`flex h-64 flex-col items-center justify-center ${className}`}>
-        <Inbox size={48} className="mb-4 text-muted" />
-        <Text size="lg" weight="medium" className="mb-2">
-          {filterUnread ? 'No unread messages' : 'No messages'}
-        </Text>
-        <Text size="sm" variant="secondary" className="mb-4">
-          {filterUnread 
-            ? 'All your messages have been read'
-            : 'Your inbox is empty'
-          }
-        </Text>
-        {filterUnread && (
-          <Button variant="outline" onClick={() => setFilterUnread(false)}>
-            Show all messages
-          </Button>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className={`flex h-full flex-col ${className}`}>
+      <ErrorBanner error={error} onRefresh={handleRefresh} onReconnect={handleReconnect} />
       {/* Action Bar - Only show when messages are selected */}
       {showActionBar && localSelectedMessages.length > 0 && (
         <EmailActionBar

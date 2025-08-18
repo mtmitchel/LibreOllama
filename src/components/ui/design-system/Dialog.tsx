@@ -91,10 +91,10 @@ export const DialogOverlay: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   return (
     <div
       className={`
-        fixed inset-0 z-[var(--z-modal-overlay)]
-        bg-[color:var(--bg-overlay)]
+        fixed inset-0 z-[9998]
+        bg-black/50
         animate-in fade-in-0
-        duration-[var(--transition-duration)]
+        duration-200
         ${className}
       `}
       onClick={() => onOpenChange(false)}
@@ -169,19 +169,19 @@ export const DialogContent: React.FC<DialogContentProps> = ({
   return (
     <DialogPortal>
       <DialogOverlay />
-      <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-[var(--space-4)]">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         <div
           ref={contentRef}
           tabIndex={-1}
           className={`
             relative w-full ${sizeClasses[size]}
             max-h-[85vh] overflow-auto
-            bg-[var(--bg-primary)]
-            border border-[var(--border-default)]
-            rounded-[var(--radius-lg)]
-            shadow-[var(--shadow-modal)]
+            bg-white dark:bg-gray-900
+            border border-gray-200 dark:border-gray-700
+            rounded-lg
+            shadow-2xl
             animate-in zoom-in-95 fade-in-0
-            duration-[var(--transition-duration)]
+            duration-200
             outline-none focus:outline-none focus:ring-0
             ${className}
           `}

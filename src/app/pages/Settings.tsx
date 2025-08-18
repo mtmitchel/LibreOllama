@@ -136,6 +136,12 @@ const Settings: React.FC = () => {
     if (tab === 'account') {
       setActiveSection('account');
     }
+    const reconnect = searchParams.get('reconnect');
+    if (reconnect === '1') {
+      // Open Google auth modal automatically for reconnect flow
+      setActiveSection('account');
+      setShowGoogleAuthModal(true);
+    }
   }, [searchParams]);
   
   // Settings from global store

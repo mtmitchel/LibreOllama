@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { HeaderProvider } from './contexts/HeaderContext';
 import { ThemeProvider } from '../components/ThemeProvider';
 import Sidebar from '../components/navigation/Sidebar';
@@ -21,6 +20,7 @@ import Chat from './pages/Chat';
 import Mail from './pages/Mail';
 import { Projects } from './pages/Projects';
 import Spaces from './pages/Spaces';
+import SpaceDetail from './pages/SpaceDetail';
 import Notes from './pages/Notes';
 import CanvasPage from './pages/Canvas';
 import CalendarCustom from './pages/CalendarCustom';
@@ -47,6 +47,7 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
       <Route path="/mail" element={<Mail />} />
       <Route path="/projects" element={<Projects />} />
       <Route path="/spaces" element={<Spaces />} />
+      <Route path="/spaces/:spaceId" element={<SpaceDetail />} />
       <Route path="/notes" element={<Notes />} />
       <Route path="/canvas" element={<CanvasPage />} />
       {/* Custom Calendar Implementation */}
@@ -134,9 +135,6 @@ export default function App() {
         </HeaderProvider>
       </Router>
     </ThemeProvider>
-    {import.meta.env.DEV && !isShellRoute && (
-      <ReactQueryDevtools initialIsOpen={false} />
-    )}
     </QueryClientProvider>
   );
 }
