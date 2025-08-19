@@ -5,7 +5,25 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-08-18
+## [Unreleased] - 2025-08-19
+
+### 📧 Mail Experience Improvements
+- **Implemented Shadow DOM isolation** for email content - prevents CSS conflicts between app styles and email HTML
+- **Added image proxy service** to bypass CORS restrictions for external images in emails
+  - Rust-based backend proxy with Referer header spoofing for CDN compatibility
+  - Smart fallbacks for protected images (403/401 errors)
+  - Caching strategy for improved performance
+- **Fixed email rendering issues**:
+  - Marketing emails now display with proper layouts and images
+  - Social media icons and app store badges load correctly
+  - Background images and hero images properly rendered
+  - Rounded buttons and CSS styles preserved
+- **UI consistency improvements**:
+  - Standardized border radius (`rounded-xl`) across all mail components
+  - Fixed vertical alignment of message counts in sidebar
+  - Matched UI styling with notes and chat pages
+- **TypeScript fixes** - resolved type errors in mail feature components
+- **Added CSS inlining** with juice library for better email rendering fidelity
 
 ### ✨ Chat Experience Enhancements
 - **Fixed rename/delete dialogs** in conversation context menu - lifted state to parent component to prevent unmounting issues
