@@ -9,8 +9,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Search, 
   X, 
-  Star,
-  Filter
+  SlidersHorizontal
 } from 'lucide-react';
 import { Button, Text } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
@@ -227,7 +226,7 @@ export function EnhancedSearchBar({
               backgroundColor: isFocused ? 'var(--bg-primary)' : 'var(--bg-secondary)',
               borderColor: isFocused ? 'var(--border-default)' : 'transparent',
               borderRadius: '8px',
-              padding: '0 12px 0 40px',
+              padding: '0 48px 0 40px',
               height: '40px',
               borderWidth: '1px',
               borderStyle: 'solid',
@@ -240,11 +239,21 @@ export function EnhancedSearchBar({
               className={`shrink-0 transition-colors`}
               style={{
                 position: 'absolute',
-                left: '12px',
+                left: '14px',
                 color: isLoading ? 'var(--accent-primary)' : 'var(--text-tertiary)',
                 animation: isLoading ? 'spin 1s linear infinite' : 'none'
               }}
             />
+            {/* Inline Filters Icon (opens advanced filters) - right inside input */}
+            <button
+              type="button"
+              onClick={() => setShowAdvancedFilters(true)}
+              className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center hover:bg-[var(--bg-secondary)] rounded"
+              style={{ right: '36px', width: '28px', height: '28px' }}
+              title="Advanced search"
+            >
+              <SlidersHorizontal size={16} style={{ color: 'var(--text-secondary)' }} />
+            </button>
             
             {/* Search Input */}
             <input
@@ -279,44 +288,7 @@ export function EnhancedSearchBar({
           </div>
         </form>
         
-        {/* Icon Group - Positioned absolutely to the right */}
-        <div className="absolute right-6 flex items-center gap-1">
-          {/* Saved Searches Button */}
-          <button
-            type="button"
-            onClick={() => setShowSavedSearches(true)}
-            className="flex items-center justify-center transition-colors"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '8px',
-              backgroundColor: 'transparent'
-            }}
-            title="Saved searches"
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <Star size={18} style={{ color: 'var(--text-secondary)' }} />
-          </button>
-          
-          {/* Advanced Search Button */}
-          <button
-            type="button"
-            onClick={() => setShowAdvancedFilters(true)}
-            className="flex items-center justify-center transition-colors"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '8px',
-              backgroundColor: 'transparent'
-            }}
-            title="Advanced search"
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <Filter size={18} style={{ color: 'var(--text-secondary)' }} />
-          </button>
-        </div>
+        
       </div>
 
       {/* Phase 2.4 Advanced Search Components */}

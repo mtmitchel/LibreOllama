@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useHeader } from '../contexts/HeaderContext';
 import { MailSidebar } from '../../features/mail/components/MailSidebar';
-import { MailToolbar } from '../../features/mail/components/MailToolbar';
+import MailToolbar from '../../features/mail/components/MailToolbar';
 import { EnhancedSearchBar, EnhancedMessageList } from '../../features/mail/components';
 import { MailContextSidebar } from '../../features/mail/components/MailContextSidebar';
 import { ComposeModal } from '../../features/mail/components';
 import { MessageViewModal } from '../../features/mail/components/MessageViewModal';
 import { useMailStore } from '../../features/mail/stores/mailStore';
 import { Page, PageCard } from '../../components/ui/design-system/Page';
+import { Card } from '../../components/ui/design-system/Card';
 // Import debug utilities (only in dev mode)
 if (import.meta.env.DEV) {
   import('../../features/mail/utils/debugGmail');
@@ -46,8 +47,7 @@ export default function Mail() {
         display: 'flex',
         height: '100%',
         overflow: 'hidden',
-        background: 'var(--bg-page)',
-        // Mirror canvas/chat: remove side padding when the corresponding panel is closed
+        background: 'var(--asana-bg-secondary)',
         padding: `${24}px ${isContextOpen ? 24 : 0}px ${24}px ${isMailSidebarOpen ? 24 : 0}px`,
         gap: isMailSidebarOpen ? '24px' : '0px'
       }}
@@ -58,27 +58,27 @@ export default function Mail() {
         onToggle={toggleMailSidebar}
       />
 
-      {/* Main + Context grouped to keep inner 24px gap */}
-      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1, alignItems: 'stretch', minWidth: 0 }}>
-        {/* Main Content Area */}
-        <div className="asana-mail-content" style={{ minWidth: 0 }}>
+      {/* Main + Right Context grouped so their internal gap remains 24px */}
+      <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1, minWidth: 0 }}>
+        {/* Main Mail Area */}
+        <div className="asana-mail-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
           
-          {/* Enhanced Search Bar */}
-          <div className="asana-mail-content-header">
-            <EnhancedSearchBar 
-              onAdvancedSearch={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)}
-            />
-          </div>
+          <Card className="flex h-full w-full" padding="none" style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Enhanced Search Bar */}
+            <div style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)' }}>
+              <EnhancedSearchBar 
+                onAdvancedSearch={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)}
+              />
+            </div>
 
-          {/* Mail Toolbar */}
-          <MailToolbar />
+            {/* Mail Toolbar */}
+            <MailToolbar />
 
-
-          {/* Message List */}
-          <div className="asana-mail-content-body">
-            <EnhancedMessageList />
-          </div>
-          
+            {/* Message List */}
+            <div className="asana-mail-content-body" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <EnhancedMessageList showActionBar={false} />
+            </div>
+          </Card>
         </div>
 
         {/* Context Sidebar */}
@@ -91,15 +91,13 @@ export default function Mail() {
           onListViewTypeChange={setListViewType}
         />
       </div>
-
-      {/* Compose Modal - Only show for new compose, not replies */}
-      {isComposing && !currentMessage && <ComposeModal />}
-      
-      {/* Message View Modal */}
-      {currentMessage && <MessageViewModal />}
-
-      
     </div>
+
+    {/* Compose Modal - Only show for new compose, not replies */}
+    {isComposing && !currentMessage && <ComposeModal />}
+    
+    {/* Message View Modal */}
+    {currentMessage && <MessageViewModal />}
       </PageCard>
     </Page>
   );

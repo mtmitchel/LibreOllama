@@ -299,6 +299,7 @@ export function EnhancedMessageList({
   return (
     <div className={`flex h-full flex-col ${className}`}>
       <ErrorBanner error={error} onRefresh={handleRefresh} onReconnect={handleReconnect} />
+      {/* List header removed (redundant with toolbar) */}
       {/* Action Bar - Only show when messages are selected */}
       {showActionBar && localSelectedMessages.length > 0 && (
         <EmailActionBar
@@ -310,7 +311,7 @@ export function EnhancedMessageList({
 
 
       {/* Message List */}
-      <div className="mail-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-content">
+      <div className="mail-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-[var(--bg-primary)]">
         {processedMessages.map((message) => (
           <EnhancedMessageItem
             key={message.id}
@@ -318,7 +319,7 @@ export function EnhancedMessageList({
             isSelected={localSelectedMessages.includes(message.id)}
             onSelect={handleMessageSelect}
             onClick={handleMessageClick}
-            compactMode={compactMode}
+            compactMode={true}
           />
         ))}
 

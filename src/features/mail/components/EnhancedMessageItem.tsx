@@ -54,20 +54,28 @@ export function EnhancedMessageItem({
     deleteMessages
   } = useMailStore();
 
-  // Format date relative to now
+  // Format date relative to now (Gmail style)
   const formatDate = (date: Date): string => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     
     if (days === 0) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // Today: show time in 12-hour format
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
     } else if (days < 7) {
+      // This week: show day name
       return date.toLocaleDateString([], { weekday: 'short' });
     } else if (date.getFullYear() === now.getFullYear()) {
+      // This year: show month and day
       return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     } else {
-      return date.toLocaleDateString([], { year: '2-digit', month: 'short', day: 'numeric' });
+      // Older: show full date
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
     }
   };
 
@@ -159,131 +167,130 @@ export function EnhancedMessageItem({
     <>
       <div
         ref={itemRef}
-        className={`border-border-default relative flex cursor-pointer items-center gap-3 border-b px-4 py-3 motion-safe:transition-all motion-safe:duration-200 ${
+        className={`border-border-default relative flex cursor-pointer items-center gap-2 border-b px-3 py-2 motion-safe:transition-all motion-safe:duration-200 ${
           isCurrentMessage 
-            ? 'bg-accent-primary/10 border-l-4 border-l-accent-primary' 
+            ? 'bg-[var(--accent-primary)]/10' 
             : isSelected
-            ? 'bg-accent-primary/5'
+            ? 'bg-[var(--accent-primary)]/5'
             : isHovered
-            ? 'bg-secondary'
-            : 'bg-transparent'
-        } ${!message.isRead ? 'font-medium' : ''} ${className}`}
+            ? 'bg-[var(--bg-secondary)]'
+            : 'bg-[var(--bg-primary)]'
+        } ${isCurrentMessage ? 'shadow-[inset_3px_0_0_0_var(--accent-primary)]' : ''} ${className}`}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Selection Checkbox */}
-        {showCheckbox && (
-          <button
-            className="checkbox-button border-border-default flex size-5 items-center justify-center rounded border hover:bg-tertiary motion-safe:transition-colors motion-safe:duration-150"
-            onClick={handleCheckboxChange}
-            title={isSelected ? 'Deselect message' : 'Select message'}
-          >
-            {isSelected ? (
-              <Check size={14} className="text-accent-primary" />
-            ) : (
-              <Square size={14} className="text-transparent" />
-            )}
-          </button>
+        {showCheckbox ? (
+          <div className="shrink-0 flex items-center justify-center">
+            <button
+              className="checkbox-button inline-flex size-4 items-center justify-center rounded-[3px] border border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--border-focus)] shadow-none motion-safe:transition-colors motion-safe:duration-150 box-border p-0"
+              onClick={handleCheckboxChange}
+              title={isSelected ? 'Deselect message' : 'Select message'}
+            >
+              {isSelected ? (
+                <Check size={12} className="text-[var(--accent-primary)]" />
+              ) : (
+                <Square size={12} className="text-transparent" />
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="w-6" />
         )}
 
         {/* Star Button */}
-        <button
-          className="action-button shrink-0 rounded p-1 hover:bg-tertiary motion-safe:transition-colors motion-safe:duration-150"
-          onClick={handleQuickStar}
-          disabled={actionInProgress === 'star' || actionInProgress === 'unstar'}
-          title={message.isStarred ? 'Remove star' : 'Add star'}
-        >
-          {message.isStarred ? (
-            <Star size={16} className="fill-current text-warning" />
-          ) : (
-            <StarOff size={16} className="text-tertiary hover:text-warning motion-safe:transition-colors motion-safe:duration-150" />
-          )}
-        </button>
+        <div className="shrink-0 flex items-center justify-center">
+          <button
+            className="action-button rounded p-1 hover:bg-[var(--bg-tertiary)] motion-safe:transition-colors motion-safe:duration-150"
+            onClick={handleQuickStar}
+            disabled={actionInProgress === 'star' || actionInProgress === 'unstar'}
+            title={message.isStarred ? 'Remove star' : 'Add star'}
+          >
+            {message.isStarred ? (
+              <Star size={16} className="fill-[var(--warning)] text-[var(--warning)]" />
+            ) : (
+              <StarOff size={16} className="text-[var(--text-tertiary)] hover:text-[var(--warning)] motion-safe:transition-colors motion-safe:duration-150" />
+            )}
+          </button>
+        </div>
 
-        {/* Message Content */}
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center justify-between gap-2">
-            {/* Sender */}
-            <div className="flex min-w-0 items-center gap-2">
-              <Text 
-                size={compactMode ? "xs" : "sm"} 
-                weight={message.isRead ? "normal" : "medium"}
-                className={`truncate ${
-                  message.isRead ? 'text-secondary' : 'text-primary'
-                }`}
-              >
-                {truncatedSender}
-              </Text>
-              
-              {/* Message indicators */}
-              <div className="flex shrink-0 items-center gap-1">
-                {message.hasAttachments && (
-                  <Paperclip size={12} className="text-tertiary" />
-                )}
-                {message.importance === 'high' && (
-                  <Flag size={12} className="text-error" />
-                )}
-              </div>
-            </div>
-
-            {/* Date */}
-            <Text 
-              size="xs" 
-              variant="secondary"
-              className="shrink-0"
-            >
-              {formatDate(message.date)}
-            </Text>
-          </div>
-
-          {/* Subject and Snippet */}
-          <div className="flex min-w-0 flex-col">
-            <Text 
-              size={compactMode ? "xs" : "sm"}
-              weight={message.isRead ? "normal" : "medium"}
-              className={`truncate leading-tight ${
-                message.isRead ? 'text-secondary' : 'text-primary'
+        {/* Message Content - single line with proper truncation */}
+        <div className="min-w-0 flex-1 flex items-center gap-2">
+          {/* Sender */}
+          <span 
+            className={`shrink-0 text-sm w-44 truncate ${
+              message.isRead ? 'font-normal text-[var(--text-secondary)]' : 'font-semibold text-[var(--text-primary)]'
+            }`}
+          >
+            {truncatedSender}
+          </span>
+          
+          {/* Subject and snippet on same line */}
+          <div className="min-w-0 flex-1 flex items-center">
+            <span 
+              className={`text-sm truncate ${
+                message.isRead ? 'font-normal text-[var(--text-secondary)]' : 'font-semibold text-[var(--text-primary)]'
               }`}
             >
               {subjectDisplay}
-            </Text>
-            
-            {!compactMode && snippetDisplay && (
-              <Text 
-                size="xs" 
-                variant="tertiary"
-                className="mt-0.5 truncate leading-tight"
-              >
-                {snippetDisplay}
-              </Text>
+            </span>
+            {snippetDisplay && (
+              <>
+                <span className="mx-1 text-sm text-[var(--text-tertiary)]">-</span>
+                <span className="text-sm text-[var(--text-tertiary)] truncate">
+                  {snippetDisplay}
+                </span>
+              </>
+            )}
+          </div>
+          
+          {/* Indicators */}
+          <div className="shrink-0 flex items-center gap-1">
+            {message.hasAttachments && (
+              <Paperclip size={14} className="text-[var(--text-tertiary)]" />
+            )}
+            {message.importance === 'high' && (
+              <Flag size={14} className="text-[var(--semantic-error)]" />
             )}
           </div>
         </div>
 
-        {/* Quick Actions - shown on hover */}
-        {(isHovered || isSelected) && (
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              className="action-button rounded p-1 hover:bg-tertiary motion-safe:transition-colors motion-safe:duration-150"
-              onClick={handleQuickArchive}
-              disabled={actionInProgress === 'archive'}
-              title="Archive"
-            >
-              <Archive size={14} className="text-secondary hover:text-primary motion-safe:transition-colors motion-safe:duration-150" />
-            </button>
-            
-            <button
-              className="action-button rounded p-1 hover:bg-tertiary motion-safe:transition-colors motion-safe:duration-150"
-              onClick={handleQuickDelete}
-              disabled={actionInProgress === 'delete'}
-              title="Delete"
-            >
-              <Trash2 size={14} className="text-secondary hover:text-error motion-safe:transition-colors motion-safe:duration-150" />
-            </button>
-          </div>
-        )}
+        {/* Date and Quick Actions */}
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Quick Actions - shown on hover */}
+          {(isHovered || isSelected) && (
+            <div className="flex items-center gap-1">
+              <button
+                className="action-button rounded p-1 hover:bg-[var(--bg-tertiary)] motion-safe:transition-colors motion-safe:duration-150"
+                onClick={handleQuickArchive}
+                disabled={actionInProgress === 'archive'}
+                title="Archive"
+              >
+                <Archive size={14} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] motion-safe:transition-colors motion-safe:duration-150" />
+              </button>
+              
+              <button
+                className="action-button rounded p-1 hover:bg-[var(--bg-tertiary)] motion-safe:transition-colors motion-safe:duration-150"
+                onClick={handleQuickDelete}
+                disabled={actionInProgress === 'delete'}
+                title="Delete"
+              >
+                <Trash2 size={14} className="text-[var(--text-secondary)] hover:text-[var(--semantic-error)] motion-safe:transition-colors motion-safe:duration-150" />
+              </button>
+            </div>
+          )}
+          
+          {/* Date - always visible */}
+          <span 
+            className={`text-xs whitespace-nowrap ${
+              message.isRead ? 'text-[var(--text-tertiary)]' : 'font-semibold text-[var(--text-primary)]'
+            }`}
+          >
+            {formatDate(message.date)}
+          </span>
+        </div>
 
       </div>
 

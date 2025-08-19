@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
 import { Card } from '../../../components/ui/design-system/Card';
 import { Badge } from '../../../components/ui/design-system/Badge';
-import { Heading, Text } from '../../../components/ui';
+import { Heading, Text, Input, Textarea } from '../../../components/ui';
+import { Tile } from '../../../components/ui/design-system/Tile';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../../../components/ui/design-system/Dialog';
+import { Link } from 'react-router-dom';
 import { 
   FileText, 
   CheckSquare, 
@@ -126,12 +129,38 @@ export function MailContextSidebar({
 }: MailContextSidebarProps) {
   const [activeTab, setActiveTab] = useState<'context' | 'settings'>('context');
   const [mailSettings, setMailSettings] = useState<MailSettings>(defaultMailSettings);
+  const [quickAction, setQuickAction] = useState<null | 'task' | 'note' | 'event' | 'label'>(null);
+  const [qaState, setQaState] = useState({
+    title: '',
+    notes: '',
+    due: '',
+    startTime: '',
+    endTime: '',
+    label: ''
+  });
   
   // Get mail store
-  const { labelSettings, updateLabelSettings } = useMailStore();
+  const { labelSettings, updateLabelSettings, currentMessage } = useMailStore();
   
   // Get context data for the current message
   const contextData = getContextData(messageId);
+
+  // Prefill quick action dialogs from selected message
+  React.useEffect(() => {
+    if (!quickAction || !currentMessage) return;
+    if (quickAction === 'task' || quickAction === 'note' || quickAction === 'event') {
+      setQaState(prev => ({ ...prev, title: currentMessage.subject || prev.title }));
+    }
+    if (quickAction === 'event' && currentMessage?.date) {
+      const d = currentMessage.date;
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mi = String(d.getMinutes()).padStart(2, '0');
+      setQaState(prev => ({ ...prev, due: `${yyyy}-${mm}-${dd}`, startTime: hh + ':' + mi }));
+    }
+  }, [quickAction, currentMessage]);
   
   // If closed, show slim 40px gutter handle aligned like Canvas/Chat
   if (!isOpen) {
@@ -143,8 +172,7 @@ export function MailContextSidebar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginTop: '-24px',
-          flexShrink: 0
+          marginTop: '-24px'
         }}
       >
         <button
@@ -283,60 +311,40 @@ export function MailContextSidebar({
 
   return (
     <Card className="flex h-full w-80 shrink-0 flex-col" padding="none">
-      {/* Header with Tabs */}
-      <div className="border-border-default border-b">
-        <div className="p-4 pb-0">
-          <div className="flex items-start justify-between">
-            <div>
-              <Heading level={4} className="mb-1 text-primary">
-                {activeTab === 'context' ? 'Context' : 'Settings'}
-              </Heading>
-              <Text variant="secondary" size="sm">
-                {activeTab === 'context' 
-                  ? 'Related items for this message' 
-                  : 'Mail view preferences'}
-              </Text>
-            </div>
-            
-            {/* Close Button */}
-            {onToggle && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onToggle}
-                title="Hide context panel"
-                className="-mt-1 text-secondary hover:text-primary"
-              >
-                <PanelRight size={18} />
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="border-border-subtle mt-4 flex border-b">
-          <button
-            onClick={() => setActiveTab('context')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
-              activeTab === 'context'
-                ? 'border-accent-primary text-primary'
-                : 'border-transparent text-secondary hover:text-primary'
-            }`}
+      {/* Tabs row with toggle button - EXACTLY like Chat */}
+      <div className="border-border-subtle flex border-b p-2 pl-3">
+        <button
+          onClick={() => setActiveTab('context')}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
+            activeTab === 'context'
+              ? 'border-accent-primary text-primary'
+              : 'border-transparent text-secondary hover:text-primary'
+          }`}
+        >
+          <MessageSquare size={14} />
+          Context
+        </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
+            activeTab === 'settings'
+              ? 'border-accent-primary text-primary'
+              : 'border-transparent text-secondary hover:text-primary'
+          }`}
+        >
+          <Settings size={14} />
+          Settings
+        </button>
+        <div className="ml-auto pr-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            title="Hide context panel"
+            className="size-8 p-0 text-secondary hover:text-primary"
           >
-            <MessageSquare size={14} />
-            Context
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
-              activeTab === 'settings'
-                ? 'border-accent-primary text-primary'
-                : 'border-transparent text-secondary hover:text-primary'
-            }`}
-          >
-            <Settings size={14} />
-            Settings
-          </button>
+            <PanelRight size={18} strokeWidth={2} />
+          </Button>
         </div>
       </div>
 
@@ -346,26 +354,14 @@ export function MailContextSidebar({
           <div className="space-y-6">
             {/* Quick Actions */}
             <div>
-              <Text size="sm" weight="semibold" variant="body" className="mb-3">
+              <Text size="lg" weight="semibold" variant="body" className="mb-3 asana-text-lg">
                 Quick actions
               </Text>
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="justify-start">
-                  <CheckSquare size={14} />
-                  Create task
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start">
-                  <FileText size={14} />
-                  Take note
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start">
-                  <Calendar size={14} />
-                  Schedule
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start">
-                  <Tag size={14} />
-                  Add tag
-                </Button>
+                <Tile icon={<CheckSquare size={16} />} label="Create task" onClick={() => setQuickAction('task')} />
+                <Tile icon={<FileText size={16} />} label="Take note" onClick={() => setQuickAction('note')} />
+                <Tile icon={<Calendar size={16} />} label="Schedule" onClick={() => setQuickAction('event')} />
+                <Tile icon={<Tag size={16} />} label="Add label" onClick={() => setQuickAction('label')} />
               </div>
             </div>
 
@@ -618,6 +614,104 @@ export function MailContextSidebar({
           </div>
         )}
       </div>
+      {/* Quick Action Modals (centered) */}
+      {quickAction && (
+        <Dialog open={true} onOpenChange={(open) => { if (!open) setQuickAction(null); }}>
+          <DialogContent size="sm" className="overflow-x-hidden">
+            <DialogHeader>
+              <DialogTitle>
+                {quickAction === 'task' && 'Quick task'}
+                {quickAction === 'note' && 'Quick note'}
+                {quickAction === 'event' && 'Quick event'}
+                {quickAction === 'label' && 'Add label'}
+              </DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <div className="space-y-3">
+                {quickAction !== 'label' && (
+                  <Input
+                    type="text"
+                    placeholder={quickAction === 'note' ? 'Title (optional)' : 'Title'}
+                    value={qaState.title}
+                    onChange={(e) => setQaState({ ...qaState, title: e.target.value })}
+                  />
+                )}
+                {quickAction === 'note' && (
+                  <Textarea
+                    placeholder="Write a quick note..."
+                    value={qaState.notes}
+                    onChange={(e) => setQaState({ ...qaState, notes: e.target.value })}
+                    className="min-h-[100px]"
+                  />
+                )}
+                {(quickAction === 'task' || quickAction === 'event') && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="date"
+                      value={qaState.due}
+                      onChange={(e) => setQaState({ ...qaState, due: e.target.value })}
+                    />
+                    {quickAction === 'event' ? (
+                      <div className="grid grid-cols-2 gap-2 min-w-0">
+                        <Input
+                          type="time"
+                          value={qaState.startTime}
+                          onChange={(e) => setQaState({ ...qaState, startTime: e.target.value })}
+                          className="min-w-0"
+                        />
+                        <Input
+                          type="time"
+                          value={qaState.endTime}
+                          onChange={(e) => setQaState({ ...qaState, endTime: e.target.value })}
+                          className="min-w-0"
+                        />
+                      </div>
+                    ) : <div />}
+                  </div>
+                )}
+                {quickAction === 'label' && (
+                  <Input
+                    type="text"
+                    placeholder="Label name"
+                    value={qaState.label}
+                    onChange={(e) => setQaState({ ...qaState, label: e.target.value })}
+                  />
+                )}
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <div className="mr-auto flex items-center gap-2">
+                {quickAction === 'task' && (
+                  <Link to="/tasks" className="asana-text-sm text-[color:var(--brand-primary)] hover:underline">Go to tasks</Link>
+                )}
+                {quickAction === 'note' && (
+                  <Link to="/notes" className="asana-text-sm text-[color:var(--brand-primary)] hover:underline">Go to notes</Link>
+                )}
+                {quickAction === 'event' && (
+                  <Link to="/calendar" className="asana-text-sm text-[color:var(--brand-primary)] hover:underline">Go to calendar</Link>
+                )}
+                {/* no CTA for label */}
+              </div>
+              <Button variant="ghost" onClick={() => setQuickAction(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                disabled={
+                  (quickAction === 'task' && !qaState.title.trim()) ||
+                  (quickAction === 'event' && !qaState.title.trim()) ||
+                  (quickAction === 'label' && !qaState.label.trim())
+                }
+                onClick={() => {
+                  console.log('Mail quick action submitted:', quickAction, qaState);
+                  setQuickAction(null);
+                  setQaState({ title: '', notes: '', due: '', startTime: '', endTime: '', label: '' });
+                }}
+              >
+                {quickAction === 'label' ? 'Add' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 } 

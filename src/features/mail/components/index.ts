@@ -20,7 +20,7 @@ export { EnhancedMessageList } from './EnhancedMessageList';
 export { MailContextSidebar } from './MailContextSidebar';
 export { default as LabelPicker } from './LabelPicker';
 export { default as LabelFilter } from './LabelFilter';
-export { MailToolbar } from './MailToolbar';
+export { default as MailToolbar } from './MailToolbar';
 // Test component - archived
 // export { GmailTauriTestComponent } from './_archive/GmailTauriTestComponent';
 export { default as SearchSuggestions } from './SearchSuggestions';

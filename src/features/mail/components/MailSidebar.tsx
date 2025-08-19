@@ -261,7 +261,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     await fetchMessages(labelId);
   };
 
-  // If closed, show slim 40px gutter handle aligned like Canvas/Chat
+  // If closed, show slim 40px gutter handle aligned like Chat
   if (!isOpen) {
     return (
       <div
@@ -287,18 +287,18 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
             borderRadius: '6px',
             background: 'transparent',
             border: 'none',
-            color: '#7B8794',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
             transition: 'all 150ms ease',
             padding: 0
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#F4F6F8';
-            e.currentTarget.style.color = '#323F4B';
+            e.currentTarget.style.background = 'var(--bg-secondary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = '#7B8794';
+            e.currentTarget.style.color = 'var(--text-muted)';
           }}
         >
           <PanelRight size={18} strokeWidth={2} />

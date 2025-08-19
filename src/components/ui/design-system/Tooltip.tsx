@@ -31,7 +31,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   children,
   content,
   placement = 'top',
-  delay = 500,
+  delay = 250,
   disabled = false,
   className = '',
   contentClassName = '',
@@ -160,12 +160,13 @@ export const Tooltip: React.FC<TooltipProps> = ({
           role="tooltip"
           className={`
             fixed z-[var(--z-tooltip)]
-            px-[var(--space-1)] py-[var(--space-0-5)]
-            bg-[var(--text-primary)]
-            text-[color:var(--text-on-brand)]
-            asana-text-sm
+            px-[var(--space-1-5)] py-[var(--space-1)]
+            bg-[var(--bg-primary)]
+            text-[color:var(--text-primary)]
+            asana-text-base
             font-normal
-            rounded-[var(--radius-sm)]
+            rounded-[var(--radius-md)]
+            border border-[var(--border-default)]
             shadow-[var(--shadow-popover)]
             pointer-events-none
             animate-in fade-in-0 zoom-in-95
@@ -178,31 +179,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
           }}
         >
           {content}
-          <div
-            className="absolute w-2 h-2 bg-[var(--text-primary)] rotate-45"
-            style={{
-              ...(placement === 'top' && {
-                bottom: '-4px',
-                left: '50%',
-                transform: 'translateX(-50%) rotate(45deg)',
-              }),
-              ...(placement === 'bottom' && {
-                top: '-4px',
-                left: '50%',
-                transform: 'translateX(-50%) rotate(45deg)',
-              }),
-              ...(placement === 'left' && {
-                right: '-4px',
-                top: '50%',
-                transform: 'translateY(-50%) rotate(45deg)',
-              }),
-              ...(placement === 'right' && {
-                left: '-4px',
-                top: '50%',
-                transform: 'translateY(-50%) rotate(45deg)',
-              }),
-            }}
-          />
         </div>,
         document.body
       )}

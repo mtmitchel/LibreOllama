@@ -6,30 +6,34 @@ import {
   Mail, 
   Star, 
   Clock, 
-  MoreHorizontal,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  RotateCcw
+  ChevronDown,
+  RotateCcw,
+  FolderPlus
 } from 'lucide-react';
 import { Button, Text } from '../../../components/ui';
+import { Popover } from '../../../components/ui/design-system/Popover';
 import { Tooltip } from '../../../components/ui/design-system';
 import { Check } from 'lucide-react';
 import { useMailStore } from '../stores/mailStore';
 import { logger } from '../../../core/lib/logger';
 import { useShallow } from 'zustand/react/shallow';
 
-export function MailToolbar() {
+export default function MailToolbar() {
   // Use stable selectors to prevent infinite re-renders
   const selectedMessages = useMailStore(useShallow(state => state.selectedMessages));
   const { 
     selectAllMessages,
     clearSelection,
+    selectMessage,
     archiveMessages,
     deleteMessages,
     markAsRead,
     markAsUnread,
     starMessages,
+    addLabelsToMessages,
     fetchMessages,
     isLoadingMessages,
     resetPagination,
@@ -37,11 +41,13 @@ export function MailToolbar() {
   } = useMailStore(useShallow(state => ({
     selectAllMessages: state.selectAllMessages,
     clearSelection: state.clearSelection,
+    selectMessage: state.selectMessage,
     archiveMessages: state.archiveMessages,
     deleteMessages: state.deleteMessages,
     markAsRead: state.markAsRead,
     markAsUnread: state.markAsUnread,
     starMessages: state.starMessages,
+    addLabelsToMessages: state.addLabelsToMessages,
     fetchMessages: state.fetchMessages,
     isLoadingMessages: state.isLoadingMessages,
     resetPagination: state.resetPagination,
@@ -158,21 +164,94 @@ export function MailToolbar() {
     return `${days}d ago`;
   };
 
+  const [selectMenuOpen, setSelectMenuOpen] = React.useState(false);
+  const [moveMenuOpen, setMoveMenuOpen] = React.useState(false);
+
+  const applySelectFilter = (type: 'all' | 'none' | 'read' | 'unread' | 'starred' | 'unstarred') => {
+    const msgs = getMessages();
+    switch (type) {
+      case 'all':
+        selectAllMessages(true);
+        break;
+      case 'none':
+        clearSelection();
+        break;
+      case 'read':
+        setTimeout(() => {
+          const ids = msgs.filter(m => m.isRead).map(m => m.id);
+          clearSelection();
+          ids.forEach(id => selectMessage(id, true));
+        }, 0);
+        break;
+      case 'unread':
+        setTimeout(() => {
+          const ids = msgs.filter(m => !m.isRead).map(m => m.id);
+          clearSelection();
+          ids.forEach(id => selectMessage(id, true));
+        }, 0);
+        break;
+      case 'starred':
+        setTimeout(() => {
+          const ids = msgs.filter(m => m.isStarred).map(m => m.id);
+          clearSelection();
+          ids.forEach(id => selectMessage(id, true));
+        }, 0);
+        break;
+      case 'unstarred':
+        setTimeout(() => {
+          const ids = msgs.filter(m => !m.isStarred).map(m => m.id);
+          clearSelection();
+          ids.forEach(id => selectMessage(id, true));
+        }, 0);
+        break;
+    }
+    setSelectMenuOpen(false);
+  };
+
   return (
-    <div className="flex items-center justify-between gap-2 bg-tertiary px-4 py-3">
+    <div className="flex items-center justify-between gap-2 bg-primary border-b border-[var(--border-subtle)] px-4 py-3 rounded-t-md">
       {/* Left Side - Selection and Actions */}
       <div className="flex items-center gap-2">
         {/* Select All Checkbox */}
-        <div className="relative flex size-5 items-center justify-center">
-          <input
-            type="checkbox"
-            checked={isAllSelected}
-            ref={(input) => {
-              if (input) input.indeterminate = isPartiallySelected;
-            }}
-            onChange={handleSelectAll}
-            className="border-border-default focus:ring-accent-primary size-4 cursor-pointer rounded bg-transparent text-accent-primary focus:ring-1 focus:ring-offset-0"
-          />
+        <div className={`flex items-center gap-2 px-0 py-1 rounded-[10px] border ${selectMenuOpen ? 'border-[var(--border-default)] bg-[var(--bg-secondary)]' : 'border-transparent bg-transparent'}`}>
+          <div className="w-6 flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              ref={(input) => {
+                if (input) input.indeterminate = isPartiallySelected;
+              }}
+              onChange={handleSelectAll}
+              className="border-border-default size-4 cursor-pointer rounded bg-primary text-accent-primary focus:ring-accent-primary focus:ring-1 focus:ring-offset-0 box-border p-0"
+              title={isAllSelected ? 'Deselect all' : 'Select all'}
+            />
+          </div>
+          <Popover
+            open={selectMenuOpen}
+            onOpenChange={setSelectMenuOpen}
+            placement="bottom-start"
+            contentClassName="rounded-[12px]"
+            offset={6}
+            showArrow={false}
+            content={(
+              <div role="menu" className="min-w-[180px] w-auto py-1 px-1 z-[10000]">
+                {['All','None','Read','Unread','Starred','Unstarred'].map((label) => (
+                  <button
+                    key={label}
+                    role="menuitem"
+                    className="block w-full rounded-[8px] px-3 py-1.5 text-left asana-text-base leading-snug hover:bg-[var(--bg-secondary)] focus:bg-[var(--bg-secondary)]"
+                    onClick={() => applySelectFilter(label.toLowerCase() as any)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          >
+            <Button variant="ghost" size="icon" className="p-0 text-secondary" onClick={() => setSelectMenuOpen(!selectMenuOpen)} title="Selection options" aria-haspopup="menu" aria-expanded={selectMenuOpen} style={{ width: 16, height: 16, borderRadius: 4 }}>
+              <ChevronDown size={12} />
+            </Button>
+          </Popover>
         </div>
 
         {/* Refresh Button */}
@@ -199,73 +278,129 @@ export function MailToolbar() {
           <>
             <div className="bg-border-default mx-1 h-6 w-px" />
             
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleArchive}
-              className="size-8 text-secondary hover:text-primary"
-              title="Archive"
-            >
-              <Archive size={16} />
-            </Button>
+            <Tooltip content="Archive" placement="bottom" delay={100}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleArchive}
+                className="size-8 text-secondary hover:text-primary"
+                aria-label="Archive"
+                title="Archive"
+              >
+                <Archive size={16} />
+              </Button>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDelete}
-              className="size-8 text-secondary hover:text-primary"
-              title="Delete"
-            >
-              <Trash2 size={16} />
-            </Button>
+            <Tooltip content="Delete" placement="bottom" delay={100}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDelete}
+                className="size-8 text-secondary hover:text-primary"
+                aria-label="Delete"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </Button>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleMarkAsRead}
-              className="size-8 text-secondary hover:text-primary"
-              title="Mark as read"
-            >
-              <MailOpen size={16} />
-            </Button>
+            <Tooltip content="Mark as read" placement="bottom" delay={100}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleMarkAsRead}
+                className="size-8 text-secondary hover:text-primary"
+                aria-label="Mark as read"
+                title="Mark as read"
+              >
+                <MailOpen size={16} />
+              </Button>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleMarkAsUnread}
-              className="size-8 text-secondary hover:text-primary"
-              title="Mark as unread"
-            >
-              <Mail size={16} />
-            </Button>
+            <Tooltip content="Mark as unread" placement="bottom" delay={100}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleMarkAsUnread}
+                className="size-8 text-secondary hover:text-primary"
+                aria-label="Mark as unread"
+                title="Mark as unread"
+              >
+                <Mail size={16} />
+              </Button>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleStar}
-              className="size-8 text-secondary hover:text-primary"
-              title="Add star"
-            >
-              <Star size={16} />
-            </Button>
+            <Tooltip content="Star" placement="bottom" delay={100}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleStar}
+                className="size-8 text-secondary hover:text-primary"
+                aria-label="Star"
+                title="Star"
+              >
+                <Star size={16} />
+              </Button>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 text-secondary hover:text-primary"
-              title="Snooze"
+            {/* Move To */}
+            <Popover
+              open={moveMenuOpen}
+              onOpenChange={setMoveMenuOpen}
+              placement="bottom-start"
+              contentClassName="rounded-[12px]"
+              offset={6}
+              showArrow={false}
+              content={(
+                <div role="menu" className="min-w-[220px] w-auto py-1 px-1 z-[10000]">
+                  {labels
+                    .filter(l => l.type === 'user')
+                    .map(label => (
+                      <button
+                        key={label.id}
+                        role="menuitem"
+                        className="block w-full rounded-[8px] px-3 py-1.5 text-left asana-text-base leading-snug hover:bg-[var(--bg-secondary)] focus:bg-[var(--bg-secondary)]"
+                        onClick={async () => {
+                          await addLabelsToMessages(selectedMessages, [label.id]);
+                          // If currently viewing INBOX, remove INBOX by archiving
+                          if (currentLabel === 'INBOX' || currentView === 'INBOX') {
+                            await archiveMessages(selectedMessages);
+                          }
+                          setMoveMenuOpen(false);
+                        }}
+                      >
+                        {label.name}
+                      </button>
+                    ))}
+                </div>
+              )}
             >
-              <Clock size={16} />
-            </Button>
+              <Tooltip content="Move to" placement="bottom" delay={100}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-secondary hover:text-primary"
+                  aria-label="Move to"
+                  title="Move to"
+                >
+                  <FolderPlus size={16} />
+                </Button>
+              </Tooltip>
+            </Popover>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 text-secondary hover:text-primary"
-              title="More"
-            >
-              <MoreHorizontal size={16} />
-            </Button>
+            <Tooltip content="Snooze" placement="bottom" delay={100}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 text-secondary hover:text-primary"
+                aria-label="Snooze"
+                title="Snooze"
+              >
+                <Clock size={16} />
+              </Button>
+            </Tooltip>
+
+            {/* Removed overflow menu as all required actions are present */}
 
             <div className="bg-border-default mx-1 h-6 w-px" />
             
