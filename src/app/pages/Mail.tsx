@@ -71,12 +71,15 @@ export default function Mail() {
               />
             </div>
 
-            {/* Mail Toolbar */}
-            <MailToolbar />
+            {/* Mail Content with aligned grid */}
+            <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
+              {/* Mail Toolbar */}
+              <MailToolbar />
 
-            {/* Message List */}
-            <div className="asana-mail-content-body" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <EnhancedMessageList showActionBar={false} />
+              {/* Message List */}
+              <div className="asana-mail-content-body" style={{ minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <EnhancedMessageList showActionBar={false} />
+              </div>
             </div>
           </Card>
         </div>

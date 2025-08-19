@@ -167,7 +167,7 @@ export function EnhancedMessageItem({
     <>
       <div
         ref={itemRef}
-        className={`border-border-default relative flex cursor-pointer items-center gap-2 border-b px-3 py-2 motion-safe:transition-all motion-safe:duration-200 ${
+        className={`border-border-default relative grid grid-cols-[40px_40px_1fr_auto] cursor-pointer items-center gap-0 border-b h-14 motion-safe:transition-all motion-safe:duration-200 ${
           isCurrentMessage 
             ? 'bg-[var(--accent-primary)]/10' 
             : isSelected
@@ -181,27 +181,22 @@ export function EnhancedMessageItem({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Selection Checkbox */}
-        {showCheckbox ? (
-          <div className="shrink-0 flex items-center justify-center">
-            <button
-              className="checkbox-button inline-flex size-4 items-center justify-center rounded-[3px] border border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--border-focus)] shadow-none motion-safe:transition-colors motion-safe:duration-150 box-border p-0"
-              onClick={handleCheckboxChange}
+        {/* Selection Checkbox Column */}
+        <div className="col-start-1 flex items-center justify-center h-full">
+          {showCheckbox && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={handleCheckboxChange}
+              onClick={(e) => e.stopPropagation()}
+              className="size-4 cursor-pointer rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--accent-primary)] focus:ring-[var(--accent-primary)] focus:ring-1 focus:ring-offset-0"
               title={isSelected ? 'Deselect message' : 'Select message'}
-            >
-              {isSelected ? (
-                <Check size={12} className="text-[var(--accent-primary)]" />
-              ) : (
-                <Square size={12} className="text-transparent" />
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="w-6" />
-        )}
+            />
+          )}
+        </div>
 
-        {/* Star Button */}
-        <div className="shrink-0 flex items-center justify-center">
+        {/* Star Button Column */}
+        <div className="col-start-2 flex items-center justify-center h-full">
           <button
             className="action-button rounded p-1 hover:bg-[var(--bg-tertiary)] motion-safe:transition-colors motion-safe:duration-150"
             onClick={handleQuickStar}
@@ -216,8 +211,8 @@ export function EnhancedMessageItem({
           </button>
         </div>
 
-        {/* Message Content - single line with proper truncation */}
-        <div className="min-w-0 flex-1 flex items-center gap-2">
+        {/* Message Content Column */}
+        <div className="col-start-3 min-w-0 flex items-center gap-2 px-2">
           {/* Sender */}
           <span 
             className={`shrink-0 text-sm w-44 truncate ${
@@ -257,8 +252,8 @@ export function EnhancedMessageItem({
           </div>
         </div>
 
-        {/* Date and Quick Actions */}
-        <div className="flex shrink-0 items-center gap-2">
+        {/* Date and Quick Actions Column */}
+        <div className="col-start-4 flex items-center gap-2 px-3">
           {/* Quick Actions - shown on hover */}
           {(isHovered || isSelected) && (
             <div className="flex items-center gap-1">

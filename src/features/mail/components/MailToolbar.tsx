@@ -209,50 +209,53 @@ export default function MailToolbar() {
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 bg-primary border-b border-[var(--border-subtle)] px-4 py-3 rounded-t-md">
-      {/* Left Side - Selection and Actions */}
-      <div className="flex items-center gap-2">
-        {/* Select All Checkbox */}
-        <div className={`flex items-center gap-2 px-0 py-1 rounded-[10px] border ${selectMenuOpen ? 'border-[var(--border-default)] bg-[var(--bg-secondary)]' : 'border-transparent bg-transparent'}`}>
-          <div className="w-6 flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={isAllSelected}
-              ref={(input) => {
-                if (input) input.indeterminate = isPartiallySelected;
-              }}
-              onChange={handleSelectAll}
-              className="border-border-default size-4 cursor-pointer rounded bg-primary text-accent-primary focus:ring-accent-primary focus:ring-1 focus:ring-offset-0 box-border p-0"
-              title={isAllSelected ? 'Deselect all' : 'Select all'}
-            />
-          </div>
-          <Popover
-            open={selectMenuOpen}
-            onOpenChange={setSelectMenuOpen}
-            placement="bottom-start"
-            contentClassName="rounded-[12px]"
-            offset={6}
-            showArrow={false}
-            content={(
-              <div role="menu" className="min-w-[180px] w-auto py-1 px-1 z-[10000]">
-                {['All','None','Read','Unread','Starred','Unstarred'].map((label) => (
-                  <button
-                    key={label}
-                    role="menuitem"
-                    className="block w-full rounded-[8px] px-3 py-1.5 text-left asana-text-base leading-snug hover:bg-[var(--bg-secondary)] focus:bg-[var(--bg-secondary)]"
-                    onClick={() => applySelectFilter(label.toLowerCase() as any)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          >
-            <Button variant="ghost" size="icon" className="p-0 text-secondary" onClick={() => setSelectMenuOpen(!selectMenuOpen)} title="Selection options" aria-haspopup="menu" aria-expanded={selectMenuOpen} style={{ width: 16, height: 16, borderRadius: 4 }}>
-              <ChevronDown size={12} />
-            </Button>
-          </Popover>
-        </div>
+    <div className="grid grid-cols-[40px_40px_1fr_auto] items-center gap-0 bg-primary border-b border-[var(--border-subtle)] h-12 rounded-t-md">
+      {/* Checkbox Column */}
+      <div className="col-start-1 flex items-center justify-center h-full">
+        <input
+          type="checkbox"
+          checked={isAllSelected}
+          ref={(input) => {
+            if (input) input.indeterminate = isPartiallySelected;
+          }}
+          onChange={handleSelectAll}
+          className="size-4 cursor-pointer rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--accent-primary)] focus:ring-[var(--accent-primary)] focus:ring-1 focus:ring-offset-0"
+          title={isAllSelected ? 'Deselect all' : 'Select all'}
+        />
+      </div>
+
+      {/* Dropdown Column */}
+      <div className="col-start-2 flex items-center justify-center h-full">
+        <Popover
+          open={selectMenuOpen}
+          onOpenChange={setSelectMenuOpen}
+          placement="bottom-start"
+          contentClassName="rounded-[12px]"
+          offset={6}
+          showArrow={false}
+          content={(
+            <div role="menu" className="min-w-[180px] w-auto py-1 px-1 z-[10000]">
+              {['All','None','Read','Unread','Starred','Unstarred'].map((label) => (
+                <button
+                  key={label}
+                  role="menuitem"
+                  className="block w-full rounded-[8px] px-3 py-1.5 text-left asana-text-base leading-snug hover:bg-[var(--bg-secondary)] focus:bg-[var(--bg-secondary)]"
+                  onClick={() => applySelectFilter(label.toLowerCase() as any)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        >
+          <Button variant="ghost" size="icon" className="p-0 text-secondary" onClick={() => setSelectMenuOpen(!selectMenuOpen)} title="Selection options" aria-haspopup="menu" aria-expanded={selectMenuOpen} style={{ width: 16, height: 16, borderRadius: 4 }}>
+            <ChevronDown size={12} />
+          </Button>
+        </Popover>
+      </div>
+
+      {/* Actions Column */}
+      <div className="col-start-3 flex items-center gap-2 px-2">
 
         {/* Refresh Button */}
         <Button
@@ -412,7 +415,7 @@ export default function MailToolbar() {
       </div>
 
       {/* Right Side - Pagination */}
-      <div className="flex items-center gap-2">
+      <div className="col-start-4 flex items-center gap-2 px-3">
         {/* Pagination Display */}
         <Text size="sm" variant="secondary">
           {(() => {

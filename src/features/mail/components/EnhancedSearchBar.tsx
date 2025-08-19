@@ -56,6 +56,7 @@ export function EnhancedSearchBar({
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchFormRef = useRef<HTMLFormElement>(null);
   const suggestionsRef = useRef<HTMLInputElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -219,7 +220,7 @@ export function EnhancedSearchBar({
   return (
     <>
       <div className={`relative flex items-center justify-center ${className}`} style={{ padding: '12px 24px', height: '64px', width: '100%' }}>
-        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="relative" style={{ width: '100%', maxWidth: '480px' }}>
+        <form ref={searchFormRef} onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="relative" style={{ width: '100%', maxWidth: '480px' }}>
           <div 
             className={`relative flex items-center transition-all duration-200`}
             style={{
@@ -339,6 +340,7 @@ export function EnhancedSearchBar({
         onClose={() => setShowAdvancedFilters(false)}
         onSearch={handleSearch}
         initialQuery={inputValue}
+        anchorRef={searchFormRef}
       />
     </>
   );

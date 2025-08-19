@@ -312,16 +312,18 @@ export function EnhancedMessageList({
 
       {/* Message List */}
       <div className="mail-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-[var(--bg-primary)]">
-        {processedMessages.map((message) => (
-          <EnhancedMessageItem
-            key={message.id}
-            message={message}
-            isSelected={localSelectedMessages.includes(message.id)}
-            onSelect={handleMessageSelect}
-            onClick={handleMessageClick}
-            compactMode={true}
-          />
-        ))}
+        <div className="mail-list-container">
+          {processedMessages.map((message) => (
+            <EnhancedMessageItem
+              key={message.id}
+              message={message}
+              isSelected={localSelectedMessages.includes(message.id)}
+              onSelect={handleMessageSelect}
+              onClick={handleMessageClick}
+              compactMode={true}
+            />
+          ))}
+        </div>
 
         {/* Loading More Indicator */}
         {isLoadingMessages && messages.length > 0 && (
