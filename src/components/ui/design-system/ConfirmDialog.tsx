@@ -8,7 +8,7 @@ import {
   DialogDescription,
   DialogFooter
 } from './Dialog';
-import { Button } from './Button';
+import { Button, type ButtonProps } from './Button';
 
 /**
  * Design System ConfirmDialog Component
@@ -30,6 +30,15 @@ export interface ConfirmDialogProps {
   variant?: 'default' | 'destructive' | 'warning' | 'info' | 'success';
   showIcon?: boolean;
   loading?: boolean;
+  /**
+   * Optional override for the confirm button visual style.
+   * Useful for higher-contrast alternatives like outline.
+   */
+  confirmButtonVariant?: ButtonProps['variant'];
+  /**
+   * Optional additional classes for the confirm button.
+   */
+  confirmButtonClassName?: string;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -43,6 +52,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   variant = 'default',
   showIcon = true,
   loading = false,
+  confirmButtonVariant,
+  confirmButtonClassName,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -67,13 +78,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     success: <CheckCircle className="text-[var(--semantic-success)]" size={20} />,
   };
 
-  const buttonVariants = {
+  const variantToButtonVariant = {
     default: 'primary' as const,
     destructive: 'destructive' as const,
     warning: 'primary' as const,
     info: 'primary' as const,
     success: 'primary' as const,
   };
+  const resolvedConfirmVariant = confirmButtonVariant || variantToButtonVariant[variant];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,9 +112,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             {cancelText}
           </Button>
           <Button
-            variant={buttonVariants[variant]}
+            variant={resolvedConfirmVariant}
             onClick={handleConfirm}
             disabled={isProcessing || loading}
+            className={confirmButtonClassName}
           >
             {isProcessing || loading ? 'Processing...' : confirmText}
           </Button>

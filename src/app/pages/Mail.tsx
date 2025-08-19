@@ -63,7 +63,7 @@ export default function Mail() {
         {/* Main Mail Area */}
         <div className="asana-mail-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
           
-          <Card className="flex h-full w-full" padding="none" style={{ display: 'flex', flexDirection: 'column' }}>
+          <Card className="flex h-full w-full rounded-xl overflow-hidden" padding="none" style={{ display: 'flex', flexDirection: 'column' }}>
             {/* Enhanced Search Bar */}
             <div style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)' }}>
               <EnhancedSearchBar 

@@ -12,6 +12,7 @@ interface InlineReplyProps {
 
 export function InlineReply({ originalMessage, replyType, onClose }: InlineReplyProps) {
   const { sendEmail } = useMailStore();
+  const store = useMailStore.getState();
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
   const [subject, setSubject] = useState('');
@@ -69,6 +70,13 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
       // Simulate send delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Auto-archive after reply if enabled
+      const settings = store.settings;
+      const current = store.currentMessage;
+      if (settings.mailAutoArchiveAfterReply && current) {
+        await store.archiveMessages([current.id], current.accountId);
+      }
+
       // Close the reply section
       onClose();
     } catch (error) {

@@ -116,6 +116,24 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
   if (!isOpen) return null;
 
   const renderModalContent = () => {
+    const CloseButton = (
+      <button
+        type="button"
+        aria-label="Close"
+        className="absolute top-3 right-3 rounded-md text-secondary hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--border-focus)]"
+        onClick={() => { if (!isLoading) onClose(); }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5">
+          <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 11-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+    );
+    const wrap = (content: React.ReactNode) => (
+      <div className="relative w-full max-w-lg">
+        {CloseButton}
+        {content}
+      </div>
+    );
     const googleIcon = (
       <svg className="size-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -127,7 +145,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
 
     switch (authStep) {
       case 'ready':
-        return (
+        return wrap(
           <Card className="w-full max-w-lg">
             <div className="p-6">
               <div className="mb-6 text-center">
@@ -173,7 +191,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         );
 
       case 'browser':
-        return (
+        return wrap(
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-blue-100">
@@ -195,7 +213,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         );
 
       case 'processing':
-        return (
+        return wrap(
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-blue-100">
@@ -226,7 +244,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         );
 
       case 'success':
-        return (
+        return wrap(
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-100">
@@ -266,7 +284,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         );
 
       case 'error':
-        return (
+        return wrap(
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-red-100">
@@ -311,10 +329,28 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     return modalContent;
   }
 
-  // Default full-screen modal with backdrop
+  // Default full-screen modal with backdrop and close affordance
   return (
-    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
-      {modalContent}
+    <div
+      className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={() => {!isLoading && onClose();}}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Connect Google account"
+    >
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          aria-label="Close"
+          className="absolute -top-3 -right-3 rounded-full bg-white shadow p-1 text-secondary hover:text-primary"
+          onClick={() => {!isLoading && onClose();}}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5">
+            <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 11-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
+          </svg>
+        </button>
+        {modalContent}
+      </div>
     </div>
   );
 } 

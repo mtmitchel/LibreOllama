@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
-import { Card } from '../../../components/ui/design-system/Card';
 import { Badge } from '../../../components/ui/design-system/Badge';
 import { Text, Caption } from '../../../components/ui';
 import { 
@@ -58,7 +57,7 @@ function StorageInfo({
     return (
       <div className="py-2 text-center">
         <Text size="xs" variant="tertiary">
-          {isRefreshing ? 'Loading storage info...' : 'Storage info unavailable'}
+          {isRefreshing ? 'Loading storage info...' : 'Storage info is unavailable'}
         </Text>
       </div>
     );
@@ -222,7 +221,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     ...(hasSnoozedLabel ? [{ id: 'snoozed', name: 'Snoozed', icon: Clock, count: getLabelCount('SNOOZED') }] : []),
     { id: 'sent', name: 'Sent', icon: Send, count: getLabelCount('SENT') },
     { id: 'drafts', name: 'Drafts', icon: FileText, count: getLabelCount('DRAFT') },
-    { id: 'all', name: 'All mail', icon: Archive },
+    { id: 'all', name: 'All mail', icon: Archive, count: getLabelCount('UNREAD') },
     { id: 'spam', name: 'Spam', icon: AlertTriangle, count: getLabelCount('SPAM') },
     { id: 'trash', name: 'Trash', icon: Trash2, count: getLabelCount('TRASH') },
   ];
@@ -308,9 +307,8 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
   }
 
   return (
-    <Card 
-      className="flex h-full w-[340px] shrink-0 flex-col"
-      padding="md"
+    <div 
+      className="flex h-full w-[340px] shrink-0 flex-col overflow-hidden rounded-xl bg-[var(--bg-primary)] shadow-sm"
     >
       {/* Header */}
       <div 
@@ -334,22 +332,22 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       </div>
 
       {/* Compose Button */}
-      <div className="mb-4">
+      <div className="px-4 pb-3">
         <Button
           onClick={() => startCompose()}
           variant="primary"
           className="w-full"
           size="default"
         >
-          <Edit size={18} />
+          <Edit size={16} />
           Compose
         </Button>
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto pr-1">
+      <div className="flex-1 overflow-y-auto">
         {/* Main Folders */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col">
           {mainFolders.map((folder) => {
             const Icon = folder.icon;
             
@@ -369,90 +367,69 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
             const isActive = currentView === expectedView;
             
             return (
-              <Card
+              <button
                 key={folder.id}
-                padding="none"
-                className={`group relative cursor-pointer ${
+                className={`group relative flex w-full items-center px-4 h-9 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] focus-visible:ring-offset-0 ${
                   isActive 
-                    ? 'border-selected bg-selected' 
-                    : 'border-transparent hover:bg-hover'
+                    ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' 
+                    : 'hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
                 onClick={() => handleFolderClick(folder.id)}
               >
-                <div className="p-3">
-                  <div className="flex items-center gap-3">
-                    <Icon 
-                      size={18} 
-                      className={`shrink-0 ${isActive ? 'text-selected' : 'text-secondary'}`} 
-                    />
-                    <Text 
-                      size="sm" 
-                      weight={isActive ? "semibold" : "medium"}
-                      variant={isActive ? "body" : "secondary"}
-                      className="flex-1 truncate"
-                    >
-                      {folder.name}
-                    </Text>
-                    <div className="flex min-w-[24px] items-center justify-center">
-                      {folder.count && folder.count > 0 && (
-                        <Badge variant="secondary" className="text-[11px]">
-                          {folder.count}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-0 top-1 bottom-1"
+                    style={{ width: 2, background: 'var(--accent-primary)', borderRadius: 1 }}
+                  />
+                )}
+                <Icon 
+                  size={16} 
+                  className={`shrink-0 ${isActive ? 'text-[var(--text-primary)]' : ''}`} 
+                />
+                <span className={`flex-1 text-sm ml-3 ${isActive ? 'font-semibold' : ''}`}>
+                  {folder.name}
+                </span>
+                <span className={`flex items-center justify-center min-w-[28px] text-xs ${isActive ? 'font-semibold' : 'text-[var(--text-tertiary)]'}`}>
+                  {folder.count && folder.count > 0 ? folder.count : ''}
+                </span>
+              </button>
             );
           })}
         </div>
 
         {/* Labels Section */}
-        <div className="mt-6">
-          <Card
-            padding="none"
-          >
-            <div className="p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div 
-                  className="flex flex-1 cursor-pointer items-center gap-2"
-                  onClick={() => setLabelsExpanded(!labelsExpanded)}
-                >
-                  {labelsExpanded ? (
-                    <ChevronDown size={16} className="text-secondary" />
-                  ) : (
-                    <ChevronRight size={16} className="text-secondary" />
-                  )}
-                  <Caption 
-                    className="font-semibold uppercase tracking-wider"
-                  >
-                    Labels
-                  </Caption>
-                </div>
-                
-                {/* Label Action Buttons */}
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-primary hover:text-primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLabelManagerMode('manage');
-                      setIsLabelManagerOpen(true);
-                    }}
-                    title="Manage labels"
-                  >
-                    <Settings size={18} />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
+        <div className="mt-4 border-t border-[var(--border-subtle)] pt-3">
+          <div className="flex items-center justify-between px-4 pb-2">
+            <button 
+              className="flex items-center gap-1 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              onClick={() => setLabelsExpanded(!labelsExpanded)}
+            >
+              {labelsExpanded ? (
+                <ChevronDown size={14} />
+              ) : (
+                <ChevronRight size={14} />
+              )}
+              <span>Labels</span>
+            </button>
+            
+            {/* Add label button */}
+            <button
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1 hover:bg-[var(--bg-secondary)] rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLabelManagerMode('manage');
+                setIsLabelManagerOpen(true);
+              }}
+              title="Create new label"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
 
           {labelsExpanded && (
-            <div className="mt-2">
-              <div className="flex flex-col gap-1">
+            <div>
+              <div className="flex flex-col">
                 {labels.length > 0 ? (
                   labels.filter(label => 
                     label.type === 'user'
@@ -461,42 +438,33 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                     const isActive = currentLabel === label.id;
                     
                     return (
-                      <Card
+                      <button
                         key={label.id}
-                        padding="none"
-                        className={`group relative cursor-pointer ${
+                        className={`group relative flex w-full items-center px-4 py-1.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] focus-visible:ring-offset-0 ${
                           isActive 
-                            ? 'border-selected bg-selected' 
-                            : 'border-transparent hover:bg-hover'
+                            ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' 
+                            : 'hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                         }`}
                         onClick={() => handleLabelClick(label.id)}
                       >
-                        <div className="p-3">
-                          <div 
-                            className="flex items-center gap-3"
-                          >
-                            <Tag 
-                              size={16} 
-                              className={`shrink-0 ${isActive ? 'text-selected' : 'text-secondary'}`} 
-                            />
-                            <Text 
-                              size="sm" 
-                              weight={isActive ? "semibold" : "medium"}
-                              variant={isActive ? "body" : "secondary"}
-                              className="flex-1 truncate"
-                            >
-                              {label.name}
-                            </Text>
-                            <div className="flex min-w-[24px] items-center justify-center">
-                              {label.threadsUnread && label.threadsUnread > 0 && (
-                                <Badge variant="secondary" className="text-[11px]">
-                                  {label.threadsUnread}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
+                        {isActive && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute left-0 top-1 bottom-1"
+                            style={{ width: 2, background: 'var(--accent-primary)', borderRadius: 1 }}
+                          />
+                        )}
+                        <Tag 
+                          size={14} 
+                          className="shrink-0" 
+                        />
+                        <span className={`flex-1 text-sm truncate ml-3 ${isActive ? 'font-semibold' : ''}`}>
+                          {label.name}
+                        </span>
+                        <span className={`flex items-center justify-center min-w-[28px] text-xs ${isActive ? 'font-semibold' : 'text-[var(--text-tertiary)]'}`}>
+                          {label.threadsUnread && label.threadsUnread > 0 ? label.threadsUnread : ''}
+                        </span>
+                      </button>
                     );
                   })
                 ) : (
@@ -513,7 +481,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       </div>
 
       {/* Storage Info */}
-      <div className="border-border-subtle mt-auto border-t p-4">
+      <div className="border-t border-[var(--border-subtle)] mt-auto px-4 py-3">
         {activeAccount ? (
           <StorageInfo 
             account={activeAccount} 
@@ -555,6 +523,6 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       />
 
 
-    </Card>
+    </div>
   );
 }

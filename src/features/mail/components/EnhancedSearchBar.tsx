@@ -219,7 +219,7 @@ export function EnhancedSearchBar({
 
   return (
     <>
-      <div className={`relative flex items-center justify-center ${className}`} style={{ padding: '12px 24px', height: '64px', width: '100%' }}>
+      <div className={`relative flex items-center justify-center ${className}`} style={{ padding: '12px 24px', height: '64px', width: '100%', backgroundColor: 'var(--bg-primary)' }}>
         <form ref={searchFormRef} onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="relative" style={{ width: '100%', maxWidth: '480px' }}>
           <div 
             className={`relative flex items-center transition-all duration-200`}
@@ -340,7 +340,7 @@ export function EnhancedSearchBar({
         onClose={() => setShowAdvancedFilters(false)}
         onSearch={handleSearch}
         initialQuery={inputValue}
-        anchorRef={searchFormRef}
+        anchorRef={searchFormRef as React.RefObject<HTMLElement>}
       />
     </>
   );

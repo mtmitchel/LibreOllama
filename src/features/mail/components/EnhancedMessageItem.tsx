@@ -134,7 +134,7 @@ export function EnhancedMessageItem({
     onClick(message);
   }, [onClick, message]);
 
-  const handleCheckboxChange = useCallback((e: React.MouseEvent) => {
+  const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     onSelect(message.id, !isSelected);
   }, [onSelect, message.id, isSelected]);
@@ -163,6 +163,7 @@ export function EnhancedMessageItem({
   // Check if this message is currently selected/viewed
   const isCurrentMessage = currentMessage?.id === message.id;
 
+  const ui = useMailStore(state => state.settings);
   return (
     <>
       <div
@@ -231,7 +232,7 @@ export function EnhancedMessageItem({
             >
               {subjectDisplay}
             </span>
-            {snippetDisplay && (
+            {ui.mailShowPreview && snippetDisplay && (
               <>
                 <span className="mx-1 text-sm text-[var(--text-tertiary)]">-</span>
                 <span className="text-sm text-[var(--text-tertiary)] truncate">

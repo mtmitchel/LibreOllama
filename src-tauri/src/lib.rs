@@ -180,6 +180,9 @@ pub fn run() {
             commands::gmail::api::modify_gmail_messages,
             commands::gmail::api::trash_gmail_messages,
             commands::gmail::api::get_gmail_attachment,
+            // Gmail image proxy commands
+            commands::gmail::image_proxy::proxy_image_cached,
+            commands::gmail::image_proxy::clear_image_proxy_cache,
             // Project commands (gated)
             #[cfg(feature = "projects-admin")] commands::projects::get_projects,
             // Agent commands (gated)

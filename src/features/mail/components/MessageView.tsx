@@ -14,6 +14,7 @@ import { Button, Text, Card } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { ParsedEmail, EmailAddress } from '../types';
 import { EnhancedMessageRenderer } from './EnhancedMessageRenderer';
+import { EmailRenderer } from './EmailRenderer';
 import { EnhancedMessageActions } from './EnhancedMessageActions';
 import { safeDecodeHtmlEntities } from '../utils/htmlDecode';
 import { InlineReply } from './InlineReply';
@@ -198,7 +199,8 @@ function AttachmentList({ attachments }: AttachmentListProps) {
 
 export function MessageView() {
   const { currentMessage } = useMailStore();
-  const [showImages, setShowImages] = React.useState(true);
+  const settings = useMailStore(state => state.settings);
+  const [showImages, setShowImages] = React.useState(settings.mailAlwaysShowImages);
   const [replyMode, setReplyMode] = React.useState<'reply' | 'reply_all' | 'forward' | null>(null);
 
   if (!currentMessage) {
@@ -244,12 +246,19 @@ export function MessageView() {
 
       {/* Message Content - Scrollable */}
       <div className="mail-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-white px-6 py-4">
-        <EnhancedMessageRenderer 
-          message={currentMessage}
-          enableImageLoading={showImages}
-          enableLinkPreview={false}
-          showRawSource={false}
-        />
+        {settings.mailUseReactLetterRenderer ? (
+          <EmailRenderer 
+            message={currentMessage}
+            showRawSource={false}
+          />
+        ) : (
+          <EnhancedMessageRenderer 
+            message={currentMessage}
+            enableImageLoading={showImages}
+            enableLinkPreview={false}
+            showRawSource={false}
+          />
+        )}
       </div>
 
       {/* Action Buttons - Only show if not in reply mode */}

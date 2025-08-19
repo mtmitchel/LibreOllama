@@ -2,9 +2,14 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Copy, ExternalLink, Shield, AlertTriangle } from 'lucide-react';
 import { Text, Button } from '../../../components/ui';
 import { ParsedEmail, EmailAddress } from '../types';
+import GmailParsingService from '../services/gmailParsingService';
 import 'highlight.js/styles/github.css';
 import { logger } from '../../../core/lib/logger';
 import { sanitizeEmailHtml, sanitizePlainText, extractQuotedContent } from '../utils/secureSanitizer';
+import { createIconFallbackElement, cacheCidUrl, getCachedCidUrl, clearCidCache } from '../utils/iconFallbacks';
+import { useMailStore } from '../stores/mailStore';
+import { imageProxyService } from '../services/imageProxyService';
+import { ShadowEmailRenderer } from './ShadowEmailRenderer';
 
 interface EnhancedMessageRendererProps {
   message: ParsedEmail;
@@ -20,6 +25,7 @@ interface MessageContentProps {
   enableImageLoading: boolean;
   enableLinkPreview: boolean;
   onLinkClick?: (url: string) => void;
+  message?: ParsedEmail;
 }
 
 interface QuotedTextProps {
@@ -38,14 +44,14 @@ function SecurityWarning({ warnings, onDismiss }: SecurityWarningProps) {
   if (warnings.length === 0) return null;
 
   return (
-    <div className="bg-warning-bg mb-4 rounded-lg border border-warning p-4">
+    <div className="mb-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3">
       <div className="flex items-start gap-3">
-        <Shield className="mt-0.5 size-5 shrink-0 text-warning" />
+        <Shield className="mt-0.5 size-4 shrink-0 text-[var(--warning)]" />
         <div className="flex-1">
-          <Text size="sm" weight="semibold" className="mb-1 text-warning-fg">
-            Security Notice
+          <Text size="sm" weight="semibold" className="mb-1 text-[var(--text-secondary)]">
+            Security notice
           </Text>
-          <ul className="space-y-1 asana-text-sm text-warning-fg">
+          <ul className="space-y-1 asana-text-sm text-[var(--text-secondary)]">
             {warnings.map((warning, index) => (
               <li key={index}>• {warning}</li>
             ))}
@@ -55,7 +61,7 @@ function SecurityWarning({ warnings, onDismiss }: SecurityWarningProps) {
           variant="ghost"
           size="sm"
           onClick={onDismiss}
-          className="text-warning hover:text-warning-fg"
+          className="text-secondary hover:text-primary"
         >
           Dismiss
         </Button>
@@ -105,30 +111,91 @@ function QuotedText({ content, isExpanded, onToggle }: QuotedTextProps) {
 }
 
 // Enhanced message content renderer
-function MessageContent({ content, contentType, enableImageLoading, enableLinkPreview, onLinkClick }: MessageContentProps) {
+function MessageContent({ content, contentType, enableImageLoading, enableLinkPreview, onLinkClick, message }: MessageContentProps) {
   const [processedContent, setProcessedContent] = useState('');
   const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
-  const [showWarnings, setShowWarnings] = useState(true);
+  const [showWarnings, setShowWarnings] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Process and sanitize content
   useEffect(() => {
-    if (contentType === 'html') {
-      const result = sanitizeEmailHtml(content, {
-        allowImages: enableImageLoading,
+    const processHtml = async () => {
+      if (contentType !== 'html') {
+        const sanitized = sanitizePlainText(content);
+        setProcessedContent(sanitized);
+        setSecurityWarnings([]);
+        return;
+      }
+
+      // Proxy all external images to bypass CORS
+      let htmlToProcess = content;
+      if (enableImageLoading) {
+        try {
+          logger.info('Proxying images for email content');
+          htmlToProcess = await imageProxyService.proxyImagesInHtml(content);
+        } catch (error) {
+          logger.error('Failed to proxy images:', error);
+        }
+      }
+
+      // Resolve cid: inline images to blob URLs before sanitization
+      if (enableImageLoading && message) {
+        const cidRegex = /<img([^>]*?)src=("|')cid:([^"']+)(\2)([^>]*?)>/gi;
+        const replacements: Array<Promise<{ match: string; replacement: string }>> = [];
+        htmlToProcess.replace(cidRegex, (full) => {
+          const exec = cidRegex.exec(full);
+          cidRegex.lastIndex = 0;
+          if (!exec) return full;
+          const pre = exec[1] || '';
+          const cid = exec[3]?.replace(/[<>]/g, '') || '';
+          const post = exec[5] || '';
+          const att = message.attachments?.find(a => (a.contentId || '').replace(/[<>]/g, '') === cid);
+          if (att && message.accountId && message.messageId) {
+            // Check cache first
+            const cached = getCachedCidUrl(cid);
+            if (cached) {
+              replacements.push(Promise.resolve({ match: full, replacement: `<img${pre}src="${cached}"${post}>` }));
+            } else {
+              const p = GmailParsingService.getGmailAttachment(message.accountId, message.messageId, att.id)
+                .then((data) => {
+                  const blob = new Blob([data], { type: att.mimeType || 'application/octet-stream' });
+                  const url = URL.createObjectURL(blob);
+                  cacheCidUrl(cid, url); // Cache for future use
+                  return { match: full, replacement: `<img${pre}src="${url}"${post}>` };
+                })
+                .catch(() => ({ match: full, replacement: full }));
+              replacements.push(p);
+            }
+          }
+          return full;
+        });
+
+        if (replacements.length > 0) {
+          const done = await Promise.all(replacements);
+          done.forEach(({ match, replacement }) => {
+            htmlToProcess = htmlToProcess.replace(match, replacement);
+          });
+        }
+      }
+
+      const result = sanitizeEmailHtml(htmlToProcess, {
+        allowImages: true, // Always allow images through sanitization
         allowExternalLinks: true,
-        allowStyles: false, // Block styles for security
+        allowStyles: true, // allow safe inline styles so marketing emails render correctly
         allowTables: true,
+        maxNestingDepth: 50,
       });
       setProcessedContent(result.sanitized);
       setSecurityWarnings(result.warnings);
-    } else {
-      // Sanitize plain text and convert to safe HTML
-      const sanitized = sanitizePlainText(content);
-      setProcessedContent(sanitized);
-      setSecurityWarnings([]);
-    }
-  }, [content, contentType, enableImageLoading]);
+    };
+
+    processHtml();
+    
+    // Cleanup CID cache on unmount or message change
+    return () => {
+      clearCidCache();
+    };
+  }, [content, contentType, enableImageLoading, message?.id]);
 
   // Link clicks are now handled globally by LinkPreviewProvider
   // No need for local link handling here
@@ -147,9 +214,9 @@ function MessageContent({ content, contentType, enableImageLoading, enableLinkPr
         className={`message-content ${contentType === 'html' ? 'html-content' : 'text-content'} text-text-primary max-w-full break-words font-sans asana-text-sm leading-relaxed`}
       >
         {contentType === 'html' ? (
-          <div
-            dangerouslySetInnerHTML={{ __html: processedContent }}
-            className="prose prose-sm dark:prose-invert max-w-none"
+          <ShadowEmailRenderer 
+            html={processedContent}
+            className="email-shadow-content"
           />
         ) : (
           <pre className="whitespace-pre-wrap font-sans asana-text-sm leading-relaxed">
@@ -255,13 +322,18 @@ export function EnhancedMessageRenderer({
       </div>
 
       {/* Main content */}
-      <MessageContent
-        content={main}
-        contentType={showSource ? 'text' : contentType}
-        enableImageLoading={enableImageLoading}
-        enableLinkPreview={enableLinkPreview}
-        onLinkClick={undefined}
-      />
+      <div className="email-viewer-container">
+        <div className="email-content-wrapper">
+          <MessageContent
+            content={main}
+            contentType={showSource ? 'text' : contentType}
+            enableImageLoading={enableImageLoading}
+            enableLinkPreview={enableLinkPreview}
+            onLinkClick={undefined}
+            message={message}
+          />
+        </div>
+      </div>
 
       {/* Quoted text */}
       {quoted && !showSource && (
@@ -272,141 +344,25 @@ export function EnhancedMessageRenderer({
         />
       )}
 
-      {/* Enhanced styling */}
+      {/* Minimal styling for container only - Shadow DOM handles email isolation */}
       <style>{`
-        .enhanced-message-renderer .html-content {
+        .email-viewer-container {
+          contain: layout style paint;
+          isolation: isolate;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          width: 100%;
+        }
+        .email-content-wrapper {
+          width: 100%;
           max-width: 100%;
+          overflow-wrap: break-word;
         }
-        
-        .enhanced-message-renderer .html-content * {
-          max-width: 100% !important;
-          word-wrap: break-word !important;
-          overflow-wrap: break-word !important;
-        }
-        
-        .enhanced-message-renderer .html-content img {
-          max-width: 100% !important;
-          height: auto !important;
-          border-radius: var(--radius-md);
-          margin: 8px 0;
-          box-shadow: var(--shadow-md);
-        }
-        
-        .enhanced-message-renderer .html-content table {
-          max-width: 100% !important;
-          border-collapse: collapse;
-          margin: 12px 0;
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-md);
-          overflow: hidden;
-        }
-        
-        .enhanced-message-renderer .html-content th,
-        .enhanced-message-renderer .html-content td {
-          padding: 8px 12px;
-          border: 1px solid var(--border-default);
-          text-align: left;
-        }
-        
-        .enhanced-message-renderer .html-content th {
-          background: var(--bg-secondary);
-          font-weight: 600;
-        }
-        
-        .enhanced-message-renderer .html-content blockquote {
-          border-left: 4px solid var(--accent-primary);
-          padding: 12px 16px;
-          margin: 16px 0;
-          background: var(--bg-secondary);
-          border-radius: 0 var(--radius-md) var(--radius-md) 0;
-          font-style: italic;
-        }
-        
-        .enhanced-message-renderer .html-content .external-link {
-          color: var(--accent-primary);
-          text-decoration: underline;
-          text-decoration-color: var(--accent-primary);
-          text-underline-offset: 2px;
-        }
-        
-        .enhanced-message-renderer .html-content .external-link:hover {
-          color: var(--accent-primary-hover);
-          text-decoration-color: var(--accent-primary-hover);
-        }
-        
-        .enhanced-message-renderer .html-content .external-link::after {
-          content: " ↗";
-          font-size: 0.8em;
-          opacity: 0.7;
-        }
-        
-        .enhanced-message-renderer .html-content pre {
-          background: var(--bg-secondary);
-          padding: 16px;
-          border-radius: var(--radius-lg);
-          overflow-x: auto;
-          margin: 16px 0;
-          border: 1px solid var(--border-default);
-          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-          font-size: 13px;
-          line-height: 1.4;
-        }
-        
-        .enhanced-message-renderer .html-content code {
-          background: var(--bg-secondary);
-          padding: 2px 6px;
-          border-radius: var(--radius-sm);
-          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-          font-size: 13px;
-          border: 1px solid var(--border-default);
-        }
-        
-        .enhanced-message-renderer .html-content ul,
-        .enhanced-message-renderer .html-content ol {
-          margin: 12px 0;
-          padding-left: 24px;
-        }
-        
-        .enhanced-message-renderer .html-content li {
-          margin: 6px 0;
-          line-height: 1.5;
-        }
-        
-        .enhanced-message-renderer .html-content h1,
-        .enhanced-message-renderer .html-content h2,
-        .enhanced-message-renderer .html-content h3,
-        .enhanced-message-renderer .html-content h4,
-        .enhanced-message-renderer .html-content h5,
-        .enhanced-message-renderer .html-content h6 {
-          margin: 20px 0 12px 0;
-          font-weight: 600;
-          line-height: 1.3;
-          color: var(--text-primary);
-        }
-        
-        .enhanced-message-renderer .html-content h1 { font-size: 1.5em; }
-        .enhanced-message-renderer .html-content h2 { font-size: 1.3em; }
-        .enhanced-message-renderer .html-content h3 { font-size: 1.2em; }
-        .enhanced-message-renderer .html-content h4 { font-size: 1.1em; }
-        .enhanced-message-renderer .html-content h5 { font-size: 1.05em; }
-        .enhanced-message-renderer .html-content h6 { font-size: 1em; }
-        
-        .enhanced-message-renderer .html-content p {
-          margin: 12px 0;
-          line-height: 1.6;
-        }
-        
-        .enhanced-message-renderer .blocked-image {
-          background: var(--bg-secondary) !important;
-          border: 1px dashed var(--border-default) !important;
-          padding: 16px !important;
-          text-align: center !important;
-          color: var(--text-secondary) !important;
-          font-size: 12px !important;
-          border-radius: var(--radius-md) !important;
-          margin: 8px 0 !important;
+        .shadow-email-container {
+          width: 100%;
         }
       `}</style>
     </div>
   );
-} 
+}

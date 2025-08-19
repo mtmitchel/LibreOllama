@@ -23,6 +23,7 @@ import { Button } from '../../components/ui/design-system/Button';
 import { Card } from '../../components/ui/design-system/Card';
 import { Input, Heading, Text, Checkbox } from '../../components/ui';
 import { SimpleDialog as ConfirmationModal } from '../../components/ui/design-system';
+import { ConfirmDialog as DSConfirmDialog } from '../../components/ui/design-system/ConfirmDialog';
 import { useHeader } from '../contexts/HeaderContext';
 import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModal';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
@@ -1692,8 +1693,13 @@ const Settings: React.FC = () => {
 
         {/* Google Authentication Modal - positioned relative to main content area */}
         {showGoogleAuthModal && (
-          <div className="bg-bg-overlay absolute inset-0 z-50 flex items-center justify-center rounded-lg p-6">
-            <div className="w-full max-w-md">
+          <div
+            className="bg-bg-overlay absolute inset-0 z-50 flex items-center justify-center rounded-lg p-6"
+            onClick={() => setShowGoogleAuthModal(false)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
               <GoogleAuthModal
                 isOpen={showGoogleAuthModal}
                 onClose={() => setShowGoogleAuthModal(false)}
@@ -1724,22 +1730,19 @@ const Settings: React.FC = () => {
           </div>
         )}
 
-        {/* Account Removal Confirmation Modal */}
-        <ConfirmationModal
+        {/* Account Removal Confirmation Dialog (Design System) */}
+        <DSConfirmDialog
           open={!!accountToRemove}
           onOpenChange={(open) => { if (!open) setAccountToRemove(null); }}
-          title="Remove Google account"
-          description={accountToRemove ? 
-            `Are you sure you want to remove ${accountToRemove.email} from LibreOllama?\n\nThis will:\n• Remove the account from this app\n• Revoke LibreOllama's access to Google services\n• Clear all cached data for this account\n\nYou can always reconnect this account later if needed.` 
-            : ''
-          }
-          footer={(
-            <div className="flex items-center justify-end gap-2 w-full">
-              <Button variant="ghost" onClick={() => setAccountToRemove(null)}>Keep account</Button>
-              <Button variant="destructive" onClick={confirmRemoveAccount}>Remove account</Button>
-            </div>
-          )}
-          size="sm"
+          onConfirm={confirmRemoveAccount}
+          title="Remove Google account?"
+          description={accountToRemove ? `Remove ${accountToRemove.email} from LibreOllama. This will revoke access and clear cached data. You can reconnect later.` : ''}
+          variant="destructive"
+          confirmText="Remove account"
+          cancelText="Keep account"
+          showIcon={false}
+          confirmButtonVariant="outline"
+          confirmButtonClassName="text-[color:var(--status-error)] border-[var(--status-error)] hover:bg-[var(--status-error-bg)] hover:text-[color:var(--status-error)]"
         />
       </div>
     </div>

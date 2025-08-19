@@ -231,6 +231,8 @@ export interface EmailAttachment {
   mimeType: string;
   size: number;
   data?: string;
+  contentId?: string;
+  isInline?: boolean;
 }
 
 export interface EmailThread {
@@ -325,6 +327,15 @@ export interface MailState {
     maxAttachmentSize: number; // in bytes
     defaultSendFrom?: string;
     readReceipts: boolean;
+    // Mail UI preferences
+    mailCompactView: boolean;
+    mailShowPreview: boolean;
+    mailAutoMarkAsRead: boolean;
+    mailMarkAsReadDelay: number; // seconds
+    mailAutoArchiveAfterReply: boolean;
+    mailAlwaysShowImages: boolean;
+    mailUseSystemIconFallbacks?: boolean; // Replace failed tiny images with design-system icons
+    mailUseReactLetterRenderer?: boolean; // Use react-letter for email rendering (experimental)
   };
   
   // Filters and sorting

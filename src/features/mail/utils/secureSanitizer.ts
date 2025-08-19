@@ -32,18 +32,20 @@ const DEFAULT_OPTIONS: SanitizationOptions = {
   maxNestingDepth: 10,
 };
 
-// Email-specific allowed tags
-const ALLOWED_TAGS = [
+// Email-specific allowed tags (base)
+const BASE_ALLOWED_TAGS = [
   'a', 'abbr', 'b', 'blockquote', 'br', 'cite', 'code', 'dd', 'dl', 'dt',
   'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'li', 'ol', 'p',
   'pre', 'q', 's', 'small', 'span', 'strong', 'sub', 'sup', 'u', 'ul',
-  'div', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr',
+  'div', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'center',
 ];
 
-// Safe attributes for email content
-const ALLOWED_ATTRIBUTES = [
+// Safe attributes for email content (base)
+const BASE_ALLOWED_ATTRIBUTES = [
   'href', 'title', 'alt', 'colspan', 'rowspan', 'scope',
   'start', 'type', 'value', 'width', 'height',
+  // Legacy/ESP layout attributes
+  'align', 'valign', 'cellpadding', 'cellspacing', 'bgcolor', 'border', 'background',
 ];
 
 // Dangerous URL schemes to block
@@ -64,9 +66,30 @@ export function sanitizeEmailHtml(
   const riskyAttributes: string[] = [];
 
   // Configure DOMPurify
+  // Build allowed tags/attributes based on options
+  const dynamicAllowedTags = new Set(BASE_ALLOWED_TAGS);
+  if (config.allowTables) {
+    // tables already included in base
+  } else {
+    ['table','tbody','td','tfoot','th','thead','tr'].forEach(t => dynamicAllowedTags.delete(t as any));
+  }
+  if (config.allowImages) {
+    dynamicAllowedTags.add('img' as any);
+  }
+
+  const dynamicAllowedAttrs = new Set(BASE_ALLOWED_ATTRIBUTES);
+  if (config.allowStyles) {
+    ['style','class'].forEach(a => dynamicAllowedAttrs.add(a as any));
+  }
+  if (config.allowImages) {
+    ['src','loading','decoding','referrerpolicy','crossorigin','sizes','srcset','alt'].forEach(a => dynamicAllowedAttrs.add(a as any));
+    // Common lazy-load attributes we may promote to src
+    ['data-src','data-original','data-lazy-src'].forEach(a => dynamicAllowedAttrs.add(a as any));
+  }
+
   const purifyConfig: DOMPurify.Config = {
-    ALLOWED_TAGS: config.allowTables ? ALLOWED_TAGS : ALLOWED_TAGS.filter(tag => !['table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr'].includes(tag)),
-    ALLOWED_ATTR: config.allowStyles ? [...ALLOWED_ATTRIBUTES, 'style', 'class'] : ALLOWED_ATTRIBUTES,
+    ALLOWED_TAGS: Array.from(dynamicAllowedTags) as string[],
+    ALLOWED_ATTR: Array.from(dynamicAllowedAttrs) as string[],
     ALLOW_DATA_ATTR: false,
     KEEP_CONTENT: true,
     FORCE_BODY: true,
@@ -79,7 +102,7 @@ export function sanitizeEmailHtml(
 
   // Add hooks to track what's being removed
   DOMPurify.addHook('uponSanitizeElement', (node, data) => {
-    if (data.tagName && !config.allowImages && data.tagName === 'img') {
+    if (data.tagName && data.tagName === 'img' && !config.allowImages) {
       blockedElements.push('img');
       warnings.push('Images blocked for security');
       
@@ -95,17 +118,105 @@ export function sanitizeEmailHtml(
     }
   });
 
+  // Normalize attributes after sanitation (runs for each allowed element)
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    // Dual image sizing strategy for broad client compatibility
+    if (node.nodeName === 'IMG' && config.allowImages) {
+      const img = node as HTMLImageElement;
+      // Promote common lazy attrs to src if still present
+      if (!img.getAttribute('src')) {
+        const lazy = img.getAttribute('data-src') || img.getAttribute('data-original') || img.getAttribute('data-lazy-src');
+        if (lazy) img.setAttribute('src', lazy);
+      }
+      // Ensure images actually load within our viewer
+      img.setAttribute('loading', 'eager');
+      img.setAttribute('decoding', 'async');
+      if (!img.getAttribute('crossorigin')) img.setAttribute('crossorigin', 'anonymous');
+      if (!img.getAttribute('referrerpolicy')) img.setAttribute('referrerpolicy', 'no-referrer');
+      // Ensure CSS width mirrors width/height attributes (if numeric), keep responsive scaling
+      const style = img.getAttribute('style') || '';
+      const widthAttr = img.getAttribute('width');
+      const heightAttr = img.getAttribute('height');
+      let newStyle = style;
+      if (widthAttr && /^(\d+)$/.test(widthAttr) && !/\bwidth\s*:/i.test(style)) {
+        newStyle += `; width: ${widthAttr}px;`;
+      }
+      if (heightAttr && /^(\d+)$/.test(heightAttr) && !/\bheight\s*:/i.test(style)) {
+        newStyle += `; height: ${heightAttr}px;`;
+      }
+      if (!/\bmax-width\s*:/i.test(newStyle)) newStyle += '; max-width: 100%;';
+      if (!heightAttr && !/\bheight\s*:/i.test(newStyle)) newStyle += '; height: auto;';
+      img.setAttribute('style', newStyle.replace(/^;\s*/, ''));
+    }
+  });
+
   DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
     // Check for dangerous URL schemes
     if (data.attrName === 'href' || data.attrName === 'src') {
-      const value = data.attrValue.toLowerCase().trim();
+      const value = data.attrValue.trim();
+      const lower = value.toLowerCase();
+      // Allow data:image/* ONLY for <img src>
+      if (data.attrName === 'src' && node.nodeName === 'IMG' && lower.startsWith('data:')) {
+        if (/^data:image\//i.test(lower)) {
+          data.keepAttr = true;
+          return;
+        }
+        riskyAttributes.push('img src with non-image data URI');
+        warnings.push('Blocked non-image data URI');
+        data.keepAttr = false;
+        return;
+      }
       for (const scheme of BLOCKED_URL_SCHEMES) {
-        if (value.startsWith(scheme)) {
+        if (lower.startsWith(scheme)) {
           riskyAttributes.push(`${data.attrName} with ${scheme}`);
           warnings.push(`Blocked potentially malicious URL: ${scheme}`);
           data.keepAttr = false;
           return;
         }
+      }
+    }
+
+    // Validate background attribute URLs (legacy HTML attr)
+    if (data.attrName === 'background') {
+      const value = data.attrValue.trim().toLowerCase();
+      if (!(value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image/'))) {
+        riskyAttributes.push('background with unsupported scheme');
+        data.keepAttr = false;
+        return;
+      }
+    }
+
+    // Filter inline styles to a safe allowlist while preserving layout fidelity
+    if (data.attrName === 'style') {
+      const allowlist = [
+        'margin', 'margin-left', 'margin-right', 'margin-top', 'margin-bottom',
+        'padding', 'padding-left', 'padding-right', 'padding-top', 'padding-bottom',
+        'width', 'max-width', 'min-width', 'height', 'max-height', 'min-height',
+        'text-align', 'vertical-align', 'display', 'line-height', 'font-size', 'font-family', 'font-weight', 'letter-spacing', 'color', 'text-decoration', 'text-decoration-color',
+        'background', 'background-color', 'background-image', 'background-repeat', 'background-position',
+        'border', 'border-top', 'border-right', 'border-bottom', 'border-left', 'border-radius', 'border-collapse', 'border-spacing',
+        'table-layout', 'mso-padding-alt', 'mso-table-lspace', 'mso-table-rspace', 'mso-line-height-rule', 'position',
+      ];
+      const original = data.attrValue;
+      const parts = original.split(';').map(p => p.trim()).filter(Boolean);
+      const safeParts: string[] = [];
+      for (const decl of parts) {
+        const idx = decl.indexOf(':');
+        if (idx === -1) continue;
+        const prop = decl.slice(0, idx).trim().toLowerCase();
+        const val = decl.slice(idx + 1).trim();
+        if (allowlist.includes(prop) || prop.startsWith('mso-')) {
+          // Block position:fixed and z-index escalations
+          if (prop === 'position' && /fixed/i.test(val)) continue;
+          if (prop === 'z-index') continue;
+          safeParts.push(`${prop}:${val}`);
+        }
+      }
+      if (safeParts.length > 0) {
+        data.attrValue = safeParts.join(';');
+        data.keepAttr = true;
+      } else {
+        data.keepAttr = false;
       }
     }
 
@@ -130,6 +241,18 @@ export function sanitizeEmailHtml(
     sanitized = sanitized.replace(/<img[^>]*>/gi, 
       '<div class="blocked-image" style="background: #f3f4f6; border: 1px dashed #d1d5db; padding: 8px; text-align: center; color: #6b7280; font-size: 12px;">🖼️ Image blocked</div>'
     );
+  }
+
+  // Promote lazy-load image attributes to src when images are allowed (post pass for stubborn cases)
+  if (config.allowImages) {
+    sanitized = sanitized
+      .replace(/<img([^>]*?)\sdata-src=("|')([^"']+)(\2)([^>]*)>/gi, '<img$1 src="$3"$5>')
+      .replace(/<img([^>]*?)\sdata-original=("|')([^"']+)(\2)([^>]*)>/gi, '<img$1 src="$3"$5>')
+      .replace(/<img([^>]*?)\sdata-lazy-src=("|')([^"']+)(\2)([^>]*)>/gi, '<img$1 src="$3"$5>')
+      .replace(/<img([^>]*?)\sdata-srcset=("|')([^"']+)(\2)([^>]*)>/gi, '<img$1 srcset="$3"$5>');
+    // Remove dimensions that are percentage strings applied as width/height attributes
+    sanitized = sanitized.replace(/(<img[^>]*?\swidth=("|')\d+%\2[^>]*?>)/gi, (m) => m.replace(/\swidth=("|')\d+%\1/i, ''));
+    sanitized = sanitized.replace(/(<img[^>]*?\sheight=("|')\d+%\2[^>]*?>)/gi, (m) => m.replace(/\sheight=("|')\d+%\1/i, ''));
   }
 
   // Check for deep nesting (potential DoS attack)

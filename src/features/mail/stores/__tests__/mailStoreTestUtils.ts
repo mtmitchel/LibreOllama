@@ -180,6 +180,12 @@ export const createTestMailStore = () => {
           emailSignature: '',
           maxAttachmentSize: 25,
           readReceipts: true,
+          mailCompactView: false,
+          mailShowPreview: true,
+          mailAutoMarkAsRead: false,
+          mailMarkAsReadDelay: 3000,
+          mailAutoArchiveAfterReply: false,
+          mailAlwaysShowImages: false,
         },
         // Pagination
 

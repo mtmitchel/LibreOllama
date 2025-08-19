@@ -209,7 +209,7 @@ export default function MailToolbar() {
   };
 
   return (
-    <div className="grid grid-cols-[40px_40px_1fr_auto] items-center gap-0 bg-primary border-b border-[var(--border-subtle)] h-12 rounded-t-md">
+    <div className="grid grid-cols-[40px_40px_1fr_auto] items-center gap-0 bg-primary border-b border-[var(--border-subtle)] h-12">
       {/* Checkbox Column */}
       <div className="col-start-1 flex items-center justify-center h-full">
         <input

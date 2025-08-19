@@ -121,7 +121,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
           </label>
         )}
         
-        <div ref={containerRef} className="relative">
+        <div ref={containerRef} className={`relative ${isOpen ? 'mb-2' : ''}`}>
           <button
             type="button"
             onClick={() => !disabled && setIsOpen(!isOpen)}

@@ -152,7 +152,7 @@ export function SimpleAdvancedSearch({
         top: `${rect.bottom + 8}px`,
         left: `${rect.left}px`,
         width: `${rect.width}px`,
-        zIndex: 50
+        zIndex: 1100
       };
     }
     // Fallback to center positioning
@@ -162,14 +162,14 @@ export function SimpleAdvancedSearch({
       left: '50%',
       transform: 'translateX(-50%)',
       width: '480px',
-      zIndex: 50
+      zIndex: 1100
     };
   };
 
   return (
     <>
-      {/* Overlay */}
-      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
+      {/* Overlay (ensure above any sticky headers) */}
+      <div className="fixed inset-0 bg-black/20" style={{ zIndex: 1000 }} onClick={onClose} />
       
       {/* Modal positioned directly under search bar */}
       <div style={getModalStyle()}>

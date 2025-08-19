@@ -14,20 +14,20 @@ import { cva, type VariantProps } from 'class-variance-authority';
 const toggleSwitchVariants = cva(
   `
     relative inline-flex
-    rounded-full border-2 border-transparent
+    rounded-full border
     transition-[var(--transition-property)]
     duration-[var(--transition-duration)]
     ease-in-out
     focus:outline-none
-    focus:ring-2 focus:ring-[var(--border-focus)] focus:ring-offset-2
+    focus:ring-2 focus:ring-[var(--asana-border-focus,var(--border-focus))] focus:ring-offset-2
     disabled:cursor-not-allowed disabled:opacity-50
   `,
   {
     variants: {
       size: {
-        sm: 'w-8 h-5',
-        md: 'w-10 h-6',
-        lg: 'w-12 h-7',
+        sm: 'w-8 h-4',
+        md: 'w-10 h-5',
+        lg: 'w-12 h-6',
       },
       variant: {
         default: '',
@@ -44,34 +44,34 @@ const toggleSwitchVariants = cva(
       {
         variant: 'default',
         checked: true,
-        className: 'bg-[var(--brand-primary)]',
+        className: 'bg-[var(--accent-primary)] border-[var(--accent-primary)]',
       },
       {
         variant: 'default',
         checked: false,
-        className: 'bg-[var(--bg-muted)]',
+        className: 'bg-[var(--bg-secondary)] border-[var(--border-default)]',
       },
       // Success variant
       {
         variant: 'success',
         checked: true,
-        className: 'bg-[var(--status-success)]',
+        className: 'bg-[var(--semantic-success,var(--success))] border-[var(--semantic-success,var(--success))]',
       },
       {
         variant: 'success',
         checked: false,
-        className: 'bg-[var(--bg-muted)]',
+        className: 'bg-[var(--bg-secondary)] border-[var(--border-default)]',
       },
       // Subtle variant
       {
         variant: 'subtle',
         checked: true,
-        className: 'bg-[var(--status-success)]',
+        className: 'bg-[var(--accent-primary)]/40 border-[var(--accent-primary)]/40',
       },
       {
         variant: 'subtle',
         checked: false,
-        className: 'bg-[var(--bg-subtle)]',
+        className: 'bg-[var(--bg-secondary)] border-[var(--border-default)]',
       },
     ],
     defaultVariants: {
@@ -107,17 +107,17 @@ const toggleThumbVariants = cva(
       {
         size: 'sm',
         checked: true,
-        className: 'translate-x-3',
+        className: 'translate-x-4',
       },
       {
         size: 'md',
         checked: true,
-        className: 'translate-x-4',
+        className: 'translate-x-5',
       },
       {
         size: 'lg',
         checked: true,
-        className: 'translate-x-5',
+        className: 'translate-x-6',
       },
     ],
     defaultVariants: {
@@ -163,12 +163,12 @@ export const Toggle: React.FC<ToggleProps> = ({
       aria-labelledby={ariaLabelledBy}
       aria-describedby={ariaDescribedBy}
       disabled={disabled}
-      className={toggleSwitchVariants({ size, variant, checked, className })}
+      className={toggleSwitchVariants({ size, variant, checked, className: `shadow-[var(--asana-shadow-sm,var(--shadow-sm))] ${className}` })}
       onClick={() => !disabled && onChange(!checked)}
     >
-      <span className="sr-only">
-        {checked ? 'Enabled' : 'Disabled'}
-      </span>
+      <span className="sr-only">{checked ? 'On' : 'Off'}</span>
+      {/* Visible state text for clarity */}
+      {/* Keep UI clean per system; rely on color and thumb position */}
       <span
         className={toggleThumbVariants({ size, checked })}
         aria-hidden="true"

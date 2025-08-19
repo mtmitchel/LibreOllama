@@ -23,6 +23,8 @@ export function convertProcessedGmailMessage(
       mimeType: att.content_type || 'application/octet-stream',
       size: Number(att.size) || 0,
       data: att.data ? Array.from(att.data).map(b => String.fromCharCode(Number(b))).join('') : undefined,
+      contentId: att.content_id,
+      isInline: Boolean(att.is_inline),
     })) || [];
   };
 

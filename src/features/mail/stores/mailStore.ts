@@ -118,6 +118,14 @@ const initialState: MailState = {
     emailSignature: '',
     maxAttachmentSize: 25,
     readReceipts: true,
+    mailCompactView: true,
+    mailShowPreview: false,
+    mailAutoMarkAsRead: false,
+    mailMarkAsReadDelay: 2,
+    mailAutoArchiveAfterReply: false,
+    mailAlwaysShowImages: true,
+    mailUseSystemIconFallbacks: true, // Replace failed tiny images with design-system icons
+    mailUseReactLetterRenderer: false, // Use react-letter for email rendering (experimental)
   },
 
   // Filters and sorting
@@ -767,6 +775,13 @@ const useMailStore = create<EnhancedMailStore>()(
             set((state) => {
               state.error = handledError.message;
               state.isLoadingMessages = false;
+              // Clear stale auth errors on successful fetch
+              state.connectionStatus = 'connected';
+              if (state.accounts[targetAccountId]) {
+                state.accounts[targetAccountId].syncStatus = 'idle';
+                state.accounts[targetAccountId].errorMessage = undefined as any;
+              }
+              state.lastSyncTime = new Date();
             });
           }
         },
@@ -1164,6 +1179,13 @@ const useMailStore = create<EnhancedMailStore>()(
               // Update labels with real data
               logger.debug(`🏷️ [STORE] Setting ${labels.length} labels for account:`, targetAccountId);
               state.accountData[targetAccountId].labels = labels;
+              // Clear stale auth errors on success
+              state.connectionStatus = 'connected';
+              if (state.accounts[targetAccountId]) {
+                state.accounts[targetAccountId].syncStatus = 'idle';
+                state.accounts[targetAccountId].errorMessage = undefined as any;
+              }
+              state.lastSyncTime = new Date();
             });
           } catch (error) {
             logger.error('❌ [STORE] Failed to fetch labels:', error);

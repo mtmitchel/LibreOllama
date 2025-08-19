@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
-import { Card } from '../../../components/ui/design-system/Card';
 import { Badge } from '../../../components/ui/design-system/Badge';
 import { Heading, Text, Input, Textarea } from '../../../components/ui';
+import { ToggleRow, Select, Dialog as DSDialog } from '../../../components/ui/design-system';
 import { Tile } from '../../../components/ui/design-system/Tile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../../../components/ui/design-system/Dialog';
 import { Link } from 'react-router-dom';
@@ -24,6 +24,7 @@ import {
   Settings,
   RotateCcw,
   List,
+  Wrench,
   MessageCircle,
   Eye,
   Archive
@@ -128,8 +129,28 @@ export function MailContextSidebar({
   onListViewTypeChange
 }: MailContextSidebarProps) {
   const [activeTab, setActiveTab] = useState<'context' | 'settings'>('context');
-  const [mailSettings, setMailSettings] = useState<MailSettings>(defaultMailSettings);
+  const storeSettings = useMailStore(state => state.settings);
+  const updateSettings = useMailStore(state => state.updateSettings);
+  const [mailSettings, setMailSettings] = useState<MailSettings>({
+    viewMode: 'threaded',
+    listType: 'enhanced',
+    compactView: storeSettings.mailCompactView,
+    showPreview: storeSettings.mailShowPreview,
+    markAsReadDelay: storeSettings.mailMarkAsReadDelay,
+    autoMarkAsRead: storeSettings.mailAutoMarkAsRead,
+    autoArchive: storeSettings.mailAutoArchiveAfterReply,
+    showImages: storeSettings.mailAlwaysShowImages,
+  });
+  // Feature availability (now backed by store)
+  const isListTypeConfigurable = true;
+  const isMessageViewConfigurable = true;
+  const isCompactViewConfigurable = true;
+  const isShowPreviewConfigurable = true;
+  const isAutoMarkAsReadConfigurable = true;
+  const isAutoArchiveConfigurable = true;
+  const isShowImagesConfigurable = true;
   const [quickAction, setQuickAction] = useState<null | 'task' | 'note' | 'event' | 'label'>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [qaState, setQaState] = useState({
     title: '',
     notes: '',
@@ -243,10 +264,9 @@ export function MailContextSidebar({
           className="gap-2 space-y-2"
         >
           {items.map(item => (
-            <Card
+            <div
               key={item.id}
-              padding="sm"
-              className="border-border-default cursor-pointer border transition-colors hover:bg-surface"
+              className="border-border-default cursor-pointer border rounded-lg p-2 transition-colors hover:bg-surface"
             >
               <div 
                 className="flex items-start gap-2"
@@ -284,7 +304,7 @@ export function MailContextSidebar({
                   <ExternalLink size={12} />
                 </Button>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       </div>
@@ -293,7 +313,14 @@ export function MailContextSidebar({
 
   const handleMailSettingsChange = (key: keyof MailSettings, value: any) => {
     setMailSettings(prev => ({ ...prev, [key]: value }));
-    
+    // Persist to store settings
+    if (key === 'compactView') updateSettings({ mailCompactView: value as boolean });
+    if (key === 'showPreview') updateSettings({ mailShowPreview: value as boolean });
+    if (key === 'autoMarkAsRead') updateSettings({ mailAutoMarkAsRead: value as boolean });
+    if (key === 'markAsReadDelay') updateSettings({ mailMarkAsReadDelay: value as number });
+    if (key === 'autoArchive') updateSettings({ mailAutoArchiveAfterReply: value as boolean });
+    if (key === 'showImages') updateSettings({ mailAlwaysShowImages: value as boolean });
+
     // Sync with parent component props
     if (key === 'viewMode') {
       onThreadedViewChange?.(value === 'threaded');
@@ -304,15 +331,35 @@ export function MailContextSidebar({
   };
 
   const handleResetSettings = () => {
-    setMailSettings(defaultMailSettings);
+    const reset: MailSettings = {
+      viewMode: 'threaded',
+      listType: 'enhanced',
+      compactView: true,
+      showPreview: false,
+      markAsReadDelay: 2,
+      autoMarkAsRead: false,
+      autoArchive: false,
+      showImages: true,
+    };
+    setMailSettings(reset);
+    updateSettings({
+      mailCompactView: reset.compactView,
+      mailShowPreview: reset.showPreview,
+      mailAutoMarkAsRead: reset.autoMarkAsRead,
+      mailMarkAsReadDelay: reset.markAsReadDelay,
+      mailAutoArchiveAfterReply: reset.autoArchive,
+      mailAlwaysShowImages: reset.showImages,
+      mailUseSystemIconFallbacks: true,
+      mailUseReactLetterRenderer: false,
+    });
     onThreadedViewChange?.(true);
     onListViewTypeChange?.('enhanced');
   };
 
   return (
-    <Card className="flex h-full w-80 shrink-0 flex-col" padding="none">
-      {/* Tabs row with toggle button - EXACTLY like Chat */}
-      <div className="border-border-subtle flex border-b p-2 pl-3">
+    <div className="flex h-full w-80 shrink-0 flex-col overflow-hidden rounded-xl bg-[var(--bg-primary)] shadow-sm">
+      {/* Tabs row with toggle button */}
+      <div className="border-border-subtle flex border-b p-2 pl-3" style={{ position: 'sticky', top: 0, zIndex: 200, background: 'var(--bg-primary)' }}>
         <button
           onClick={() => setActiveTab('context')}
           className={`flex items-center gap-2 border-b-2 px-4 py-2 asana-text-sm font-medium transition-colors ${
@@ -443,18 +490,18 @@ export function MailContextSidebar({
         ) : (
           <div className="space-y-6">
             {/* Settings Tab */}
-            
-            {/* View Settings */}
-            <div>
+
+            {/* View settings */}
+            <div className="mb-4">
               <Text size="sm" weight="semibold" variant="body" className="mb-3 flex items-center gap-2">
                 <Eye size={16} className="text-accent-primary" />
-                View Settings
+                View settings
               </Text>
               
               <div className="space-y-4">
                 {/* View Mode */}
                 <div>
-                  <Text size="sm" variant="body" className="mb-2">Message View</Text>
+                  <Text size="sm" variant="body" className="mb-2">Message view</Text>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2">
                       <input
@@ -482,48 +529,36 @@ export function MailContextSidebar({
 
                 {/* List Type */}
                 <div>
-                  <Text size="sm" variant="body" className="mb-2">List Type</Text>
-                  <select 
+                  <Text size="sm" variant="body" className="mb-2">List type</Text>
+                  <Select
+                    options={[{ value: 'enhanced', label: 'Enhanced' }]}
                     value={mailSettings.listType}
-                    onChange={(e) => handleMailSettingsChange('listType', e.target.value)}
-                    className="border-border-default focus:ring-accent-primary w-full rounded-md border bg-surface px-3 py-2 text-primary focus:border-transparent focus:outline-none focus:ring-2"
-                  >
-                    <option value="enhanced">Enhanced</option>
-                  </select>
+                    onChange={(val) => handleMailSettingsChange('listType', val as 'enhanced')}
+                  />
                 </div>
 
                 {/* Compact View */}
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={mailSettings.compactView}
-                    onChange={(e) => handleMailSettingsChange('compactView', e.target.checked)}
-                    className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
-                  />
-                  <div>
-                    <Text size="sm" weight="medium">Compact view</Text>
-                    <Text size="xs" variant="tertiary">Show more messages in less space</Text>
-                  </div>
-                </label>
+                <ToggleRow
+                  label="Compact view"
+                  description="Show more messages in less space"
+                  checked={mailSettings.compactView}
+                  onChange={(checked) => handleMailSettingsChange('compactView', checked)}
+                  switchClassName="ring-1 ring-[var(--border-default)]"
+                />
 
                 {/* Show Preview */}
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={mailSettings.showPreview}
-                    onChange={(e) => handleMailSettingsChange('showPreview', e.target.checked)}
-                    className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
-                  />
-                  <div>
-                    <Text size="sm" weight="medium">Show message preview</Text>
-                    <Text size="xs" variant="tertiary">Display snippet of message content</Text>
-                  </div>
-                </label>
+                <ToggleRow
+                  label="Show message preview"
+                  description="Display snippet of message content"
+                  checked={mailSettings.showPreview}
+                  onChange={(checked) => handleMailSettingsChange('showPreview', checked)}
+                  switchClassName="ring-1 ring-[var(--border-default)]"
+                />
               </div>
             </div>
 
-            {/* Behavior Settings */}
-            <div>
+            {/* Behavior settings */}
+            <div className="mt-6 border-t border-[var(--border-subtle)] pt-4">
               <Text size="sm" weight="semibold" variant="body" className="mb-3 flex items-center gap-2">
                 <Settings size={16} className="text-accent-primary" />
                 Behavior
@@ -531,18 +566,13 @@ export function MailContextSidebar({
               
               <div className="space-y-4">
                 {/* Auto Mark as Read */}
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={mailSettings.autoMarkAsRead}
-                    onChange={(e) => handleMailSettingsChange('autoMarkAsRead', e.target.checked)}
-                    className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
-                  />
-                  <div>
-                    <Text size="sm" weight="medium">Auto-mark as read</Text>
-                    <Text size="xs" variant="tertiary">Automatically mark messages as read when opened</Text>
-                  </div>
-                </label>
+                <ToggleRow
+                  label="Auto-mark as read"
+                  description="Automatically mark messages as read when opened"
+                  checked={mailSettings.autoMarkAsRead}
+                  onChange={(checked) => handleMailSettingsChange('autoMarkAsRead', checked)}
+                  switchClassName="ring-1 ring-[var(--border-default)]"
+                />
 
                 {/* Mark as Read Delay */}
                 {mailSettings.autoMarkAsRead && (
@@ -556,57 +586,76 @@ export function MailContextSidebar({
                         min={0}
                         max={10}
                         className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-surface px-3 py-2 text-primary focus:border-transparent focus:outline-none focus:ring-2"
+                        
                       />
                       <Text size="sm" variant="secondary">seconds</Text>
                     </div>
+                    
                   </div>
                 )}
 
                 {/* Auto Archive */}
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={mailSettings.autoArchive}
-                    onChange={(e) => handleMailSettingsChange('autoArchive', e.target.checked)}
-                    className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
-                  />
-                  <div>
-                    <Text size="sm" weight="medium">Auto-archive after reply</Text>
-                    <Text size="xs" variant="tertiary">Automatically archive conversations after replying</Text>
-                  </div>
-                </label>
+                <ToggleRow
+                  label="Auto-archive after reply"
+                  description="Automatically archive conversations after replying"
+                  checked={mailSettings.autoArchive}
+                  onChange={(checked) => handleMailSettingsChange('autoArchive', checked)}
+                  switchClassName="ring-1 ring-[var(--border-default)]"
+                />
 
                 {/* Show Images */}
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={mailSettings.showImages}
-                    onChange={(e) => handleMailSettingsChange('showImages', e.target.checked)}
-                    className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
-                  />
-                  <div>
-                    <Text size="sm" weight="medium">Always show images</Text>
-                    <Text size="xs" variant="tertiary">Automatically load images in messages</Text>
-                  </div>
-                </label>
+                <ToggleRow
+                  label="Always show images"
+                  description="Automatically load images in messages"
+                  checked={mailSettings.showImages}
+                  onChange={(checked) => handleMailSettingsChange('showImages', checked)}
+                  switchClassName="ring-1 ring-[var(--border-default)]"
+                />
+              </div>
+            </div>
+
+            {/* Advanced settings */}
+            <div className="mt-6 border-t border-[var(--border-subtle)] pt-4">
+              <Text size="sm" weight="semibold" variant="body" className="mb-3 flex items-center gap-2">
+                <Settings size={16} className="text-accent-primary" />
+                Advanced
+              </Text>
+              
+              <div className="space-y-4">
+                {/* Icon Fallbacks */}
+                <ToggleRow
+                  label="Smart icon fallbacks"
+                  description="Replace broken footer icons with design-system icons"
+                  checked={storeSettings.mailUseSystemIconFallbacks ?? true}
+                  onChange={(checked) => updateSettings({ mailUseSystemIconFallbacks: checked })}
+                  switchClassName="ring-1 ring-[var(--border-default)]"
+                />
+
+                {/* React Letter Renderer */}
+                <ToggleRow
+                  label="Enhanced email renderer (Beta)"
+                  description="Use advanced rendering for complex emails"
+                  checked={storeSettings.mailUseReactLetterRenderer ?? false}
+                  onChange={(checked) => updateSettings({ mailUseReactLetterRenderer: checked })}
+                  switchClassName="ring-1 ring-[var(--border-default)]"
+                />
               </div>
             </div>
 
             {/* Actions */}
-            <div>
+            <div className="mt-6 border-t border-[var(--border-subtle)] pt-4">
               <Text size="sm" weight="semibold" variant="body" className="mb-3 flex items-center gap-2">
-                <RotateCcw size={16} className="text-accent-primary" />
+                <Wrench size={16} className="text-accent-primary" />
                 Actions
               </Text>
               
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 gap-2 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-md p-3">
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
-                  onClick={handleResetSettings}
+                  onClick={() => setShowResetConfirm(true)}
                   className="justify-center"
                 >
-                  <RotateCcw size={14} className="mr-2" />
                   Reset to defaults
                 </Button>
               </div>
@@ -614,6 +663,21 @@ export function MailContextSidebar({
           </div>
         )}
       </div>
+      {/* Confirm reset dialog */}
+      <DSDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Reset settings</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <Text size="sm">This will reset mail settings to their defaults. This cannot be undone.</Text>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
+            <Button variant="primary" onClick={() => { handleResetSettings(); setShowResetConfirm(false); }}>Reset</Button>
+          </DialogFooter>
+        </DialogContent>
+      </DSDialog>
       {/* Quick Action Modals (centered) */}
       {quickAction && (
         <Dialog open={true} onOpenChange={(open) => { if (!open) setQuickAction(null); }}>
@@ -712,6 +776,6 @@ export function MailContextSidebar({
           </DialogContent>
         </Dialog>
       )}
-    </Card>
+    </div>
   );
 } 

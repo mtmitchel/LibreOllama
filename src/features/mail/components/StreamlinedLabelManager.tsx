@@ -189,7 +189,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/50" style={{ zIndex: 1000 }}>
       <div className="max-h-[90vh] w-full max-w-md overflow-hidden rounded-lg bg-white shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b p-4">

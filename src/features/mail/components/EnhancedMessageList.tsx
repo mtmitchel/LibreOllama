@@ -125,6 +125,7 @@ export function EnhancedMessageList({
   const [sortBy, setSortBy] = useState<'date' | 'sender' | 'subject'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterUnread, setFilterUnread] = useState(false);
+  const uiSettings = useMailStore(state => state.settings);
 
   const messages = getMessages();
 
@@ -215,6 +216,21 @@ export function EnhancedMessageList({
       // Call optional callback
       onMessageSelect?.(message);
       
+      // Auto-mark as read after delay if enabled
+      const settings = useMailStore.getState().settings;
+      if (settings.mailAutoMarkAsRead) {
+        const delayMs = Math.max(0, (settings.mailMarkAsReadDelay || 0) * 1000);
+        window.setTimeout(() => {
+          const state = useMailStore.getState();
+          const current = state.currentMessage;
+          if (!current || current.id !== message.id) return;
+          const msg = state.getMessages().find(m => m.id === message.id);
+          if (msg && !msg.isRead) {
+            state.markAsRead([message.id], message.accountId);
+          }
+        }, delayMs);
+      }
+
     } catch (error) {
       logger.error('❌ [ENHANCED_LIST] Message click failed:', error);
       useMailStore.setState({ 
@@ -297,7 +313,7 @@ export function EnhancedMessageList({
   }
 
   return (
-    <div className={`flex h-full flex-col ${className}`}>
+    <div className={`flex h-full flex-col overflow-hidden rounded-xl bg-[var(--bg-primary)] shadow-sm ${className}`}>
       <ErrorBanner error={error} onRefresh={handleRefresh} onReconnect={handleReconnect} />
       {/* List header removed (redundant with toolbar) */}
       {/* Action Bar - Only show when messages are selected */}
@@ -320,7 +336,7 @@ export function EnhancedMessageList({
               isSelected={localSelectedMessages.includes(message.id)}
               onSelect={handleMessageSelect}
               onClick={handleMessageClick}
-              compactMode={true}
+              compactMode={useMailStore.getState().settings.mailCompactView}
             />
           ))}
         </div>
