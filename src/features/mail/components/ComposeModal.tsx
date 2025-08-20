@@ -19,7 +19,9 @@ import {
 import { Button, Text } from '../../../components/ui';
 import { blocksToHtml, blocksToText } from '../../notes/utils/blocksToHtml';
 import ComposeEditor from './ComposeEditor';
+import { EmailAutocomplete } from './EmailAutocomplete';
 import { useMailStore } from '../stores/mailStore';
+import { useContactsStore } from '../stores/contactsStore';
 import { 
   GmailComposeService, 
   ComposeRequest, 
@@ -32,6 +34,7 @@ import {
   GmailError, 
   ErrorContext 
 } from '../services/gmailErrorHandler';
+import '../styles/EmailAutocomplete.css';
 
 interface ComposeModalProps {
   replyToMessage?: {
@@ -70,8 +73,8 @@ function ComposeModal({
   const [isMinimized, setIsMinimized] = useState(false);
   const [ccVisible, setCcVisible] = useState(false);
   const [bccVisible, setBccVisible] = useState(false);
-  const [showScheduler, setShowScheduler] = useState(false);
   const [toFieldFocused, setToFieldFocused] = useState(false);
+  const [showScheduler, setShowScheduler] = useState(false);
   
   // Form State
   const [compose, setCompose] = useState<ComposeRequest>({
@@ -108,9 +111,6 @@ function ComposeModal({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   // Refs
-  const toInputRef = useRef<HTMLInputElement>(null);
-  const ccInputRef = useRef<HTMLInputElement>(null);
-  const bccInputRef = useRef<HTMLInputElement>(null);
   const subjectInputRef = useRef<HTMLInputElement>(null);
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -198,17 +198,6 @@ function ComposeModal({
   }, [editorContent]);
 
   // Event Handlers
-  const handleEmailAddressChange = useCallback((
-    field: 'to' | 'cc' | 'bcc', 
-    value: string
-  ) => {
-    const emails = value.split(',').map(email => {
-      const trimmed = email.trim();
-      return gmailComposeUtils.parseEmailAddress(trimmed);
-    }).filter(addr => addr.email);
-
-    setCompose(prev => ({ ...prev, [field]: emails }));
-  }, []);
 
   const handleSend = async () => {
     if (validationErrors.length > 0) {
@@ -312,9 +301,6 @@ function ComposeModal({
     }
   };
 
-  const formatEmailAddresses = (addresses: ComposeEmailAddress[] = []) => {
-    return addresses.map(addr => addr.email || '').join(', ');
-  };
 
   // Calculate position to center modal over mail main area
   const [modalPosition, setModalPosition] = useState({ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' });
@@ -509,72 +495,82 @@ function ComposeModal({
         {/* Form Content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Recipients Section */}
-          <div className="border-border-default border-b">
+          <div>
             {/* To Field */}
-            <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
-              {toFieldFocused && (
-                <span className="px-3 text-[13px] text-secondary">
-                  To
-                </span>
-              )}
-              <input
-                ref={toInputRef}
-                type="text"
-                value={formatEmailAddresses(compose.to)}
-                onChange={(e) => handleEmailAddressChange('to', e.target.value)}
+            <div className="flex min-h-[40px] items-center px-3">
+              <EmailAutocomplete
+                value={compose.to.map(addr => typeof addr === 'string' ? addr : addr.email)}
+                onChange={(emails) => {
+                  setCompose(prev => ({
+                    ...prev,
+                    to: emails.map(email => ({ email, name: '' }))
+                  }));
+                }}
+                placeholder={toFieldFocused ? "To" : "Recipients"}
+                multiple={true}
+                className="flex-1"
+                borderless
                 onFocus={() => setToFieldFocused(true)}
-                onBlur={() => setToFieldFocused(compose.to.length > 0)}
-                placeholder={toFieldFocused ? "" : "Recipients"}
-                className="flex-1 border-0 bg-transparent px-3 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+                onBlur={() => setToFieldFocused(false)}
               />
-              <div className="flex items-center px-2">
-                <button
-                  type="button"
-                  onClick={() => setCcVisible(!ccVisible)}
-                  className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
-                >
-                  Cc
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBccVisible(!bccVisible)}
-                  className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
-                >
-                  Bcc
-                </button>
-              </div>
+              {toFieldFocused && (
+                <div className="flex items-center px-2">
+                  <button
+                    type="button"
+                    onClick={() => setCcVisible(!ccVisible)}
+                    className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
+                  >
+                    Cc
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBccVisible(!bccVisible)}
+                    className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
+                  >
+                    Bcc
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* CC Field */}
             {ccVisible && (
-              <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
-                <span className="px-3 text-[13px] text-secondary">
+              <div className="flex min-h-[40px] items-center border-b border-[var(--border-subtle)] px-3">
+                <span className="mr-2 text-[13px] text-secondary">
                   Cc
                 </span>
-                <input
-                  ref={ccInputRef}
-                  type="text"
-                  value={formatEmailAddresses(compose.cc)}
-                  onChange={(e) => handleEmailAddressChange('cc', e.target.value)}
+                <EmailAutocomplete
+                  value={compose.cc.map(addr => typeof addr === 'string' ? addr : addr.email)}
+                  onChange={(emails) => {
+                    setCompose(prev => ({
+                      ...prev,
+                      cc: emails.map(email => ({ email, name: '' }))
+                    }));
+                  }}
                   placeholder=""
-                  className="flex-1 border-0 bg-transparent px-2 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+                  multiple={true}
+                  className="flex-1"
                 />
               </div>
             )}
 
             {/* BCC Field */}
             {bccVisible && (
-              <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
-                <span className="px-3 text-[13px] text-secondary">
+              <div className="flex min-h-[40px] items-center border-b border-[var(--border-subtle)] px-3">
+                <span className="mr-2 text-[13px] text-secondary">
                   Bcc
                 </span>
-                <input
-                  ref={bccInputRef}
-                  type="text"
-                  value={formatEmailAddresses(compose.bcc)}
-                  onChange={(e) => handleEmailAddressChange('bcc', e.target.value)}
+                <EmailAutocomplete
+                  value={compose.bcc.map(addr => typeof addr === 'string' ? addr : addr.email)}
+                  onChange={(emails) => {
+                    setCompose(prev => ({
+                      ...prev,
+                      bcc: emails.map(email => ({ email, name: '' }))
+                    }));
+                  }}
                   placeholder=""
-                  className="flex-1 border-0 bg-transparent px-2 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+                  multiple={true}
+                  className="flex-1"
                 />
               </div>
             )}

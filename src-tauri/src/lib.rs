@@ -199,6 +199,9 @@ pub fn run() {
             #[cfg(feature = "gmail-compose")] commands::gmail::compose::create_gmail_reply,
             #[cfg(feature = "gmail-compose")] commands::gmail::compose::get_gmail_templates,
             #[cfg(feature = "gmail-compose")] commands::gmail::compose::create_gmail_template,
+            // Gmail contacts commands
+            #[cfg(feature = "gmail-compose")] commands::gmail::contacts::get_gmail_contacts,
+            #[cfg(feature = "gmail-compose")] commands::gmail::contacts::search_gmail_contacts,
             // Gmail image proxy commands
             commands::gmail::image_proxy::proxy_image_cached,
             commands::gmail::image_proxy::clear_image_proxy_cache,

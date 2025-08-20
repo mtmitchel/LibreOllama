@@ -56,6 +56,25 @@ const CombinedColorPicker: React.FC<CombinedColorPickerProps> = ({
   const popoverRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0, placement: 'bottom' as 'top' | 'bottom' });
 
+  // Helpers for contrast-aware styling
+  const hexToRgb = (hex: string) => {
+    const clean = hex.replace('#', '');
+    const bigint = parseInt(clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return { r, g, b };
+  };
+
+  const getRelativeLuminance = (hex: string) => {
+    const { r, g, b } = hexToRgb(hex);
+    const srgb = [r, g, b].map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+    return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+  };
+
+  const isVeryLight = (hex: string) => getRelativeLuminance(hex) >= 0.9; // near-white
+  const isLight = (hex: string) => getRelativeLuminance(hex) >= 0.75;
+
   // Colors array
   const colors = [
     '#000000', '#434343', '#666666', '#999999', '#b7b7b7',
@@ -132,10 +151,26 @@ const CombinedColorPicker: React.FC<CombinedColorPickerProps> = ({
 
   if (!isOpen) return null;
 
-  const ColorGrid = ({ onSelect, label }: { onSelect: (color: string) => void; label: string }) => (
+  const ColorGrid = ({ onSelect, label, onClear }: { onSelect: (color: string) => void; label: string; onClear: () => void }) => (
     <div>
-      <div style={{ fontSize: '11px', fontWeight: 500, marginBottom: '6px', color: '#5f6368', textAlign: 'center' }}>
-        {label}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 500, color: '#5f6368' }}>{label}</div>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onClear}
+          style={{
+            fontSize: '11px',
+            color: 'var(--accent-primary)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '2px 4px',
+            borderRadius: '3px'
+          }}
+        >
+          Clear
+        </button>
       </div>
       <div
         style={{
@@ -160,19 +195,28 @@ const CombinedColorPicker: React.FC<CombinedColorPickerProps> = ({
               width: SWATCH_SIZE,
               height: SWATCH_SIZE,
               backgroundColor: color,
-              border: color === '#ffffff' ? '1px solid #d0d0d0' : '1px solid transparent',
+              border: `1px solid ${isLight(color) ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.15)'}`,
+              boxShadow: isLight(color)
+                ? 'inset 0 0 0 1px rgba(0,0,0,0.12)'
+                : 'inset 0 0 0 1px rgba(255,255,255,0.2)',
               borderRadius: '2px',
               cursor: 'pointer',
               padding: 0,
               margin: 0,
               display: 'block',
-              transition: 'border-color 0.15s ease'
+              transition: 'border-color 0.15s ease',
+              // Add subtle checkerboard overlay only for near-white swatches
+              backgroundImage: isVeryLight(color)
+                ? 'linear-gradient(45deg, rgba(0,0,0,0.06) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.06) 75%, rgba(0,0,0,0.06)), linear-gradient(45deg, rgba(0,0,0,0.06) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.06) 75%, rgba(0,0,0,0.06))'
+                : undefined,
+              backgroundSize: isVeryLight(color) ? '6px 6px, 6px 6px' : undefined,
+              backgroundPosition: isVeryLight(color) ? '0 0, 3px 3px' : undefined
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = '#4a86e8';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = color === '#ffffff' ? '#d0d0d0' : 'transparent';
+              e.currentTarget.style.borderColor = isLight(color) ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.15)';
             }}
             title={color}
           />
@@ -190,10 +234,10 @@ const CombinedColorPicker: React.FC<CombinedColorPickerProps> = ({
         left: position.left,
         width: PANEL_WIDTH,
         zIndex: 1000,
-        backgroundColor: 'white',
-        border: '1px solid rgba(0, 0, 0, 0.2)',
+        backgroundColor: '#f8f9fa',
+        border: '1px solid rgba(0, 0, 0, 0.15)',
         borderRadius: '6px',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
         padding: PADDING,
         boxSizing: 'border-box',
         display: 'flex',
@@ -203,9 +247,9 @@ const CombinedColorPicker: React.FC<CombinedColorPickerProps> = ({
         overflow: 'hidden' // Ensure content doesn't overflow
       }}
     >
-      <ColorGrid onSelect={onTextColorSelect} label="Text color" />
+      <ColorGrid onSelect={onTextColorSelect} label="Text color" onClear={() => onTextColorSelect('default' as any)} />
       <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '2px 0' }} />
-      <ColorGrid onSelect={onBgColorSelect} label="Background color" />
+      <ColorGrid onSelect={onBgColorSelect} label="Background color" onClear={() => onBgColorSelect('default' as any)} />
     </div>
   );
 };

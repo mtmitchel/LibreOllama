@@ -609,8 +609,8 @@ impl GmailComposeService {
         let has_attachments = compose.attachments.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
 
         // Helper to write attachments under a given boundary
-        let mut write_attachments = |outer_boundary: &str| {
-            if let Some(attachments) = &compose.attachments {
+        let write_attachments = |message: &mut String, outer_boundary: &str, attachments: &Option<Vec<ComposeAttachment>>| {
+            if let Some(attachments) = attachments {
                 for attachment in attachments {
                     message.push_str(&format!("--{}\r\n", outer_boundary));
                     message.push_str(&format!("Content-Type: {}\r\n", attachment.content_type));
@@ -646,7 +646,7 @@ impl GmailComposeService {
                 message.push_str(&format!("--{}--\r\n", alt_boundary));
 
                 // attachments
-                write_attachments(&mixed_boundary);
+                write_attachments(&mut message, &mixed_boundary, &compose.attachments);
                 // close mixed
                 message.push_str(&format!("--{}--\r\n", mixed_boundary));
             }
@@ -680,7 +680,7 @@ impl GmailComposeService {
                     message.push_str(compose.body_html.as_ref().unwrap());
                 }
                 message.push_str("\r\n");
-                write_attachments(&mixed_boundary);
+                write_attachments(&mut message, &mixed_boundary, &compose.attachments);
                 message.push_str(&format!("--{}--\r\n", mixed_boundary));
             }
             // One body, no attachments → single part, correct content-type

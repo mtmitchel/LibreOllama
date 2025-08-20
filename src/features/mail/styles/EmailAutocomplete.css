@@ -1,0 +1,250 @@
+.email-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.email-autocomplete__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.email-autocomplete__container {
+  position: relative;
+}
+
+.email-autocomplete__chips-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  transition: border-color 0.2s;
+}
+
+.email-autocomplete__chips-input--borderless {
+  border: none !important;
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.email-autocomplete__chips-input:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-alpha);
+}
+
+.email-autocomplete__chips-input--borderless:focus-within {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Extra guard to suppress any utility focus rings that may leak in */
+.email-autocomplete__chips-input--borderless,
+.email-autocomplete__chips-input--borderless:focus,
+.email-autocomplete__chips-input--borderless:focus-within {
+  --tw-ring-color: transparent;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+}
+
+/* Ensure inner input and any children never show outline when borderless */
+.email-autocomplete__chips-input--borderless .email-autocomplete__input:focus,
+.email-autocomplete__chips-input--borderless *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  animation: chipEnter 0.2s ease;
+}
+
+@keyframes chipEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.email-chip--invalid {
+  background: var(--error-bg, #fee);
+  border-color: var(--error-border, #fcc);
+  color: var(--error-text, #c00);
+}
+
+.email-chip__text {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-chip__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.email-chip__remove:hover {
+  background: var(--bg-quaternary);
+  color: var(--text-primary);
+}
+
+.email-autocomplete__input {
+  flex: 1;
+  min-width: 150px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.email-autocomplete__input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.email-autocomplete__suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item--selected {
+  background: var(--bg-secondary);
+}
+
+.suggestion-item__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.suggestion-item__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.suggestion-item__details {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-item__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.suggestion-item__frequent {
+  color: var(--warning-text, #f90);
+  font-size: 12px;
+}
+
+.suggestion-item__email,
+.suggestion-item__company {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion-item__company {
+  margin-top: 2px;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .email-autocomplete__suggestions {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  .email-chip--invalid {
+    background: rgba(255, 0, 0, 0.1);
+    border-color: rgba(255, 0, 0, 0.3);
+    color: #ff6b6b;
+  }
+}

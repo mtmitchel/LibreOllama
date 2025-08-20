@@ -4,7 +4,10 @@
 
 pub mod auth;
 pub mod api;
+#[cfg(feature = "gmail-compose")]
 pub mod compose;
+#[cfg(feature = "gmail-compose")]
+pub mod contacts;
 pub mod sync;
 pub mod cache;
 pub mod migration;

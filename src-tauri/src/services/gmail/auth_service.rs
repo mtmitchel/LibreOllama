@@ -34,6 +34,7 @@ pub const GMAIL_SCOPES: &[&str] = &[
     "https://www.googleapis.com/auth/drive.metadata.readonly",
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/tasks",
+    "https://www.googleapis.com/auth/contacts.readonly",
 ];
 
 /// Gmail OAuth2 endpoints
@@ -814,7 +815,7 @@ use crate::database::connection;
 
     #[test]
     fn test_gmail_scopes_configuration() {
-        assert_eq!(GMAIL_SCOPES.len(), 8);
+        assert_eq!(GMAIL_SCOPES.len(), 10);
         assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.readonly"));
         assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.modify"));
         assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.compose"));
