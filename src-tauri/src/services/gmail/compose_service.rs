@@ -602,31 +602,17 @@ impl GmailComposeService {
         }
 
         // MIME headers
-        let boundary = format!("boundary_{}", Uuid::new_v4());
         message.push_str("MIME-Version: 1.0\r\n");
 
-        if compose.attachments.is_some() || (compose.body_text.is_some() && compose.body_html.is_some()) {
-            message.push_str(&format!("Content-Type: multipart/mixed; boundary=\"{}\"\r\n\r\n", boundary));
-            
-            // Body parts
-            if let Some(text) = &compose.body_text {
-                message.push_str(&format!("--{}\r\n", boundary));
-                message.push_str("Content-Type: text/plain; charset=utf-8\r\n\r\n");
-                message.push_str(text);
-                message.push_str("\r\n");
-            }
+        let has_text = compose.body_text.as_ref().map(|s| !s.is_empty()).unwrap_or(false);
+        let has_html = compose.body_html.as_ref().map(|s| !s.is_empty()).unwrap_or(false);
+        let has_attachments = compose.attachments.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
 
-            if let Some(html) = &compose.body_html {
-                message.push_str(&format!("--{}\r\n", boundary));
-                message.push_str("Content-Type: text/html; charset=utf-8\r\n\r\n");
-                message.push_str(html);
-                message.push_str("\r\n");
-            }
-
-            // Attachments
+        // Helper to write attachments under a given boundary
+        let mut write_attachments = |outer_boundary: &str| {
             if let Some(attachments) = &compose.attachments {
                 for attachment in attachments {
-                    message.push_str(&format!("--{}\r\n", boundary));
+                    message.push_str(&format!("--{}\r\n", outer_boundary));
                     message.push_str(&format!("Content-Type: {}\r\n", attachment.content_type));
                     message.push_str("Content-Transfer-Encoding: base64\r\n");
                     message.push_str(&format!("Content-Disposition: attachment; filename=\"{}\"\r\n\r\n", attachment.filename));
@@ -634,15 +620,82 @@ impl GmailComposeService {
                     message.push_str("\r\n");
                 }
             }
+        };
 
-            message.push_str(&format!("--{}--\r\n", boundary));
+        match (has_text, has_html, has_attachments) {
+            // Both text and html, plus attachments → mixed with inner alternative
+            (true, true, true) => {
+                let mixed_boundary = format!("mixed_{}", Uuid::new_v4());
+                let alt_boundary = format!("alt_{}", Uuid::new_v4());
+                message.push_str(&format!("Content-Type: multipart/mixed; boundary=\"{}\"\r\n\r\n", mixed_boundary));
+
+                // Inner multipart/alternative as first part
+                message.push_str(&format!("--{}\r\n", mixed_boundary));
+                message.push_str(&format!("Content-Type: multipart/alternative; boundary=\"{}\"\r\n\r\n", alt_boundary));
+                // text/plain
+                message.push_str(&format!("--{}\r\n", alt_boundary));
+                message.push_str("Content-Type: text/plain; charset=utf-8\r\n\r\n");
+                message.push_str(compose.body_text.as_ref().unwrap());
+                message.push_str("\r\n");
+                // text/html
+                message.push_str(&format!("--{}\r\n", alt_boundary));
+                message.push_str("Content-Type: text/html; charset=utf-8\r\n\r\n");
+                message.push_str(compose.body_html.as_ref().unwrap());
+                message.push_str("\r\n");
+                // close alternative
+                message.push_str(&format!("--{}--\r\n", alt_boundary));
+
+                // attachments
+                write_attachments(&mixed_boundary);
+                // close mixed
+                message.push_str(&format!("--{}--\r\n", mixed_boundary));
+            }
+            // Both text and html, no attachments → alternative
+            (true, true, false) => {
+                let alt_boundary = format!("alt_{}", Uuid::new_v4());
+                message.push_str(&format!("Content-Type: multipart/alternative; boundary=\"{}\"\r\n\r\n", alt_boundary));
+                // text/plain
+                message.push_str(&format!("--{}\r\n", alt_boundary));
+                message.push_str("Content-Type: text/plain; charset=utf-8\r\n\r\n");
+                message.push_str(compose.body_text.as_ref().unwrap());
+                message.push_str("\r\n");
+                // text/html
+                message.push_str(&format!("--{}\r\n", alt_boundary));
+                message.push_str("Content-Type: text/html; charset=utf-8\r\n\r\n");
+                message.push_str(compose.body_html.as_ref().unwrap());
+                message.push_str("\r\n");
+                // close alternative
+                message.push_str(&format!("--{}--\r\n", alt_boundary));
+            }
+            // One body, with attachments → mixed with single part + attachments
+            (true, false, true) | (false, true, true) => {
+                let mixed_boundary = format!("mixed_{}", Uuid::new_v4());
+                message.push_str(&format!("Content-Type: multipart/mixed; boundary=\"{}\"\r\n\r\n", mixed_boundary));
+                message.push_str(&format!("--{}\r\n", mixed_boundary));
+                if has_text {
+                    message.push_str("Content-Type: text/plain; charset=utf-8\r\n\r\n");
+                    message.push_str(compose.body_text.as_ref().unwrap());
         } else {
-            // Simple text message
+                    message.push_str("Content-Type: text/html; charset=utf-8\r\n\r\n");
+                    message.push_str(compose.body_html.as_ref().unwrap());
+                }
+                message.push_str("\r\n");
+                write_attachments(&mixed_boundary);
+                message.push_str(&format!("--{}--\r\n", mixed_boundary));
+            }
+            // One body, no attachments → single part, correct content-type
+            (true, false, false) => {
+                message.push_str("Content-Type: text/plain; charset=utf-8\r\n\r\n");
+                message.push_str(compose.body_text.as_ref().unwrap());
+            }
+            (false, true, false) => {
+                message.push_str("Content-Type: text/html; charset=utf-8\r\n\r\n");
+                message.push_str(compose.body_html.as_ref().unwrap());
+            }
+            // No body provided (should not happen due to validation)
+            _ => {
             message.push_str("Content-Type: text/plain; charset=utf-8\r\n\r\n");
-            if let Some(text) = &compose.body_text {
-                message.push_str(text);
-            } else if let Some(html) = &compose.body_html {
-                message.push_str(html);
+                message.push_str("");
             }
         }
 
