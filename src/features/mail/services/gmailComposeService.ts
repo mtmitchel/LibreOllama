@@ -109,6 +109,22 @@ export type GmailComposeError = GmailError;
  * Service for Gmail compose, send, and draft functionality
  */
 export class GmailComposeService {
+  private static isCallbackIdError(err: unknown): boolean {
+    const msg = String((err as any)?.message || err);
+    return msg.includes("Couldn't find callback id");
+  }
+
+  private static async invokeWithHMRRetry<T>(command: string, args: Record<string, unknown>): Promise<T> {
+    try {
+      return await invoke<T>(command, args);
+    } catch (err) {
+      if (this.isCallbackIdError(err)) {
+        await new Promise(r => setTimeout(r, 300));
+        return await invoke<T>(command, args);
+      }
+      throw err;
+    }
+  }
   /**
    * Send an email through Gmail API
    */
@@ -132,9 +148,14 @@ export class GmailComposeService {
           throw handleGmailError('Message size exceeds 25MB limit', context);
         }
 
-        return await invoke<SendResponse>('send_gmail_message', {
-          composeRequest: this.toBackendComposeRequest(composeRequest),
-        });
+        const payload = { composeRequest: this.toBackendComposeRequest(composeRequest) } as const;
+        try {
+          return await this.invokeWithHMRRetry<SendResponse>('send_gmail_message', payload);
+        } catch (err: any) {
+          // Bubble up the original message so UI can show exact cause
+          const message = err?.message || String(err);
+          throw handleGmailError(message, context);
+        }
       },
       context,
       { maxRetries: 2 } // Reduce retries for send operations
@@ -158,7 +179,7 @@ export class GmailComposeService {
           throw handleGmailError(validationErrors.join('; '), context);
         }
 
-        return await invoke<DraftResponse>('save_gmail_draft', {
+        return await this.invokeWithHMRRetry<DraftResponse>('save_gmail_draft', {
           draftRequest: {
             accountId: draftRequest.accountId,
             draftId: draftRequest.draftId,
@@ -185,7 +206,7 @@ export class GmailComposeService {
 
     return retryGmailOperation(
       async () => {
-        return await invoke<DraftResponse[]>('get_gmail_drafts', {
+        return await this.invokeWithHMRRetry<DraftResponse[]>('get_gmail_drafts', {
           accountId,
           maxResults,
           pageToken

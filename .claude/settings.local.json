@@ -46,7 +46,9 @@
       "Bash(claude mcp:*)",
       "Bash(git log:*)",
       "mcp__exa__web_search_exa",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__exa__deep_researcher_start",
+      "mcp__exa__deep_researcher_check"
     ],
     "deny": []
   },

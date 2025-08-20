@@ -64,7 +64,7 @@ async-openai = "0.19.1"
 
 [features]
 # Enable system-advanced by default so PDF export is available
-default = ["system-advanced"]
+default = ["system-advanced", "gmail-compose"]
 
 # Optional features to include additional command surfaces
 system-advanced = []

@@ -14,6 +14,7 @@ import { useMailOperation } from '../hooks';
 import { Text, Button } from '../../../components/ui';
 import { ParsedEmail } from '../types';
 import { logger } from '../../../core/lib/logger';
+import { getSecureAuthHandler } from '../../google/services/SecureAuthHandler';
 import './mail-scrollbar.css';
 
 interface ErrorBannerProps {
@@ -272,8 +273,44 @@ export function EnhancedMessageList({
     }
   }, [isLoadingMessages, currentAccountId]);
 
-  const handleReconnect = useCallback(() => {
-    window.location.href = '/settings?tab=account&reconnect=1';
+  const handleReconnect = useCallback(async () => {
+    try {
+      logger.info('[EnhancedMessageList] Starting Gmail reconnect flow');
+      
+      // Use the same secure authentication handler as the Settings page
+      const authHandler = getSecureAuthHandler();
+      
+      // This will open the browser and handle the OAuth flow
+      const accountData = await authHandler.authenticateUser();
+      
+      logger.info('[EnhancedMessageList] Reconnection successful', { 
+        accountId: accountData.accountId,
+        email: accountData.email 
+      });
+      
+      // Add the account to the mail store
+      const { addAccount } = useMailStore.getState();
+      await addAccount({
+        id: accountData.accountId,
+        email: accountData.email,
+        displayName: accountData.name,
+        avatar: accountData.picture,
+        accessToken: '', // Will be filled by the auth flow
+        refreshToken: '', // Will be filled by the auth flow
+        tokenExpiry: new Date(Date.now() + 3600000), // 1 hour from now
+        isActive: true,
+        syncStatus: 'idle',
+        labels: [],
+        threads: []
+      });
+      
+      // Refresh messages after reconnection
+      const { fetchMessages } = useMailStore.getState();
+      await fetchMessages();
+      
+    } catch (error) {
+      logger.error('[EnhancedMessageList] Error during reconnect:', error);
+    }
   }, []);
 
   // Loading state

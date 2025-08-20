@@ -5,6 +5,24 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-08-20
+
+### 📧 Mail compose reliability fixes
+- Enabled desktop sending pipeline by turning on the `gmail-compose` feature in Tauri and adding the missing `gmail.send` scope to backend OAuth scopes.
+- Added HMR‑safe invoke wrapper with auto‑retry for Tauri callback‑id race conditions (dev only).
+- Synced `compose.accountId` with the active account post-hydration to avoid empty account sends.
+- Surfaced precise backend errors from send/draft to the UI for actionable debugging.
+
+### 🖌️ Compose editor UI/UX
+- Consolidated text/background color picking into a single smart popover with viewport‑aware positioning; switched layout to stacked (longer, less wide) to prevent cutoff; tightened swatch sizing/gaps; removed overflow.
+- Converted font picker to a portal with auto‑flip and proper z‑order; expanded font list (Sans Serif, Serif, Fixed Width, Wide, Narrow, Comic Sans MS, Garamond, Georgia, Tahoma, Trebuchet MS, Verdana).
+- Fixed text color application by aligning with BlockNote’s `textColor` style and adding CSS attribute selectors for rendering.
+
+### 🖼️ Image upload modal
+- Migrated to design‑system `Dialog`/`Button` components; added drag‑and‑drop, paste from clipboard/URL, size/type validation (≤10MB), focused a11y and progress state. API now uses `onConfirm(url)`.
+
+Impact: Mail sending works in the desktop app, color picker no longer overflows/cuts off, font menu renders fully, and image uploads align with the design system and improved UX.
+
 ## [Unreleased] - 2025-08-19
 
 ### 📧 Mail Experience Improvements

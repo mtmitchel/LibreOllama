@@ -1,6 +1,16 @@
-import React, { useState, useRef } from 'react';
-import { X, Upload, Image as ImageIcon, Link } from 'lucide-react';
-import { cn } from '../../../core/lib/utils';
+import React, { useState, useRef, useCallback } from 'react';
+import { Upload, Image as ImageIcon, Link } from 'lucide-react';
+import { Button } from '../../../components/ui/design-system/Button';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogBody,
+  DialogFooter
+} from '../../../components/ui/design-system/Dialog';
+import { LoadingSpinner } from '../../../components/ui/design-system/ProgressRing';
 
 interface ImageUploadModalProps {
   isOpen: boolean;
@@ -18,11 +28,26 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const validateFile = (file: File) => {
+    const maxBytes = 10 * 1024 * 1024; // 10MB
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file.');
+      return false;
+    }
+    if (file.size > maxBytes) {
+      setError('File is too large. Maximum size is 10MB.');
+      return false;
+    }
+    setError('');
+    return true;
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && validateFile(file)) {
       setSelectedFile(file);
       
       // Create preview
@@ -69,7 +94,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
     e.stopPropagation();
     
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && validateFile(file)) {
       setSelectedFile(file);
       
       // Create preview
@@ -80,6 +105,32 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       reader.readAsDataURL(file);
     }
   };
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file && validateFile(file)) {
+          setSelectedFile(file);
+          const reader = new FileReader();
+          reader.onload = (ev) => setPreviewUrl(ev.target?.result as string);
+          reader.readAsDataURL(file);
+        }
+        return;
+      }
+      if (item.type === 'text/plain') {
+        item.getAsString((text) => {
+          if (/^https?:\/\/.+\.(png|jpg|jpeg|gif|webp)$/i.test(text)) {
+            setActiveTab('url');
+            setImageUrl(text);
+          }
+        });
+      }
+    }
+  }, []);
 
   const resetModal = () => {
     setActiveTab('upload');
@@ -94,67 +145,47 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50"
-        onClick={handleClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 max-w-lg w-full mx-4">
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
-          <X size={18} />
-        </button>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>Insert image</DialogTitle>
+          <DialogDescription>Upload a file or paste a URL. Max size 10MB.</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
         
-        <h3 className="asana-text-lg font-semibold mb-4">Insert Image</h3>
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6">
+            <Button
+              onClick={() => setActiveTab('upload')}
+              variant={activeTab === 'upload' ? 'primary' : 'ghost'}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Upload size={14} /> Upload file
+            </Button>
+            <Button
+              onClick={() => setActiveTab('url')}
+              variant={activeTab === 'url' ? 'primary' : 'ghost'}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Link size={14} /> From URL
+            </Button>
+          </div>
         
-        {/* Tabs */}
-        <div className="flex gap-1 mb-4">
-          <button
-            onClick={() => setActiveTab('upload')}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-md transition-colors",
-              activeTab === 'upload' 
-                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                : "hover:bg-gray-100 dark:hover:bg-gray-800"
-            )}
-          >
-            <Upload size={16} />
-            Upload File
-          </button>
-          <button
-            onClick={() => setActiveTab('url')}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-md transition-colors",
-              activeTab === 'url' 
-                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                : "hover:bg-gray-100 dark:hover:bg-gray-800"
-            )}
-          >
-            <Link size={16} />
-            From URL
-          </button>
-        </div>
-        
-        {/* Tab content */}
-        {activeTab === 'upload' ? (
-          <div>
-            <div
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer",
-                "hover:border-gray-400 dark:hover:border-gray-500 transition-colors",
-                "border-gray-300 dark:border-gray-600"
-              )}
+          {/* Tab content */}
+          {activeTab === 'upload' ? (
+            <div>
+              <div
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                onPaste={handlePaste}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+                className="border-2 border-dashed border-[var(--border-subtle)] rounded-lg p-8 text-center cursor-pointer hover:border-[var(--border-default)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             >
               <input
                 ref={fileInputRef}
@@ -167,82 +198,88 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                 aria-label="Upload image"
               />
               
-              {previewUrl ? (
-                <div className="space-y-4">
-                  <img 
-                    src={previewUrl} 
-                    alt="Preview" 
-                    className="max-h-48 mx-auto rounded"
-                  />
-                  <p className="asana-text-sm text-gray-600 dark:text-gray-400">
-                    {selectedFile?.name}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <ImageIcon size={48} className="mx-auto text-gray-400" />
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="asana-text-sm text-gray-500 dark:text-gray-500">
-                    PNG, JPG, GIF up to 10MB
-                  </p>
-                </div>
+                {previewUrl ? (
+                  <div className="space-y-3">
+                    <div className="relative max-h-40 overflow-hidden rounded-lg bg-[var(--bg-secondary)]">
+                      <img 
+                        src={previewUrl} 
+                        alt="Preview" 
+                        className="w-full h-full object-contain max-h-40"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-[color:var(--text-secondary)] truncate flex-1">
+                        {selectedFile?.name}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        className="ml-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                          setPreviewUrl('');
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = '';
+                          }
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <ImageIcon size={48} className="mx-auto text-[color:var(--text-tertiary)]" />
+                    <p className="text-[color:var(--text-secondary)]">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-sm text-[color:var(--text-tertiary)]">
+                      PNG, JPG, GIF up to 10MB
+                    </p>
+                  </div>
+                )}
+            </div>
+              {error && (
+                <p className="mt-2 text-sm text-[color:var(--error)]">{error}</p>
               )}
             </div>
-          </div>
-        ) : (
-          <div>
-            <label htmlFor="image-url" className="block asana-text-sm font-medium mb-1">
-              Image URL
-            </label>
-            <input
-              id="image-url"
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/image.png"
-              className={cn(
-                "w-full px-3 py-2 rounded-md",
-                "border border-gray-300 dark:border-gray-600",
-                "bg-white dark:bg-gray-800",
-                "focus:outline-none focus:ring-2 focus:ring-blue-500"
-              )}
-            />
-          </div>
-        )}
-        
-        <div className="flex justify-end gap-2 mt-6">
-          <button
-            onClick={handleClose}
-            className={cn(
-              "px-4 py-2 rounded-md",
-              "bg-gray-100 dark:bg-gray-800",
-              "hover:bg-gray-200 dark:hover:bg-gray-700",
-              "transition-colors"
-            )}
-          >
-            Cancel
-          </button>
-          <button
+          ) : (
+            <div>
+              <label htmlFor="image-url" className="block text-sm font-medium mb-2 text-[color:var(--text-primary)]">
+                Image URL
+              </label>
+              <input
+                id="image-url"
+                type="url"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://example.com/image.png"
+                className="w-full px-3 py-2 rounded-md border border-[var(--border-default)] bg-[var(--bg-primary)] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)]"
+              />
+              <p className="mt-2 text-xs text-[color:var(--text-tertiary)]">Tip: You can also paste an image or URL directly into this field.</p>
+            </div>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="ghost" onClick={handleClose}>Cancel</Button>
+          <Button
             onClick={handleUpload}
             disabled={
               (activeTab === 'upload' && !selectedFile) || 
               (activeTab === 'url' && !imageUrl.trim()) ||
               isUploading
             }
-            className={cn(
-              "px-4 py-2 rounded-md",
-              "bg-blue-600 text-white",
-              "hover:bg-blue-700",
-              "transition-colors",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
           >
-            {isUploading ? 'Uploading...' : 'Insert Image'}
-          </button>
-        </div>
-      </div>
-    </div>
+            {isUploading ? (
+              <span className="inline-flex items-center gap-2"><LoadingSpinner size={16} /> Uploading…</span>
+            ) : (
+              'Insert image'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

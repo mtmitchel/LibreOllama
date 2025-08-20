@@ -71,7 +71,7 @@ export const LinkModal: React.FC<LinkModalProps> = ({
           <X size={18} />
         </button>
         
-        <h3 className="asana-text-lg font-semibold mb-4">Insert Link</h3>
+        <h3 className="asana-text-lg font-semibold mb-4">Insert link</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -136,7 +136,7 @@ export const LinkModal: React.FC<LinkModalProps> = ({
                 "transition-colors"
               )}
             >
-              Insert Link
+              Insert link
             </button>
           </div>
         </form>

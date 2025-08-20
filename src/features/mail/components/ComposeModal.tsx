@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Maximize2, 
+  Minimize2,
   Send, 
   Paperclip, 
   Timer,
@@ -11,9 +13,12 @@ import {
   AlertTriangle,
   Reply,
   Forward,
-  Users
+  Users,
+  Trash2
 } from 'lucide-react';
 import { Button, Text } from '../../../components/ui';
+import { blocksToHtml, blocksToText } from '../../notes/utils/blocksToHtml';
+import ComposeEditor from './ComposeEditor';
 import { useMailStore } from '../stores/mailStore';
 import { 
   GmailComposeService, 
@@ -54,7 +59,8 @@ function ComposeModal({
     getAccountsArray,
     currentAccountId,
     getCurrentAccount,
-    switchAccount
+    switchAccount,
+    currentMessage
   } = useMailStore();
 
   const activeAccount = getCurrentAccount();
@@ -65,6 +71,7 @@ function ComposeModal({
   const [ccVisible, setCcVisible] = useState(false);
   const [bccVisible, setBccVisible] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
+  const [toFieldFocused, setToFieldFocused] = useState(false);
   
   // Form State
   const [compose, setCompose] = useState<ComposeRequest>({
@@ -80,6 +87,14 @@ function ComposeModal({
     readReceipt: false,
     scheduleSend: scheduledTime
   });
+  // Keep accountId in sync once accounts load/hydrate
+  useEffect(() => {
+    if (activeAccount?.id && compose.accountId !== activeAccount.id) {
+      setCompose(prev => ({ ...prev, accountId: activeAccount.id }));
+    }
+  }, [activeAccount?.id]);
+  const [editorContent, setEditorContent] = useState<string>('');
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   // Status States
   const [isSending, setIsSending] = useState(false);
@@ -155,6 +170,33 @@ function ComposeModal({
     setValidationErrors(errors);
   }, [compose]);
 
+  // Sync editor content to compose body (text + html)
+  useEffect(() => {
+    if (!editorContent) {
+      // Set a minimal empty paragraph for empty content
+      setCompose(prev => ({ ...prev, bodyText: ' ', bodyHtml: '<p>&nbsp;</p>' }));
+      return;
+    }
+    try {
+      const html = blocksToHtml(editorContent);
+      const text = blocksToText(editorContent);
+      // Ensure we always have some content, even if empty
+      setCompose(prev => ({ 
+        ...prev, 
+        bodyText: text || ' ', 
+        bodyHtml: html || '<p>&nbsp;</p>' 
+      }));
+    } catch (error) {
+      console.error('[COMPOSE] Error converting editor content:', error);
+      // Fallback to simple text
+      setCompose(prev => ({ 
+        ...prev, 
+        bodyText: editorContent || ' ', 
+        bodyHtml: `<p>${editorContent || '&nbsp;'}</p>` 
+      }));
+    }
+  }, [editorContent]);
+
   // Event Handlers
   const handleEmailAddressChange = useCallback((
     field: 'to' | 'cc' | 'bcc', 
@@ -170,8 +212,17 @@ function ComposeModal({
 
   const handleSend = async () => {
     if (validationErrors.length > 0) {
+      console.error('[COMPOSE] Validation errors:', validationErrors);
       return;
     }
+
+    console.log('[COMPOSE] Sending email with data:', {
+      to: compose.to,
+      subject: compose.subject,
+      bodyText: compose.bodyText?.substring(0, 100) + '...',
+      bodyHtml: compose.bodyHtml?.substring(0, 100) + '...',
+      attachments: attachments.length
+    });
 
     setIsSending(true);
     setGmailError(null);
@@ -186,6 +237,9 @@ function ComposeModal({
       }, 2000);
     } catch (error) {
       console.error('Failed to send email:', error);
+      // Surface the actual error string for debugging
+      const msg = (error as any)?.message || String(error);
+      console.error('[COMPOSE] Send error detail:', msg);
       
       // Handle the error with our comprehensive error handler
       const context: ErrorContext = {
@@ -234,9 +288,72 @@ function ComposeModal({
     }
   };
 
+  const handleDeleteDraft = async () => {
+    if (!currentDraftId) {
+      // No draft to delete, just close the compose modal
+      cancelCompose();
+      return;
+    }
+
+    try {
+      await GmailComposeService.deleteDraft(compose.accountId, currentDraftId);
+      setCurrentDraftId(undefined);
+      cancelCompose();
+    } catch (error) {
+      console.error('Failed to delete draft:', error);
+      
+      const context: ErrorContext = {
+        operation: 'delete_draft',
+        accountId: compose.accountId
+      };
+      
+      const gmailError = handleGmailError(error, context);
+      setGmailError(gmailError);
+    }
+  };
+
   const formatEmailAddresses = (addresses: ComposeEmailAddress[] = []) => {
     return addresses.map(addr => addr.email || '').join(', ');
   };
+
+  // Calculate position to center modal over mail main area
+  const [modalPosition, setModalPosition] = useState({ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' });
+  
+  useLayoutEffect(() => {
+    const calculatePosition = () => {
+      const mailMainArea = document.getElementById('mail-main-area');
+      if (mailMainArea) {
+        const rect = mailMainArea.getBoundingClientRect();
+        const modalWidth = 600;
+        const modalHeight = 600;
+        
+        // Calculate center position
+        const left = rect.left + (rect.width / 2) - (modalWidth / 2);
+        const top = rect.top + (rect.height / 2) - (modalHeight / 2);
+        
+        setModalPosition({
+          left: `${Math.max(20, left)}px`,
+          top: `${Math.max(20, top)}px`,
+          transform: 'none'
+        });
+      }
+    };
+
+    calculatePosition();
+    window.addEventListener('resize', calculatePosition);
+    
+    // Recalculate when sidebars might change
+    const observer = new MutationObserver(calculatePosition);
+    const mailArea = document.getElementById('mail-main-area');
+    if (mailArea) {
+      observer.observe(mailArea.parentElement!, { attributes: true, childList: true, subtree: true });
+    }
+    
+    return () => {
+      window.removeEventListener('resize', calculatePosition);
+      observer.disconnect();
+    };
+  }, []);
 
   // Handle case where compose modal is open but draft creation failed
   if (!composeData) {
@@ -244,13 +361,14 @@ function ComposeModal({
                 <div className="border-border-subtle fixed bottom-0 right-4 z-50 flex h-[400px] w-[700px] flex-col rounded-t-lg border bg-content shadow-xl">
         <div className="border-border-subtle flex items-center justify-between border-b bg-secondary p-3">
           <Text size="sm" weight="medium" className="text-primary">
-            New Message
+            New message
           </Text>
           <Button
             variant="ghost"
             size="icon"
             onClick={cancelCompose}
             className="size-6 text-secondary hover:text-primary"
+            aria-label="Close compose"
           >
             <X size={14} />
           </Button>
@@ -323,18 +441,16 @@ function ComposeModal({
   }
 
   return (
-          <div className="bg-bg-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="border-border-primary flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border bg-content shadow-2xl">
-        {/* Header */}
-        <div className="border-border-primary bg-bg-secondary flex items-center justify-between border-b p-4">
-          <div className="flex items-center gap-3">
-            {replyType === 'reply' && <Reply size={18} className="text-secondary" />}
-            {replyType === 'reply_all' && <Users size={18} className="text-secondary" />}
-            {replyType === 'forward' && <Forward size={18} className="text-secondary" />}
-            <Text size="base" weight="semibold" className="text-primary">
-              {replyType === 'reply' ? 'Reply' : 
-               replyType === 'reply_all' ? 'Reply All' : 
-               replyType === 'forward' ? 'Forward' : 'New Message'}
+    <div className="bg-bg-overlay fixed inset-0 z-[60]">
+      <div 
+        className="border-border-default fixed flex h-[600px] max-h-[90vh] w-[600px] flex-col overflow-hidden rounded-lg border bg-content shadow-2xl"
+        style={modalPosition}
+      >
+        {/* Header - Gmail-style compact */}
+        <div className="border-border-default flex h-11 shrink-0 items-center justify-between border-b bg-secondary px-3">
+          <div className="flex items-center gap-2">
+            <Text size="sm" weight="medium" className="text-primary">
+              New message
             </Text>
             
             {/* Auto-save indicator */}
@@ -352,21 +468,20 @@ function ComposeModal({
             )}
           </div>
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={cancelCompose}
-              className="text-secondary hover:text-primary"
-            >
-              <X size={16} />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={cancelCompose}
+            className="size-7 text-secondary hover:text-primary"
+            aria-label="Close compose"
+          >
+            <X size={16} />
+          </Button>
         </div>
 
         {/* Account Selector (if multiple accounts) */}
         {accounts.length > 1 && (
-          <div className="border-border-default border-b bg-tertiary px-4 py-2">
+          <div className="border-border-default border-b bg-tertiary px-3 py-1.5">
             <div className="flex items-center gap-2">
               <Text size="sm" className="min-w-0 text-secondary">
                 From:
@@ -394,116 +509,135 @@ function ComposeModal({
         {/* Form Content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Recipients Section */}
-          <div className="border-border-default space-y-3 border-b p-4">
+          <div className="border-border-default border-b">
             {/* To Field */}
-            <div className="flex items-center gap-3">
-              <Text size="sm" className="w-12 text-right text-secondary">
-                To:
-              </Text>
+            <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
+              {toFieldFocused && (
+                <span className="px-3 text-[13px] text-secondary">
+                  To
+                </span>
+              )}
               <input
                 ref={toInputRef}
                 type="text"
                 value={formatEmailAddresses(compose.to)}
                 onChange={(e) => handleEmailAddressChange('to', e.target.value)}
-                placeholder="Enter recipients..."
-                className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                onFocus={() => setToFieldFocused(true)}
+                onBlur={() => setToFieldFocused(compose.to.length > 0)}
+                placeholder={toFieldFocused ? "" : "Recipients"}
+                className="flex-1 border-0 bg-transparent px-3 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
               />
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
+              <div className="flex items-center px-2">
+                <button
+                  type="button"
                   onClick={() => setCcVisible(!ccVisible)}
-                  className="text-[11px] text-secondary hover:text-primary"
+                  className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
                 >
                   Cc
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                </button>
+                <button
+                  type="button"
                   onClick={() => setBccVisible(!bccVisible)}
-                  className="text-[11px] text-secondary hover:text-primary"
+                  className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
                 >
                   Bcc
-                </Button>
+                </button>
               </div>
             </div>
 
             {/* CC Field */}
             {ccVisible && (
-              <div className="flex items-center gap-3">
-                <Text size="sm" className="w-12 text-right text-secondary">
-                  Cc:
-                </Text>
+              <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
+                <span className="px-3 text-[13px] text-secondary">
+                  Cc
+                </span>
                 <input
                   ref={ccInputRef}
                   type="text"
                   value={formatEmailAddresses(compose.cc)}
                   onChange={(e) => handleEmailAddressChange('cc', e.target.value)}
-                  placeholder="Enter CC recipients..."
-                  className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                  placeholder=""
+                  className="flex-1 border-0 bg-transparent px-2 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
                 />
               </div>
             )}
 
             {/* BCC Field */}
             {bccVisible && (
-              <div className="flex items-center gap-3">
-                <Text size="sm" className="w-12 text-right text-secondary">
-                  Bcc:
-                </Text>
+              <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
+                <span className="px-3 text-[13px] text-secondary">
+                  Bcc
+                </span>
                 <input
                   ref={bccInputRef}
                   type="text"
                   value={formatEmailAddresses(compose.bcc)}
                   onChange={(e) => handleEmailAddressChange('bcc', e.target.value)}
-                  placeholder="Enter BCC recipients..."
-                  className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                  placeholder=""
+                  className="flex-1 border-0 bg-transparent px-2 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
                 />
               </div>
             )}
 
             {/* Subject Field */}
-            <div className="flex items-center gap-3">
-              <Text size="sm" className="w-12 text-right text-secondary">
-                Subject:
-              </Text>
+            <div className="flex h-10 items-center">
               <input
                 ref={subjectInputRef}
                 type="text"
                 value={compose.subject}
                 onChange={(e) => setCompose(prev => ({ ...prev, subject: e.target.value }))}
-                placeholder="Enter subject..."
-                className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-transparent px-3 py-2 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
+                placeholder="Subject"
+                className="flex-1 border-0 bg-transparent px-3 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
               />
             </div>
           </div>
 
-          {/* Message Body */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 p-4">
-              <textarea
-                ref={bodyTextareaRef}
-                value={compose.bodyText}
-                onChange={(e) => setCompose(prev => ({ ...prev, bodyText: e.target.value }))}
-                placeholder="Write your message..."
-                className="border-border-default focus:ring-accent-primary size-full resize-none rounded-md border bg-transparent p-3 asana-text-sm text-primary placeholder:text-muted hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1"
-                style={{ minHeight: '200px' }}
-              />
-            </div>
+          {/* Message Body (BlockNote editor) */}
+          <div className="relative flex flex-1 flex-col overflow-y-auto">
+            <ComposeEditor
+              value={editorContent}
+              onChange={setEditorContent}
+            />
           </div>
+          
+          {/* Attachments display */}
+          {attachments.length > 0 && (
+            <div className="border-t border-[var(--border-subtle)] px-3 py-2">
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((file, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center gap-1 rounded bg-[var(--bg-tertiary)] px-2 py-1 text-xs"
+                  >
+                    <Paperclip size={12} />
+                    <span className="max-w-[150px] truncate" title={file.name}>
+                      {file.name}
+                    </span>
+                    <span className="text-[color:var(--text-tertiary)]">
+                      ({file.size < 1024 * 1024 
+                        ? `${(file.size / 1024).toFixed(1)}KB`
+                        : `${(file.size / (1024 * 1024)).toFixed(1)}MB`
+                      })
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttachments(prev => prev.filter((_, i) => i !== index));
+                        console.log('[ATTACH] File removed:', file.name);
+                      }}
+                      className="ml-1 text-[color:var(--text-secondary)] hover:text-[color:var(--error)]"
+                      title="Remove attachment"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Error Display */}
-        {validationErrors.length > 0 && (
-          <div className="border-border-default border-t bg-error-ghost px-4 py-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle size={16} className="text-error" />
-              <Text size="sm" className="text-error">
-                {validationErrors[0]}
-              </Text>
-            </div>
-          </div>
-        )}
+        {/* Suppress banner-style validation; inline validation will be used near fields */}
 
         {gmailError && (
           <div className="border-border-default border-t bg-error-ghost px-4 py-2">
@@ -527,67 +661,91 @@ function ComposeModal({
           </div>
         )}
 
-        {/* Footer Actions */}
-        <div className="border-border-default flex items-center justify-between border-t bg-secondary p-4">
+        {/* Footer Actions - Gmail-style compact */}
+        <div className="border-border-default flex h-12 shrink-0 items-center justify-between border-t bg-primary px-3">
           <div className="flex items-center gap-2">
-            <Button
-              variant="primary"
+            <button
+              type="button"
               onClick={handleSend}
               disabled={isSending || validationErrors.length > 0}
-              className="flex items-center gap-2"
+              className="flex h-8 items-center gap-1.5 rounded-md bg-accent-primary px-4 text-[13px] font-medium text-white hover:bg-accent-hover disabled:opacity-50"
             >
               {isSending ? (
                 <>
-                  <div className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  <div className="size-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send size={16} />
+                  <Send size={14} />
                   Send
                 </>
               )}
-            </Button>
+            </button>
 
-            <Button
-              variant="outline"
+            {/* Formatting toolbar icons */}
+            <div className="mx-2 h-5 w-px bg-[var(--border-subtle)]" />
+            
+            <button
+              type="button"
+              title="Attach files"
+              className="inline-flex size-7 items-center justify-center rounded text-secondary hover:bg-[var(--bg-tertiary)]"
+            >
+              <label className="flex size-full cursor-pointer items-center justify-center">
+                <Paperclip size={15} />
+                <input 
+                  type="file" 
+                  multiple 
+                  className="sr-only"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length > 0) {
+                      setAttachments(prev => [...prev, ...files]);
+                      console.log('[ATTACH] Files added:', files.map(f => f.name));
+                    }
+                  }}
+                />
+              </label>
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => setShowScheduler(!showScheduler)}
+              className="inline-flex size-7 items-center justify-center rounded text-secondary hover:bg-[var(--bg-tertiary)]"
+              title="Schedule send"
+            >
+              <Timer size={15} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
               onClick={handleSaveDraft}
               disabled={isSavingDraft}
-              className="flex items-center gap-2"
+              className="inline-flex h-7 items-center gap-1 rounded px-2 text-[12px] text-secondary hover:bg-[var(--bg-tertiary)]"
             >
               {isSavingDraft ? (
                 <>
-                  <div className="size-4 animate-spin rounded-full border-2 border-accent-primary border-t-transparent"></div>
+                  <div className="size-3 animate-spin rounded-full border border-secondary border-t-transparent"></div>
                   Saving...
                 </>
               ) : (
                 <>
-                  <Save size={16} />
-                  Save Draft
+                  <Save size={14} />
+                  Save draft
                 </>
               )}
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-secondary hover:text-primary"
-              title="Attach files"
-            >
-              <Paperclip size={16} />
-            </Button>
+            </button>
             
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowScheduler(!showScheduler)}
-              className="text-secondary hover:text-primary"
-              title="Schedule send"
+            <button
+              type="button"
+              onClick={handleDeleteDraft}
+              className="inline-flex size-7 items-center justify-center rounded text-secondary hover:bg-[var(--bg-tertiary)] hover:text-error"
+              title="Delete draft"
             >
-              <Timer size={16} />
-            </Button>
+              <Trash2 size={14} />
+            </button>
           </div>
         </div>
       </div>

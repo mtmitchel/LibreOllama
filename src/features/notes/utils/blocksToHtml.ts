@@ -24,6 +24,41 @@ export const blocksToHtml = (content: string): string => {
 };
 
 /**
+ * Converts inline content to HTML with styles
+ */
+const inlineContentToHtml = (content: any[]): string => {
+  if (!Array.isArray(content)) return '';
+  
+  return content.map((item: any) => {
+    if (typeof item === 'string') return item;
+    
+    if (item.type === 'text') {
+      let text = item.text || '';
+      const styles = item.styles || {};
+      
+      // Apply styles
+      if (styles.bold) text = `<strong>${text}</strong>`;
+      if (styles.italic) text = `<em>${text}</em>`;
+      if (styles.underline) text = `<u>${text}</u>`;
+      if (styles.strike) text = `<s>${text}</s>`;
+      if (styles.code) text = `<code>${text}</code>`;
+      if (styles.textColor) text = `<span style="color: ${styles.textColor}">${text}</span>`;
+      if (styles.backgroundColor) text = `<span style="background-color: ${styles.backgroundColor}">${text}</span>`;
+      
+      return text;
+    }
+    
+    if (item.type === 'link') {
+      const url = item.props?.url || '#';
+      const linkContent = inlineContentToHtml(item.content || []);
+      return `<a href="${url}">${linkContent}</a>`;
+    }
+    
+    return item.text || '';
+  }).join('');
+};
+
+/**
  * Converts a single BlockNote block to HTML
  */
 const blockToHtml = (block: any): string => {
@@ -32,7 +67,7 @@ const blockToHtml = (block: any): string => {
   }
 
   const content = Array.isArray(block.content) 
-    ? block.content.map((item: any) => typeof item === 'string' ? item : item.text || '').join('')
+    ? inlineContentToHtml(block.content)
     : block.content || '';
 
   switch (block.type) {
@@ -94,7 +129,16 @@ export const blocksToText = (content: string): string => {
 
     return blocks.map((block: any) => {
       const content = Array.isArray(block.content) 
-        ? block.content.map((item: any) => typeof item === 'string' ? item : item.text || '').join('')
+        ? block.content.map((item: any) => {
+            if (typeof item === 'string') return item;
+            if (item.type === 'text') return item.text || '';
+            if (item.type === 'link') {
+              return Array.isArray(item.content) 
+                ? item.content.map((linkItem: any) => linkItem.text || '').join('')
+                : '';
+            }
+            return item.text || '';
+          }).join('')
         : block.content || '';
       
       // Add some formatting for different block types

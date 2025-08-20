@@ -33,7 +33,7 @@ use std::sync::Arc;
 use crate::config::ConfigManager;
 use crate::services::gmail::{auth_service::GmailAuthService, api_service::GmailApiService, GmailCacheService};
 #[cfg(feature = "gmail-compose")]
-use crate::services::gmail::GmailSyncService;
+use crate::services::gmail::{GmailSyncService, compose_service::GmailComposeService};
 use crate::services::google::tasks_service::GoogleTasksService;
 use crate::commands::rate_limiter::RateLimiter;
 use tauri::Manager;
@@ -144,11 +144,22 @@ pub fn run() {
             app.manage(Arc::new(auth_service));
             
             let auth_service_state: tauri::State<Arc<GmailAuthService>> = app.state();
+            
+            // Initialize rate limiter for Gmail API (moved up to use in compose service)
+            let rate_limiter = Arc::new(tokio::sync::Mutex::new(RateLimiter::new(crate::commands::rate_limiter::RateLimitConfig::default())));
+            
+            // Initialize Gmail Compose Service
+            #[cfg(feature = "gmail-compose")]
+            {
+                let compose_service = GmailComposeService::new(
+                    auth_service_state.inner().clone(),
+                    db_manager_arc.clone(),
+                    rate_limiter.clone()
+                );
+                app.manage(Arc::new(compose_service));
+            }
             let google_tasks_service = GoogleTasksService::new(auth_service_state.inner().clone(), db_manager_arc.clone());
             app.manage(google_tasks_service);
-            
-            // Initialize rate limiter for Gmail API
-            let rate_limiter = Arc::new(tokio::sync::Mutex::new(RateLimiter::new(crate::commands::rate_limiter::RateLimitConfig::default())));
             
             // Initialize Gmail API service
             let gmail_api_service = GmailApiService::new(auth_service_state.inner().clone(), db_manager_arc.clone(), rate_limiter);
@@ -180,6 +191,14 @@ pub fn run() {
             commands::gmail::api::modify_gmail_messages,
             commands::gmail::api::trash_gmail_messages,
             commands::gmail::api::get_gmail_attachment,
+            // Gmail compose commands
+            #[cfg(feature = "gmail-compose")] commands::gmail::compose::send_gmail_message,
+            #[cfg(feature = "gmail-compose")] commands::gmail::compose::save_gmail_draft,
+            #[cfg(feature = "gmail-compose")] commands::gmail::compose::get_gmail_drafts,
+            #[cfg(feature = "gmail-compose")] commands::gmail::compose::delete_gmail_draft,
+            #[cfg(feature = "gmail-compose")] commands::gmail::compose::create_gmail_reply,
+            #[cfg(feature = "gmail-compose")] commands::gmail::compose::get_gmail_templates,
+            #[cfg(feature = "gmail-compose")] commands::gmail::compose::create_gmail_template,
             // Gmail image proxy commands
             commands::gmail::image_proxy::proxy_image_cached,
             commands::gmail::image_proxy::clear_image_proxy_cache,

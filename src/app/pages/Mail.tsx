@@ -61,7 +61,7 @@ export default function Mail() {
       {/* Main + Right Context grouped so their internal gap remains 24px */}
       <div style={{ display: 'flex', gap: isContextOpen ? '24px' : '0px', flex: 1, minWidth: 0 }}>
         {/* Main Mail Area */}
-        <div className="asana-mail-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <div className="asana-mail-main" id="mail-main-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', position: 'relative' }}>
           
           <Card className="flex h-full w-full rounded-xl overflow-hidden" padding="none" style={{ display: 'flex', flexDirection: 'column' }}>
             {/* Enhanced Search Bar */}
@@ -96,8 +96,8 @@ export default function Mail() {
       </div>
     </div>
 
-    {/* Compose Modal - Only show for new compose, not replies */}
-    {isComposing && !currentMessage && <ComposeModal />}
+    {/* Compose Modal */}
+    {isComposing && <ComposeModal />}
     
     {/* Message View Modal */}
     {currentMessage && <MessageViewModal />}
