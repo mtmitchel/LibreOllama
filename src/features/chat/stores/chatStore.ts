@@ -227,10 +227,10 @@ export const useChatStore = create<ChatState>()(
               timestamp: new Date().toISOString(),
               isPinned: false,
               participants: 1,
-              modelId: currentState.selectedModel,
+              modelId: currentState.selectedModel || undefined,
               provider: currentState.selectedProvider
             };
-            logger.debug('chatStore: Created new conversation object:', newConversation); 
+            logger.debug('chatStore: Created new conversation object with model:', newConversation.modelId, 'provider:', newConversation.provider); 
 
             set(state => {
               state.conversations.unshift(newConversation);
@@ -286,18 +286,36 @@ export const useChatStore = create<ChatState>()(
           // Restore the model used for this conversation
           if (conversationId) {
             const conversation = state.conversations.find(c => c.id === conversationId);
-            if (conversation?.modelId && conversation?.provider) {
+            if (conversation?.modelId) {
               // Check if the model still exists in available models
               const modelExists = state.availableModels.find(m => m.id === conversation.modelId);
               if (modelExists) {
                 set(state => {
                   state.selectedModel = conversation.modelId!;
-                  state.selectedProvider = conversation.provider!;
+                  state.selectedProvider = conversation.provider || modelExists.provider;
                 });
                 logger.debug('chatStore: Restored model for conversation:', conversation.modelId);
               } else {
                 logger.warn('chatStore: Conversation model no longer available:', conversation.modelId);
+                // If model doesn't exist, keep the current selection but update the conversation
+                set(state => {
+                  const conv = state.conversations.find(c => c.id === conversationId);
+                  if (conv && state.selectedModel) {
+                    conv.modelId = state.selectedModel;
+                    conv.provider = state.selectedProvider;
+                  }
+                });
               }
+            } else {
+              // If conversation doesn't have a model, assign the current selection to it
+              set(state => {
+                const conv = state.conversations.find(c => c.id === conversationId);
+                if (conv && state.selectedModel) {
+                  conv.modelId = state.selectedModel;
+                  conv.provider = state.selectedProvider;
+                  logger.debug('chatStore: Assigned current model to conversation:', state.selectedModel);
+                }
+              });
             }
             
             // Auto-fetch messages if not already loaded
@@ -887,7 +905,7 @@ export const useChatStore = create<ChatState>()(
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           // Persist only essential, serializable state
-          conversations: state.conversations,
+          conversations: state.conversations, // This includes modelId and provider for each conversation
           selectedModel: state.selectedModel,
           selectedProvider: state.selectedProvider,
         }),

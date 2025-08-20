@@ -12,6 +12,7 @@ export function ModelSelector({ conversationId }: Props) {
   const {
     availableModels,
     selectedModel,
+    conversations,
     isLoadingModels,
     isHydrated,
     fetchAvailableModels,
@@ -19,6 +20,10 @@ export function ModelSelector({ conversationId }: Props) {
     setConversationModel,
     error
   } = useChatStore();
+  
+  // Get the model for this specific conversation if conversationId is provided
+  const conversation = conversationId ? conversations.find(c => c.id === conversationId) : null;
+  const displayModel = conversation?.modelId || selectedModel;
 
   // Fetch models on component mount
   useEffect(() => {
@@ -97,7 +102,7 @@ export function ModelSelector({ conversationId }: Props) {
         value: model.id || model.name,
         label: model.name,
       }))}
-      value={selectedModel || undefined}
+      value={displayModel || undefined}
       onChange={handleModelSelect}
       placeholder="Select Model"
       className="min-w-[180px]"
