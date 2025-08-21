@@ -13,18 +13,52 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
   const suppressOpenRef = useRef<{ url: string; until: number } | null>(null);
 
   useEffect(() => {
+    // Global CAPTURE handler: cancel native navigation for external links
+    const capturePreventNativeNavigation = (e: MouseEvent) => {
+      try {
+        const path = (e.composedPath && e.composedPath()) || [];
+        // Find the first anchor element in the composed path
+        let anchorEl: HTMLElement | null = null;
+        for (const el of path) {
+          const node = el as HTMLElement;
+          if (node && node.tagName === 'A') { anchorEl = node; break; }
+        }
+        const target = e.target as HTMLElement;
+        const anchor = (anchorEl as HTMLAnchorElement) || target.closest('a');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href') || '';
+        const original = anchor.getAttribute('data-original-href') || '';
+        const url = original || href;
+        if (!url) return;
+        if (url.startsWith('mailto:') || url.startsWith('tel:')) return;
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          e.preventDefault();
+          // Do not stop propagation here; allow shadow/global handlers to decide opening
+        }
+      } catch {}
+    };
+
+    document.addEventListener('click', capturePreventNativeNavigation, true);
+
     // Monkey-patch window.open to suppress duplicate opens triggered by other handlers
     if (!originalWindowOpenRef.current) {
       originalWindowOpenRef.current = window.open.bind(window);
       const originalOpen = originalWindowOpenRef.current;
       window.open = ((url?: string | URL, target?: string, features?: string) => {
         try {
+          const now = performance.now();
+          // Suppress duplicates opened by our own global handler
           if (typeof url === 'string' && suppressOpenRef.current) {
-            const now = performance.now();
             if (now <= suppressOpenRef.current.until && url === suppressOpenRef.current.url) {
               console.debug('[LinkPreview] Suppressed duplicate window.open for', url);
               return null as unknown as Window | null;
             }
+          }
+          // Also suppress any window.open during a ShadowEmailRenderer-handled click window
+          const skipUntil = (window as any).__skipGlobalLinkUntil as number | undefined;
+          if (typeof skipUntil === 'number' && now <= skipUntil) {
+            console.debug('[LinkPreview] Suppressed window.open during shadow email handling');
+            return null as unknown as Window | null;
           }
         } catch {}
         return originalOpen(url as any, target, features);
@@ -32,10 +66,42 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
     }
 
     const handleGlobalLinkClick = async (e: MouseEvent) => {
+      // Global shadow-email suppression flag (set by ShadowEmailRenderer)
+      try {
+        const skipUntil = (window as any).__skipGlobalLinkUntil as number | undefined;
+        if (typeof skipUntil === 'number' && performance.now() <= skipUntil) {
+          // Shadow email click already handled; skip global handling
+          return;
+        }
+      } catch {}
+      // Check if this event was already handled by shadow DOM
+      if ((e as any)._shadowHandled) {
+        console.log('Link already handled by shadow DOM, skipping');
+        return;
+      }
+      
       const target = e.target as HTMLElement;
+      
+      // IMPORTANT: Skip ALL events from shadow email containers
+      // Prefer composedPath to detect the shadow host boundary
+      const path = (e.composedPath && e.composedPath()) || [];
+      if (
+        path.some((el) => (el as any)?.classList?.contains?.('shadow-email-container')) ||
+        target.closest('.shadow-email-container') ||
+        target.classList.contains('shadow-email-container')
+      ) {
+        return;
+      }
+      
       const anchor = target.closest('a');
       
       if (!anchor) return;
+      
+      // Skip if the link is marked as shadow-handled
+      if (anchor.hasAttribute('data-shadow-handled')) {
+        console.log('Link marked as shadow-handled, skipping');
+        return;
+      }
       
       // Skip if it's an internal link or has a specific handler
       const href = anchor.getAttribute('href');
@@ -77,16 +143,17 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
         setCurrentBrowserUrl(href);
         console.log('Browser window opened with label:', windowLabel);
       } catch (err) {
-        console.error('Failed to open Tauri browser window, falling back to system browser:', err);
-        window.open(href, '_blank', 'noopener,noreferrer');
+        console.error('Failed to open Tauri browser window:', err);
+        // Avoid falling back to system browser to prevent duplicates
       }
     };
 
-    // Add listener to capture phase to intercept before other handlers
-    document.addEventListener('click', handleGlobalLinkClick, true);
+    // Add listener in BUBBLE phase so Shadow DOM capture handlers can stop it first
+    document.addEventListener('click', handleGlobalLinkClick, false);
     
     return () => {
-      document.removeEventListener('click', handleGlobalLinkClick, true);
+      document.removeEventListener('click', handleGlobalLinkClick, false);
+      document.removeEventListener('click', capturePreventNativeNavigation, true);
       // Restore original window.open
       if (originalWindowOpenRef.current) {
         window.open = originalWindowOpenRef.current;

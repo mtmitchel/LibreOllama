@@ -10,17 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "title": "LibreOllama",
-        "width": 1200,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
-        "center": true,
-        "resizable": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self' https: http: data: blob:; connect-src 'self' https: http: ws: wss: http://localhost:11434 ws://localhost:11434 https://www.googleapis.com https://accounts.google.com; script-src 'self' https: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' https: 'unsafe-inline'; img-src * data: blob:; font-src * data:; media-src *; frame-src *; worker-src 'self' blob: https:;"
     }

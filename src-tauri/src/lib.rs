@@ -120,6 +120,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
+            // Programmatically create the main window so we can attach webview handlers
+            use tauri::WebviewUrl;
+            let _ = tauri::WebviewWindowBuilder::new(app, "main", {
+                if cfg!(debug_assertions) {
+                    WebviewUrl::External("http://localhost:1423".parse().unwrap())
+                } else {
+                    WebviewUrl::App("index.html".into())
+                }
+            })
+            .title("LibreOllama")
+            .inner_size(1200.0, 800.0)
+            .resizable(true)
+            .center()
+            .build();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create async runtime");
             rt.block_on(async {
                 if let Err(e) = init_database_system(app.handle().clone()).await {

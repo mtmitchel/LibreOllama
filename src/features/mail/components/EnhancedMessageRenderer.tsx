@@ -217,6 +217,7 @@ function MessageContent({ content, contentType, enableImageLoading, enableLinkPr
           <ShadowEmailRenderer 
             html={processedContent}
             className="email-shadow-content"
+            onLinkClick={undefined} // Let ShadowEmailRenderer handle it directly
           />
         ) : (
           <pre className="whitespace-pre-wrap font-sans asana-text-sm leading-relaxed">

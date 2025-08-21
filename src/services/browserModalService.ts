@@ -22,12 +22,14 @@ class BrowserModalService {
 
       console.log('[browserModalService] Opening browser window with options:', options);
 
-      // Open single-window browser shell with DS chrome
-      const windowLabel = await invoke<string>('open_browser_shell_window', {
-        url: options.url,
-        title: options.title || this.getTitleFromUrl(options.url),
-        width: options.width || 1200,
-        height: options.height || 820,
+      // Open a native external webview window (avoids iframe embedding restrictions)
+      const windowLabel = await invoke<string>('open_browser_window', {
+        options: {
+          url: options.url,
+          title: options.title || this.getTitleFromUrl(options.url),
+          width: options.width || 1200,
+          height: options.height || 820,
+        }
       });
 
       console.log('[browserModalService] Browser window opened successfully:', windowLabel);

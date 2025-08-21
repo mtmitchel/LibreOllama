@@ -1,16 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import { logger } from '../../../core/lib/logger';
+import { browserModalService } from '../../../services/browserModalService';
 
 interface ShadowEmailRendererProps {
   html: string;
   className?: string;
+  onLinkClick?: (url: string) => void;
 }
 
 /**
  * Renders email HTML content in a Shadow DOM to completely isolate styles.
  * This prevents the app's CSS from interfering with email styles and vice versa.
  */
-export function ShadowEmailRenderer({ html, className = '' }: ShadowEmailRendererProps) {
+export function ShadowEmailRenderer({ html, className = '', onLinkClick }: ShadowEmailRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const shadowRootRef = useRef<ShadowRoot | null>(null);
 
@@ -112,6 +114,38 @@ export function ShadowEmailRenderer({ html, className = '' }: ShadowEmailRendere
     // Update shadow DOM content
     shadowRoot.innerHTML = emailContent;
 
+    // Normalize external anchors to prevent native navigation by the webview
+    const anchors = Array.from(shadowRoot.querySelectorAll('a')) as HTMLAnchorElement[];
+    anchors.forEach((a) => {
+      const href = a.getAttribute('href') || '';
+      // Keep mailto/tel intact; only normalize http(s)
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        a.setAttribute('data-original-href', href);
+        // Remove href entirely to disable native webview navigation
+        a.removeAttribute('href');
+        a.setAttribute('role', 'link');
+        a.setAttribute('tabindex', '0');
+        a.style.cursor = a.style.cursor || 'pointer';
+      }
+    });
+
+    // Keyboard accessibility: handle Enter on link-like elements without href
+    shadowRoot.addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter') return;
+      const target = e.target as HTMLElement;
+      const link = target.closest('a[role="link"][data-original-href], [role="link"][data-original-href]') as HTMLElement | null;
+      if (!link) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        const href = link.getAttribute('data-original-href');
+        if (href) {
+          (window as any).__skipGlobalLinkUntil = performance.now() + 1200;
+          await browserModalService.openModal({ url: href, title: 'Browser' });
+        }
+      } catch {}
+    }, true);
+
     // Handle image errors within shadow DOM - just hide failed images
     const images = shadowRoot.querySelectorAll('img');
     images.forEach((img: HTMLImageElement) => {
@@ -124,27 +158,52 @@ export function ShadowEmailRenderer({ html, className = '' }: ShadowEmailRendere
       });
     });
 
-    // Handle clicks on links
-    const links = shadowRoot.querySelectorAll('a');
-    links.forEach((link: HTMLAnchorElement) => {
-      link.addEventListener('click', (e) => {
+    // Add a capture phase listener on the shadow root itself to intercept ALL clicks
+    shadowRoot.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      
+      if (!link) return;
+      
+      const href = link.getAttribute('data-original-href') || link.getAttribute('href');
+      if (!href) return;
+      
+      // For mailto and tel, let them work normally
+      if (href.startsWith('mailto:') || href.startsWith('tel:')) {
+        return; // Don't prevent default
+      }
+      
+      // For HTTP/HTTPS links, completely stop the event
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        // Stop EVERYTHING
         e.preventDefault();
-        const href = link.getAttribute('href');
-        if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
-          // Dispatch custom event that LinkPreviewProvider can handle
-          window.dispatchEvent(new CustomEvent('email-link-click', { 
-            detail: { url: href } 
-          }));
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        // Mark as handled for any composed listeners outside
+        try {
+          (e as any)._shadowHandled = true;
+          // Set a brief global suppression window for the document-level handler
+          (window as any).__skipGlobalLinkUntil = performance.now() + 1200;
+        } catch {}
+        
+        // Open directly with browserModalService
+        try {
+          logger.info('Opening email link from shadow DOM:', href);
+          await browserModalService.openModal({ url: href, title: 'Browser' });
+        } catch (err) {
+          logger.error('Failed to open browser modal:', err);
+          // Do not fallback to system browser to avoid duplicate openings
         }
-      });
-    });
+      }
+    }, true); // Use capture phase!
 
-  }, [html]);
+  }, [html, onLinkClick]);
 
   return (
     <div 
       ref={containerRef} 
       className={`shadow-email-container ${className}`}
+      data-shadow-dom="true"
       style={{ width: '100%', minHeight: '200px' }}
     />
   );

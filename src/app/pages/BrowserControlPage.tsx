@@ -17,5 +17,5 @@ export function BrowserControlPage() {
 	} catch {}
 
 	if (!windowLabel) return null;
-	return <BrowserModalController windowLabel={windowLabel} url={url} />;
+	return <BrowserModalController windowLabel={windowLabel} url={url} mode="toolbar" />;
 }

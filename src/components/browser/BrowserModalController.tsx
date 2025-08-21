@@ -11,9 +11,10 @@ import { useNavigate } from 'react-router-dom';
 interface BrowserModalControllerProps {
   windowLabel?: string;
   url: string;
+  mode?: 'overlay' | 'toolbar';
 }
 
-export function BrowserModalController({ windowLabel, url }: BrowserModalControllerProps) {
+export function BrowserModalController({ windowLabel, url, mode = 'overlay' }: BrowserModalControllerProps) {
   const { closeLinkPreview } = useLinkPreviewStore();
   const [isMinimized, setIsMinimized] = useState(false);
   const [currentUrl, setCurrentUrl] = useState(url);
@@ -65,14 +66,20 @@ export function BrowserModalController({ windowLabel, url }: BrowserModalControl
       // Get current URL from the browser window
       let targetUrl = currentUrl;
       if (windowLabel) {
-        targetUrl = await invoke<string>('get_browser_window_url', { windowLabel });
-        setCurrentUrl(targetUrl);
+        try {
+          targetUrl = await invoke<string>('get_browser_window_url', { windowLabel });
+          setCurrentUrl(targetUrl);
+        } catch (err) {
+          console.error('Failed to get browser URL:', err);
+        }
       }
       
-      // Open reader view in a new window/route
-      // We'll pass the URL as a query parameter
-      const encodedUrl = encodeURIComponent(targetUrl);
-      window.open(`#/reader?url=${encodedUrl}`, '_blank', 'width=800,height=900');
+      // Navigate the content webview to reader view
+      // Since we're using BrowserRouter in dev, use path directly
+      const readerUrl = window.location.hostname === 'localhost'
+        ? `http://localhost:1423/reader?url=${encodeURIComponent(targetUrl)}`
+        : `${window.location.origin}#/reader?url=${encodeURIComponent(targetUrl)}`;
+      await browserModalService.navigateModal(windowLabel, readerUrl);
     } catch (error) {
       console.error('Failed to open reader view:', error);
     }
@@ -95,9 +102,55 @@ export function BrowserModalController({ windowLabel, url }: BrowserModalControl
     return () => clearInterval(interval);
   }, [windowLabel]);
 
+  // Toolbar mode: render a full-width top bar for the controller window
+  if (mode === 'toolbar') {
+    return (
+      <div
+        className={cn(
+          "w-full h-14 flex items-center justify-end gap-1",
+          "bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm",
+          "border-b border-gray-200 dark:border-gray-700 px-3",
+          "[--drag-region:theme(colors.transparent)]"
+        )}
+        data-tauri-drag-region
+      >
+        <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' }}>
+          <Button size="icon" variant="ghost" onClick={handleRefresh} className="h-8 w-8" title="Refresh">
+            <RefreshCw size={16} />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleCopyLink}
+            className={cn("h-8 w-8", copyStatus === 'copied' && "text-green-600 dark:text-green-400")}
+            title={copyStatus === 'copied' ? "Copied!" : "Copy link"}
+          >
+            <Copy size={16} />
+          </Button>
+          <Button size="icon" variant="ghost" onClick={handleReaderView} className="h-8 w-8" title="Reader view">
+            <BookOpen size={16} />
+          </Button>
+          <Button size="icon" variant="ghost" onClick={handleOpenExternal} className="h-8 w-8" title="Open in browser">
+            <ExternalLink size={16} />
+          </Button>
+          <div className="mx-1 h-4 w-px bg-gray-300 dark:bg-gray-600" />
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleClose}
+            className="h-8 w-8 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+            title="Close"
+          >
+            <X size={16} />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!windowLabel) return null;
 
-  // Render a floating control bar for the browser window
+  // Overlay mode: render floating control bar in the main window
   return createPortal(
     <div className={cn(
       "fixed top-4 right-4 z-[10000] flex items-center gap-2 rounded-lg",

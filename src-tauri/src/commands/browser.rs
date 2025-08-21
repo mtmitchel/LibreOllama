@@ -1,4 +1,4 @@
-use tauri::{WebviewUrl, WebviewWindowBuilder, Manager, PhysicalPosition, PhysicalSize};
+use tauri::{WebviewUrl, WebviewWindowBuilder, WindowBuilder, Manager, PhysicalPosition, PhysicalSize, LogicalPosition, LogicalSize};
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
 use std::process::Command;
@@ -17,33 +17,58 @@ pub async fn open_browser_window(
     options: BrowserWindowOptions,
 ) -> Result<String, String> {
     let window_label = format!("browser-{}", Utc::now().timestamp_millis());
+    let toolbar_height = 56.0;
+    let width = options.width.unwrap_or(1200.0);
+    let height = options.height.unwrap_or(820.0);
     
-    let window = WebviewWindowBuilder::new(
+    // Create main window without webview
+    let window = WindowBuilder::new(
         &app_handle,
         &window_label,
-        WebviewUrl::External(options.url.parse().map_err(|e| format!("Invalid URL: {}", e))?),
     )
-    .title(options.title.unwrap_or_else(|| "LibreOllama Browser".to_string()))
-    .inner_size(
-        options.width.unwrap_or(1200.0),
-        options.height.unwrap_or(800.0),
-    )
+    .title(options.title.unwrap_or_else(|| "Browser".to_string()))
+    .inner_size(width, height)
     .resizable(true)
-    .decorations(true)
-    .always_on_top(false)
+    .decorations(false)
     .center()
-    .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     .build()
-    .map_err(|e| format!("Failed to create browser window: {}", e))?;
+    .map_err(|e| format!("Failed to create window: {}", e))?;
     
-    // Show the window
+    // Create toolbar webview
+    let toolbar_url = if cfg!(debug_assertions) {
+        format!("http://localhost:1423/browser-control?windowLabel={}&url={}&mode=toolbar", 
+                window_label, urlencoding::encode(&options.url))
+    } else {
+        format!("index.html#/browser-control?windowLabel={}&url={}&mode=toolbar", 
+                window_label, urlencoding::encode(&options.url))
+    };
+    
+    let toolbar = window.add_child(
+        tauri::webview::WebviewBuilder::new(
+            "toolbar",
+            WebviewUrl::External(toolbar_url.parse().unwrap())
+        )
+        .auto_resize(),
+        LogicalPosition::new(0.0, 0.0),
+        LogicalSize::new(width, toolbar_height),
+    )
+    .map_err(|e| format!("Failed to add toolbar: {}", e))?;
+    
+    // Create content webview  
+    let content = window.add_child(
+        tauri::webview::WebviewBuilder::new(
+            "content",
+            WebviewUrl::External(options.url.parse().map_err(|e| format!("Invalid URL: {}", e))?)
+        )
+        .auto_resize()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"),
+        LogicalPosition::new(0.0, toolbar_height),
+        LogicalSize::new(width, height - toolbar_height),
+    )
+    .map_err(|e| format!("Failed to add content: {}", e))?;
+    
     window.show().map_err(|e| format!("Failed to show window: {}", e))?;
-    // Also spawn the controller window from backend to guarantee visibility
-    let url_for_ctrl = Some(options.url.clone());
-    let parent_label_for_ctrl = window_label.clone();
-    let app_for_ctrl = app_handle.clone();
-    let _ = open_browser_controller_window(app_for_ctrl, parent_label_for_ctrl, url_for_ctrl).await;
-
+    
     Ok(window_label)
 }
 
@@ -52,7 +77,11 @@ pub async fn close_browser_window(
     app_handle: tauri::AppHandle,
     window_label: String,
 ) -> Result<(), String> {
-    if let Some(window) = app_handle.get_webview_window(&window_label) {
+    // Try to close as a window first (for multi-webview setup)
+    if let Some(window) = app_handle.get_window(&window_label) {
+        window.close().map_err(|e| format!("Failed to close window: {}", e))?;
+    } else if let Some(window) = app_handle.get_webview_window(&window_label) {
+        // Fallback to webview window for single-webview setup
         window.close().map_err(|e| format!("Failed to close window: {}", e))?;
     }
     Ok(())
@@ -64,6 +93,20 @@ pub async fn navigate_browser_window(
     window_label: String,
     url: String,
 ) -> Result<(), String> {
+    // For multi-webview setup, navigate the content webview
+    if let Some(window) = app_handle.get_window(&window_label) {
+        // Get all webviews in the window
+        let webviews = window.webviews();
+        for webview in webviews {
+            if webview.label() == "content" {
+                webview.navigate(url.parse().map_err(|e| format!("Invalid URL: {}", e))?)
+                    .map_err(|e| format!("Failed to navigate: {}", e))?;
+                return Ok(());
+            }
+        }
+    }
+    
+    // Fallback to single webview window
     if let Some(window) = app_handle.get_webview_window(&window_label) {
         window.navigate(url.parse().map_err(|e| format!("Invalid URL: {}", e))?)
             .map_err(|e| format!("Failed to navigate: {}", e))?;
@@ -76,6 +119,19 @@ pub async fn get_browser_window_url(
     app_handle: tauri::AppHandle,
     window_label: String,
 ) -> Result<String, String> {
+    // For multi-webview setup, get URL from the content webview
+    if let Some(window) = app_handle.get_window(&window_label) {
+        let webviews = window.webviews();
+        for webview in webviews {
+            if webview.label() == "content" {
+                return webview.url()
+                    .map(|u| u.to_string())
+                    .map_err(|e| format!("Failed to get URL: {}", e));
+            }
+        }
+    }
+    
+    // Fallback to single webview window
     if let Some(window) = app_handle.get_webview_window(&window_label) {
         window.url()
             .map(|u| u.to_string())
@@ -104,9 +160,8 @@ pub async fn open_browser_controller_window(
         .outer_size()
         .map_err(|e| format!("Failed to get parent size: {}", e))?;
 
-    // Controller window dimensions (bigger for visibility)
-    let ctrl_width: i32 = 500;
-    let ctrl_height: i32 = 120;
+    // Controller window dimensions: full parent width, toolbar height
+    let ctrl_height: i32 = 56;
 
     let controller_label = format!("browser-controller-{}", Utc::now().timestamp_millis());
 
@@ -137,28 +192,24 @@ pub async fn open_browser_controller_window(
         &controller_label,
         controller_url,
     )
-    .title("DEBUG Controller")
-    // Decorations enabled and transparency disabled to avoid WebView2 compositor issues
-    .decorations(true)
+    .title("Browser Controls")
+    // Frameless, always-on-top toolbar that docks to parent top edge
+    .decorations(false)
     .always_on_top(true)
-    .transparent(false)
-    .inner_size(ctrl_width as f64, ctrl_height as f64)
-    .center()
+    .transparent(true)
+    .inner_size(parent_size.width as f64, ctrl_height as f64)
     .build()
     .map_err(|e| format!("Failed to create controller window: {}", e))?;
 
-    println!("[controller] Window built; setting properties and showing");
+    println!("[controller] Window built; docking to parent top edge");
+    // Position the controller at the parent's top-left corner
     controller
-        .set_always_on_top(true)
-        .map_err(|e| format!("Failed to set always on top: {}", e))?;
+        .set_position(PhysicalPosition::new(parent_pos.x, parent_pos.y))
+        .map_err(|e| format!("Failed to set controller position: {}", e))?;
     controller
-        .set_size(PhysicalSize::new(ctrl_width as u32, ctrl_height as u32))
-        .map_err(|e| format!("Failed to set size: {}", e))?;
-    // Centered on screen for guaranteed visibility during debug
-    controller
-        .show()
-        .map_err(|e| format!("Failed to show controller window: {}", e))?;
-    println!("[controller] Show requested");
+        .set_size(PhysicalSize::new(parent_size.width, ctrl_height as u32))
+        .map_err(|e| format!("Failed to set controller size: {}", e))?;
+    controller.show().map_err(|e| format!("Failed to show controller window: {}", e))?;
 
     Ok(controller_label)
 }
