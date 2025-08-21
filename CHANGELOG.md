@@ -39,6 +39,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Impact: Clicking links across Mail/Notes/Chat opens exactly one native browser window with working toolbar; no system browser duplication; chat shows clean links.
 
+### 🗒️ Notes menu and export
+- Added Move to folder picker dialog for notes instead of auto-assigning
+- Updated export labels to design-system copy: Export as Word, Export as Text
+- Export dialogs and toasts now use DLS naming (Word/Text) and tokens
+- Added separators in the notes item dropdown to group actions
+
+### 💬 Chat conversations context menu (DLS alignment)
+- Made menu fully opaque (bg-primary) and removed blur
+- Unified labels: Export as Text / Markdown / JSON / PDF
+- Switched icons to FileDown for all export actions; Edit icon standardized
+- Delete uses semantic error color and icon inherits current color
+- Added separators to group actions; spacing/padding matched Notes dropdown
+- Standardized z-index, border, radius, and shadow to design-system tokens
+
 ### 📧 Mail compose reliability fixes
 - Enabled desktop sending pipeline by turning on the `gmail-compose` feature in Tauri and adding the missing `gmail.send` scope to backend OAuth scopes.
 - Added HMR‑safe invoke wrapper with auto‑retry for Tauri callback‑id race conditions (dev only).

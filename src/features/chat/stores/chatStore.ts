@@ -37,6 +37,8 @@ interface ChatMessageApi {
 interface ChatSessionApi {
   id: string;
   title: string;
+  model_id?: string;
+  provider?: string;
   created_at: string;
   updated_at: string;
   message_count: number;
@@ -134,7 +136,9 @@ const convertApiSessionToConversation = (session: ChatSessionApi, lastMessage = 
   lastMessage,
   timestamp: new Date(session.updated_at).toISOString(),
   isPinned: false, // Backend doesn't store this yet, handle in UI state
-  participants: 1
+  participants: 1,
+  modelId: session.model_id,
+  provider: session.provider as LLMProvider | undefined
 });
 
 const convertApiMessageToChatMessage = (message: ChatMessageApi): ChatMessage => ({
@@ -494,11 +498,25 @@ export const useChatStore = create<ChatState>()(
               state.isSending = false;
             });
 
-            // 6. Generate title if this is the first message in the conversation
+            // 6. Save model to backend if it changed
             const conversation = get().conversations.find(c => c.id === conversationId);
-            if (conversation && conversation.title === 'New chat') {
-              // Generate title asynchronously without blocking
-              get().generateTitle(conversationId, content.trim());
+            if (conversation) {
+              try {
+                await invoke('update_session_model', {
+                  sessionIdStr: conversationId,
+                  modelId: selectedModel || null,
+                  provider: selectedProvider
+                });
+                logger.debug('chatStore: Saved model to backend after message:', selectedModel, selectedProvider);
+              } catch (error) {
+                logger.error('chatStore: Failed to save model after message:', error);
+              }
+              
+              // Generate title if this is the first message in the conversation
+              if (conversation.title === 'New chat') {
+                // Generate title asynchronously without blocking
+                get().generateTitle(conversationId, content.trim());
+              }
             }
 
           } catch (error) {
@@ -801,17 +819,36 @@ export const useChatStore = create<ChatState>()(
         },
 
         // Optional explicit setter to wire UI directly per-conversation
-        setConversationModel(conversationId: string, modelId: string, provider?: LLMProvider) {
+        async setConversationModel(conversationId: string, modelId: string, provider?: LLMProvider) {
+          const state = get();
+          const convo = state.conversations.find(c => c.id === conversationId);
+          if (!convo) return;
+          
+          // Determine provider if not explicitly provided
+          if (!provider) {
+            const model = state.availableModels.find(m => m.id === modelId);
+            provider = model ? model.provider : convo.provider;
+          }
+          
+          // Update in backend
+          try {
+            await invoke('update_session_model', {
+              sessionIdStr: conversationId,
+              modelId: modelId,
+              provider: provider
+            });
+            logger.debug('chatStore: Saved model to backend:', modelId, provider);
+          } catch (error) {
+            logger.error('chatStore: Failed to save model to backend:', error);
+          }
+          
+          // Update in frontend state
           set(state => {
             const convo = state.conversations.find(c => c.id === conversationId);
             if (!convo) return;
             convo.modelId = modelId;
-            if (provider) {
-              convo.provider = provider;
-            } else {
-              const model = state.availableModels.find(m => m.id === modelId);
-              convo.provider = model ? model.provider : convo.provider;
-            }
+            convo.provider = provider;
+            
             // If this is the active convo, also update the global selection
             if (state.selectedConversationId === conversationId) {
               state.selectedModel = modelId;

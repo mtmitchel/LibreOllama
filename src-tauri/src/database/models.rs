@@ -284,6 +284,8 @@ pub struct ChatSession {
     pub agent_id: i32,
     pub context_length: i32,
     pub is_active: bool,
+    pub model_id: Option<String>,
+    pub provider: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -298,8 +300,10 @@ impl From<&Row<'_>> for ChatSession {
             agent_id: row.get(4).unwrap_or(0),
             context_length: row.get(5).unwrap_or(4096),
             is_active: row.get(6).unwrap_or(true),
-            created_at: row.get(7).unwrap_or_else(|_| chrono::Local::now().naive_local()),
-            updated_at: row.get(8).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+            model_id: row.get(7).ok(),
+            provider: row.get(8).ok(),
+            created_at: row.get(9).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+            updated_at: row.get(10).unwrap_or_else(|_| chrono::Local::now().naive_local()),
         }
     }
 }

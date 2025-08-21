@@ -24,7 +24,7 @@ pub fn create_chat_session(conn: &Connection, user_id: &str, session_name: &str)
 /// Get all chat sessions by user
 pub fn get_chat_sessions_by_user(conn: &Connection, user_id: &str) -> Result<Vec<ChatSession>> {
     let mut stmt = conn.prepare(
-        "SELECT id, user_id, session_name, created_at, updated_at FROM chat_sessions WHERE user_id = ?1 ORDER BY updated_at DESC"
+        "SELECT id, user_id, session_name, created_at, updated_at, model_id, provider FROM chat_sessions WHERE user_id = ?1 ORDER BY updated_at DESC"
     ).context("Failed to prepare get chat sessions by user query")?;
     
     let sessions = stmt.query_map(params![user_id], |row| {
@@ -36,6 +36,8 @@ pub fn get_chat_sessions_by_user(conn: &Connection, user_id: &str) -> Result<Vec
             agent_id: 0, // Default agent_id
             context_length: 4096, // Default context_length
             is_active: true, // Default is_active
+            model_id: row.get(5).ok(),
+            provider: row.get(6).ok(),
             created_at: row.get(3)?,
             updated_at: row.get(4)?,
         })
@@ -52,7 +54,7 @@ pub fn get_chat_sessions_by_user(conn: &Connection, user_id: &str) -> Result<Vec
 /// Get a specific chat session by ID
 pub fn get_chat_session(conn: &Connection, session_id: i32) -> Result<Option<ChatSession>> {
     let mut stmt = conn.prepare(
-        "SELECT id, user_id, session_name, created_at, updated_at FROM chat_sessions WHERE id = ?1"
+        "SELECT id, user_id, session_name, created_at, updated_at, model_id, provider FROM chat_sessions WHERE id = ?1"
     ).context("Failed to prepare get chat session query")?;
     
     let session = stmt.query_row(params![session_id], |row| {
@@ -64,6 +66,8 @@ pub fn get_chat_session(conn: &Connection, session_id: i32) -> Result<Option<Cha
             agent_id: 0, // Default agent_id
             context_length: 4096, // Default context_length
             is_active: true, // Default is_active
+            model_id: row.get(5).ok(),
+            provider: row.get(6).ok(),
             created_at: row.get(3)?,
             updated_at: row.get(4)?,
         })
@@ -79,6 +83,17 @@ pub fn update_chat_session(conn: &Connection, session_id: i32, session_name: &st
         "UPDATE chat_sessions SET session_name = ?1, updated_at = ?2 WHERE id = ?3",
         params![session_name, now, session_id],
     ).context("Failed to update chat session")?;
+    
+    Ok(())
+}
+
+/// Update chat session model info
+pub fn update_chat_session_model(conn: &Connection, session_id: i32, model_id: Option<String>, provider: Option<String>) -> Result<()> {
+    let now = Local::now().naive_local();
+    conn.execute(
+        "UPDATE chat_sessions SET model_id = ?1, provider = ?2, updated_at = ?3 WHERE id = ?4",
+        params![model_id, provider, now, session_id],
+    ).context("Failed to update chat session model")?;
     
     Ok(())
 }

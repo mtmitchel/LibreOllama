@@ -71,6 +71,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
     <Popover
       open={isOpen}
       onOpenChange={setIsOpen}
+      contentClassName={`bg-white dark:bg-gray-900 z-[10000] ${menuClassName}`.trim()}
       content={
         <div className={`min-w-[180px] py-[var(--space-0-5)] ${menuClassName}`}>
           {items && items.length > 0 ? items.map((item, index) => {

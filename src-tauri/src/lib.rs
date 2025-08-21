@@ -249,6 +249,7 @@ pub fn run() {
             commands::chat::delete_session,
             commands::chat::delete_session_v4,
             commands::chat::update_session_title,
+            commands::chat::update_session_model,
             // Text processing commands
             commands::text_processing::clean_text,
             commands::text_processing::format_ai_response,

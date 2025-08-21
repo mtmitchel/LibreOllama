@@ -59,6 +59,17 @@ function Chat() {
   }, [clearError]);
 
   useEffect(() => {
+    // When conversations are loaded and we have a selected conversation from persisted state,
+    // ensure its messages are loaded
+    if (selectedConversationId && conversations.length > 0 && !isLoadingMessages) {
+      const hasMessages = messages[selectedConversationId] && messages[selectedConversationId].length >= 0;
+      if (!hasMessages) {
+        fetchMessages(selectedConversationId);
+      }
+    }
+  }, [selectedConversationId, conversations, messages, isLoadingMessages, fetchMessages]);
+
+  useEffect(() => {
     // Determine if we should scroll instantly or smoothly
     const isConversationChange = previousConversationIdRef.current !== selectedConversationId;
     const scrollBehavior = isInitialLoadRef.current || isConversationChange ? 'instant' : 'smooth';

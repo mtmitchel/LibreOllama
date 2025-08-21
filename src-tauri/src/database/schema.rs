@@ -103,6 +103,13 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         record_migration(conn, 14)?;
         println!("Migration v14 completed successfully");
     }
+    
+    if current_version < 15 {
+        println!("Running migration v15 to add model_id and provider to chat_sessions...");
+        run_migration_v15(conn)?;
+        record_migration(conn, 15)?;
+        println!("Migration v15 completed successfully");
+    }
 
     Ok(())
 }
@@ -749,6 +756,53 @@ fn run_migration_v11(conn: &Connection) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_subtasks_metadata_id ON subtasks(task_metadata_id)",
         [],
     ).context("Failed to create subtasks index")?;
+
+    Ok(())
+}
+
+/// Run migration v15 - Add model_id and provider columns to chat_sessions
+fn run_migration_v15(conn: &Connection) -> Result<()> {
+    // Check if model_id column already exists
+    let has_model_id: bool = conn
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='chat_sessions'",
+            [],
+            |row| {
+                let sql: String = row.get(0)?;
+                Ok(sql.contains("model_id"))
+            },
+        )
+        .unwrap_or(false);
+
+    if !has_model_id {
+        // Add model_id column
+        conn.execute(
+            "ALTER TABLE chat_sessions ADD COLUMN model_id TEXT",
+            [],
+        ).context("Failed to add model_id column to chat_sessions")?;
+        println!("Added model_id column to chat_sessions table");
+    }
+
+    // Check if provider column already exists
+    let has_provider: bool = conn
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='chat_sessions'",
+            [],
+            |row| {
+                let sql: String = row.get(0)?;
+                Ok(sql.contains("provider"))
+            },
+        )
+        .unwrap_or(false);
+
+    if !has_provider {
+        // Add provider column
+        conn.execute(
+            "ALTER TABLE chat_sessions ADD COLUMN provider TEXT",
+            [],
+        ).context("Failed to add provider column to chat_sessions")?;
+        println!("Added provider column to chat_sessions table");
+    }
 
     Ok(())
 }

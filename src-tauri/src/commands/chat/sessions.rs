@@ -21,6 +21,8 @@ pub struct ChatMessageApi {
 pub struct ChatSessionApi {
     pub id: String,
     pub title: String,
+    pub model_id: Option<String>,
+    pub provider: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub message_count: usize,
@@ -46,6 +48,8 @@ impl From<DbChatSession> for ChatSessionApi {
         Self {
             id: db_session.id.to_string(), // Convert i32 to String
             title: db_session.session_name, // Use session_name field
+            model_id: db_session.model_id,
+            provider: db_session.provider,
             created_at: Utc.from_utc_datetime(&db_session.created_at),
             updated_at: Utc.from_utc_datetime(&db_session.updated_at),
             message_count: 0, // Calculated separately
@@ -288,6 +292,27 @@ pub async fn update_session_title(
     tokio::task::spawn_blocking(move || {
         let conn = db_manager_clone.get_connection()?;
         operations::chat_operations::update_chat_session(&conn, session_id, &new_title)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e: anyhow::Error| e.to_string())?;
+    
+    Ok(true)
+}
+
+#[tauri::command]
+pub async fn update_session_model(
+    session_id_str: String,
+    model_id: Option<String>,
+    provider: Option<String>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
+) -> Result<bool, String> {
+    let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
+    
+    let db_manager_clone = db_manager.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone.get_connection()?;
+        operations::chat_operations::update_chat_session_model(&conn, session_id, model_id, provider)
     })
     .await
     .map_err(|e| e.to_string())?

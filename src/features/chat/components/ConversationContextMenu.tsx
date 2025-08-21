@@ -8,11 +8,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useChatStore } from '../stores/chatStore';
 import { 
-  Pin, PinOff, Edit3, Trash2, Download 
+  Pin, PinOff, Edit, Trash2, FileDown 
 } from 'lucide-react';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import type { ChatConversation } from "../stores/chatStore";
+import { useToast, toast } from '../../../components/ui/design-system';
 
 interface ConversationContextMenuProps {
   conversation: ChatConversation;
@@ -53,6 +54,7 @@ export function ConversationContextMenu({
 }: ConversationContextMenuProps) {
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { addToast } = useToast();
 
   // Close menu when clicking outside (use 'click' to avoid racing item onClick)
   useEffect(() => {
@@ -127,47 +129,13 @@ export function ConversationContextMenu({
     onClose();
   }, [conversation.id, onDelete, onAction, onClose]);
 
-  // Helper function to show success notification
-  const showExportSuccess = useCallback((format: string, filePath: string) => {
-    // Extract just the filename from the full path
-    const fileName = filePath.split(/[/\\]/).pop() || filePath;
-    
-    // Create notification container
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100000] animate-in fade-in-0 zoom-in-95 duration-200';
-    
-    // Create inner content
-    notification.innerHTML = `
-      <div class="bg-[color:var(--bg-primary)] rounded-lg shadow-[var(--shadow-xl)] border border-[color:var(--border-default)] p-6 min-w-[320px] max-w-[480px]">
-        <div class="flex items-start gap-3">
-          <div class="flex-shrink-0 size-10 rounded-full bg-[color:var(--status-success-subtle)] flex items-center justify-center">
-            <svg class="size-5 text-[color:var(--status-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="asana-text-base font-semibold text-[color:var(--text-primary)] mb-1">
-              ${format} saved
-            </h3>
-            <p class="asana-text-sm text-[color:var(--text-secondary)] break-all">
-              ${fileName}
-            </p>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Auto-remove after 4 seconds
-    setTimeout(() => {
-      notification.classList.add('animate-out', 'fade-out-0', 'zoom-out-95');
-      setTimeout(() => notification.remove(), 200);
-    }, 4000);
-  }, []);
+  // Map export format to friendly label
+  const getFormatLabel = (format: 'txt' | 'json' | 'md' | 'pdf') =>
+    format === 'txt' ? 'Text' : format === 'md' ? 'Markdown' : format === 'json' ? 'JSON' : 'PDF';
 
   const handleExport = useCallback(async (format: 'txt' | 'json' | 'md' | 'pdf') => {
     try {
+      const formatLabel = getFormatLabel(format);
       // Prefer backend export; fall back to client store when unavailable
       let exportContent = '' as string;
       let extension = '' as string;
@@ -252,19 +220,19 @@ export function ConversationContextMenu({
             });
             console.log('PDF Export: Backend call successful');
             
-            // Show success message
-            showExportSuccess('PDF', filePath);
+            // DLS toast
+            addToast(toast.success(`${formatLabel} export saved`));
             
             onClose();
             return;
           } catch (err) {
             console.error('PDF Export: Backend error:', err);
-            alert(`Failed to export PDF: ${err}`);
+            addToast(toast.error(`Failed to export ${formatLabel}: ${String(err)}`));
             onClose();
             return;
           }
         } else {
-          alert('PDF export requires the desktop app with file dialog permissions. Please run the Tauri build to export PDF, or use .md/.txt in the browser.');
+          addToast(toast.info('PDF export requires the desktop app. Use Markdown/Text/JSON in browser.'));
           onClose();
           return;
         }
@@ -309,9 +277,8 @@ export function ConversationContextMenu({
           if (filePath) {
             await tauriWrite(filePath, exportContent);
             saved = true;
-            // Show success notification
-            const formatName = extension.toUpperCase();
-            showExportSuccess(formatName, filePath);
+            // DLS toast
+            addToast(toast.success(`${formatLabel} export saved`));
           }
         }
       } catch (e) {
@@ -343,6 +310,8 @@ export function ConversationContextMenu({
       }
     } catch (error) {
       console.error('Failed to export conversation:', error);
+      const formatLabel = getFormatLabel(format);
+      addToast(toast.error(`Failed to export ${formatLabel}`));
     }
     
     onExport?.(conversation.id);
@@ -362,7 +331,7 @@ export function ConversationContextMenu({
     {
       id: 'rename',
       label: 'Rename',
-      icon: <Edit3 size={16} />,
+      icon: <Edit size={16} />,
       action: handleRename
     },
     {
@@ -374,26 +343,26 @@ export function ConversationContextMenu({
     },
     {
       id: 'export_txt',
-      label: 'Export .txt',
-      icon: <Download size={16} />,
+      label: 'Export as Text',
+      icon: <FileDown size={16} />,
           action: () => handleExport('txt')
         },
         {
           id: 'export_md',
-      label: 'Export .md',
-      icon: <Download size={16} />,
+      label: 'Export as Markdown',
+      icon: <FileDown size={16} />,
           action: () => handleExport('md')
         },
         {
           id: 'export_json',
-      label: 'Export .json',
-      icon: <Download size={16} />,
+      label: 'Export as JSON',
+      icon: <FileDown size={16} />,
           action: () => handleExport('json')
         },
         {
           id: 'export_pdf',
-      label: 'Export .pdf',
-      icon: <Download size={16} />,
+      label: 'Export as PDF',
+      icon: <FileDown size={16} />,
           action: () => handleExport('pdf')
     },
     {
@@ -422,15 +391,15 @@ export function ConversationContextMenu({
       {isOpen && (
       <div
         ref={menuRef}
-          className="fixed z-[99999] min-w-[220px] rounded-[var(--radius-lg)] border border-[var(--border-default)] p-[var(--space-1)] shadow-[var(--shadow-lg)]"
-          style={{ left: `${menuPosition.x}px`, top: `${menuPosition.y}px`, backgroundColor: '#ffffff', opacity: 1 }}
+          className="fixed z-[10000] min-w-[220px] rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] py-[var(--space-0-5)] px-[var(--space-1)] shadow-[var(--shadow-popover)] animate-in fade-in-0 zoom-in-95"
+          style={{ left: `${menuPosition.x}px`, top: `${menuPosition.y}px` }}
         role="menu"
         aria-label="Conversation actions"
       >
           {menuItems.map((item) => {
             if (item.separator) {
               return (
-                <div key={item.id} className="my-[var(--space-1)] h-px bg-[var(--border-subtle)]" role="separator" />
+                <div key={item.id} className="my-[var(--space-0-5)] h-px bg-[var(--border-default)]" role="separator" />
               );
             }
 
@@ -459,12 +428,11 @@ export function ConversationContextMenu({
                     </svg>
                   </button>
                   {activeSubmenu === item.id && (
-                    <div className="absolute left-full top-0 -ml-px min-w-[180px] rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-[var(--shadow-lg)]"
-                      style={{ backgroundColor: '#ffffff', opacity: 1 }}
+                    <div className="absolute left-full top-0 -ml-px min-w-[180px] rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] shadow-[var(--shadow-popover)]"
                       onMouseEnter={() => setActiveSubmenu(item.id)}
                       onMouseLeave={() => setActiveSubmenu(null)}
                     >
-                      <div className="p-[var(--space-1)]">
+                      <div className="py-[var(--space-0-5)] px-[var(--space-1)]">
                         {item.submenu.map((subItem) => (
                           <button
                             key={subItem.id}
@@ -472,7 +440,7 @@ export function ConversationContextMenu({
                               subItem.action?.();
                               setActiveSubmenu(null);
                             }}
-                            className="flex h-8 w-full items-center rounded-[var(--radius-md)] px-[var(--space-2)] text-left asana-text-base text-[color:var(--text-primary)] transition-colors hover:bg-[var(--bg-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]"
+                            className="flex w-full items-center rounded-[var(--radius-md)] px-[var(--space-1-5)] py-[var(--space-1)] text-left asana-text-base text-[color:var(--text-primary)] transition-colors hover:bg-[var(--bg-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]"
                           >
                             {subItem.label}
                           </button>
@@ -498,17 +466,17 @@ export function ConversationContextMenu({
                   }
                 }}
                 disabled={item.disabled}
-                className={`flex h-8 w-full items-center justify-between rounded-[var(--radius-md)] px-[var(--space-2)] text-left asana-text-base transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)] ${
+                className={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-[var(--space-1-5)] py-[var(--space-1)] text-left asana-text-base transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)] ${
                   item.disabled
                     ? 'opacity-50 cursor-not-allowed'
                     : item.destructive
-                      ? 'text-[color:var(--status-error)] hover:bg-[var(--status-error-subtle)]'
+                      ? 'text-[var(--semantic-error)] hover:bg-red-50 hover:text-[var(--semantic-error)]'
                       : 'text-[color:var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                 }`}
                 role="menuitem"
               >
                 <div className="flex items-center gap-[var(--space-2)]">
-                  <span className="text-[color:var(--text-secondary)]">{item.icon}</span>
+                  <span className="text-current">{item.icon}</span>
                   <span>{item.label}</span>
                 </div>
                 {item.shortcut && (

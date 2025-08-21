@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useNotesStore } from '../store';
-import { Button, Text, Input, Card, Heading, toast } from '../../../components/ui';
-import { Dropdown } from '../../../components/ui/design-system';
+import { Button, Text, Input, Card, Heading, toast, useToast } from '../../../components/ui';
+import { Dropdown, SelectDropdown, SimpleDialog as Dialog } from '../../../components/ui/design-system';
 import { FolderPlus, FilePlus, Search, MoreHorizontal, Edit, Trash2, Folder as FolderIcon, FileText as NoteIcon, ChevronRight, X, FileDown, PanelLeft, PanelRight } from 'lucide-react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, DragStartEvent } from '@dnd-kit/core';
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
@@ -11,7 +11,7 @@ import html2canvas from 'html2canvas';
 import { writeTextFile, writeFile } from '@tauri-apps/plugin-fs';
 import { save } from '@tauri-apps/plugin-dialog';
 import { blocksToHtml, blocksToText } from '../utils/blocksToHtml';
-import { useNotifications } from '../hooks/useNotifications';
+// Legacy notifications replaced by design-system toasts
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -81,7 +81,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
   const [renameNoteTitle, setRenameNoteTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
+  const { addToast } = useToast();
+
+  // Move note dialog state
+  const [moveNoteId, setMoveNoteId] = useState<string | null>(null);
+  const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +145,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
     return [...roots, ...rootNotes];
   }, [folders, notes, searchQuery]);
 
+  const folderOptions = useMemo(() => {
+    return folders.map(f => ({ value: f.id, label: f.name }));
+  }, [folders]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -165,10 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
           console.log('✅ Drag & drop move completed');
           
           // Use custom notification
-          const event = new CustomEvent('app-notification', {
-            detail: { type: 'success', message: 'Note moved successfully' }
-          });
-          window.dispatchEvent(event);
+          addToast(toast.success('Note moved successfully'));
           
           // Refresh notes to ensure consistency
           await fetchNotes();
@@ -176,10 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
           console.error('❌ Drag & drop move failed:', error);
           const errorMessage = error instanceof Error ? error.message : String(error);
           
-          const event = new CustomEvent('app-notification', {
-            detail: { type: 'error', message: `Failed to move note: ${errorMessage}` }
-          });
-          window.dispatchEvent(event);
+          addToast(toast.error(`Failed to move note: ${errorMessage}`));
         }
     }
     setActiveId(null);
@@ -200,20 +202,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
 
   useEffect(() => {
     const handleNotification = (event: CustomEvent) => {
-      setNotification(event.detail);
-      
-      // Auto-hide notification after 3 seconds
-      setTimeout(() => {
-        setNotification(null);
-      }, 3000);
+      const { type, message } = event.detail as { type: 'success' | 'error' | 'info', message: string };
+      const variant = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+      addToast({ description: message, variant });
     };
-
     window.addEventListener('app-notification', handleNotification as EventListener);
-    
-    return () => {
-      window.removeEventListener('app-notification', handleNotification as EventListener);
-    };
-  }, []);
+    return () => window.removeEventListener('app-notification', handleNotification as EventListener);
+  }, [addToast]);
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
@@ -223,12 +218,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
       setShowFolderInput(false);
       setNewFolderName('');
       await fetchFolders();
-      const event = new CustomEvent('app-notification', { detail: { type: 'success', message: 'Folder created' } });
-      window.dispatchEvent(event);
+      addToast(toast.success('Folder created'));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create folder';
-      const event = new CustomEvent('app-notification', { detail: { type: 'error', message } });
-      window.dispatchEvent(event);
+      addToast(toast.error(message));
     }
   };
   
@@ -258,21 +251,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
     // Add debug alert to confirm function is called
     console.log('Export function called with:', { noteId, format });
     
-    // Show immediate feedback
-    const event = new CustomEvent('app-notification', {
-      detail: { type: 'info', message: `Starting ${format.toUpperCase()} export...` }
-    });
-    window.dispatchEvent(event);
+    // Show immediate feedback (user-friendly names)
+    const formatLabel = format === 'docx' ? 'Word' : format === 'txt' ? 'Text' : format.toUpperCase();
+    addToast(toast.info(`Starting ${formatLabel} export...`));
     
     const note = notes.find(n => n.id === noteId);
     if (!note) {
         console.error("❌ Note not found for export:", noteId);
         console.error('Available notes:', notes.map(n => ({ id: n.id, title: n.title })));
         // Use a more reliable notification method
-        const event = new CustomEvent('app-notification', {
-          detail: { type: 'error', message: `Note not found for export: ${noteId}` }
-        });
-        window.dispatchEvent(event);
+        addToast(toast.error(`Note not found for export: ${noteId}`));
         return;
     }
     
@@ -285,15 +273,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
       console.log('💾 Opening file dialog...');
       const filePath = await save({
           defaultPath: suggestedFilename,
-          filters: [{ name: format.toUpperCase(), extensions: [format] }]
+          filters: [{ name: format === 'docx' ? 'Word' : format === 'txt' ? 'Text' : format.toUpperCase(), extensions: [format] }]
       });
 
       if (!filePath) {
           console.log('❌ User cancelled file dialog');
-          const event = new CustomEvent('app-notification', {
-            detail: { type: 'info', message: 'Export cancelled' }
-          });
-          window.dispatchEvent(event);
+          addToast(toast.info('Export cancelled'));
           return;
       }
       
@@ -360,19 +345,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
           }
       }
       
-      // Show success notification
-      const successEvent = new CustomEvent('app-notification', {
-        detail: { type: 'success', message: `${format.toUpperCase()} export completed successfully!` }
-      });
-      window.dispatchEvent(successEvent);
+      // Show success notification (user-friendly names)
+      addToast(toast.success(`${formatLabel} export completed successfully!`));
       
     } catch (error) {
       console.error(`❌ Export failed for ${format}:`, error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorEvent = new CustomEvent('app-notification', {
-        detail: { type: 'error', message: `Export failed: ${errorMessage}` }
-      });
-      window.dispatchEvent(errorEvent);
+      addToast(toast.error(`Export failed: ${errorMessage}`));
     }
   }, [notes]);
 
@@ -390,7 +369,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
               className={`group flex cursor-pointer items-center justify-between rounded-xl p-2 asana-text-sm font-medium transition-colors ${selectedFolderId === item.id ? 'bg-selected-bg text-selected-text' : 'hover:bg-hover-bg'}`}
               style={{ paddingLeft }}
             >
-              <div className="flex flex-1 items-center gap-2" onClick={() => selectFolder(item.id)}>
+              <div className="flex flex-1 items-center gap-2" onClick={(e) => { if (isRenaming) return; toggleFolderExpansion(item.id); selectFolder(item.id); }}>
                 <ChevronRight 
                   size={16} 
                   className={`transition-transform${isExpanded ? 'rotate-90' : ''}`}
@@ -449,7 +428,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
           <DraggableNote key={item.id} note={item}>
             <div
               className={`group relative cursor-pointer rounded-lg border px-3 py-2 transition-all ${selectedNoteId === item.id ? 'border-selected bg-selected' : 'border-transparent'}`} 
-              onClick={() => onSelectNote(item.id)}
+              onClick={(e) => {
+                const t = e.target as HTMLElement;
+                if (t && t.closest('[data-notes-dropdown-trigger]')) return;
+                onSelectNote(item.id);
+              }}
             >
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
@@ -480,7 +463,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
                     trigger={(
                       <button 
                         className="flex size-6 items-center justify-center rounded-sm opacity-0 transition-colors hover:bg-tertiary group-hover:opacity-100"
-                        onClick={(e) => { e.stopPropagation(); }}
+                        data-notes-dropdown-trigger
                       >
                         <MoreHorizontal size={16} />
                       </button>
@@ -488,27 +471,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
                     items={[
                       { value: 'rename', label: 'Rename', icon: <Edit size={14} className="mr-2" /> },
                       { value: 'move', label: 'Move to', icon: <FolderIcon size={14} className="mr-2" /> },
+                      { value: 'sep-1', label: '', separator: true },
                       { value: 'export-pdf', label: 'Export as PDF', icon: <FileDown size={14} className="mr-2" /> },
-                      { value: 'export-docx', label: 'Export as DOCX', icon: <FileDown size={14} className="mr-2" /> },
-                      { value: 'export-txt', label: 'Export as TXT', icon: <FileDown size={14} className="mr-2" /> },
+                      { value: 'export-docx', label: 'Export as Word', icon: <FileDown size={14} className="mr-2" /> },
+                      { value: 'export-txt', label: 'Export as Text', icon: <FileDown size={14} className="mr-2" /> },
+                      { value: 'sep-2', label: '', separator: true },
                       { value: 'delete', label: 'Delete', icon: <Trash2 size={14} className="mr-2" />, destructive: true },
                     ]}
                     onSelect={(v) => {
                       if (v === 'rename') { setRenamingNoteId(item.id); setRenameNoteTitle(item.title); }
                       if (v === 'move') {
-                        // Default to first folder if available
-                        if (folders.length > 0) {
-                          const folder = folders[0];
-                          updateNote({ id: item.id, folderId: folder.id })
-                            .then(() => {
-                              const event = new CustomEvent('app-notification', { detail: { type: 'success', message: `Moved to ${folder.name}` } });
-                              window.dispatchEvent(event);
-                            })
-                            .catch((error) => {
-                              const event = new CustomEvent('app-notification', { detail: { type: 'error', message: `Move failed: ${error}` } });
-                              window.dispatchEvent(event);
-                            });
-                        }
+                        setMoveNoteId(item.id);
+                        setTargetFolderId(item.folderId || (folders[0]?.id ?? null));
                       }
                       if (v === 'export-pdf') { exportNote(item.id, 'pdf'); }
                       if (v === 'export-docx') { exportNote(item.id, 'docx'); }
@@ -652,23 +626,59 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
         </div>
       </Card>
       
-      {/* Notification Display */}
-      {notification && (
-        <div className={`fixed right-4 top-4 z-50 max-w-sm rounded-lg p-4 shadow-lg transition-all duration-300 ${
-          notification.type === 'success' ? 'bg-green-500 text-white' :
-          notification.type === 'error' ? 'bg-red-500 text-white' :
-          'bg-blue-500 text-white'
-        }`}>
-          <div className="flex items-center justify-between">
-            <span>{notification.message}</span>
-            <button
-              onClick={() => setNotification(null)}
-              className="ml-2 rounded-full p-1 hover:bg-white/20"
-            >
-              <X size={16} />
-            </button>
+      {/* Toasts are handled globally via ToastProvider */}
+      {/* Move Note Dialog */}
+      {moveNoteId && (
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setMoveNoteId(null);
+              setTargetFolderId(null);
+            }
+          }}
+          title="Move note"
+          description="Choose a folder to move this note to"
+          size="sm"
+          footer={(
+            <div className="flex items-center justify-end gap-2 w-full">
+              <Button
+                variant="ghost"
+                onClick={() => { setMoveNoteId(null); setTargetFolderId(null); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                disabled={!targetFolderId}
+                onClick={async () => {
+                  if (!moveNoteId || !targetFolderId) return;
+                  try {
+                    await updateNote({ id: moveNoteId, folderId: targetFolderId });
+                    addToast(toast.success('Note moved successfully'));
+                    setMoveNoteId(null);
+                    setTargetFolderId(null);
+                    await fetchNotes();
+                  } catch (err) {
+                    const message = err instanceof Error ? err.message : 'Failed to move note';
+                    addToast(toast.error(message));
+                  }
+                }}
+              >
+                Move
+              </Button>
+            </div>
+          )}
+        >
+          <div className="px-[var(--space-6)] py-[var(--space-2)]">
+            <SelectDropdown
+              options={folderOptions}
+              value={targetFolderId || undefined}
+              onChange={(val) => setTargetFolderId(val)}
+              placeholder="Select a folder"
+            />
           </div>
-        </div>
+        </Dialog>
       )}
     </>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '../components/ui';
 import { HeaderProvider } from './contexts/HeaderContext';
 import { ThemeProvider } from '../components/ThemeProvider';
 import Sidebar from '../components/navigation/Sidebar';
@@ -105,6 +106,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
+        <ToastProvider>
         <Router>
           <HeaderProvider>
             <MailStoreProvider>
@@ -134,7 +136,8 @@ export default function App() {
           </MailStoreProvider>
         </HeaderProvider>
       </Router>
-    </ThemeProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

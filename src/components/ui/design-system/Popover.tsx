@@ -289,7 +289,7 @@ export const Popover: React.FC<PopoverProps> = ({
       {isOpen && createPortal(
         <div
           ref={contentRef}
-          className={`fixed z-[var(--z-popover)] bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] shadow-[var(--shadow-popover)] animate-in fade-in-0 zoom-in-95 duration-[var(--transition-duration)] ${contentClassName}`}
+          className={`fixed z-[10000] bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] shadow-[var(--shadow-popover)] animate-in fade-in-0 zoom-in-95 duration-[var(--transition-duration)] ${contentClassName}`}
           style={{
             top: position.top,
             left: position.left,
