@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Browser controller/toolbar reliability
   - Event-driven visibility (`browser:opened`/`browser:closed`) so the toolbar consistently appears
   - Copy button now returns the real external URL (decodes reader/app shell redirect params)
+  - Embedded the toolbar directly inside the browser window (single OS window, multi‑webview)
+  - Removed floating overlay toolbar in the main app to avoid duplicate toolbars
+  - Fixed close handling for the browser window listener when `onCloseRequested` isn’t available
 
 ### 💬 Chat rendering
 - Markdown links like `[reds.com](https://www.reds.com)` now render as proper clickable anchors with the visible text (not literal markdown)
@@ -28,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🛠️ Tauri/Rust housekeeping
 - Removed unsupported `on_navigation`/`on_page_load` uses on `WebviewWindow` (v2), keeping the build clean
 - Controller window docking adjustments (frameless, non-blurred toolbar style)
+ - Implemented single-window multi‑webview browser (top toolbar + content webview)
+
+### 🗂️ Notes folders UX
+- Folder creation now surfaces errors and shows success/error toast; no silent failures
+- Follow‑up: ensure folder commands are registered in backend for environments where they are missing
 
 Impact: Clicking links across Mail/Notes/Chat opens exactly one native browser window with working toolbar; no system browser duplication; chat shows clean links.
 
