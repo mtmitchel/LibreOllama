@@ -24,6 +24,9 @@ export function ModelSelector({ conversationId }: Props) {
   // Get the model for this specific conversation if conversationId is provided
   const conversation = conversationId ? conversations.find(c => c.id === conversationId) : null;
   const displayModel = conversation?.modelId || selectedModel;
+  
+  // Check if the displayed model exists in available models
+  const modelInList = displayModel ? availableModels.find(m => m.id === displayModel) : null;
 
   // Fetch models on component mount
   useEffect(() => {
@@ -96,12 +99,23 @@ export function ModelSelector({ conversationId }: Props) {
     );
   }
 
+  // Build options list, including the saved model if it's not in availableModels
+  const options = availableModels.map((model) => ({
+    value: model.id || model.name,
+    label: model.name,
+  }));
+  
+  // If there's a saved model that's not in the list, add it
+  if (displayModel && !modelInList) {
+    options.unshift({
+      value: displayModel,
+      label: displayModel + ' (saved)',
+    });
+  }
+
   return (
     <SelectDropdown
-      options={availableModels.map((model) => ({
-        value: model.id || model.name,
-        label: model.name,
-      }))}
+      options={options}
       value={displayModel || undefined}
       onChange={handleModelSelect}
       placeholder="Select Model"

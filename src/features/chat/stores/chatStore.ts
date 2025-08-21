@@ -287,24 +287,22 @@ export const useChatStore = create<ChatState>()(
           if (conversationId) {
             const conversation = state.conversations.find(c => c.id === conversationId);
             if (conversation?.modelId) {
-              // Check if the model still exists in available models
-              const modelExists = state.availableModels.find(m => m.id === conversation.modelId);
-              if (modelExists) {
-                set(state => {
-                  state.selectedModel = conversation.modelId!;
-                  state.selectedProvider = conversation.provider || modelExists.provider;
-                });
-                logger.debug('chatStore: Restored model for conversation:', conversation.modelId);
-              } else {
-                logger.warn('chatStore: Conversation model no longer available:', conversation.modelId);
-                // If model doesn't exist, keep the current selection but update the conversation
-                set(state => {
-                  const conv = state.conversations.find(c => c.id === conversationId);
-                  if (conv && state.selectedModel) {
-                    conv.modelId = state.selectedModel;
-                    conv.provider = state.selectedProvider;
-                  }
-                });
+              // Always restore the conversation's model selection, even if not yet in availableModels
+              // (availableModels might be empty if fetchAvailableModels hasn't been called yet)
+              set(state => {
+                state.selectedModel = conversation.modelId!;
+                state.selectedProvider = conversation.provider || state.selectedProvider;
+              });
+              logger.debug('chatStore: Restored model for conversation:', conversation.modelId, 'provider:', conversation.provider);
+              
+              // If availableModels is populated, verify the model exists
+              if (state.availableModels.length > 0) {
+                const modelExists = state.availableModels.find(m => m.id === conversation.modelId);
+                if (!modelExists) {
+                  logger.warn('chatStore: Conversation model no longer available:', conversation.modelId);
+                  // Model doesn't exist in available models, but keep it selected anyway
+                  // The UI will handle showing this appropriately
+                }
               }
             } else {
               // If conversation doesn't have a model, assign the current selection to it
@@ -906,6 +904,7 @@ export const useChatStore = create<ChatState>()(
         partialize: (state) => ({
           // Persist only essential, serializable state
           conversations: state.conversations, // This includes modelId and provider for each conversation
+          selectedConversationId: state.selectedConversationId, // Persist selected conversation
           selectedModel: state.selectedModel,
           selectedProvider: state.selectedProvider,
         }),
@@ -933,15 +932,42 @@ export const useChatStore = create<ChatState>()(
             logger.info('chatStore: Rehydrated from localStorage', {
               selectedModel: state.selectedModel,
               selectedProvider: state.selectedProvider,
+              selectedConversationId: state.selectedConversationId,
               conversationsCount: state.conversations.length
             });
             
-            // If we have a persisted model, fetch available models to validate it
-            if (state.selectedModel) {
-              // Fetch models after a short delay to ensure providers are initialized
-              setTimeout(() => {
-                state.fetchAvailableModels().then(() => {
-                  // Validate that the persisted model still exists
+            // If we have a selected conversation, restore its model settings
+            if (state.selectedConversationId) {
+              const selectedConv = state.conversations.find(c => c.id === state.selectedConversationId);
+              if (selectedConv?.modelId) {
+                state.selectedModel = selectedConv.modelId;
+                state.selectedProvider = selectedConv.provider || state.selectedProvider;
+                logger.info('chatStore: Restored model from selected conversation:', selectedConv.modelId);
+              }
+            }
+            
+            // Fetch available models to validate persisted selections
+            // Fetch models after a short delay to ensure providers are initialized
+            setTimeout(() => {
+              state.fetchAvailableModels().then(() => {
+                // If we still have a selected conversation after fetching models, ensure its model is set
+                if (state.selectedConversationId) {
+                  const selectedConv = state.conversations.find(c => c.id === state.selectedConversationId);
+                  if (selectedConv?.modelId) {
+                    // Check if the model exists in available models
+                    const modelExists = state.availableModels.find(m => m.id === selectedConv.modelId);
+                    if (modelExists) {
+                      // Model exists, ensure it's selected
+                      state.selectedModel = selectedConv.modelId;
+                      state.selectedProvider = modelExists.provider;
+                    } else {
+                      // Model doesn't exist but keep it selected anyway
+                      // The UI will show it as "(saved)"
+                      logger.warn('chatStore: Conversation model not in available models:', selectedConv.modelId);
+                    }
+                  }
+                } else if (state.selectedModel) {
+                  // No selected conversation, validate the global selected model
                   const modelExists = state.availableModels.find(m => m.id === state.selectedModel);
                   if (!modelExists && state.availableModels.length > 0) {
                     logger.warn('chatStore: Persisted model no longer available, selecting default');
@@ -952,9 +978,9 @@ export const useChatStore = create<ChatState>()(
                     logger.info('chatStore: Correcting provider for persisted model');
                     state.setSelectedProvider(modelExists.provider);
                   }
-                });
-              }, 100);
-            }
+                }
+              });
+            }, 100);
           }
         }
       }

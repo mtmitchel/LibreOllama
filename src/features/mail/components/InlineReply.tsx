@@ -13,6 +13,8 @@ import {
   gmailComposeUtils
 } from '../services/gmailComposeService';
 import { handleGmailError, GmailError, ErrorContext } from '../services/gmailErrorHandler';
+import { EmailAutocomplete } from './EmailAutocomplete';
+import '../styles/EmailAutocomplete.css';
 
 interface InlineReplyProps {
   originalMessage: ParsedEmail;
@@ -43,6 +45,7 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
     readReceipt: false
   });
   const [editorContent, setEditorContent] = useState<string>('');
+  const [attachments, setAttachments] = useState<File[]>([]);
   
   // Status States
   const [isSending, setIsSending] = useState(false);
@@ -85,7 +88,39 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
             messageForReply.id,
             replyType
           );
-          setCompose(replyCompose);
+          // Override placeholder recipients/subject from backend with actual values from original message
+          const senderAddress: ComposeEmailAddress = {
+            email: originalMessage.from.email,
+            name: originalMessage.from.name || ''
+          };
+          const toList: ComposeEmailAddress[] = replyType === 'reply'
+            ? [senderAddress]
+            : [
+                senderAddress,
+                ...originalMessage.to.map(addr => ({ email: addr.email, name: addr.name || '' })),
+                ...((originalMessage.cc || []).map(addr => ({ email: addr.email, name: addr.name || '' })))
+              ];
+          const dedupe = (arr: ComposeEmailAddress[]) => {
+            const seen = new Set<string>();
+            return arr.filter(a => {
+              const key = (a.email || '').toLowerCase();
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return !!key;
+            });
+          };
+          const formattedSubject = (() => {
+            const s = originalMessage.subject || '';
+            if (replyType === 'forward') {
+              return s.startsWith('Fwd: ') ? s : `Fwd: ${s}`;
+            }
+            return s.startsWith('Re: ') ? s : `Re: ${s}`;
+          })();
+          setCompose({
+            ...replyCompose,
+            to: dedupe(toList),
+            subject: formattedSubject
+          } as any);
           
           // Show CC if replying to all
           if (replyType === 'reply_all') {
@@ -147,16 +182,9 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
     return () => clearTimeout(timeoutId);
   }, [compose, currentDraftId]);
 
-  const handleEmailAddressChange = useCallback((
-    field: 'to' | 'cc' | 'bcc', 
-    value: string
-  ) => {
-    const emails = value.split(',').map(email => {
-      const trimmed = email.trim();
-      return gmailComposeUtils.parseEmailAddress(trimmed);
-    }).filter(addr => addr.email);
-
-    setCompose(prev => ({ ...prev, [field]: emails }));
+  const handleRecipientsChange = useCallback((field: 'to' | 'cc' | 'bcc', emails: string[]) => {
+    const mapped = emails.map(email => ({ email, name: '' }));
+    setCompose(prev => ({ ...prev, [field]: mapped } as any));
   }, []);
 
   const handleSend = async () => {
@@ -256,7 +284,7 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
   };
 
   return (
-    <div className="border-border-default border-t bg-content">
+    <div className="border-border-default border-t bg-content flex flex-col">
       {/* Header - Gmail-style compact */}
       <div className="border-border-default flex h-11 items-center justify-between border-b bg-secondary px-3">
         <div className="flex items-center gap-2">
@@ -292,69 +320,64 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
 
       {/* Recipients Section */}
       <div className="border-border-default border-b">
-        {/* To Field */}
-        <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
-          {toFieldFocused && (
-            <span className="px-3 text-[13px] text-secondary">
-              To
-            </span>
-          )}
-          <input
-            ref={toInputRef}
-            type="text"
-            value={formatEmailAddresses(compose.to)}
-            onChange={(e) => handleEmailAddressChange('to', e.target.value)}
+        {/* To Field (Gmail-style, borderless with Cc/Bcc on focus) */}
+        <div className="flex min-h-[40px] items-center px-3">
+          <EmailAutocomplete
+            value={compose.to.map(addr => (addr as ComposeEmailAddress).email)}
+            onChange={(emails) => handleRecipientsChange('to', emails)}
+            placeholder={toFieldFocused ? 'To' : 'Recipients'}
+            multiple
+            className="flex-1"
+            borderless
             onFocus={() => setToFieldFocused(true)}
-            onBlur={() => setToFieldFocused(compose.to.length > 0)}
-            placeholder={toFieldFocused ? "" : "Recipients"}
-            className="flex-1 border-0 bg-transparent px-3 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+            onBlur={() => setToFieldFocused(false)}
           />
-          <div className="flex items-center px-2">
-            <button
-              type="button"
-              onClick={() => setCcVisible(!ccVisible)}
-              className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
-            >
-              Cc
-            </button>
-            <button
-              type="button"
-              onClick={() => setBccVisible(!bccVisible)}
-              className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
-            >
-              Bcc
-            </button>
-          </div>
+          {toFieldFocused && (
+            <div className="flex items-center px-2">
+              <button
+                type="button"
+                onClick={() => setCcVisible(!ccVisible)}
+                className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
+              >
+                Cc
+              </button>
+              <button
+                type="button"
+                onClick={() => setBccVisible(!bccVisible)}
+                className="px-2 py-1 text-[13px] text-secondary hover:text-primary"
+              >
+                Bcc
+              </button>
+            </div>
+          )}
         </div>
 
         {/* CC Field */}
         {ccVisible && (
-          <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
-            <span className="px-3 text-[13px] text-secondary">
-              Cc
-            </span>
-            <input
-              type="text"
-              value={formatEmailAddresses(compose.cc)}
-              onChange={(e) => handleEmailAddressChange('cc', e.target.value)}
+          <div className="flex min-h-[40px] items-center border-b border-[var(--border-subtle)] px-3">
+            <span className="mr-2 text-[13px] text-secondary">Cc</span>
+            <EmailAutocomplete
+              value={(compose.cc || []).map(addr => (addr as ComposeEmailAddress).email)}
+              onChange={(emails) => handleRecipientsChange('cc', emails)}
               placeholder=""
-              className="flex-1 border-0 bg-transparent px-2 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+              multiple
+              className="flex-1"
+              borderless
             />
           </div>
         )}
 
         {/* BCC Field */}
         {bccVisible && (
-          <div className="flex h-10 items-center border-b border-[var(--border-subtle)]">
-            <span className="px-3 text-[13px] text-secondary">
-              Bcc
-            </span>
-            <input
-              type="text"
-              value={formatEmailAddresses(compose.bcc)}
-              onChange={(e) => handleEmailAddressChange('bcc', e.target.value)}
+          <div className="flex min-h-[40px] items-center border-b border-[var(--border-subtle)] px-3">
+            <span className="mr-2 text-[13px] text-secondary">Bcc</span>
+            <EmailAutocomplete
+              value={(compose.bcc || []).map(addr => (addr as ComposeEmailAddress).email)}
+              onChange={(emails) => handleRecipientsChange('bcc', emails)}
               placeholder=""
-              className="flex-1 border-0 bg-transparent px-2 py-2 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+              multiple
+              className="flex-1"
+              borderless
             />
           </div>
         )}
@@ -371,13 +394,45 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
         </div>
       </div>
 
-      {/* Message Body with ComposeEditor */}
-      <div className="min-h-[300px]">
+      {/* Message Body with ComposeEditor - middle area scrolls so footer stays visible */}
+      <div className="min-h-[300px] flex-1 overflow-auto">
         <ComposeEditor
           value={editorContent}
           onChange={setEditorContent}
         />
       </div>
+
+      {/* Attachments display */}
+      {attachments.length > 0 && (
+        <div className="border-t border-[var(--border-subtle)] px-3 py-2">
+          <div className="flex flex-wrap gap-2">
+            {attachments.map((file, index) => (
+              <div 
+                key={index} 
+                className="flex items-center gap-1 rounded bg-[var(--bg-tertiary)] px-2 py-1 text-xs"
+              >
+                <Paperclip size={12} />
+                <span className="max-w-[150px] truncate" title={file.name}>
+                  {file.name}
+                </span>
+                <span className="text-[color:var(--text-tertiary)]">
+                  ({file.size < 1024 * 1024 
+                    ? `${(file.size / 1024).toFixed(1)}KB`
+                    : `${(file.size / (1024 * 1024)).toFixed(1)}MB`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
+                  className="ml-1 text-[color:var(--text-secondary)] hover:text-[color:var(--error)]"
+                  title="Remove attachment"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Error display */}
       {gmailError && (
@@ -388,8 +443,8 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
         </div>
       )}
 
-      {/* Footer Actions - Gmail-style compact */}
-      <div className="border-border-default flex h-12 items-center justify-between border-t bg-primary px-3">
+      {/* Footer Actions - sticky */}
+      <div className="border-border-default sticky bottom-0 z-10 flex h-12 items-center justify-between border-t bg-primary px-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -420,7 +475,17 @@ export function InlineReply({ originalMessage, replyType, onClose }: InlineReply
           >
             <label className="flex size-full cursor-pointer items-center justify-center">
               <Paperclip size={15} />
-              <input type="file" multiple className="sr-only" />
+              <input 
+                type="file" 
+                multiple 
+                className="sr-only"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 0) {
+                    setAttachments(prev => [...prev, ...files]);
+                  }
+                }}
+              />
             </label>
           </button>
           

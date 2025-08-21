@@ -292,7 +292,8 @@ const SmartFontPicker: React.FC<SmartFontPickerProps> = ({
     const updatePosition = () => {
       const triggerRect = triggerRef.current!.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
-      const dropdownHeight = fonts.length * 32; // Approximate height
+      const viewportWidth = window.innerWidth;
+      const dropdownHeight = Math.min(fonts.length * 32, Math.floor(viewportHeight * 0.6)); // Constrain height
 
       // Determine vertical placement
       const spaceBelow = viewportHeight - triggerRect.bottom;
@@ -300,11 +301,26 @@ const SmartFontPicker: React.FC<SmartFontPickerProps> = ({
       const placement = spaceBelow >= dropdownHeight || spaceBelow >= spaceAbove ? 'bottom' : 'top';
 
       // Calculate vertical position
-      const top = placement === 'bottom'
+      let top = placement === 'bottom'
         ? triggerRect.bottom + 4
         : triggerRect.top - dropdownHeight - 4;
 
-      setPosition({ top, left: triggerRect.left, placement });
+      // Clamp vertical position into viewport with small margins
+      const margin = 8;
+      if (top + dropdownHeight > viewportHeight - margin) {
+        top = viewportHeight - dropdownHeight - margin;
+      }
+      if (top < margin) top = margin;
+
+      // Clamp horizontal position within viewport
+      const DROPDOWN_WIDTH = 192;
+      let left = triggerRect.left;
+      if (left + DROPDOWN_WIDTH > viewportWidth - 8) {
+        left = Math.max(8, viewportWidth - DROPDOWN_WIDTH - 8);
+      }
+      if (left < 8) left = 8;
+
+      setPosition({ top, left, placement });
     };
 
     updatePosition();
@@ -341,12 +357,14 @@ const SmartFontPicker: React.FC<SmartFontPickerProps> = ({
         top: position.top,
         left: position.left,
         width: '192px',
-        zIndex: 1000,
+        zIndex: 2000,
         backgroundColor: 'var(--bg-primary)',
         border: '1px solid var(--border-default)',
         borderRadius: '6px',
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.18)',
-        padding: '4px'
+        padding: '4px',
+        maxHeight: '60vh',
+        overflowY: 'auto'
       }}
     >
       {fonts.map((font) => (
@@ -374,6 +392,7 @@ const ComposeEditor: React.FC<ComposeEditorProps> = ({ value, onChange }) => {
 	const [showColorPicker, setShowColorPicker] = useState(false);
 	const [showFontPicker, setShowFontPicker] = useState(false);
 	const [currentFont, setCurrentFont] = useState('Sans Serif');
+	const [linkInitialText, setLinkInitialText] = useState('');
 	const colorPickerTriggerRef = useRef<HTMLDivElement>(null);
 	const fontPickerRef = useRef<HTMLDivElement>(null);
 	const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -439,7 +458,19 @@ const ComposeEditor: React.FC<ComposeEditorProps> = ({ value, onChange }) => {
 		
 		handleUpdate();
 	};
-	const insertLink = () => setShowLinkModal(true);
+	const insertLink = () => {
+		if (editor && (editor as any).getSelectedText) {
+			try {
+				const selected = (editor as any).getSelectedText() || '';
+				setLinkInitialText(selected);
+			} catch {
+				setLinkInitialText('');
+			}
+		} else {
+			setLinkInitialText('');
+		}
+		setShowLinkModal(true);
+	};
 	const handleLinkConfirm = (url: string, text: string) => { if (!editor) return; editor.insertInlineContent([{ type: 'link', props: { url, title: text }, content: [{ type: 'text', text, styles: {} }] }] as any); };
 	const insertImage = () => setShowImageModal(true);
 	const handleImageUpload = (url: string) => { 
@@ -464,7 +495,7 @@ const ComposeEditor: React.FC<ComposeEditorProps> = ({ value, onChange }) => {
 				props: {
 					url: url,
 					caption: '',
-					previewWidth: 512
+					previewWidth: 320
 				},
 				content: [],
 				children: []
@@ -731,7 +762,7 @@ const ComposeEditor: React.FC<ComposeEditorProps> = ({ value, onChange }) => {
 				<ToolbarButton title="Insert image" onClick={insertImage}><ImageIcon size={16} /></ToolbarButton>
 			</div>
 			<div className="flex-1 overflow-auto"><BlockNoteView editor={editor} editable formattingToolbar={false} slashMenu={false} onChange={handleUpdate} /></div>
-			<LinkModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} onConfirm={handleLinkConfirm} />
+			<LinkModal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} onConfirm={handleLinkConfirm} initialText={linkInitialText} />
 			<ImageUploadModal isOpen={showImageModal} onClose={() => setShowImageModal(false)} onConfirm={handleImageUpload} />
 			<style>{`
 				.compose-editor .bn-suggestion-menu,
@@ -814,10 +845,10 @@ const ComposeEditor: React.FC<ComposeEditorProps> = ({ value, onChange }) => {
 				.compose-editor .ProseMirror { tab-size: 4; white-space: pre-wrap; }
 				/* Image support with resizing */
 				.compose-editor .ProseMirror img {
-					max-width: 100%;
+					max-width: min(100%, 320px);
 					height: auto;
 					display: block;
-					margin: 8px 0;
+					margin: 8px auto;
 					cursor: pointer;
 					border: 2px solid transparent;
 					transition: border-color 0.2s;
@@ -832,8 +863,10 @@ const ComposeEditor: React.FC<ComposeEditorProps> = ({ value, onChange }) => {
 				}
 				.compose-editor .ProseMirror .bn-image-block img {
 					display: block;
-					max-width: 100%;
+					max-width: min(100%, 320px);
 					height: auto;
+					margin-left: auto;
+					margin-right: auto;
 				}
 				/* BlockNote's image resize handles */
 				.compose-editor .ProseMirror .bn-image-block-handle {

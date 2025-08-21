@@ -427,7 +427,7 @@ function ComposeModal({
   }
 
   return (
-    <div className="bg-bg-overlay fixed inset-0 z-[60]">
+    <div className="bg-bg-overlay fixed inset-0 z-[400]">
       <div 
         className="border-border-default fixed flex h-[600px] max-h-[90vh] w-[600px] flex-col overflow-hidden rounded-lg border bg-content shadow-2xl"
         style={modalPosition}

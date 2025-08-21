@@ -60,7 +60,7 @@ export function MailStoreProvider({ children }: MailStoreProviderProps) {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="mb-4 size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-secondary">Loading mail data...</p>
+          <p className="text-secondary">Loading...</p>
         </div>
       </div>
     );
