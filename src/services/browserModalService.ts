@@ -39,13 +39,19 @@ class BrowserModalService {
       const openedWindow = WebviewWindow.getByLabel(windowLabel);
       if (openedWindow) {
         this.openModals.set(windowLabel, openedWindow);
-        await openedWindow.onCloseRequested(() => {
-          this.openModals.delete(windowLabel);
-          // Emit close event in the main app window context
-          try {
-            window.dispatchEvent(new CustomEvent('browser:closed', { detail: { windowLabel } }));
-          } catch {}
-        });
+        try {
+          if (typeof (openedWindow as any).onCloseRequested === 'function') {
+            await (openedWindow as any).onCloseRequested(() => {
+              this.openModals.delete(windowLabel);
+              try { window.dispatchEvent(new CustomEvent('browser:closed', { detail: { windowLabel } })); } catch {}
+            });
+          } else if (typeof (openedWindow as any).listen === 'function') {
+            await (openedWindow as any).listen('close-requested', () => {
+              this.openModals.delete(windowLabel);
+              try { window.dispatchEvent(new CustomEvent('browser:closed', { detail: { windowLabel } })); } catch {}
+            });
+          }
+        } catch {}
       }
 
       // Emit open event in the main app window context

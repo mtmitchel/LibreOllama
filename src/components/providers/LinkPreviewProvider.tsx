@@ -208,12 +208,7 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
     <>
       {children}
       {/* Browser control bar for native browser windows */}
-      {currentWindowLabel && currentBrowserUrl && (
-        <BrowserModalController 
-          windowLabel={currentWindowLabel}
-          url={currentBrowserUrl}
-        />
-      )}
+      {/* Remove floating overlay toolbar; the toolbar is embedded inside the browser window itself */}
       {/* Optional: keep iframe modal for specific internal previews if ever needed */}
       <LinkPreviewModal 
         isOpen={isOpen}

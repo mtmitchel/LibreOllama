@@ -158,6 +158,8 @@ export const useNotesStore = create<NotesState>()(
             } catch (error) {
               console.error('Failed to create folder:', error);
               set({ error: 'Failed to create folder', isLoading: false });
+              // Propagate so callers can surface feedback
+              throw error;
             }
           },
 

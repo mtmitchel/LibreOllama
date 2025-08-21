@@ -17,61 +17,69 @@ pub async fn open_browser_window(
     options: BrowserWindowOptions,
 ) -> Result<String, String> {
     let window_label = format!("browser-{}", Utc::now().timestamp_millis());
+    // Create one OS window with TWO child webviews: toolbar (top) + content (below)
     let toolbar_height = 56.0;
     let width = options.width.unwrap_or(1200.0);
     let height = options.height.unwrap_or(820.0);
-    
-    // Create main window without webview
-    let window = WindowBuilder::new(
-        &app_handle,
-        &window_label,
-    )
-    .title(options.title.unwrap_or_else(|| "Browser".to_string()))
-    .inner_size(width, height)
-    .resizable(true)
-    .decorations(false)
-    .center()
-    .build()
-    .map_err(|e| format!("Failed to create window: {}", e))?;
-    
-    // Create toolbar webview
+
+    let window = WindowBuilder::new(&app_handle, &window_label)
+        .title(options.title.unwrap_or_else(|| "Browser".to_string()))
+        .inner_size(width, height)
+        .resizable(true)
+        .decorations(false)
+        .center()
+        .build()
+        .map_err(|e| format!("Failed to create window: {}", e))?;
+
+    // Toolbar child webview (renders our React toolbar route in toolbar mode)
     let toolbar_url = if cfg!(debug_assertions) {
-        format!("http://localhost:1423/browser-control?windowLabel={}&url={}&mode=toolbar", 
-                window_label, urlencoding::encode(&options.url))
+        format!(
+            "http://localhost:1423/browser-control?windowLabel={}&url={}&mode=toolbar",
+            window_label,
+            urlencoding::encode(&options.url)
+        )
     } else {
-        format!("index.html#/browser-control?windowLabel={}&url={}&mode=toolbar", 
-                window_label, urlencoding::encode(&options.url))
+        format!(
+            "index.html#/browser-control?windowLabel={}&url={}&mode=toolbar",
+            window_label,
+            urlencoding::encode(&options.url)
+        )
     };
-    
-    let toolbar = window.add_child(
-        tauri::webview::WebviewBuilder::new(
-            "toolbar",
-            WebviewUrl::External(toolbar_url.parse().unwrap())
+
+    let toolbar = window
+        .add_child(
+            tauri::webview::WebviewBuilder::new(
+                "toolbar",
+                WebviewUrl::External(toolbar_url.parse().unwrap()),
+            )
+            .auto_resize(),
+            LogicalPosition::new(0.0, 0.0),
+            LogicalSize::new(width, toolbar_height),
         )
-        .auto_resize(),
-        LogicalPosition::new(0.0, 0.0),
-        LogicalSize::new(width, toolbar_height),
-    )
-    .map_err(|e| format!("Failed to add toolbar: {}", e))?;
-    
-    // Ensure toolbar is visible
-    toolbar.show().map_err(|e| format!("Failed to show toolbar: {}", e))?;
-    
-    // Create content webview  
-    let _content = window.add_child(
-        tauri::webview::WebviewBuilder::new(
-            "content",
-            WebviewUrl::External(options.url.parse().map_err(|e| format!("Invalid URL: {}", e))?)
+        .map_err(|e| format!("Failed to add toolbar: {}", e))?;
+    let _ = toolbar.show();
+
+    // Content child webview for external site
+    let content = window
+        .add_child(
+            tauri::webview::WebviewBuilder::new(
+                "content",
+                WebviewUrl::External(
+                    options
+                        .url
+                        .parse()
+                        .map_err(|e| format!("Invalid URL: {}", e))?,
+                ),
+            )
+            .auto_resize(),
+            LogicalPosition::new(0.0, toolbar_height),
+            LogicalSize::new(width, height - toolbar_height),
         )
-        .auto_resize()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"),
-        LogicalPosition::new(0.0, toolbar_height),
-        LogicalSize::new(width, height - toolbar_height),
-    )
-    .map_err(|e| format!("Failed to add content: {}", e))?;
-    
-    window.show().map_err(|e| format!("Failed to show window: {}", e))?;
-    
+        .map_err(|e| format!("Failed to add content: {}", e))?;
+    let _ = content.show();
+
+    let _ = window.show();
+
     Ok(window_label)
 }
 

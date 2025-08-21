@@ -218,10 +218,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     // Always create folders at root level (parentId: null)
-    await createFolder({ name: newFolderName, parentId: null });
-    setShowFolderInput(false);
-    setNewFolderName('');
-    await fetchFolders();
+    try {
+      await createFolder({ name: newFolderName.trim(), parentId: null });
+      setShowFolderInput(false);
+      setNewFolderName('');
+      await fetchFolders();
+      const event = new CustomEvent('app-notification', { detail: { type: 'success', message: 'Folder created' } });
+      window.dispatchEvent(event);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create folder';
+      const event = new CustomEvent('app-notification', { detail: { type: 'error', message } });
+      window.dispatchEvent(event);
+    }
   };
   
   const handleRenameFolder = async () => {
