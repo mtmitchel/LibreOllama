@@ -54,8 +54,11 @@ pub async fn open_browser_window(
     )
     .map_err(|e| format!("Failed to add toolbar: {}", e))?;
     
+    // Ensure toolbar is visible
+    toolbar.show().map_err(|e| format!("Failed to show toolbar: {}", e))?;
+    
     // Create content webview  
-    let content = window.add_child(
+    let _content = window.add_child(
         tauri::webview::WebviewBuilder::new(
             "content",
             WebviewUrl::External(options.url.parse().map_err(|e| format!("Invalid URL: {}", e))?)

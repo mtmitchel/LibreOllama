@@ -8,6 +8,39 @@ import { cn } from '../../core/lib/utils';
 import { invoke } from '@tauri-apps/api/core';
 import { useNavigate } from 'react-router-dom';
 
+function getExternalUrlForCopy(inputUrl: string): string {
+  try {
+    if (!inputUrl) return inputUrl;
+    // Support both hash and pathname reader routes
+    // Examples:
+    //   http://localhost:1423/reader?url=<ENC>
+    //   index.html#/reader?url=<ENC>
+    const urlObj = new URL(inputUrl, window.location.origin);
+    const full = urlObj.href;
+    const isReaderPath = full.includes('/reader') || full.includes('#/reader');
+    if (isReaderPath) {
+      const search = full.includes('#/reader') ? full.split('#/reader')[1] : urlObj.search;
+      const params = new URLSearchParams(search.startsWith('?') ? search : `?${search}`);
+      const encoded = params.get('url') || '';
+      if (encoded) {
+        try { return decodeURIComponent(encoded); } catch { return encoded; }
+      }
+    }
+    // Fallback: if we accidentally navigated to an internal route like /browser-shell
+    if (full.includes('/browser-shell') || full.includes('#/browser-shell')) {
+      const search = full.includes('#/browser-shell') ? full.split('#/browser-shell')[1] : urlObj.search;
+      const params = new URLSearchParams(search.startsWith('?') ? search : `?${search}`);
+      const encoded = params.get('url') || '';
+      if (encoded) {
+        try { return decodeURIComponent(encoded); } catch { return encoded; }
+      }
+    }
+    return full;
+  } catch {
+    return inputUrl;
+  }
+}
+
 interface BrowserModalControllerProps {
   windowLabel?: string;
   url: string;
@@ -46,13 +79,14 @@ export function BrowserModalController({ windowLabel, url, mode = 'overlay' }: B
       if (windowLabel) {
         try {
           const actualUrl = await invoke<string>('get_browser_window_url', { windowLabel });
-          urlToCopy = actualUrl;
+          urlToCopy = getExternalUrlForCopy(actualUrl);
           setCurrentUrl(actualUrl);
         } catch (err) {
           // Use current URL if we can't get the actual one
         }
       }
-      
+      // Normalize for reader/app shell URLs
+      urlToCopy = getExternalUrlForCopy(urlToCopy);
       await navigator.clipboard.writeText(urlToCopy);
       setCopyStatus('copied');
       setTimeout(() => setCopyStatus('idle'), 2000);
@@ -106,12 +140,7 @@ export function BrowserModalController({ windowLabel, url, mode = 'overlay' }: B
   if (mode === 'toolbar') {
     return (
       <div
-        className={cn(
-          "w-full h-14 flex items-center justify-end gap-1",
-          "bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm",
-          "border-b border-gray-200 dark:border-gray-700 px-3",
-          "[--drag-region:theme(colors.transparent)]"
-        )}
+        className="absolute top-0 left-0 right-0 h-14 flex items-center justify-end gap-1 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 px-3 z-50"
         data-tauri-drag-region
       >
         <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' }}>
@@ -154,9 +183,9 @@ export function BrowserModalController({ windowLabel, url, mode = 'overlay' }: B
   return createPortal(
     <div className={cn(
       "fixed top-4 right-4 z-[10000] flex items-center gap-2 rounded-lg",
-      "bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm",
+      "bg-white dark:bg-gray-900",
       "border border-gray-200 dark:border-gray-700 shadow-lg",
-      "px-3 py-2 transition-all duration-200",
+      "px-3 py-2",
       isMinimized && "opacity-50"
     )}>
       <div className="flex items-center gap-1">

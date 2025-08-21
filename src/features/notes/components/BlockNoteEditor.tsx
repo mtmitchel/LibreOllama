@@ -13,7 +13,7 @@ import { AIOutputModalPro } from '../../../components/ai/AIOutputModalPro';
 import { LLMProviderManager } from '../../../services/llmProviders';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import type { AIAction } from '../../../components/ai/AIWritingToolsContextMenu';
-import { LinkPreviewModal } from './LinkPreviewModal';
+import { browserModalService } from '../../../services/browserModalService';
 import Link from '@tiptap/extension-link';
 import { Plugin, PluginKey } from 'prosemirror-state';
 
@@ -215,8 +215,7 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ top: 0, left: 0 });
   const [showAIModal, setShowAIModal] = useState(false);
-  const [showLinkPreview, setShowLinkPreview] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
+  // Notes should use the same native browser flow as Mail/Chat
   
   // Debug effect to track modal state
   useEffect(() => {
@@ -255,9 +254,12 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
   });
 
   // Handle link clicks
-  const handleLinkClick = useCallback((url: string) => {
-    setPreviewUrl(url);
-    setShowLinkPreview(true);
+  const handleLinkClick = useCallback(async (url: string) => {
+    try {
+      await browserModalService.openModal({ url, title: 'Browser' });
+    } catch (err) {
+      // Silent: fallback not desired to avoid duplicate opens
+    }
   }, []);
 
   // Creates the editor instance with custom Link extension
@@ -782,11 +784,7 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
             }}
           />
           
-          <LinkPreviewModal
-            isOpen={showLinkPreview}
-            onClose={() => setShowLinkPreview(false)}
-            url={previewUrl}
-          />
+          {/* Notes uses native browser window; no iframe/modal preview */}
         </>
       )}
     </div>

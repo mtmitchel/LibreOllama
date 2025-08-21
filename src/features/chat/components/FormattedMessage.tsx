@@ -30,72 +30,76 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
     const renderInlineFormatting = (text: string): (string | JSX.Element)[] => {
       const parts: (string | JSX.Element)[] = [];
       let lastIndex = 0;
-      
-      // Combined regex for all inline patterns
-      const patterns = [
-        { regex: /`([^`]+)`/g, render: (match: string, code: string) => 
-          <code key={`code-${lastIndex}`} className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-sm font-mono text-red-600 dark:text-red-400">
-            {code}
-          </code>
+
+      type Pattern = {
+        regex: RegExp;
+        render: (m: RegExpExecArray, key: string) => JSX.Element;
+      };
+
+      // Order matters: handle markdown links before raw URLs to avoid splitting
+      const patterns: Pattern[] = [
+        {
+          // [text](https://example.com)
+          regex: /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+          render: (m, key) => (
+            <a key={key} href={m[2]} className="text-accent-primary underline underline-offset-2 hover:text-accent-primary-hover transition-colors" target="_blank" rel="noopener noreferrer">
+              {m[1]}
+            </a>
+          )
         },
-        { regex: /\*\*([^*]+)\*\*/g, render: (match: string, text: string) => 
-          <strong key={`bold-${lastIndex}`} className="font-semibold">{text}</strong>
+        {
+          // Inline code
+          regex: /`([^`]+)`/g,
+          render: (m, key) => (
+            <code key={key} className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-sm font-mono text-red-600 dark:text-red-400">{m[1]}</code>
+          )
         },
-        { regex: /\*([^*]+)\*/g, render: (match: string, text: string) => 
-          <em key={`italic-${lastIndex}`}>{text}</em>
+        {
+          // Bold
+          regex: /\*\*([^*]+)\*\*/g,
+          render: (m, key) => <strong key={key} className="font-semibold">{m[1]}</strong>
         },
-        { regex: /(https?:\/\/[^\s]+)/g, render: (match: string, url: string) => 
-          <a key={`link-${lastIndex}`} href={url} className="text-accent-primary underline underline-offset-2 hover:text-accent-primary-hover transition-colors" target="_blank" rel="noopener noreferrer">
-            {url}
-          </a>
+        {
+          // Italic
+          regex: /\*([^*]+)\*/g,
+          render: (m, key) => <em key={key}>{m[1]}</em>
+        },
+        {
+          // Raw URL
+          regex: /(https?:\/\/[^\s]+)/g,
+          render: (m, key) => (
+            <a key={key} href={m[1]} className="text-accent-primary underline underline-offset-2 hover:text-accent-primary-hover transition-colors" target="_blank" rel="noopener noreferrer">
+              {m[1]}
+            </a>
+          )
         }
       ];
-      
-      // Create a combined regex and match all patterns
-      const combinedRegex = new RegExp(
-        patterns.map(p => p.regex.source).join('|'), 
-        'g'
-      );
-      
-      let match;
-      const matches: Array<{index: number, length: number, element: JSX.Element}> = [];
-      
+
+      const combinedRegex = new RegExp(patterns.map(p => p.regex.source).join('|'), 'g');
+      let match: RegExpExecArray | null;
+      const matches: Array<{ index: number; length: number; element: JSX.Element }> = [];
+
       while ((match = combinedRegex.exec(text)) !== null) {
-        // Determine which pattern matched
         for (let i = 0; i < patterns.length; i++) {
           const patternRegex = new RegExp(patterns[i].regex.source, 'g');
           patternRegex.lastIndex = match.index;
-          const patternMatch = patternRegex.exec(text);
-          
-          if (patternMatch && patternMatch.index === match.index) {
-            const element = patterns[i].render(patternMatch[0], patternMatch[1] || patternMatch[0]);
-            matches.push({
-              index: match.index,
-              length: patternMatch[0].length,
-              element: element as JSX.Element
-            });
+          const m = patternRegex.exec(text);
+          if (m && m.index === match.index) {
+            const element = patterns[i].render(m, `${i}-${m.index}`);
+            matches.push({ index: m.index, length: m[0].length, element });
             break;
           }
         }
       }
-      
-      // Sort matches by index
+
       matches.sort((a, b) => a.index - b.index);
-      
-      // Build the result
       lastIndex = 0;
       for (const m of matches) {
-        if (m.index > lastIndex) {
-          parts.push(text.substring(lastIndex, m.index));
-        }
+        if (m.index > lastIndex) parts.push(text.substring(lastIndex, m.index));
         parts.push(m.element);
         lastIndex = m.index + m.length;
       }
-      
-      if (lastIndex < text.length) {
-        parts.push(text.substring(lastIndex));
-      }
-      
+      if (lastIndex < text.length) parts.push(text.substring(lastIndex));
       return parts.length > 0 ? parts : [text];
     };
     

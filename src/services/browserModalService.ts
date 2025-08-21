@@ -36,13 +36,22 @@ class BrowserModalService {
       logger.debug('Opened browser modal:', { windowLabel, url: options.url });
 
       // Track the window if available
-      const window = WebviewWindow.getByLabel(windowLabel);
-      if (window) {
-        this.openModals.set(windowLabel, window);
-        await window.onCloseRequested(() => {
+      const openedWindow = WebviewWindow.getByLabel(windowLabel);
+      if (openedWindow) {
+        this.openModals.set(windowLabel, openedWindow);
+        await openedWindow.onCloseRequested(() => {
           this.openModals.delete(windowLabel);
+          // Emit close event in the main app window context
+          try {
+            window.dispatchEvent(new CustomEvent('browser:closed', { detail: { windowLabel } }));
+          } catch {}
         });
       }
+
+      // Emit open event in the main app window context
+      try {
+        window.dispatchEvent(new CustomEvent('browser:opened', { detail: { windowLabel, url: options.url } }));
+      } catch {}
 
       return windowLabel;
     } catch (error) {

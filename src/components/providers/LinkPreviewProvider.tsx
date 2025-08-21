@@ -7,10 +7,42 @@ import { BrowserModalController } from '../browser/BrowserModalController';
 
 export function LinkPreviewProvider({ children }: { children: React.ReactNode }) {
   const { isOpen, url, openLinkPreview, closeLinkPreview } = useLinkPreviewStore();
-  const currentWindowLabel = useRef<string | null>(null);
+  const currentWindowLabelRef = useRef<string | null>(null);
+  const [currentWindowLabel, setCurrentWindowLabel] = useState<string | null>(null);
   const [currentBrowserUrl, setCurrentBrowserUrl] = useState<string | null>(null);
   const originalWindowOpenRef = useRef<typeof window.open | null>(null);
   const suppressOpenRef = useRef<{ url: string; until: number } | null>(null);
+
+  useEffect(() => {
+    const handleOpened = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { windowLabel: string; url: string } | undefined;
+      if (detail?.windowLabel) {
+        setCurrentWindowLabel(detail.windowLabel);
+        setCurrentBrowserUrl(detail.url || null);
+      }
+    };
+    const handleClosed = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { windowLabel: string } | undefined;
+      if (detail?.windowLabel && detail.windowLabel === currentWindowLabelRef.current) {
+        setCurrentWindowLabel(null);
+        setCurrentBrowserUrl(null);
+        currentWindowLabelRef.current = null;
+      }
+    };
+
+    window.addEventListener('browser:opened', handleOpened as EventListener);
+    window.addEventListener('browser:closed', handleClosed as EventListener);
+    return () => {
+      window.removeEventListener('browser:opened', handleOpened as EventListener);
+      window.removeEventListener('browser:closed', handleClosed as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (currentWindowLabelRef.current && !currentWindowLabel) {
+      setCurrentWindowLabel(currentWindowLabelRef.current);
+    }
+  }, [currentWindowLabel]);
 
   useEffect(() => {
     // Global CAPTURE handler: cancel native navigation for external links
@@ -117,10 +149,7 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
         return;
       }
       
-      // Skip if it's within the notes editor (which has its own handler)
-      if (anchor.closest('.block-note-editor')) {
-        return;
-      }
+      // Notes (BlockNote) links should be handled here too so the toolbar shows
       
       // Skip mailto and tel links
       if (href.startsWith('mailto:') || href.startsWith('tel:')) {
@@ -139,7 +168,8 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
           url: href,
           title: 'Browser'
         });
-        currentWindowLabel.current = windowLabel;
+        currentWindowLabelRef.current = windowLabel;
+        setCurrentWindowLabel(windowLabel);
         setCurrentBrowserUrl(href);
         console.log('Browser window opened with label:', windowLabel);
       } catch (err) {
@@ -168,8 +198,8 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      if (currentWindowLabel.current) {
-        browserModalService.closeModal(currentWindowLabel.current);
+      if (currentWindowLabelRef.current) {
+        browserModalService.closeModal(currentWindowLabelRef.current);
       }
     };
   }, []);
@@ -178,9 +208,9 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
     <>
       {children}
       {/* Browser control bar for native browser windows */}
-      {currentWindowLabel.current && currentBrowserUrl && (
+      {currentWindowLabel && currentBrowserUrl && (
         <BrowserModalController 
-          windowLabel={currentWindowLabel.current}
+          windowLabel={currentWindowLabel}
           url={currentBrowserUrl}
         />
       )}

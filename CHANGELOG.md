@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2025-08-20
 
+## [Unreleased] - 2025-08-21
+
+### 🔗 Link handling and custom browser
+- Eliminated duplicate system/browser opens from email links rendered in Shadow DOM
+  - Normalized http/https anchors inside the shadow (removed href, stored data-original-href)
+  - Added capture-phase interception and global suppression window to avoid native navigation
+  - Removed any fallback `window.open` paths to prevent duplicates
+- Global link interception now uses bubble phase + composedPath to reliably skip/handle Shadow DOM
+- Notes (BlockNote) links now open in the same native browser flow as Mail/Chat (no iframe modal)
+- Link Preview modal backdrop blur removed and modal auto-closes after launching native browser to avoid covering the toolbar
+- Browser controller/toolbar reliability
+  - Event-driven visibility (`browser:opened`/`browser:closed`) so the toolbar consistently appears
+  - Copy button now returns the real external URL (decodes reader/app shell redirect params)
+
+### 💬 Chat rendering
+- Markdown links like `[reds.com](https://www.reds.com)` now render as proper clickable anchors with the visible text (not literal markdown)
+- Kept inline code, bold and italic formatting intact
+
+### 🛠️ Tauri/Rust housekeeping
+- Removed unsupported `on_navigation`/`on_page_load` uses on `WebviewWindow` (v2), keeping the build clean
+- Controller window docking adjustments (frameless, non-blurred toolbar style)
+
+Impact: Clicking links across Mail/Notes/Chat opens exactly one native browser window with working toolbar; no system browser duplication; chat shows clean links.
+
 ### 📧 Mail compose reliability fixes
 - Enabled desktop sending pipeline by turning on the `gmail-compose` feature in Tauri and adding the missing `gmail.send` scope to backend OAuth scopes.
 - Added HMR‑safe invoke wrapper with auto‑retry for Tauri callback‑id race conditions (dev only).

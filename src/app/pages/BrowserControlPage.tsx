@@ -5,6 +5,7 @@ export function BrowserControlPage() {
 	// Support both router and direct-hash usage
 	let windowLabel: string | undefined;
 	let url = '';
+	let mode: 'toolbar' | 'overlay' = 'toolbar';
 	try {
 		const hash = typeof window !== 'undefined' ? window.location.hash : '';
 		const hasHashParams = hash.includes('?');
@@ -14,8 +15,17 @@ export function BrowserControlPage() {
 		const params = new URLSearchParams(search);
 		windowLabel = params.get('windowLabel') || undefined;
 		url = params.get('url') || '';
+		// Check if mode is explicitly set in params
+		const modeParam = params.get('mode');
+		if (modeParam === 'overlay' || modeParam === 'toolbar') {
+			mode = modeParam;
+		}
 	} catch {}
 
 	if (!windowLabel) return null;
-	return <BrowserModalController windowLabel={windowLabel} url={url} mode="toolbar" />;
+	return (
+		<div className="w-full h-full bg-white dark:bg-gray-900">
+			<BrowserModalController windowLabel={windowLabel} url={url} mode={mode} />
+		</div>
+	);
 }

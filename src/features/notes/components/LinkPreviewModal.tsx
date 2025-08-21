@@ -53,8 +53,8 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
     (async () => {
       try {
         await browserModalService.openModal({ url, title: 'Browser' });
-        // Don't close the modal - let the LinkPreviewProvider handle it
-        // This keeps the state alive for the BrowserModalController
+        // Close the modal immediately so it doesn't cover the toolbar overlay
+        onClose();
       } catch (err) {
         // If native window fails, stay in modal and allow user to open externally
         setLoadError(true);
@@ -137,9 +137,9 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop - remove blur */}
       <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
       
