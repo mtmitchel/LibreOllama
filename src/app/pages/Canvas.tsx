@@ -7,6 +7,8 @@ import { PanelRight } from 'lucide-react';
 import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
 import Konva from 'konva';
 import { Page, PageCard } from '../../components/ui/design-system/Page';
+import ModernKonvaToolbar from '../../features/canvas/toolbar/ModernKonvaToolbar';
+import { useUnifiedCanvasStore } from '../../features/canvas/stores/unifiedCanvasStore';
 
 /**
  * This component establishes the two-pane layout for the Canvas feature,
@@ -17,6 +19,9 @@ import { Page, PageCard } from '../../components/ui/design-system/Page';
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [isCanvasSidebarOpen, setCanvasSidebarOpen] = useState(true);
   const [canvasStageRef, setCanvasStageRef] = useState<React.RefObject<Konva.Stage | null> | undefined>(undefined);
+
+  const undo = useUnifiedCanvasStore(state => state.undo);
+  const redo = useUnifiedCanvasStore(state => state.redo);
 
   const handleStageReady = (stageRef: React.RefObject<Konva.Stage | null>) => {
     setCanvasStageRef(stageRef);
@@ -102,6 +107,7 @@ import { Page, PageCard } from '../../components/ui/design-system/Page';
       }}>
         
         <CanvasContainer onStageReady={handleStageReady} />
+        <ModernKonvaToolbar onUndo={undo} onRedo={redo} />
       </main>
     </div>
       </PageCard>

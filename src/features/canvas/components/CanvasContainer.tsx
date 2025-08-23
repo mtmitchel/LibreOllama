@@ -13,7 +13,7 @@
 
 import React, { useRef } from 'react';
 import Konva from 'konva';
-import CanvasStage from './CanvasStage';
+import { CanvasStageWrapper } from './CanvasStage';
 import ModernKonvaToolbar from '../toolbar/ModernKonvaToolbar';
 import { CanvasDragDropHandler } from './ui/CanvasDragDropHandler';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
@@ -53,7 +53,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({ onStageReady }
           onRedo={redo} 
         />
         <CanvasDragDropHandler stageRef={stageRef}>
-          <CanvasStage stageRef={stageRef} />
+          <CanvasStageWrapper stageRef={stageRef} />
         </CanvasDragDropHandler>
       </div>
     </div>
