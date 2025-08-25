@@ -10,6 +10,8 @@ import { CanvasElement, ElementId, SectionId } from '../types';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
 import { useCursorManager, CanvasTool } from '../utils/performance/cursorManager';
 import { canvasLog } from '../utils/canvasLogger';
+import { ElementRendererFactory, ElementCallbacks, RendererContext } from '../renderers/ElementRendererFactory';
+import { VanillaElementRenderer } from '../renderers/VanillaElementRenderer';
 
 interface CanvasStageProps {
   stageRef?: React.RefObject<Konva.Stage | null>;
@@ -132,6 +134,9 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   const connectorLayerRef = useRef<Konva.Layer | null>(null);
   const uiLayerRef = useRef<Konva.Layer | null>(null);
   const toolLayerRef = useRef<Konva.Layer | null>(null);
+  
+  // Element renderers management
+  const elementRenderersRef = useRef<Map<ElementId, VanillaElementRenderer<CanvasElement>>>(new Map());
 
   // Initialize Konva Stage on mount
   useEffect(() => {
@@ -211,6 +216,74 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
       
       mainLayer.add(testRect);
       
+      // Create element callbacks
+      const elementCallbacks: ElementCallbacks = {
+        onElementUpdate: updateElement,
+        onElementClick: onElementClick,
+        onElementDragEnd: onElementDragEnd,
+        onStartTextEdit: setTextEditingElement
+      };
+
+      // Create renderer context
+      const rendererContext: RendererContext = {
+        layer: mainLayer,
+        stage: stage,
+        callbacks: elementCallbacks
+      };
+
+      // Add test elements to demonstrate vanilla Konva rendering
+      const testElements: CanvasElement[] = [
+        {
+          id: 'test-rect-1' as ElementId,
+          type: 'rectangle',
+          x: 200,
+          y: 150,
+          width: 150,
+          height: 100,
+          fill: '#3498db',
+          stroke: '#2980b9',
+          strokeWidth: 2,
+          draggable: true,
+          visible: true,
+          listening: true
+        } as any,
+        {
+          id: 'test-circle-1' as ElementId,
+          type: 'circle',
+          x: 400,
+          y: 200,
+          radius: 60,
+          fill: '#e74c3c',
+          stroke: '#c0392b',
+          strokeWidth: 3,
+          draggable: true,
+          visible: true,
+          listening: true
+        } as any,
+        {
+          id: 'test-text-1' as ElementId,
+          type: 'text',
+          x: 250,
+          y: 300,
+          text: 'Hello Vanilla Konva!',
+          fontSize: 24,
+          fontFamily: 'Arial',
+          fill: '#2c3e50',
+          draggable: true,
+          visible: true,
+          listening: true
+        } as any
+      ];
+
+      // Render test elements
+      testElements.forEach(element => {
+        const renderer = ElementRendererFactory.createRenderer(element, rendererContext);
+        if (renderer) {
+          renderer.render();
+          elementRenderersRef.current.set(element.id, renderer);
+        }
+      });
+      
       // Draw all layers
       backgroundLayer.draw();
       mainLayer.draw();
@@ -220,6 +293,9 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
 
       // Cleanup function
       return () => {
+        // Cleanup element renderers
+        ElementRendererFactory.destroyRenderers(elementRenderersRef.current);
+        
         stage.destroy();
         stageRef.current = null;
         backgroundLayerRef.current = null;
