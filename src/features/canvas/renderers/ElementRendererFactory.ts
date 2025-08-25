@@ -9,7 +9,6 @@ import Konva from 'konva';
 import { 
   CanvasElement, 
   ElementId, 
-  ElementType,
   RectangleElement,
   CircleElement,
   TriangleElement,
@@ -28,6 +27,12 @@ import { VanillaCircleRenderer } from './shapes/VanillaCircleRenderer';
 import { VanillaTriangleRenderer } from './shapes/VanillaTriangleRenderer';
 import { VanillaTextRenderer } from './shapes/VanillaTextRenderer';
 import { VanillaPenRenderer } from './shapes/VanillaPenRenderer';
+import { VanillaImageRenderer } from './shapes/VanillaImageRenderer';
+import { VanillaStickyNoteRenderer } from './shapes/VanillaStickyNoteRenderer';
+import { VanillaConnectorRenderer } from './shapes/VanillaConnectorRenderer';
+import { VanillaTableRenderer } from './shapes/VanillaTableRenderer';
+import { VanillaMarkerRenderer } from './shapes/VanillaMarkerRenderer';
+import { VanillaHighlighterRenderer } from './shapes/VanillaHighlighterRenderer';
 
 export interface ElementCallbacks {
   onElementUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
@@ -56,12 +61,13 @@ export class ElementRendererFactory {
     ElementRendererFactory.registerRenderer('triangle', VanillaTriangleRenderer);
     ElementRendererFactory.registerRenderer('text', VanillaTextRenderer);
     ElementRendererFactory.registerRenderer('pen', VanillaPenRenderer);
+    ElementRendererFactory.registerRenderer('image', VanillaImageRenderer);
+    ElementRendererFactory.registerRenderer('sticky-note', VanillaStickyNoteRenderer);
+    ElementRendererFactory.registerRenderer('connector', VanillaConnectorRenderer);
+    ElementRendererFactory.registerRenderer('table', VanillaTableRenderer);
+    ElementRendererFactory.registerRenderer('marker', VanillaMarkerRenderer);
+    ElementRendererFactory.registerRenderer('highlighter', VanillaHighlighterRenderer);
     // TODO: Add remaining renderers as they're implemented
-    // ElementRendererFactory.registerRenderer('image', VanillaImageRenderer);
-    // ElementRendererFactory.registerRenderer('sticky-note', VanillaStickyNoteRenderer);
-    // ElementRendererFactory.registerRenderer('connector', VanillaConnectorRenderer);
-    // ElementRendererFactory.registerRenderer('section', VanillaSectionRenderer);
-    // ElementRendererFactory.registerRenderer('table', VanillaTableRenderer);
   }
 
   /**
@@ -78,10 +84,11 @@ export class ElementRendererFactory {
     element: CanvasElement,
     context: RendererContext
   ): VanillaElementRenderer<CanvasElement> | null {
-    const RendererClass = ElementRendererFactory.rendererRegistry.get(element.type);
+    const key = String(element.type).toLowerCase();
+    const RendererClass = ElementRendererFactory.rendererRegistry.get(key);
     
     if (!RendererClass) {
-      console.warn(`No renderer found for element type: ${element.type}`);
+      // Unsupported types are skipped without crashing
       return null;
     }
 
@@ -92,7 +99,7 @@ export class ElementRendererFactory {
    * Check if a renderer is available for the given element type
    */
   static hasRenderer(elementType: string): boolean {
-    return ElementRendererFactory.rendererRegistry.has(elementType);
+    return ElementRendererFactory.rendererRegistry.has(String(elementType).toLowerCase());
   }
 
   /**

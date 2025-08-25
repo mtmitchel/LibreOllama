@@ -12,6 +12,9 @@ import { useCursorManager, CanvasTool } from '../utils/performance/cursorManager
 import { canvasLog } from '../utils/canvasLogger';
 import { ElementRendererFactory, ElementCallbacks, RendererContext } from '../renderers/ElementRendererFactory';
 import { VanillaElementRenderer } from '../renderers/VanillaElementRenderer';
+import { VanillaLayerManager } from '../layers/VanillaLayerManager';
+import { VanillaEventHandler } from '../events/VanillaEventHandler';
+import { VanillaToolManager } from '../tools/VanillaToolManager';
 
 interface CanvasStageProps {
   stageRef?: React.RefObject<Konva.Stage | null>;
@@ -128,15 +131,10 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
     });
   }, [viewport, setViewport, stageRef])
 
-  // Refs for Konva layers
-  const backgroundLayerRef = useRef<Konva.Layer | null>(null);
-  const mainLayerRef = useRef<Konva.Layer | null>(null);
-  const connectorLayerRef = useRef<Konva.Layer | null>(null);
-  const uiLayerRef = useRef<Konva.Layer | null>(null);
-  const toolLayerRef = useRef<Konva.Layer | null>(null);
-  
-  // Element renderers management
-  const elementRenderersRef = useRef<Map<ElementId, VanillaElementRenderer<CanvasElement>>>(new Map());
+  // Element renderers management now handled by VanillaLayerManager
+  const layerManagerRef = useRef<VanillaLayerManager | null>(null);
+  const eventHandlerRef = useRef<VanillaEventHandler | null>(null);
+  const toolManagerRef = useRef<VanillaToolManager | null>(null);
 
   // Initialize Konva Stage on mount
   useEffect(() => {
@@ -151,158 +149,49 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
         pixelRatio: stageConfig.pixelRatio,
       });
 
-      // Create layers in proper order
-      const backgroundLayer = new Konva.Layer({ name: 'background-layer' });
-      const mainLayer = new Konva.Layer({ name: 'main-layer' });
-      const connectorLayer = new Konva.Layer({ name: 'connector-layer' });
-      const uiLayer = new Konva.Layer({ name: 'ui-layer' });
-      const toolLayer = new Konva.Layer({ name: 'tool-layer' });
-
-      // Add layers to stage in order
-      stage.add(backgroundLayer);
-      stage.add(mainLayer);
-      stage.add(connectorLayer);
-      stage.add(uiLayer);
-      stage.add(toolLayer);
-
-      // Store references
+      // Store reference
       stageRef.current = stage;
-      backgroundLayerRef.current = backgroundLayer;
-      mainLayerRef.current = mainLayer;
-      connectorLayerRef.current = connectorLayer;
-      uiLayerRef.current = uiLayer;
-      toolLayerRef.current = toolLayer;
 
       // Add wheel event listener
       stage.on('wheel', handleWheel);
 
-      // Add basic background grid (test)
-      const grid = new Konva.Group();
-      const gridSize = 50;
-      const gridColor = '#e0e0e0';
-      
-      // Create grid lines
-      for (let i = 0; i < stageConfig.width; i += gridSize) {
-        const line = new Konva.Line({
-          points: [i, 0, i, stageConfig.height],
-          stroke: gridColor,
-          strokeWidth: 1,
-          opacity: 0.3,
-        });
-        grid.add(line);
-      }
-      
-      for (let i = 0; i < stageConfig.height; i += gridSize) {
-        const line = new Konva.Line({
-          points: [0, i, stageConfig.width, i],
-          stroke: gridColor,
-          strokeWidth: 1,
-          opacity: 0.3,
-        });
-        grid.add(line);
-      }
-      
-      backgroundLayer.add(grid);
-      
-      // Add a test rectangle to verify things are working
-      const testRect = new Konva.Rect({
-        x: 100,
-        y: 100,
-        width: 100,
-        height: 100,
-        fill: 'red',
-        draggable: true,
-      });
-      
-      mainLayer.add(testRect);
-      
-      // Create element callbacks
-      const elementCallbacks: ElementCallbacks = {
+      // Create layer manager
+      const callbacks: ElementCallbacks = {
         onElementUpdate: updateElement,
         onElementClick: onElementClick,
         onElementDragEnd: onElementDragEnd,
-        onStartTextEdit: setTextEditingElement
+        onStartTextEdit: setTextEditingElement,
       };
+      const manager = new VanillaLayerManager(stage, callbacks);
+      layerManagerRef.current = manager;
 
-      // Create renderer context
-      const rendererContext: RendererContext = {
-        layer: mainLayer,
-        stage: stage,
-        callbacks: elementCallbacks
-      };
+      // Draw background grid
+      manager.drawBackgroundGrid(stageConfig.width, stageConfig.height);
 
-      // Add test elements to demonstrate vanilla Konva rendering
-      const testElements: CanvasElement[] = [
-        {
-          id: 'test-rect-1' as ElementId,
-          type: 'rectangle',
-          x: 200,
-          y: 150,
-          width: 150,
-          height: 100,
-          fill: '#3498db',
-          stroke: '#2980b9',
-          strokeWidth: 2,
-          draggable: true,
-          visible: true,
-          listening: true
-        } as any,
-        {
-          id: 'test-circle-1' as ElementId,
-          type: 'circle',
-          x: 400,
-          y: 200,
-          radius: 60,
-          fill: '#e74c3c',
-          stroke: '#c0392b',
-          strokeWidth: 3,
-          draggable: true,
-          visible: true,
-          listening: true
-        } as any,
-        {
-          id: 'test-text-1' as ElementId,
-          type: 'text',
-          x: 250,
-          y: 300,
-          text: 'Hello Vanilla Konva!',
-          fontSize: 24,
-          fontFamily: 'Arial',
-          fill: '#2c3e50',
-          draggable: true,
-          visible: true,
-          listening: true
-        } as any
-      ];
-
-      // Render test elements
-      testElements.forEach(element => {
-        const renderer = ElementRendererFactory.createRenderer(element, rendererContext);
-        if (renderer) {
-          renderer.render();
-          elementRenderersRef.current.set(element.id, renderer);
+      // Reconcile initial elements
+      const elementMap = new Map<ElementId, CanvasElement>();
+      (elements as Map<ElementId | SectionId, CanvasElement | any>).forEach((el: any, id: any) => {
+        if (el && el.type !== 'section') {
+          elementMap.set(id as ElementId, el as CanvasElement);
         }
       });
-      
-      // Draw all layers
-      backgroundLayer.draw();
-      mainLayer.draw();
-      connectorLayer.draw();
-      uiLayer.draw();
-      toolLayer.draw();
+      manager.setElements(elementMap);
+
+      // Create event handler
+      eventHandlerRef.current = new VanillaEventHandler(stage, useUnifiedCanvasStore.getState, undefined, manager);
+
+      // Create tool manager
+      toolManagerRef.current = new VanillaToolManager(stage, useUnifiedCanvasStore.getState, manager);
 
       // Cleanup function
       return () => {
-        // Cleanup element renderers
-        ElementRendererFactory.destroyRenderers(elementRenderersRef.current);
-        
+        eventHandlerRef.current?.destroy();
+        manager.destroy();
         stage.destroy();
         stageRef.current = null;
-        backgroundLayerRef.current = null;
-        mainLayerRef.current = null;
-        connectorLayerRef.current = null;
-        uiLayerRef.current = null;
-        toolLayerRef.current = null;
+        layerManagerRef.current = null;
+        eventHandlerRef.current = null;
+        toolManagerRef.current = null;
       };
     }
   }, [stageConfig, handleWheel, stageRef]);
@@ -316,6 +205,24 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
       stage.batchDraw();
     }
   }, [viewport.scale, viewport.x, viewport.y, stageRef]);
+
+  // Reconcile elements when state changes
+  useEffect(() => {
+    if (!layerManagerRef.current) return;
+    const elementMap = new Map<ElementId, CanvasElement>();
+    (elements as Map<ElementId | SectionId, CanvasElement | any>).forEach((el: any, id: any) => {
+      if (el && el.type !== 'section') {
+        elementMap.set(id as ElementId, el as CanvasElement);
+      }
+    });
+    layerManagerRef.current.setElements(elementMap);
+  }, [elements]);
+
+  // Switch active tool when selection changes
+  useEffect(() => {
+    if (!toolManagerRef.current) return;
+    toolManagerRef.current.setTool(selectedTool);
+  }, [selectedTool]);
 
   return (
     <CanvasErrorBoundary
@@ -334,17 +241,6 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
           height: stageConfig.height 
         }}
       />
-      
-      {/* TODO: Implement vanilla Konva rendering logic */}
-      {stageRef.current && (
-        <div style={{ display: 'none' }}>
-          {/* Temporarily disabled while refactoring to vanilla Konva */}
-          {/* <UnifiedEventHandler stageRef={stageRef} /> */}
-          {/* <CanvasLayerManager ... /> */}
-          {/* <ToolLayer stageRef={stageRef} /> */}
-        </div>
-      )}
-
     </CanvasErrorBoundary>
   );
 };

@@ -12,7 +12,7 @@ import { StoreModule, StoreSet, StoreGet } from './types';
 export interface DrawingState {
   isDrawing: boolean;
   currentPath?: number[];
-  drawingTool: 'pen' | 'pencil' | null;
+  drawingTool: 'pen' | 'marker' | 'highlighter' | null;
   drawingStartPoint: { x: number; y: number } | null;
   drawingCurrentPoint: { x: number; y: number } | null;
   
@@ -38,7 +38,7 @@ export interface DrawingState {
  */
 export interface DrawingActions {
   // Drawing operations
-  startDrawing: (tool: 'pen' | 'pencil', point: { x: number; y: number }) => void;
+  startDrawing: (tool: 'pen' | 'marker' | 'highlighter', point: { x: number; y: number }) => void;
   updateDrawing: (point: { x: number; y: number }) => void;
   finishDrawing: () => void;
   cancelDrawing: () => void;
@@ -116,36 +116,82 @@ export const createDrawingModule = (
       finishDrawing: () => {
         const state = get();
         if (state.isDrawing && state.currentPath && state.currentPath.length >= 4) {
-          // Create pen element with fallback color
-          const penColor = get().penColor || '#000000';
-          
-          const penElement = {
-            id: nanoid(),
-            type: 'pen',
-            x: 0,
-            y: 0,
-            points: [...state.currentPath],
-            stroke: penColor,
-            strokeWidth: 2,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            isLocked: false,
-            isHidden: false
-          };
-          
-          // Add to store
-          get().addElement(penElement as any);
-          
-          // Check if the stroke was created within a sticky note container
-          const startPoint = { x: state.currentPath[0], y: state.currentPath[1] };
-          console.log('🖊️ [Store] Checking for sticky note at start point:', startPoint);
-          const stickyNoteId = get().findStickyNoteAtPoint?.(startPoint);
-          
-          if (stickyNoteId) {
-            console.log('🖊️ [Store] Adding pen stroke to sticky note container:', stickyNoteId);
-            get().addElementToStickyNote?.(penElement.id as any, stickyNoteId);
-          } else {
-            console.log('🖊️ [Store] No sticky note container found at start point');
+          const tool = state.drawingTool || 'pen';
+
+          if (tool === 'pen') {
+            const color = (get() as any).penColor || '#000000';
+            const penElement = {
+              id: nanoid(),
+              type: 'pen',
+              x: 0,
+              y: 0,
+              points: [...state.currentPath],
+              stroke: color,
+              strokeWidth: 2,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              isLocked: false,
+              isHidden: false
+            };
+            get().addElement(penElement as any);
+          }
+
+          if (tool === 'marker') {
+            const cfg = state.strokeConfig.marker;
+            const width = Math.max(cfg.minWidth, Math.min(cfg.maxWidth, 6));
+            const markerElement = {
+              id: nanoid(),
+              type: 'marker',
+              x: 0,
+              y: 0,
+              points: [...state.currentPath],
+              rawPoints: undefined,
+              style: {
+                color: cfg.color,
+                width,
+                opacity: cfg.opacity,
+                smoothness: cfg.smoothness,
+                lineCap: 'round',
+                lineJoin: 'round',
+                widthVariation: cfg.widthVariation,
+                minWidth: cfg.minWidth,
+                maxWidth: cfg.maxWidth,
+                pressureSensitive: cfg.pressureSensitive,
+              },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              isLocked: false,
+              isHidden: false,
+            };
+            get().addElement(markerElement as any);
+          }
+
+          if (tool === 'highlighter') {
+            const cfg = state.strokeConfig.highlighter;
+            const highlighterElement = {
+              id: nanoid(),
+              type: 'highlighter',
+              x: 0,
+              y: 0,
+              points: [...state.currentPath],
+              rawPoints: undefined,
+              style: {
+                color: cfg.color,
+                width: cfg.width,
+                opacity: cfg.opacity,
+                smoothness: 0.5,
+                lineCap: 'round',
+                lineJoin: 'round',
+                blendMode: cfg.blendMode,
+                baseOpacity: cfg.opacity,
+                highlightColor: cfg.color,
+              },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              isLocked: false,
+              isHidden: false,
+            };
+            get().addElement(highlighterElement as any);
           }
         }
         
@@ -219,25 +265,17 @@ export const createDrawingModule = (
           
           return sectionId;
         }
-        
-        // Clear draft even if too small
-        set(state => {
-          state.draftSection = null;
-        });
-        
         return null;
       },
-      
+
       cancelDraftSection: () => {
-        set(state => {
-          state.draftSection = null;
-        });
+        set(state => { state.draftSection = null; });
       },
 
-      // Stroke Configuration
+      // Stroke config updates
       updateStrokeConfig: (tool, config) => {
         set(state => {
-          Object.assign(state.strokeConfig[tool], config);
+          state.strokeConfig[tool] = { ...(state.strokeConfig as any)[tool], ...(config as any) } as any;
         });
       },
     },
