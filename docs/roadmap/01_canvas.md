@@ -13,50 +13,44 @@ This document provides a comprehensive overview of the Canvas feature, including
 
 ## Current Implementation
 
-The canvas is a core feature of the application, built using React Konva and a sophisticated state management system.
+The canvas is implemented using a direct imperative Konva.js API with a modular Zustand store. Some legacy react-konva components exist for archived/tests but are not part of the runtime path.
 
 ### Frontend Architecture
 
-- **Rendering Engine:** `react-konva` & `konva` for 2D canvas rendering.
-- **State Management:** A unified Zustand store (`unifiedCanvasStore.ts`) manages all canvas-related state, including elements, tools, and UI properties. It uses Immer for immutable state updates.
-- **Component Structure:**
-    - `CanvasContainer.tsx`: The main wrapper component.
-    - `CanvasLayerManager.tsx`: Manages the different layers (background, main, connector, UI).
-    - `ElementRenderer.tsx`: A key component responsible for rendering different canvas elements (shapes, text, etc.) based on their type.
-    - `UnifiedEventHandler.tsx`: A centralized handler for all canvas events (mouse, keyboard, drag), which translates user interactions into store actions.
-- **Tools System:** A modular tool system is located in `src/features/canvas/tools/`. It includes base classes for creation tools (`BaseCreationTool.tsx`) and specific tools like `PenTool`, `TextTool`, and `ConnectorTool`.
-- **Performance:** Optimizations include viewport culling, `React.memo` on heavy components, and granular selectors to minimize re-renders.
+- Rendering Engine: Imperative Konva.js via `CanvasRenderer` and `ElementRegistry`.
+- State Management: Modular unified store (`stores/unifiedCanvasStore.ts`) with element, selection, viewport, drawing, history, section, table, sticky note, UI, eraser, and event modules.
+- **Core Files:**
+    - `components/CanvasStage.tsx`: Initializes Konva `Stage` and layers imperatively, draws background, handles zoom.
+    - `core/CanvasRenderer.ts`: Subscribes to store and syncs elements to Konva nodes.
+    - `core/ElementRegistry.ts`: Creates/updates/destroys Konva nodes for elements.
+    - `core/UnifiedEventHandler.ts`: Centralized event delegation and tool activation.
+- Tools System: Tools are pure TypeScript classes (e.g., `tools/TextTool.ts`, `tools/ShapeTools.ts`, `tools/DrawingTools.ts`, `tools/ConnectorTool.ts`) managed by `core/UnifiedEventHandler.ts`.
+- **Performance:** Batch draws, minimal subscriptions, and removal of React reconciliation for canvas operations.
 
 ### Backend Architecture
 
-- **Persistence:** The backend currently has a command `save_canvas_state` in `src-tauri/src/commands/canvas.rs` which saves the current canvas JSON to `canvas-save.json`.
+- Persistence: No active backend persistence; the canvas.rs command module currently contains no implemented commands.
 - **No Real-time:** There is currently no real-time backend support for the canvas.
 
 ### Implemented Features
 
-**Core Tools:**
-- ✅ Selection & Pan tools
-- ✅ Text tool with rich text editing
-- ✅ Sticky Notes with color picker
-- ✅ Table tool with cell editing
-- ✅ Image upload and placement
-- ✅ Drawing tools: Pen, Marker, Highlighter
-- ✅ Eraser tool for drawing strokes
-- ✅ Shape tools: Rectangle, Circle, Triangle (via dropdown)
-- ✅ Connector tool with multiple styles (arrow, elbow, straight)
-- ❌ Section tool (temporarily disabled in toolbar)
+Core Tools:
+- Selection & Pan tools
+- Text tool
+- Sticky Notes
+- Drawing tools: Pen, Marker, Highlighter, Eraser
+- Shape tools: Rectangle, Circle, Triangle
+- Connector tool (basic line)
+- Image element supported via ElementRegistry
+- Table/Section element types exist; Table tool UX pending; Section tool currently disabled
 
 **Core Functionality:**
-- ✅ Selection and multi-selection with Shift+click
-- ✅ Transformation (move, resize, rotate) of elements
-- ✅ Undo/redo functionality with history management
-- ✅ Layer management system (Background, Main, Connector, UI layers)
-- ✅ Viewport controls (pan, zoom in/out)
-- ✅ Copy/paste functionality
-- ✅ Delete elements
-- ✅ Group/ungroup elements
-- ✅ Grid display toggle
-- ✅ Snap to grid functionality
+- 🔄 Selection and multi-selection with Shift+click (in progress with imperative transformer)
+- 🔄 Transformation (move, resize, rotate) of elements (pending transformer controller)
+- ✅ Undo/redo functionality with history management (via modular history module)
+- ❌ Legacy react-konva layer system removed; background rendered imperatively
+- ✅ Viewport controls (wheel zoom; pan disabled temporarily)
+- 🔄 Copy/paste, group/ungroup, grid toggle, snap to grid (to be reintroduced post-migration)
 
 **Performance Optimizations:**
 - ✅ Viewport culling for rendering only visible elements

@@ -1,6 +1,6 @@
 // Modern Bottom-Center Floating Toolbar (FigJam-style)
 import React, { useState } from 'react';
-import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 
 import { ElementId } from '../types/enhanced.types';
 
@@ -22,7 +22,7 @@ import {
   Image as ImageIcon,
   ZoomIn,
   ZoomOut
-} from 'lucide-react';
+, Maximize2 } from 'lucide-react';
 import ShapesDropdown from './ShapesDropdown';
 import ConnectorDropdown from './ConnectorDropdown';
 import { Button } from '../../../components/ui';
@@ -100,7 +100,11 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   const resetZoom = () => {
-    setViewport({ scale: 1 });
+    setViewport({ scale: 1, x: 0, y: 0 });
+  };
+
+  const zoomToFit = () => {
+    try { useUnifiedCanvasStore.getState().zoomToFit?.(40); } catch {}
   };
 
   const groupElements = () => {
@@ -280,17 +284,25 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
             return (
-              <Button
-                key={tool.id}
-                variant={isActive ? "primary" : "ghost"}
-                size="icon"
-                onClick={() => handleToolClick(tool.id)}
-                className="size-9"
-                title={tool.name}
-                aria-label={tool.name}
-              >
-                <IconComponent size={16} />
-              </Button>
+              <div key={tool.id} className="relative">
+                <Button
+                  variant={isActive ? "primary" : "ghost"}
+                  size="icon"
+                  onClick={() => handleToolClick(tool.id)}
+                  className="size-9"
+                  title={tool.name}
+                  aria-label={tool.name}
+                >
+                  <IconComponent size={16} />
+                </Button>
+                {isActive && (
+                  <div
+                    className="absolute left-1/2 -bottom-1 h-0.5 w-4 -translate-x-1/2 rounded"
+                    style={{ background: 'var(--accent-primary)' }}
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
             );
           })}
         </div>
@@ -312,6 +324,13 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 >
                   <IconComponent size={16} />
                 </Button>
+                {isActive && (
+                  <div
+                    className="absolute left-1/2 -bottom-1 h-0.5 w-4 -translate-x-1/2 rounded"
+                    style={{ background: 'var(--accent-primary)' }}
+                    aria-hidden="true"
+                  />
+                )}
                 
                 {/* Color bar for sticky note tool when active */}
                 {tool.id === 'sticky-note' && isActive && (
@@ -356,17 +375,25 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
             return (
-              <Button
-                key={tool.id}
-                variant={isActive ? "primary" : "ghost"}
-                size="icon"
-                onClick={() => handleToolClick(tool.id)}
-                className="size-9"
-                title={tool.name}
-                aria-label={tool.name}
-              >
-                <IconComponent size={16} />
-              </Button>
+              <div key={tool.id} className="relative">
+                <Button
+                  variant={isActive ? "primary" : "ghost"}
+                  size="icon"
+                  onClick={() => handleToolClick(tool.id)}
+                  className="size-9"
+                  title={tool.name}
+                  aria-label={tool.name}
+                >
+                  <IconComponent size={16} />
+                </Button>
+                {isActive && (
+                  <div
+                    className="absolute left-1/2 -bottom-1 h-0.5 w-4 -translate-x-1/2 rounded"
+                    style={{ background: 'var(--accent-primary)' }}
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
             );
           })}
         </div>
@@ -450,6 +477,17 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             className="size-9"
           >
             <ZoomIn size={16} />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={zoomToFit}
+            title="Zoom to Fit"
+            aria-label="Zoom to Fit"
+            className="size-9"
+          >
+            <Maximize2 size={16} />
           </Button>
         </div>
 

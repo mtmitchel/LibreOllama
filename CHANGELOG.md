@@ -5,11 +5,28 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-08-25
+
+### 🖊️ Canvas text editing
+- Implemented real-time horizontal auto-resize for text boxes with pixel-parity between DOM textarea and Konva nodes
+  - Positioned overlay via background-rect absolute transform for exact origin alignment
+  - Measured width from `textarea.scrollWidth` (CSS px) and converted via absolute scale
+  - Updated `Text`, `background-rect`, `hit-area`, and `Group` widths in lockstep on every input with `layer.batchDraw()`
+  - Disabled caching during live edits to avoid stale bitmaps
+  - Fixed caret containment at the right edge without visible gap; box now hugs text precisely
+
 ## [Unreleased] - 2025-08-20
 
 ## [Unreleased] - 2025-08-21
 
-### 🔗 Link handling and custom browser
+### 🎨 Canvas Text Editor Alignment
+- **Pixel-perfect synchronization** between DOM textarea and Konva.js canvas text.
+  - Removed border and padding from the textarea to match Konva's text rendering.
+  - Added `box-sizing: border-box` to the textarea for consistent sizing.
+  - Synchronized `letter-spacing` and `line-height` between the textarea and Konva text.
+  - Adjusted the position of the textarea to account for padding and scale.
+
+### 🔗 Link handling and custom browserimage.png
 - Eliminated duplicate system/browser opens from email links rendered in Shadow DOM
   - Normalized http/https anchors inside the shadow (removed href, stored data-original-href)
   - Added capture-phase interception and global suppression window to avoid native navigation

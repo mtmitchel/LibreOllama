@@ -1,0 +1,2 @@
+export { TriangleTool } from './ShapeTools';
+

@@ -1,7 +1,7 @@
 import React, { ReactNode, useRef } from 'react';
 import Konva from 'konva';
 import { StoreApi } from 'zustand';
-import { UnifiedCanvasState } from '@/features/canvas/stores/unifiedCanvasStore';
+import { UnifiedCanvasState } from '@/features/canvas/store/useCanvasStore';
 
 // Create a minimal context for testing purposes, as the original might not be exported
 // or easily accessible.

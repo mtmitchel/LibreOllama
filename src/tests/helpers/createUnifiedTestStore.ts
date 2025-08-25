@@ -9,8 +9,8 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
-import { createCanvasStoreSlice } from '@/features/canvas/stores/unifiedCanvasStore';
-import type { UnifiedCanvasStore } from '@/features/canvas/stores/unifiedCanvasStore';
+import { createCanvasStoreSlice } from '@/features/canvas/store/useCanvasStore';
+import type { UnifiedCanvasStore } from '@/features/canvas/store/useCanvasStore';
 
 // Enable Map and Set support for Immer
 enableMapSet();

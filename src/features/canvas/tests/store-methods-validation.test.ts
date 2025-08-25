@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createUnifiedTestStore } from '../../../tests/helpers/createUnifiedTestStore';
+import { createUnifiedTestStore } from '../../../../tests/helpers/createUnifiedTestStore';
 
 describe('Canvas Test Store Validation', () => {
   it('should create a store with all slice methods available', () => {

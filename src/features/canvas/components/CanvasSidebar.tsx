@@ -13,7 +13,7 @@ import {
   Download,
 } from "lucide-react";
 import { Button, Input, Spinner, Text, Heading, Caption } from "../../../components/ui";
-import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 import { exportCanvasAsJPEG, exportCanvasAsPDF, getSuggestedFilename } from '../utils/exportUtils';
 import Konva from 'konva';
 import { CanvasElement, SectionElement } from '../types';

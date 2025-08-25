@@ -1,6 +1,6 @@
 // src/features/canvas/hooks/useKeyboardShortcuts.ts
 import { useEffect, useCallback, useMemo } from 'react';
-import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 import { ElementId, CanvasElement } from '../types/enhanced.types';
 
 export const useKeyboardShortcuts = () => {

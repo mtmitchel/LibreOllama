@@ -1,0 +1,1 @@
+Archive snapshot of previous status report. See docs/CANVAS_TOOL_REFACTOR_STATUS.md for the current, code-accurate status.

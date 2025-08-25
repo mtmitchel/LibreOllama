@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Text Rotation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .instructions {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .steps {
+            background: #f0f8e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .steps li {
+            margin: 8px 0;
+        }
+        .note {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .success {
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌀 Text Rotation Test</h1>
+
+        <div class="success">
+            <strong>✅ FIGMA-STYLE CORNER ROTATION & BACKGROUND FIXES IMPLEMENTED!</strong>
+            <p>Figma-style rotation with corner hover detection and background disappearing issue have been fixed!</p>
+        </div>
+
+        <div class="instructions">
+            <strong>Expected Behavior:</strong> This test verifies that the text rotation functionality is working correctly with Figma-style corner rotation.
+        </div>
+
+        <div class="steps">
+            <strong>Test Steps:</strong>
+            <ol>
+                <li>Open the LibreOllama canvas application</li>
+                <li>Click on the "Text" tool in the toolbar</li>
+                <li>Click anywhere on the canvas to create a text element</li>
+                <li>Type some text and press Enter to finish editing</li>
+                <li>Click on the text element to select it (blue border should appear)</li>
+                <li><strong>Move your cursor near any of the four corners</strong> of the text box</li>
+                <li><strong>Cursor should change to rotate cursor</strong> when within ~30px of corner</li>
+                <li><strong>Click and drag from the corner</strong> - text should rotate smoothly</li>
+                <li><strong>Release mouse</strong> - rotation should stop and be saved</li>
+                <li>Try rotating from different corners and in different directions</li>
+            </ol>
+        </div>
+
+        <div class="note">
+            <strong>What to Look For:</strong>
+            <ul>
+                <li>🔳 <strong>Blue selection border</strong> around text when selected</li>
+                <li>🖱️ <strong>Rotate cursor</strong> when hovering near any corner (top-left, top-right, bottom-left, bottom-right)</li>
+                <li>↩️ <strong>Smooth rotation</strong> when dragging from corner</li>
+                <li>💾 <strong>Persistent rotation</strong> after mouse release</li>
+            </ul>
+        </div>
+
+        <div class="note">
+            <strong>Technical Details:</strong>
+            <ul>
+                <li>Uses proximity detection within 16px of each corner</li>
+                <li>No visible rotation handles - corners themselves trigger rotation</li>
+                <li>Real-time cursor changes based on mouse position</li>
+                <li>Rotation calculated relative to element center</li>
+                <li>Works with any selected element, not just text</li>
+            </ul>
+        </div>
+
+        <div class="note">
+            <strong>🔄 TEMPORARY ROLLBACK TO WORKING SYSTEM</strong>
+            <p><strong>SITUATION:</strong> The new Direct Konva tool system was causing issues. I've temporarily restored the old React-Konva transformer system to provide working functionality.</p>
+        </div>
+
+        <div class="success">
+            <strong>✅ FIGJAM-STYLE ROTATION IMPLEMENTED!</strong>
+            <ul>
+                <li>✅ <strong>CustomTransformer.tsx</strong> - IMPLEMENTED with FigJam-style corner rotation</li>
+                <li>✅ <strong>TransformerManager</strong> - WORKING for transformations</li>
+                <li>❌ <strong>Visible Rotation Handle</strong> - REMOVED (FigJam style)</li>
+                <li>✅ <strong>Corner-Based Rotation</strong> - HOVER near corners to rotate</li>
+                <li>✅ <strong>Background Fixed</strong> - Clean white background with subtle dot grid like FigJam</li>
+                <li>✅ <strong>Crosshair Cursor</strong> - Shows when hovering near corners</li>
+                <li>✅ <strong>Shift+Drag</strong> - Snaps to 15° increments</li>
+                <li>✅ <strong>No Call Stack Errors</strong> - Stable implementation</li>
+            </ul>
+        </div>
+
+        <div class="note">
+            <strong>⚠️ Issues Fixed:</strong>
+            <ul>
+                <li>✅ <strong>Background disappearing</strong> - Fixed by moving BackgroundLayer outside viewport transformations</li>
+                <li>✅ <strong>Background not rendering</strong> - Fixed background layer positioning and sizing</li>
+                <li>✅ <strong>Stage size issues</strong> - Added proper fallback dimensions for background</li>
+                <li>✅ <strong>Selection clearing</strong> - Background clicks now clear selection properly</li>
+                <li>✅ <strong>Layer positioning</strong> - Background layer properly positioned in layer stack</li>
+                <li>✅ <strong>Clean FigJam-style</strong> - Professional white background with subtle dots</li>
+                <li>✅ <strong>React hook errors</strong> - Fixed by simplifying the rotation logic and removing circular dependencies</li>
+                <li>✅ <strong>Call stack overflow</strong> - Fixed by removing complex event handling that caused infinite loops</li>
+                <li>✅ <strong>Cursor changes</strong> - Figma-style corner rotation with proper cursor feedback</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

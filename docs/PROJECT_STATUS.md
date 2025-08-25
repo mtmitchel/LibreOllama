@@ -67,26 +67,25 @@
 - BlockNote integration in `src/features/notes/components/BlockNotePopover.tsx`
 
 ### 🎯 Canvas System
-**Status**: ✅ **PRODUCTION-READY** - Fully functional with comprehensive testing
+Status: ⚠️ In migration — imperative Konva runtime active, legacy React Konva components archived/tests remain
 
-**What's Working**:
-- ✅ React Konva integration with modular store architecture
-- ✅ 15+ element types with discriminated union typing
-- ✅ Core tools: Text, Sticky Notes, Sections, Connectors, Pen tool, Shapes (Rectangle, Circle, Triangle)
-- ✅ Advanced tools: Table creation, Image upload, Drawing tools (pen, pencil, eraser, highlighter)
-- ✅ Smart connector system with FigJam-like behavior and auto-update
-- ✅ Section tool with auto-capture functionality
-- ✅ Selection and transformation system with custom transformer
-- ✅ 50-state undo/redo functionality
-- ✅ Layer management system (Background, Main, Connector, UI layers)
-- ✅ Performance optimizations (viewport culling, memory management, shape caching)
-- ✅ Comprehensive test coverage (37 shape tests passing)
+What's working (runtime):
+- Imperative Konva Stage + Layers; ElementRegistry + CanvasRenderer sync to store
+- Tools: select, pan, text, sticky note, rectangle, circle, triangle, pen, marker, highlighter, eraser, basic connector
+- Selection groundwork + TransformerController integrated; move/resize/rotate polishing in progress
+- Undo/redo via modular history module
+- Wheel zoom with anchored point; pan via space/middle mouse
 
-**Architecture**: 
-- Unified store pattern with Zustand + Immer
+Current limitations / in progress:
+- Advanced connector styles and full transform snapping
+- Table tool UX not implemented; Section tool disabled
+- MemoryManager and KonvaDirectRenderer exist but not yet wired
+- Legacy react-konva tests/components present; not used in runtime
+
+Architecture:
+- Modular unified store with Zustand + Immer
 - Centralized event handling via UnifiedEventHandler
-- Component-based layer system (Background, Main, Connector, UI)
-
+- Imperative runtime; background grid drawn in CanvasStage
 ### 📧 Gmail Integration
 **Status**: Functional backend with frontend integration
 

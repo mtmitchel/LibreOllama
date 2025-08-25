@@ -1,6 +1,6 @@
 // src/hooks/canvas/useViewportControls.ts
 import { useCallback } from 'react';
-import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 
 /**
  * useViewportControls - Zoom/pan controls from the main canvas store

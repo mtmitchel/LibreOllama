@@ -5,12 +5,12 @@ import {
   ChevronDown,
   GitBranch
 } from 'lucide-react';
-import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 import { Button } from '../../../components/ui';
 
 const connectorTools = [
-  { id: 'connector-line', name: 'Line', icon: Minus },
-  { id: 'connector-arrow', name: 'Arrow', icon: ArrowRight }
+  { id: 'connector', name: 'Line', icon: Minus },
+  { id: 'connector', name: 'Arrow', icon: ArrowRight }
 ];
 
 interface ConnectorDropdownProps {

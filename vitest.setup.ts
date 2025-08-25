@@ -6,8 +6,8 @@ import { enableMapSet } from 'immer';
 
 enableMapSet();
 
-// Definitive react-konva mock
-vi.mock('react-konva', async (importOriginal) => {
+// Removed react-konva mock - no longer using react-konva
+// vi.mock('react-konva', async (importOriginal) => {
   const actual = await importOriginal();
 
   // This factory creates a simple div-based mock for any Konva component

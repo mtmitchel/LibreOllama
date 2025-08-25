@@ -1,3 +1,23 @@
+import { useRef, useCallback } from 'react';
+
+export function useRafThrottle<T extends (...args: any[]) => void>(fn: T) {
+  const frame = useRef<number | null>(null);
+  const lastArgs = useRef<any[] | null>(null);
+
+  const throttled = useCallback((...args: any[]) => {
+    lastArgs.current = args;
+    if (frame.current !== null) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      const a = lastArgs.current;
+      lastArgs.current = null;
+      if (a) fn(...a);
+    });
+  }, [fn]);
+
+  return throttled as T;
+}
+
 import { useCallback, useRef } from 'react';
 
 /**

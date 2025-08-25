@@ -1,0 +1,1 @@
+Snapshot of canvas docs prior to replacing with tmp_rovodev_ versions.

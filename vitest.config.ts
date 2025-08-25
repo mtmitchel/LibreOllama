@@ -31,7 +31,7 @@ export default defineConfig({
     jsxInject: 'import React from "react"'
   },
   optimizeDeps: {
-    include: ['konva', 'react-konva'],
+    include: ['konva'],
     esbuildOptions: {
       jsx: 'automatic'
     }

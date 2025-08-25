@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createUnifiedTestStore } from '../../../tests/helpers/createUnifiedTestStore';
+import { createUnifiedTestStore } from '../../../../tests/helpers/createUnifiedTestStore';
 import { ElementId, SectionId, CanvasElement } from '@/features/canvas/types/enhanced.types';
 
 type TestStore = ReturnType<typeof createUnifiedTestStore>;

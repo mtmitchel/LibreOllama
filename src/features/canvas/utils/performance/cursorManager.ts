@@ -43,7 +43,8 @@ export type CursorType =
   | 'not-allowed'
   | 'help'
   | 'wait'
-  | 'progress';
+  | 'progress'
+  | 'rotate';
 
 export interface CursorState {
   currentCursor: CursorType;
@@ -64,6 +65,7 @@ export class CursorManager {
     isDragging: false,
     isHovering: false
   };
+  private locked: boolean = false;
 
   // Tool-based cursor mappings
   private readonly toolCursors: Record<CanvasTool, CursorType> = {
@@ -113,7 +115,7 @@ export class CursorManager {
    * Set the cursor directly
    */
   setCursor(cursor: CursorType): void {
-    if (!this.stage) return;
+    if (!this.stage || this.locked) return;
     
     this.state.currentCursor = cursor;
     this.stage.container().style.cursor = cursor;
@@ -128,6 +130,7 @@ export class CursorManager {
    */
   updateForTool(tool: CanvasTool): void {
     this.state.tool = tool;
+    if (this.locked) return;
     
     // If dragging, maintain grabbing cursor for pan tool
     if (this.state.isDragging && tool === 'pan') {
@@ -144,6 +147,7 @@ export class CursorManager {
    * Update cursor for hover interactions
    */
   updateForHover(target: Konva.Node | null): void {
+    if (this.locked) return;
     if (!target) {
       this.state.isHovering = false;
       this.state.hoverTarget = undefined;
@@ -213,6 +217,7 @@ export class CursorManager {
    * Update cursor for drag operations
    */
   updateForDrag(isDragging: boolean): void {
+    if (this.locked) return;
     this.state.isDragging = isDragging;
     
     if (isDragging) {
@@ -231,6 +236,7 @@ export class CursorManager {
    * Set cursor for loading states
    */
   setLoadingCursor(message?: string): void {
+    if (this.locked) return;
     this.setCursor('wait');
     
     if (message && this.stage) {
@@ -243,6 +249,7 @@ export class CursorManager {
    * Set cursor for error states
    */
   setErrorCursor(): void {
+    if (this.locked) return;
     this.setCursor('not-allowed');
   }
 
@@ -250,6 +257,7 @@ export class CursorManager {
    * Update cursor based on current state
    */
   private updateCursor(): void {
+    if (this.locked) return;
     if (this.state.isDragging) {
       this.updateForDrag(true);
       return;
@@ -277,10 +285,24 @@ export class CursorManager {
     this.setCursor('default');
   }
 
+  // Locking API to prevent outside systems from overriding cursor during critical interactions
+  lock(): void {
+    this.locked = true;
+  }
+  unlock(): void {
+    this.locked = false;
+    // After unlocking, restore cursor based on current tool/state
+    this.updateCursor();
+  }
+  isLocked(): boolean {
+    return this.locked;
+  }
+
   /**
    * Get current cursor state (useful for debugging)
    */
   getState(): CursorState {
+    // Extend state with lock flag for diagnostics
     return { ...this.state };
   }
 
@@ -337,7 +359,10 @@ export function useCursorManager(stage?: Konva.Stage) {
     setErrorCursor: () => cursorManager.setErrorCursor(),
     reset: () => cursorManager.reset(),
     getState: () => cursorManager.getState(),
-    setStage: (stage: Konva.Stage) => cursorManager.setStage(stage)
+    setStage: (stage: Konva.Stage) => cursorManager.setStage(stage),
+    lock: () => cursorManager.lock(),
+    unlock: () => cursorManager.unlock(),
+    isLocked: () => cursorManager.isLocked()
   };
 }
 

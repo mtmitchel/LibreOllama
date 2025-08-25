@@ -1,0 +1,2 @@
+export { RectangleTool } from './ShapeTools';
+

@@ -1,4 +1,6 @@
-// src/app/pages/Canvas.tsx - Phase 1.3: Component Hierarchy Restoration (FINAL)
+// src/app/pages/Canvas.tsx
+// WARNING: This page is a thin route shell only.
+// It must not contain canvas logic. All canvas logic lives under features/canvas/**.
 import React, { useEffect, useState } from 'react';
 import { CanvasContainer } from '../../features/canvas/components/CanvasContainer';
 import { useHeader } from '../contexts/HeaderContext';
@@ -8,14 +10,14 @@ import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
 import Konva from 'konva';
 import { Page, PageCard } from '../../components/ui/design-system/Page';
 import ModernKonvaToolbar from '../../features/canvas/toolbar/ModernKonvaToolbar';
-import { useUnifiedCanvasStore } from '../../features/canvas/stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../../features/canvas/store/useCanvasStore';
 
 /**
  * This component establishes the two-pane layout for the Canvas feature,
  * following the same pattern as the Notes and Projects pages.
  * The Canvas Sidebar is on the left, and the main canvas content is on the right.
  */
-  export function CanvasPage() {
+export function CanvasPage() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [isCanvasSidebarOpen, setCanvasSidebarOpen] = useState(true);
   const [canvasStageRef, setCanvasStageRef] = useState<React.RefObject<Konva.Stage | null> | undefined>(undefined);

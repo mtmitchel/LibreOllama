@@ -1,0 +1,2 @@
+export { CircleTool } from './ShapeTools';
+

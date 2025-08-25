@@ -6,13 +6,13 @@ import {
   ChevronDown,
   Workflow
 } from 'lucide-react';
-import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 import { Button } from '../../../components/ui';
 
 const basicShapes = [
-  { id: 'draw-rectangle', name: 'Rectangle', icon: Square },
-  { id: 'draw-circle', name: 'Circle', icon: Circle },
-  { id: 'draw-triangle', name: 'Triangle', icon: Triangle },
+  { id: 'rectangle', name: 'Rectangle', icon: Square },
+  { id: 'circle', name: 'Circle', icon: Circle },
+  { id: 'triangle', name: 'Triangle', icon: Triangle },
   { id: 'mindmap', name: 'Mindmap', icon: Workflow }
 ];
 

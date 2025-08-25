@@ -8,21 +8,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { ConnectorTool } from '../components/tools/creation/ConnectorTool';
-import { createUnifiedTestStore } from '../../../tests/helpers/createUnifiedTestStore';
+import { createUnifiedTestStore } from '../../../../tests/helpers/createUnifiedTestStore';
 import type { ConnectorElement } from '../types/enhanced.types';
 import { ElementId } from '../types/enhanced.types';
-import { CanvasTestWrapper } from '../../../tests/helpers/CanvasTestWrapper';
-import { UnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { CanvasTestWrapper } from '../../../../tests/helpers/CanvasTestWrapper';
+import { UnifiedCanvasStore } from '../store/useCanvasStore';
 
 // Mock Konva
 vi.mock('konva');
-vi.mock('react-konva', () => ({
-  Line: ({ children, ...props }: any) => <div data-testid="line" {...props}>{children}</div>,
-  Arrow: ({ children, ...props }: any) => <div data-testid="arrow" {...props}>{children}</div>,
-  Group: ({ children, ...props }: any) => <div data-testid="group" {...props}>{children}</div>,
-  Stage: ({ children, ...props }: any) => <div data-testid="stage" {...props}>{children}</div>,
-  Layer: ({ children, ...props }: any) => <div data-testid="layer" {...props}>{children}</div>,
-}));
 
 // Mock Konva Stage for UI tests
 const mockStage = {

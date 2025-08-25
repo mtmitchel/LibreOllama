@@ -1,6 +1,6 @@
 // src/hooks/canvas/useCanvasHistory.ts
 import { useCallback } from 'react';
-import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 
 /**
  * useCanvasHistory - Undo/redo operations from history store
