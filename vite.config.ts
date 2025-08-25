@@ -35,7 +35,7 @@ export default defineConfig(async () => {
   
   // Optimize dependencies for browser
   optimizeDeps: {
-    include: ["konva", "react-konva"],
+    include: ["konva"],
     // No longer need to exclude canvas as it's properly aliased
     force: true, // Force re-optimization to ensure proper canvas handling
   },
@@ -53,7 +53,7 @@ export default defineConfig(async () => {
         manualChunks: {
           // Core framework chunks
           'react-vendor': ['react', 'react-dom'],
-          'canvas-vendor': ['konva', 'react-konva'],
+          'canvas-vendor': ['konva'],
           
           // Canvas core functionality 
           'canvas-core': [
