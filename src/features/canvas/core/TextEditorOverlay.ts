@@ -18,8 +18,15 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
   const store = useUnifiedCanvasStore.getState();
   store.setTextEditingElement(elementId);
   
-  // Keep the original text node visible initially to show placeholder
+  // Keep the original text node visible only for placeholder; hide for real edits
   const originalVisible = node.visible();
+  try {
+    const editingExisting = !!(opts.initialText && opts.initialText !== 'Add text');
+    if (editingExisting) {
+      node.visible(false);
+      node.getLayer()?.batchDraw();
+    }
+  } catch {}
 
   // Align overlay to the background-rect within the group for true box origin
   const stageBox = stage.container().getBoundingClientRect();
@@ -32,7 +39,9 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
 
   const frame = document.createElement('div');
   const textarea = document.createElement('textarea');
-  textarea.value = ''; // Start empty so Konva text shows through
+  // If we are editing an existing text, preload the value and hide the Konva text
+  const isPlaceholder = (opts.initialText || '') === 'Add text';
+  textarea.value = isPlaceholder ? '' : (opts.initialText || '');
   textarea.setAttribute('spellcheck', 'false');
   textarea.setAttribute('wrap', 'off');
   
@@ -195,22 +204,36 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
   };
 
   const commit = (cancel?: boolean) => {
+    const valueNow = (textarea.value ?? '').replace(/\t/g, '  ');
+    const trimmed = valueNow.trim();
+    const wasPlaceholder = (opts.initialText || '') === 'Add text';
+
+    // If user cancels, restore original visibility and do nothing
+    if (cancel) {
+      cleanup();
+      return;
+    }
+
+    // If user typed nothing and it was an existing text (not placeholder), keep original
+    const finalText = trimmed.length === 0 ? (wasPlaceholder ? 'Add text' : (opts.initialText || '')) : trimmed;
+
+    // Compute final group width from DOM (no caret buffer), convert to Konva units
+    const absScale = (node.getAbsoluteScale && node.getAbsoluteScale().x) ? node.getAbsoluteScale().x : (stage.scaleX() || 1);
+    const cssWidth = Math.max(1, textarea.scrollWidth);
+    const targetGroupWidth = cssWidth / absScale;
+
     cleanup();
-    const text = (textarea.value || '').replace(/\t/g, '  ');
-    const trimmed = text.trim();
-    
-    // Never delete on first commit - always keep the text box with placeholder
-    const finalText = trimmed || (opts.initialText || 'Add text');
-    store.updateElement(elementId, { type: 'text' as any, text: finalText, updatedAt: Date.now() } as any);
+    store.updateElement(
+      elementId,
+      { type: 'text' as any, text: finalText, width: targetGroupWidth as any, updatedAt: Date.now() } as any
+    );
     store.setTextEditingElement(null);
-    
+
     const group = node.getParent();
     if (group && (group as any)._enableSelection) {
       (group as any)._enableSelection();
     }
-    try {
-      store.selectElement(elementId as any, false);
-    } catch {}
+    try { store.selectElement(elementId as any, false); } catch {}
   };
 
   const cleanup = () => {
@@ -244,8 +267,7 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
       if (!startedTyping && e.key.length === 1) {
         startedTyping = true;
         textarea.style.color = node.fill?.() as string || '#111827';
-        node.visible(false);
-        node.getLayer()?.batchDraw();
+        try { node.visible(false); node.getLayer()?.batchDraw(); } catch {}
       }
       onInput();
     }

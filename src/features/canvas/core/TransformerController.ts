@@ -56,7 +56,8 @@ export class TransformerController {
     this.transformer.on('transform', this.handleTransform);
     this.transformer.on('dragstart', () => this.onTransformStart());
     this.transformer.on('transformstart', () => this.onTransformStart());
-    this.transformer.on('dragend', () => this.onTransformEnd());
+    // Use the same handler for dragend to persist position/size and clear guides
+    this.transformer.on('dragend', () => this.handleTransformEnd());
     this.transformer.on('transformend', this.handleTransformEnd);
   }
 
@@ -112,9 +113,38 @@ export class TransformerController {
       const fn = (e: any) => this.updateGuides(e.target as Konva.Node, snapEnabled);
       n.on('dragmove', fn);
       this.nodeDragListeners.set(n.id(), fn);
+
+      // Clear selection automatically after a node drag ends (so cursor is free)
+      try { n.off('dragend.auto-deselect'); } catch {}
+      n.on('dragend.auto-deselect', () => {
+        try {
+          const store = useUnifiedCanvasStore.getState();
+          const el = store.elements.get((n.id && n.id()) as any);
+          if (el && (el as any).type === 'text') {
+            store.clearSelection();
+            this.transformer.nodes([]);
+            this.transformer.visible(false);
+            this.layer.batchDraw();
+            try { this.stage.container().style.cursor = 'default'; } catch {}
+            // Prevent the same click sequence from re-selecting immediately
+            try { (this.stage as any)._suppressSelectUntil = performance.now() + 200; } catch {}
+          }
+        } catch {}
+      });
     });
 
-    // console.log('🔧 Setting transformer nodes:', nodes);
+    // Adjust transformer anchors based on selected node types
+    const isTextGroup = (n: Konva.Node) => (n as any).getClassName?.() === 'Group' && !!(n as Konva.Group).findOne('Text');
+    try {
+      if (nodes.length > 0 && nodes.every(isTextGroup)) {
+        // Text boxes: allow both axes but lock aspect ratio
+        this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right']);
+        this.transformer.keepRatio(true);
+      } else {
+        this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right']);
+        this.transformer.keepRatio(false);
+      }
+    } catch {}
     // Ensure selected nodes are interactive (especially text groups created with listening:false)
     nodes.forEach((n) => {
       try {
@@ -130,11 +160,8 @@ export class TransformerController {
           if (rectChild && typeof (rectChild as any).listening === 'function') {
             (rectChild as any).listening(true);
           }
-          // Ensure the group has a hit area matching its bounds
+          // Do not stop propagation on mousedown; allow stage to handle deselect clicks
           try { grp.off('mousedown.transformer-hit'); } catch {}
-          grp.on('mousedown.transformer-hit', (evt) => {
-            evt.cancelBubble = true; // keep selection
-          });
         }
       } catch {}
     });
@@ -229,17 +256,16 @@ export class TransformerController {
   }
 
   private handleTransform = () => {
-    // Grid snapping (first pass) using UI flags
+    // Enforce horizontal-only resize for text groups and apply grid snapping for position
     const store = useUnifiedCanvasStore.getState();
     const snap = (store as any).snapToGrid as boolean;
     const grid = 10; // base grid size
-
-    if (!snap) return;
 
     const nodes = this.transformer.nodes();
     if (!nodes || nodes.length === 0) return;
 
     for (const node of nodes) {
+      if (!snap) continue;
       const x = (node as any).x?.();
       const y = (node as any).y?.();
       if (typeof x === 'number' && typeof y === 'number') {
@@ -323,5 +349,21 @@ export class TransformerController {
 
     this.layer.batchDraw();
     try { (useUnifiedCanvasStore.getState() as any).setCaretVisible?.(true); } catch {}
+
+    // If we moved only text boxes, clear selection after drag so cursor is free
+    try {
+      const allText = nodes.every((n) => {
+        const id = n.id() as ElementId;
+        const el = store.elements.get(id);
+        return !!el && isTextElement(el);
+      });
+      if (allText) {
+        store.clearSelection();
+        this.transformer.nodes([]);
+        this.transformer.visible(false);
+        this.layer.batchDraw();
+        try { this.stage.container().style.cursor = 'default'; } catch {}
+      }
+    } catch {}
   };
 }

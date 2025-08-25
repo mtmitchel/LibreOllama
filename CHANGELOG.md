@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `Text`, `background-rect`, `hit-area`, and `Group` widths in lockstep on every input with `layer.batchDraw()`
   - Disabled caching during live edits to avoid stale bitmaps
   - Fixed caret containment at the right edge without visible gap; box now hugs text precisely
+  - Preserved existing text when editing; placeholder logic no longer deletes content on blur/cancel
+  - Committing edits now snaps Konva width to the DOM's final `scrollWidth` to remove blue-gap mismatch
+
+### 🔧 Text box interaction stability
+- Restored reliable selection/drag after edits; `listening`/`draggable` flags are reaffirmed on updates
+- Improved hit detection with a tiny‑alpha hit-area placed on top of the group
+- Fixed transformer crash and ordering when attaching selection; guarded anchor updates
+- Auto-deselect behavior after text drag wired (transformer + node dragend)
+- Text boxes now resize with locked aspect ratio (keep ratio) using corner anchors
 
 ## [Unreleased] - 2025-08-20
 

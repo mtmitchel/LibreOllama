@@ -70,7 +70,8 @@ export class ElementRegistry {
         y: 0,
         width: initialWidth,
         height: initialHeight,
-        fill: 'transparent',
+        // Use tiny alpha fill so Konva hit canvas consistently registers clicks
+        fill: 'rgba(0,0,0,0.001)',
         listening: true,
         hitStrokeWidth: 0,
       });
@@ -132,12 +133,10 @@ export class ElementRegistry {
       
       // Create text node with definitive single-line guarantee
       createSingleLineTextNode().then(({ textNode, width, height: measuredHeightPx }) => {
-        // Add hit-area first as the bottom layer for reliable click detection
-        group.add(hitArea);
-        // Add rect above hit-area
+        // Add rect/text first and place hit-area on top for maximum click reliability
         group.add(rect);
-        // Add text on top
         group.add(textNode);
+        group.add(hitArea);
         
         // Initial height fallback; will refine on next frame using Konva's computed height
         let actualTextHeight = measuredHeightPx;
@@ -163,7 +162,8 @@ export class ElementRegistry {
         group.width(finalWidth);
         group.height(finalHeight);
         
-        // Dimensions synced with overlay
+        // Dimensions synced with overlay and ensure hit-area stays on top
+        try { hitArea.moveToTop(); } catch {}
         
         // Force redraw
         group.getLayer()?.batchDraw();
@@ -196,21 +196,46 @@ export class ElementRegistry {
         if (rc) rc.listening(true);
         
         // Single click to select (after creation is complete)
-        group.on('click', () => {
+        group.on('click', (evt: any) => {
+          // Suppress immediate re-select after programmatic deselect on dragend
+          try {
+            const st = group.getStage();
+            const until = (st as any)?._suppressSelectUntil as number | undefined;
+            if (until && performance.now() < until) {
+              return;
+            }
+          } catch {}
           const store = useUnifiedCanvasStore.getState();
-          store.selectElement(element.id as any);
+          const mult = evt?.evt && (evt.evt.ctrlKey || evt.evt.metaKey);
+          store.selectElement(element.id as any, !!mult);
+        });
+
+        // Visual cursor feedback
+        group.on('mouseenter', () => {
+          try {
+            const st = group.getStage();
+            if (st) { st.container().style.cursor = 'move'; }
+          } catch {}
+        });
+        group.on('mouseleave', () => {
+          try {
+            const st = group.getStage();
+            if (st) { st.container().style.cursor = 'default'; }
+          } catch {}
         });
         
         // Double-click to edit
-        group.on('dblclick', () => {
+        group.on('dblclick', (evt: any) => {
           const stage = group.getStage();
           if (!stage) return;
           const tn = group.findOne('Text') as Konva.Text | null;
           if (!tn) return;
+          // Prevent double-click from leaving transformer in inconsistent state
+          try { stage.fire('contentClick', {}, true); } catch {}
           openTextEditorOverlay(stage, tn, element.id as any, {
-            initialText: (element as any).text || '',
-            fontSize: (element as any).fontSize,
-            fontFamily: (element as any).fontFamily,
+            initialText: (tn.text?.() as string) || '',
+            fontSize: (tn.fontSize?.() as number) || (element as any).fontSize,
+            fontFamily: (tn.fontFamily?.() as string) || (element as any).fontFamily,
             align: 'left',
           });
         });
@@ -426,6 +451,15 @@ export class ElementRegistry {
           group.height(textHeight + padY * 2);
         }
 
+        // Ensure node remains interactive after updates
+        try {
+          group.listening(true);
+          group.draggable(true);
+          if (textNode) (textNode as any).listening?.(true);
+          if (rect) (rect as any).listening?.(true);
+          const hit = group.findOne('[name="hit-area"]') as Konva.Rect | null;
+          if (hit) (hit as any).listening?.(true);
+        } catch {}
         this.layer.batchDraw();
         return;
       }
@@ -455,6 +489,14 @@ export class ElementRegistry {
         if (textNode) {
           try { textNode.width(Math.max(1, newGroupWidth - padX * 2)); } catch {}
         }
+        // Keep group interactive after dimension updates
+        try {
+          group.listening(true);
+          group.draggable(true);
+          if (textNode) (textNode as any).listening?.(true);
+          const hit = group.findOne('[name="hit-area"]') as Konva.Rect | null;
+          if (hit) (hit as any).listening?.(true);
+        } catch {}
         this.layer.batchDraw();
         return;
       }
@@ -462,6 +504,20 @@ export class ElementRegistry {
 
     // Default: apply attributes directly
     node.setAttrs(updates as any);
+    // If this is a group, reaffirm interactivity (guards against accidental disable)
+    try {
+      if ((node as any).getClassName && (node as any).getClassName() === 'Group') {
+        const grp = node as Konva.Group;
+        grp.listening(true);
+        grp.draggable(true);
+        const tn = grp.findOne('Text') as Konva.Text | null;
+        const rc = (grp.findOne('[name="background-rect"]') as Konva.Rect | null) || (grp.findOne('Rect') as Konva.Rect | null);
+        if (tn) (tn as any).listening?.(true);
+        if (rc) (rc as any).listening?.(true);
+        const hit = grp.findOne('[name="hit-area"]') as Konva.Rect | null;
+        if (hit) (hit as any).listening?.(true);
+      }
+    } catch {}
     this.layer.batchDraw();
   }
 
