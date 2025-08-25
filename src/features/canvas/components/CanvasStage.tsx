@@ -10,6 +10,7 @@ import { CanvasElement, ElementId, SectionId } from '../types';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
 import { useCursorManager, CanvasTool } from '../utils/performance/cursorManager';
 import { canvasLog } from '../utils/canvasLogger';
+import { useCanvasSizing } from '../hooks/useCanvasSizing';
 
 interface CanvasStageProps {
   stageRef?: React.RefObject<Konva.Stage | null>;
@@ -27,6 +28,7 @@ interface CanvasStageProps {
 const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef }) => {
   const internalStageRef = useRef<Konva.Stage | null>(null);
   const stageRef = externalStageRef || internalStageRef;
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // OPTIMIZED: Consolidated store subscriptions using useShallow
   const {
@@ -48,6 +50,12 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
     setTextEditingElement: state.setTextEditingElement,
     setViewport: state.setViewport
   })));
+
+  const canvasSize = useCanvasSizing(containerRef, {});
+
+  useEffect(() => {
+    setViewport({ width: canvasSize.width, height: canvasSize.height });
+  }, [canvasSize, setViewport]);
 
   // Elements from store - memoized conversion with size-based optimization
   const allElements = useMemo(() => {
@@ -136,37 +144,39 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   }, [viewport.scale, viewport.x, viewport.y, stageRef]);
 
   return (
-    <CanvasErrorBoundary
-      onError={(error, errorInfo) => {
-        canvasLog.error('🚨 [CanvasStage] Critical error in canvas rendering:', {
-          error: error.message,
-          componentStack: errorInfo.componentStack
-        });
-      }}
-    >
-      <Stage
-        ref={stageRef}
-        {...stageConfig}
-        className="text-text-primary bg-canvas font-sans"
-        onWheel={handleWheel}
+    <div ref={containerRef} className="relative size-full flex-1 overflow-hidden bg-canvas">
+      <CanvasErrorBoundary
+        onError={(error, errorInfo) => {
+          canvasLog.error('🚨 [CanvasStage] Critical error in canvas rendering:', {
+            error: error.message,
+            componentStack: errorInfo.componentStack
+          });
+        }}
       >
-        <UnifiedEventHandler stageRef={stageRef} />
-        
-        <CanvasLayerManager 
-            stageRef={stageRef}
-            elements={allElements}
-            selectedElementIds={selectedElementIds}
-            onElementUpdate={updateElement}
-            onElementDragEnd={onElementDragEnd}
-            onElementClick={onElementClick}
-            onStartTextEdit={setTextEditingElement}
-          />
+        <Stage
+          ref={stageRef}
+          {...stageConfig}
+          className="text-text-primary bg-canvas font-sans"
+          onWheel={handleWheel}
+        >
+          <UnifiedEventHandler stageRef={stageRef} />
           
-        {/* Tool Layer - handles all drawing and selection tools */}
-        <ToolLayer stageRef={stageRef} />
-      </Stage>
+          <CanvasLayerManager 
+              stageRef={stageRef}
+              elements={allElements}
+              selectedElementIds={selectedElementIds}
+              onElementUpdate={updateElement}
+              onElementDragEnd={onElementDragEnd}
+              onElementClick={onElementClick}
+              onStartTextEdit={setTextEditingElement}
+            />
+            
+          {/* Tool Layer - handles all drawing and selection tools */}
+          <ToolLayer stageRef={stageRef} />
+        </Stage>
 
-    </CanvasErrorBoundary>
+      </CanvasErrorBoundary>
+    </div>
   );
 };
 

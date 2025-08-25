@@ -31,8 +31,8 @@ const DEFAULT_STYLES = {
 export const createCircleElement = (position: Vector2d): CircleElement => ({
   id: nanoid() as ElementId,
   type: 'circle',
-  x: position.x - DEFAULT_SIZES.circle.radius,
-  y: position.y - DEFAULT_SIZES.circle.radius,
+  x: position.x,
+  y: position.y,
   radius: DEFAULT_SIZES.circle.radius,
   ...DEFAULT_STYLES,
   isLocked: false,
@@ -44,8 +44,8 @@ export const createCircleElement = (position: Vector2d): CircleElement => ({
 export const createRectangleElement = (position: Vector2d): RectangleElement => ({
   id: nanoid() as ElementId,
   type: 'rectangle',
-  x: position.x - DEFAULT_SIZES.rectangle.width / 2,
-  y: position.y - DEFAULT_SIZES.rectangle.height / 2,
+  x: position.x,
+  y: position.y,
   width: DEFAULT_SIZES.rectangle.width,
   height: DEFAULT_SIZES.rectangle.height,
   cornerRadius: 8,
@@ -63,8 +63,8 @@ export const createTriangleElement = (position: Vector2d): TriangleElement => {
   return {
     id: nanoid() as ElementId,
     type: 'triangle',
-    x: position.x - halfWidth,
-    y: position.y - height / 2,
+    x: position.x,
+    y: position.y,
     width,
     height,
     points: [

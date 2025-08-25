@@ -11,12 +11,13 @@
  * - Maintain separation of concerns per approved blueprint
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Konva from 'konva';
 import CanvasStage from './CanvasStage';
 import ModernKonvaToolbar from '../toolbar/ModernKonvaToolbar';
 import { CanvasDragDropHandler } from './ui/CanvasDragDropHandler';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useCanvasSizing } from '../hooks/useCanvasSizing';
 
 interface CanvasContainerProps {
   onStageReady?: (stageRef: React.RefObject<Konva.Stage | null>) => void;
