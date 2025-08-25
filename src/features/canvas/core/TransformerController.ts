@@ -1,6 +1,7 @@
 // src/features/canvas/core/TransformerController.ts
 import Konva from 'konva';
 import { ElementRegistry } from './ElementRegistry';
+import { StickyPreview } from './StickyPreview';
 import { computeSnapPoints, getElementBounds, findAlignmentSnap, calculateSnapLines } from '../utils/snappingUtils';
 import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 import { CanvasElement, ElementId, isCircleElement, isRectangleElement, isTriangleElement, isStickyNoteElement, isImageElement, isTextElement } from '../types/enhanced.types';
@@ -35,7 +36,9 @@ export class TransformerController {
       anchorFill: '#ffffff',
       anchorSize: 8,
       borderStroke: '#3b82f6',
+      borderStrokeWidth: 1,
       ignoreStroke: true,
+      padding: 0,
       keepRatio: false,
       visible: false,
     });
@@ -79,6 +82,7 @@ export class TransformerController {
       this.transformer.nodes([]);
       this.transformer.visible(false);
       this.layer.batchDraw();
+      try { StickyPreview.hide(); } catch {}
       return;
     }
 
@@ -110,7 +114,20 @@ export class TransformerController {
       if (prev) {
         try { n.off('dragmove', prev); } catch {}
       }
-      const fn = (e: any) => this.updateGuides(e.target as Konva.Node, snapEnabled);
+      const fn = (e: any) => {
+        const node = e.target as Konva.Node;
+        // Constrain dragging to prevent overlap with toolbar (bottom 100px)
+        const stage = node.getStage();
+        if (stage) {
+          const nodeY = node.y();
+          const nodeHeight = node.height() || 0;
+          const maxY = stage.height() - 100 - nodeHeight;
+          if (nodeY > maxY) {
+            node.y(maxY);
+          }
+        }
+        this.updateGuides(node, snapEnabled);
+      };
       n.on('dragmove', fn);
       this.nodeDragListeners.set(n.id(), fn);
 
@@ -171,6 +188,19 @@ export class TransformerController {
     this.transformer.nodes(nodes);
     this.transformer.visible(nodes.length > 0);
     this.layer.batchDraw();
+
+    // Keep transformer bounds in sync after drags
+    nodes.forEach((n) => {
+      try { n.off('dragend.updateTransformer'); } catch {}
+      n.on('dragend.updateTransformer', () => {
+        try { (n as any).clearCache?.(); } catch {}
+        try { this.transformer.forceUpdate(); } catch {}
+        this.layer.batchDraw();
+      });
+    });
+
+    // Ensure no floating preview remains while using transformer
+    try { StickyPreview.hide(); } catch {}
   };
 
   private updateGuides(node: Konva.Node, snap: boolean) {

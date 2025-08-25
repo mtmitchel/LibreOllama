@@ -18,6 +18,7 @@ import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 // duplicate import removed
 
 import { MemoryManager } from './MemoryManager';
+import { StickyPreview } from './StickyPreview';
 
 export class ElementRegistry {
   private nodeMap = new Map<ElementId, Konva.Node>();
@@ -243,6 +244,74 @@ export class ElementRegistry {
       
       // Store the enableSelection function for later use
       (group as any)._enableSelection = enableSelection;
+    } else if (isStickyNoteElement(element)) {
+      const group = new Konva.Group({
+        id: element.id as any,
+        x: element.x,
+        y: element.y,
+        width: element.width,
+        height: element.height,
+        listening: true,
+        draggable: true,
+      });
+      // Do not use clip on sticky notes to avoid getClientRect mismatches with transformer
+      const rect = new Konva.Rect({
+        id: element.id as any,
+        x: 0,
+        y: 0,
+        width: element.width,
+        height: element.height,
+        fill: element.backgroundColor ?? '#FEF3C7',
+        cornerRadius: 8,
+        strokeEnabled: false,
+        hitStrokeWidth: 0,
+        listening: true,
+      });
+      const pad = 10;
+      const tn = new Konva.Text({
+        x: pad,
+        y: pad,
+        width: Math.max(1, element.width - pad * 2),
+        height: Math.max(1, element.height - 16),
+        text: element.text || '',
+        fontSize: element.fontSize ?? 16,
+        fontFamily: element.fontFamily ?? 'Inter, system-ui, Arial',
+        fill: element.textColor ?? '#111827',
+        listening: false,
+      });
+      group.add(rect);
+      group.add(tn);
+      node = group;
+
+      // Selection preview disabled: we only use pre-creation hover preview
+      try {
+        group.off('.sticky-preview');
+      } catch {}
+
+      // Ensure selection always occurs on click/tap regardless of target child
+      group.on('click.select', () => {
+        try { useUnifiedCanvasStore.getState().selectElement(element.id as any, false); } catch {}
+      });
+      group.on('tap.select', () => {
+        try { useUnifiedCanvasStore.getState().selectElement(element.id as any, false); } catch {}
+      });
+
+      // Ensure padding is preserved after drags/transforms (prevent right-edge overflow)
+      const reflowText = () => {
+        try {
+          // Use fixed padding of 10 (same as creation) for consistency
+          const padInner = 10;
+          const innerW = Math.max(1, group.width() - padInner * 2);
+          tn.width(innerW);
+          tn.wrap('word');
+          tn.clearCache();
+          rect.clearCache();
+          group.clearCache();
+          group.getLayer()?.batchDraw();
+        } catch {}
+      };
+      group.on('dragend.reflow', reflowText);
+      group.on('transformend.reflow', reflowText);
     } else if (isRectangleElement(element)) {
       node = new Konva.Rect({
         id: element.id as unknown as string,
@@ -276,6 +345,8 @@ export class ElementRegistry {
         height: element.height,
         fill: element.backgroundColor ?? '#FEF3C7',
         cornerRadius: 8,
+        strokeEnabled: false,
+        hitStrokeWidth: 0,
         listening: true,
       });
     } else if (isImageElement(element)) {
@@ -394,9 +465,14 @@ export class ElementRegistry {
     this.layer.batchDraw();
   }
 
-  update(elementId: ElementId, updates: Partial<CanvasElement>): void {
+  update(elementId: ElementId, elementOrUpdates: CanvasElement | Partial<CanvasElement>): void {
     const node = this.nodeMap.get(elementId);
     if (!node) return;
+
+    // Handle both full element updates and partial updates
+    const updates = elementOrUpdates as any;
+    
+    console.log('🔄 [ElementRegistry] Update called for:', elementId, 'with data:', updates);
 
     // Specialized handling for text elements that render as a Group(Text + Rect)
     const isGroup = (node as any).getClassName && (node as any).getClassName() === 'Group';
@@ -404,7 +480,57 @@ export class ElementRegistry {
       const group = node as Konva.Group;
       const textNode = group.findOne('Text') as Konva.Text | null;
       const rect = (group.findOne('[name="background-rect"]') as Konva.Rect | null) || (group.findOne('Rect') as Konva.Rect | null);
-      if (textNode && rect && ('text' in (updates as any) || 'fontSize' in (updates as any) || 'fontFamily' in (updates as any) || 'fill' in (updates as any))) {
+      
+      // Handle backgroundColor updates for sticky notes
+      if ('backgroundColor' in updates && rect) {
+        let isStickyGroup = false;
+        try {
+          const storeNow = useUnifiedCanvasStore.getState();
+          const el = storeNow.elements.get(elementId as any);
+          isStickyGroup = !!(el && (el as any).type === 'sticky-note');
+        } catch {}
+        
+        if (isStickyGroup) {
+          const newBackgroundColor = updates.backgroundColor as string;
+          rect.fill(newBackgroundColor);
+          console.log('🎨 [ElementRegistry] Updated sticky note background color to:', newBackgroundColor);
+          this.layer.batchDraw();
+          // Don't return here - let other updates proceed too
+        }
+      }
+      
+      if (textNode && ('text' in (updates as any) || 'fontSize' in (updates as any) || 'fontFamily' in (updates as any) || 'fill' in (updates as any))) {
+        // Distinguish between text boxes and sticky notes to apply correct wrapping behavior
+        let isStickyGroup = false;
+        try {
+          const storeNow = useUnifiedCanvasStore.getState();
+          const el = storeNow.elements.get(elementId as any);
+          isStickyGroup = !!(el && (el as any).type === 'sticky-note');
+        } catch {}
+
+        if (isStickyGroup) {
+          // For sticky notes: keep fixed group width, wrap text within inner bounds
+          const newText = ((updates as any).text ?? textNode.text()) as string;
+          const fontSize = ((updates as any).fontSize ?? textNode.fontSize()) as number;
+          const fontFamily = ((updates as any).fontFamily ?? textNode.fontFamily()) as string;
+          const fill = ((updates as any).fill ?? (textNode.fill?.() as string) ?? '#111827') as string;
+          textNode.text(newText);
+          textNode.fontSize(fontSize);
+          textNode.fontFamily(fontFamily);
+          textNode.fill(fill);
+          textNode.wrap('word');
+          // inner width = group width minus fixed padding (consistent with creation)
+          const padX = 10;
+          const innerWidth = Math.max(1, group.width() - padX * 2);
+          textNode.width(innerWidth);
+          
+
+          
+          // Do NOT expand group width for sticky notes
+          this.layer.batchDraw();
+          return;
+        }
+
         const newText = ((updates as any).text ?? textNode.text()) as string;
         const fontSize = ((updates as any).fontSize ?? textNode.fontSize()) as number;
         const fontFamily = ((updates as any).fontFamily ?? textNode.fontFamily()) as string;
@@ -466,28 +592,37 @@ export class ElementRegistry {
 
       // If width/height are provided directly, reflect them onto rect/hit-area/group too
       if (rect && (('width' in (updates as any)) || ('height' in (updates as any)))) {
-        const padX = 4;
-        const padY = 2;
+        // For sticky notes, there is no negative padding; rect anchors the group.
+        let isStickyGroup = false;
+        try {
+          const storeNow = useUnifiedCanvasStore.getState();
+          const el = storeNow.elements.get(elementId as any);
+          isStickyGroup = !!(el && (el as any).type === 'sticky-note');
+        } catch {}
+        const padX = isStickyGroup ? 0 : 4;
+        const padY = isStickyGroup ? 0 : 2;
         const newGroupWidth = Math.max(1, ((updates as any).width as number) || group.width());
         const newGroupHeight = Math.max(1, ((updates as any).height as number) || group.height());
 
         // Update rect and hit area to match new group dimensions
-        rect.x(-padX);
-        rect.y(-padY);
+        rect.x(isStickyGroup ? 0 : -padX);
+        rect.y(isStickyGroup ? 0 : -padY);
         rect.width(newGroupWidth);
         rect.height(newGroupHeight);
         const hitArea = group.findOne('[name="hit-area"]') as Konva.Rect | null;
         if (hitArea) {
-          hitArea.x(-padX);
-          hitArea.y(-padY);
+          hitArea.x(isStickyGroup ? 0 : -padX);
+          hitArea.y(isStickyGroup ? 0 : -padY);
           hitArea.width(newGroupWidth);
           hitArea.height(newGroupHeight);
         }
         group.width(newGroupWidth);
         group.height(newGroupHeight);
-        // Keep text width consistent if available
+        // No clip mask to ensure transformer bounds match visual rect
+        // Keep text width consistent if available (respect creation padding if sticky)
         if (textNode) {
-          try { textNode.width(Math.max(1, newGroupWidth - padX * 2)); } catch {}
+          const padInner = isStickyGroup ? Math.max(0, (textNode.x?.() as number) || 0) : padX;
+          try { textNode.width(Math.max(1, newGroupWidth - padInner * 2)); } catch {}
         }
         // Keep group interactive after dimension updates
         try {

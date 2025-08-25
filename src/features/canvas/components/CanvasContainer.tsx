@@ -23,8 +23,8 @@ export const CanvasContainer = () => {
   return (
     <div className="text-text-primary flex size-full bg-canvas">
       <div className="relative size-full flex-1 overflow-hidden bg-canvas">
-        <ModernKonvaToolbar onUndo={undo} onRedo={redo} />
         <CanvasStage />
+        <ModernKonvaToolbar onUndo={undo} onRedo={redo} />
       </div>
     </div>
   );

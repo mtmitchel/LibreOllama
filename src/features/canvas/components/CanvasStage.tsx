@@ -83,6 +83,8 @@ export const CanvasStage = () => {
       height: Math.max(1, rect.height),
       draggable: false,
     });
+    
+
     stageRef.current = stage;
     // Initialize viewport size in store
     try { useUnifiedCanvasStore.getState().setViewport({ width: Math.max(1, rect.width), height: Math.max(1, rect.height) }); } catch {}

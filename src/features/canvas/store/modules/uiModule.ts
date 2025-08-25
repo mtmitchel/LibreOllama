@@ -52,10 +52,13 @@ export const createUIModule = (
       snapToGrid: false,
       isUploading: false,
       snapLines: [], // Initialize snapLines
+      // Prevent overlay from closing during initial placement
+      blockOutsideClicks: false as any,
     },
     
     actions: {
       setSelectedTool: (tool) => set(state => { state.selectedTool = tool; }),
+      setBlockOutsideClicks: (block: boolean) => set(state => { (state as any).blockOutsideClicks = block; }),
 
       setTextEditingElement: (id) => {
         // Log the state change for debugging in development

@@ -42,6 +42,7 @@ export class CanvasRenderer {
       if (!prevElement) {
         this.registry.create(element);
       } else if (element !== prevElement) {
+        // Pass the entire new element for full update
         this.registry.update(id, element);
       }
     });

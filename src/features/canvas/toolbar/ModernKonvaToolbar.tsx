@@ -1,5 +1,6 @@
 // Modern Bottom-Center Floating Toolbar (FigJam-style)
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useUnifiedCanvasStore } from '../store/useCanvasStore';
 
 import { ElementId } from '../types/enhanced.types';
@@ -70,7 +71,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const deleteElement = useUnifiedCanvasStore(state => state.deleteElement);
   const updateElement = useUnifiedCanvasStore(state => state.updateElement);
   const addElement = useUnifiedCanvasStore(state => state.addElement);
-  const setStickyNoteColor = useUnifiedCanvasStore(state => state.setStickyNoteColor);
+  const setSelectedStickyNoteColor = useUnifiedCanvasStore(state => state.setSelectedStickyNoteColor);
   const canUndo = useUnifiedCanvasStore(state => state.canUndo);
   const canRedo = useUnifiedCanvasStore(state => state.canRedo);
   const viewport = useUnifiedCanvasStore(state => state.viewport);
@@ -85,6 +86,8 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const selectedElement = useUnifiedCanvasStore(state => 
     selectedElementId ? state.elements.get(selectedElementId) || null : null
   );
+  
+
 
   // Zoom controls functions
   const currentZoom = Math.round(viewport.scale * 100);
@@ -174,6 +177,9 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   const handleToolClick = (toolId: string) => {
+    // When sticky-note tool is toggled active, also ensure any canvas previews don't capture clicks
+    try { (window as any).__disableCanvasPointerEventsDuringToolbarPopover = toolId === 'sticky-note'; } catch {}
+
     // Special handling for image tool
     if (toolId === 'image') {
       fileInputRef.current?.click();
@@ -194,7 +200,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     const resolvedColor = resolveCSSVariable(color);
     
     // Set default sticky note color for future elements
-    setStickyNoteColor(resolvedColor);
+    setSelectedStickyNoteColor(resolvedColor);
     
     // If an element is selected, update its color
     if (selectedElementId && selectedElement) {
@@ -269,7 +275,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[1000] flex justify-center">
+    <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[999999] flex justify-center">
       <div className="pointer-events-auto flex max-w-[95vw] items-center justify-center gap-3 overflow-visible"
         style={{
           background: 'var(--bg-primary)',
@@ -332,38 +338,78 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                   />
                 )}
                 
-                {/* Color bar for sticky note tool when active */}
-                {tool.id === 'sticky-note' && isActive && (
-                  <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 mb-2 flex -translate-x-1/2 gap-0.5 rounded-md border p-1.5 shadow-lg backdrop-blur-sm">
-                    {[
-                      { color: '#FFE299', label: 'Yellow' },
-                      { color: '#BAFFC9', label: 'Green' },
-                      { color: '#A8DAFF', label: 'Blue' },
-                      { color: '#E6BAFF', label: 'Violet' },
-                      { color: '#FFB3BA', label: 'Pink' },
-                      { color: '#FFDFBA', label: 'Coral' }
-                    ].map((colorOption, index) => (
-                      <button
-                        key={index}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleColorChange(colorOption.color);
-                        }}
-                        className="focus:ring-accent-primary focus:ring-offset-elevated size-2.5 rounded-full border transition-transform focus:outline-none focus:ring-1 focus:ring-offset-1 motion-safe:hover:scale-125"
-                        style={{ 
-                          backgroundColor: colorOption.color, 
-                          border: '1px solid transparent'
-                        }}
-                        title={colorOption.label}
-                        aria-label={`Select ${colorOption.label}`}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
             );
           })}
         </div>
+
+        {/* Portal color picker rendered outside canvas */}
+        {(selectedTool === 'sticky-note' || selectedElement?.type === 'sticky-note') && createPortal(
+          <div 
+            style={{
+              position: 'fixed',
+              bottom: '120px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 2147483647,
+              pointerEvents: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {['#FEF3C7','#FEE2E2','#FED7AA','#FEF08A','#D1FAE5','#DBEAFE','#E9D5FF','#FCE7F3'].map((color) => {
+              const store = useUnifiedCanvasStore.getState();
+              const currentColor = selectedElement?.type === 'sticky-note' 
+                ? selectedElement.backgroundColor 
+                : (store as any).selectedStickyNoteColor || '#FEF3C7';
+              const isSelected = currentColor === color;
+              
+              return (
+                <button
+                  key={color}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleColorChange(color);
+                  }}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '14px',
+                    border: isSelected ? '3px solid var(--accent-primary)' : '2px solid var(--border-default)',
+                    backgroundColor: color,
+                    cursor: 'pointer',
+                    outline: 'none',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                    transform: isSelected ? 'scale(1.1)' : 'scale(1)'
+                  }}
+                  title={color}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.transform = 'scale(1.1)';
+                      e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.borderColor = 'var(--border-default)';
+                    }
+                  }}
+                />
+              );
+            })}
+          </div>,
+          document.body
+        )}
 
         {/* Shapes & Drawing Tools - Combined cluster */}
         <div className="flex items-center gap-1">

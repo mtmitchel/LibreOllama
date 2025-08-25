@@ -8,6 +8,7 @@ interface OpenEditorOptions {
   fontFamily?: string;
   align?: 'left' | 'center' | 'right';
   screen?: { left: number; top: number; width?: number; height?: number };
+  mode?: 'single' | 'multiline';
 }
 
 /**
@@ -56,8 +57,9 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
   const fontSize = node.fontSize();
   const fontFamily = node.fontFamily();
   const lineHeight = node.lineHeight();
-  const rectPadX = bgRect ? Math.abs(bgRect.x()) : 0;
-  const rectPadY = bgRect ? Math.abs(bgRect.y()) : 0;
+  // Padding: prefer background-rect offsets; fallback to text node local x/y (e.g., sticky notes)
+  const rectPadX = bgRect ? Math.abs(bgRect.x()) : Math.max(0, (node.x?.() as number) || 0);
+  const rectPadY = bgRect ? Math.abs(bgRect.y()) : Math.max(0, (node.y?.() as number) || 0);
   const caretBuffer = 1; // minimal buffer to keep caret inside without visible gap
   
   frame.style.width = `${groupWidth * scale}px`;
@@ -77,8 +79,10 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
   textarea.style.width = '100%';
   textarea.style.height = '100%';
   textarea.style.resize = 'none';
-  textarea.style.overflow = 'hidden'; // No scrollbars
-  textarea.style.whiteSpace = 'nowrap'; // Single line
+  const isMultiline = (opts.mode === 'multiline');
+  textarea.style.overflow = 'hidden'; // keep text within box
+  textarea.style.whiteSpace = isMultiline ? 'pre-wrap' : 'nowrap';
+  textarea.style.wordWrap = isMultiline ? 'break-word' : 'normal';
   
   textarea.style.outline = 'none !important';
   textarea.style.background = 'transparent';
@@ -92,8 +96,8 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
   textarea.style.resize = 'none';
   textarea.style.overflow = 'hidden';
   textarea.style.zIndex = '10001';
-  textarea.style.whiteSpace = 'nowrap';
-  textarea.style.wordWrap = 'normal';
+  textarea.style.whiteSpace = isMultiline ? 'pre-wrap' : 'nowrap';
+  textarea.style.wordWrap = isMultiline ? 'break-word' : 'normal';
   textarea.style.wordBreak = 'keep-all';
   textarea.style.textAlign = (opts.align ?? (node.align?.() as any) ?? 'left') as any;
 
@@ -122,7 +126,7 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
       try { node.visible(false); node.getLayer()?.batchDraw(); } catch {}
     }
 
-    // Measure using DOM scrollWidth for immediate accuracy, then convert to Konva units
+    // For multiline sticky notes, keep width fixed and wrap text; for single-line, auto-resize width
     const value = textarea.value;
     const absScale = (node.getAbsoluteScale && node.getAbsoluteScale().x) ? node.getAbsoluteScale().x : (stage.scaleX() || 1);
     const group = node.getParent() as Konva.Group;
@@ -131,55 +135,90 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
       const hitArea = group.findOne('[name="hit-area"]') as Konva.Rect | null;
       const allRects = group.find('Rect') as Konva.Rect[];
       const textNode = group.findOne('Text') as Konva.Text | null;
+      const padX = backgroundRect ? Math.abs(backgroundRect.x()) : Math.max(0, (node.x?.() as number) || 0);
+      const padY = backgroundRect ? Math.abs(backgroundRect.y()) : Math.max(0, (node.y?.() as number) || 0);
 
-      const padX = backgroundRect ? Math.abs(backgroundRect.x()) : 4;
-      // Temporarily autosize textarea to content to read scrollWidth accurately
-      const prevWidthStyle = textarea.style.width;
-      textarea.style.width = 'auto';
-      const contentCssWidth = Math.max(1, textarea.scrollWidth);
-      textarea.style.width = prevWidthStyle || '100%';
+      if (isMultiline) {
+        // Keep frame width fixed to group width; wrap within inner width
+        frame.style.width = `${groupWidth * scale}px`;
+        textarea.style.width = '100%';
+        // Autosize height to content to compute scrollHeight
+        const prevH = textarea.style.height;
+        textarea.style.height = 'auto';
+        const contentCssHeight = Math.max(1, textarea.scrollHeight);
+        textarea.style.height = prevH || '100%';
+        // Apply new CSS height to frame for immediate visual parity
+        frame.style.height = `${contentCssHeight}px`;
 
-      // DOM width hugs the text exactly; caret handled by expanding Konva box slightly
-      const strokeW = backgroundRect ? (backgroundRect.strokeWidth?.() as number) || 1 : 1;
-      const frameCssWidth = contentCssWidth;
-      frame.style.width = `${frameCssWidth}px`;
-      textarea.style.width = '100%';
-      textarea.style.overflow = 'hidden';
-      // Ensure no internal horizontal scroll keeps old text hidden on the left
-      try { (textarea as any).scrollLeft = 0; } catch {}
+        const konvaGroupHeight = Math.max(1, contentCssHeight / absScale);
+        const padInner = Math.max(0, (node.x?.() as number) || padX);
+        const innerKonvaWidth = Math.max(1, (groupWidth - padInner * 2));
+        const innerKonvaHeight = Math.max(1, (konvaGroupHeight - padY * 2));
 
-      // Convert to Konva units and update nodes in sync
-      // Add a tiny extra in Konva space so the blue stroke stays beyond the caret
-      const konvaCaretExtra = (Math.ceil(strokeW) + 1) / absScale;
-      const konvaGroupWidth = frameCssWidth / absScale + konvaCaretExtra;
-      const konvaTextWidth = Math.max(1, konvaGroupWidth - padX * 2);
-
-      if (textNode) {
-        textNode.fontSize(fontSize);
-        textNode.fontFamily(fontFamily);
-        textNode.lineHeight(lineHeight as number);
-        textNode.wrap('none');
-        textNode.text(value);
-        textNode.width(Math.max(1, konvaTextWidth + 2));
-      }
-
-      if (backgroundRect) {
-        backgroundRect.width(Math.max(1, konvaGroupWidth));
-        backgroundRect.clearCache();
-      }
-      // Fallback: update any rects in the group if named rect not found
-      if (!backgroundRect && allRects && allRects.length > 0) {
-        for (const r of allRects) {
-          r.width(Math.max(1, konvaGroupWidth));
-          try { r.clearCache(); } catch {}
+        if (textNode) {
+          textNode.fontSize(fontSize);
+          textNode.fontFamily(fontFamily);
+          textNode.lineHeight(lineHeight as number);
+          textNode.wrap('word');
+          textNode.text(value);
+          textNode.width(innerKonvaWidth);
+          textNode.height(innerKonvaHeight);
         }
+        if (backgroundRect) {
+          backgroundRect.height(konvaGroupHeight);
+          backgroundRect.clearCache();
+        }
+        if (hitArea) {
+          hitArea.height(konvaGroupHeight);
+          hitArea.clearCache();
+        }
+        group.height(konvaGroupHeight);
+        group.clearCache();
+      } else {
+        // Single-line auto-width behavior (text boxes)
+        // Temporarily autosize textarea to content to read scrollWidth accurately
+        const prevWidthStyle = textarea.style.width;
+        textarea.style.width = 'auto';
+        const contentCssWidth = Math.max(1, textarea.scrollWidth);
+        textarea.style.width = prevWidthStyle || '100%';
+
+        const strokeW = backgroundRect ? (backgroundRect.strokeWidth?.() as number) || 1 : 1;
+        const frameCssWidth = contentCssWidth;
+        frame.style.width = `${frameCssWidth}px`;
+        textarea.style.width = '100%';
+        textarea.style.overflow = 'hidden';
+        try { (textarea as any).scrollLeft = 0; } catch {}
+
+        const konvaCaretExtra = (Math.ceil(strokeW) + 1) / absScale;
+        const konvaGroupWidth = frameCssWidth / absScale + konvaCaretExtra;
+        const konvaTextWidth = Math.max(1, konvaGroupWidth - padX * 2);
+
+        if (textNode) {
+          textNode.fontSize(fontSize);
+          textNode.fontFamily(fontFamily);
+          textNode.lineHeight(lineHeight as number);
+          textNode.wrap('none');
+          textNode.text(value);
+          textNode.width(Math.max(1, konvaTextWidth + 2));
+        }
+
+        if (backgroundRect) {
+          backgroundRect.width(Math.max(1, konvaGroupWidth));
+          backgroundRect.clearCache();
+        }
+        if (!backgroundRect && allRects && allRects.length > 0) {
+          for (const r of allRects) {
+            r.width(Math.max(1, konvaGroupWidth));
+            try { r.clearCache(); } catch {}
+          }
+        }
+        if (hitArea) {
+          hitArea.width(Math.max(1, konvaGroupWidth));
+          hitArea.clearCache();
+        }
+        group.width(Math.max(1, konvaGroupWidth));
+        group.clearCache();
       }
-      if (hitArea) {
-        hitArea.width(Math.max(1, konvaGroupWidth));
-        hitArea.clearCache();
-      }
-      group.width(Math.max(1, konvaGroupWidth));
-      group.clearCache();
 
       // Debug: log live measurements for this element
       try {
@@ -217,16 +256,34 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
     // If user typed nothing and it was an existing text (not placeholder), keep original
     const finalText = trimmed.length === 0 ? (wasPlaceholder ? 'Add text' : (opts.initialText || '')) : trimmed;
 
-    // Compute final group width from DOM (no caret buffer), convert to Konva units
-    const absScale = (node.getAbsoluteScale && node.getAbsoluteScale().x) ? node.getAbsoluteScale().x : (stage.scaleX() || 1);
-    const cssWidth = Math.max(1, textarea.scrollWidth);
-    const targetGroupWidth = cssWidth / absScale;
-
     cleanup();
-    store.updateElement(
-      elementId,
-      { type: 'text' as any, text: finalText, width: targetGroupWidth as any, updatedAt: Date.now() } as any
-    );
+    if (isMultiline) {
+      // Persist final multiline height and ensure text node width remains inner width
+      const absScale = (node.getAbsoluteScale && node.getAbsoluteScale().x) ? node.getAbsoluteScale().x : (stage.scaleX() || 1);
+      const cssHeight = Math.max(1, textarea.scrollHeight);
+      const targetGroupHeight = cssHeight / absScale;
+      store.updateElement(
+        elementId,
+        { text: finalText, height: targetGroupHeight as any, updatedAt: Date.now() } as any
+      );
+      try {
+        const group = node.getParent() as Konva.Group;
+        const rect = group?.findOne('[name="background-rect"]') as Konva.Rect | null;
+        const padX = rect ? Math.abs(rect.x()) : Math.max(0, (node.x?.() as number) || 0);
+        const padInner2 = Math.max(0, (node.x?.() as number) || padX);
+        const innerW = Math.max(1, group.width() - padInner2 * 2);
+        node.width(innerW);
+      } catch {}
+    } else {
+      // Text box: adjust width based on final DOM width
+      const absScale = (node.getAbsoluteScale && node.getAbsoluteScale().x) ? node.getAbsoluteScale().x : (stage.scaleX() || 1);
+      const cssWidth = Math.max(1, textarea.scrollWidth);
+      const targetGroupWidth = cssWidth / absScale;
+      store.updateElement(
+        elementId,
+        { type: 'text' as any, text: finalText, width: targetGroupWidth as any, updatedAt: Date.now() } as any
+      );
+    }
     store.setTextEditingElement(null);
 
     const group = node.getParent();
@@ -273,6 +330,11 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
     }
   };
   const onOutsideMouseDown = (e: MouseEvent) => {
+    // Honor UI flag to block initial outside-click while placing the element
+    try {
+      const s = useUnifiedCanvasStore.getState();
+      if ((s as any).blockOutsideClicks) return;
+    } catch {}
     const target = e.target as Node;
     if (!frame.contains(target)) {
       try { e.stopImmediatePropagation?.(); } catch {}
@@ -291,7 +353,7 @@ export function openTextEditorOverlay(stage: Konva.Stage, node: Konva.Text, elem
   // from the same click that created the text box
   setTimeout(() => {
     window.addEventListener('mousedown', onOutsideMouseDown, true);
-  }, 100);
+  }, 50);
   
   try { stage.on('scaleXChange', handleStageTransform); } catch {}
   try { stage.on('scaleYChange', handleStageTransform); } catch {}

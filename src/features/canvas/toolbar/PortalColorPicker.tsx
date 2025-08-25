@@ -109,7 +109,8 @@ const PortalColorPicker: React.FC<PortalColorPickerProps> = ({
         boxShadow: '0 12px 40px rgba(0, 0, 0, 0.2)',
         border: '2px solid rgba(255, 255, 255, 0.8)',
         animation: 'colorPickerSlideUp 0.2s ease',
-        minWidth: '220px'
+        minWidth: 'fit-content',
+        maxWidth: '480px'
       }}
     >
       <style>
@@ -132,10 +133,10 @@ const PortalColorPicker: React.FC<PortalColorPickerProps> = ({
       </div>
       
       <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(4, 1fr)', 
-        gap: '8px',
-        alignItems: 'center'
+        display: 'flex', 
+        gap: '12px',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
         {colors.map(color => (
           <button
@@ -145,29 +146,29 @@ const PortalColorPicker: React.FC<PortalColorPickerProps> = ({
               onClose();
             }}
             style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
               border: color.value === currentColor ? 
-                '2px solid #3B82F6' : 
-                '1px solid rgba(0, 0, 0, 0.1)',
+                '3px solid #3B82F6' : 
+                '2px solid rgba(0, 0, 0, 0.1)',
               background: color.value === 'transparent' ? 
                 'repeating-linear-gradient(45deg, #f3f4f6, #f3f4f6 2px, white 2px, white 4px)' : 
                 color.value,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              transform: color.value === currentColor ? 'scale(1.1)' : 'scale(1)',
+              transform: color.value === currentColor ? 'scale(1.15)' : 'scale(1)',
               outline: 'none',
               boxShadow: color.value === currentColor 
-                ? '0 4px 12px rgba(59, 130, 246, 0.3)' 
-                : '0 2px 4px rgba(0, 0, 0, 0.1)'
+                ? '0 4px 12px rgba(59, 130, 246, 0.4)' 
+                : '0 2px 6px rgba(0, 0, 0, 0.15)'
             }}
             title={color.label}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.transform = 'scale(1.1)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = color.value === currentColor ? 'scale(1.1)' : 'scale(1)';
+              e.currentTarget.style.transform = color.value === currentColor ? 'scale(1.15)' : 'scale(1)';
             }}
           >
             {color.value === 'transparent' && (
@@ -177,7 +178,7 @@ const PortalColorPicker: React.FC<PortalColorPickerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '16px',
+                fontSize: '14px',
                 color: '#6B7280'
               }}>
                 ×
