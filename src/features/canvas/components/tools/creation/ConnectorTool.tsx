@@ -16,7 +16,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { BaseCreationTool, Vector2d } from '../base';
 import { debug } from '../../../utils/debug';
 import { nanoid } from 'nanoid';
-import { ElementId, ConnectorElement, CanvasElement } from '../../../types/enhanced.types';
+import { ElementId, ConnectorElement, CanvasElement, createElementId } from '../../../types/enhanced.types';
 import Konva from 'konva';
 
 interface ConnectorToolProps {
@@ -102,7 +102,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     const now = Date.now();
     
     const connectorElement: ConnectorElement = {
-      id: ElementId(nanoid()),
+      id: createElementId(nanoid()),
       type: 'connector',
       subType: connectorType,
       x: minX,
