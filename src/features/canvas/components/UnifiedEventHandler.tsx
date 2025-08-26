@@ -1,8 +1,8 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Konva from 'konva';
 import { useShallow } from 'zustand/react/shallow';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { logger } from '../../../core/lib/logger';
+// Removed unused import: logger
 import { ElementId, ElementOrSectionId, CanvasElement } from '../types/enhanced.types';
 import { calculateSnapLines } from '../utils/snappingUtils';
 

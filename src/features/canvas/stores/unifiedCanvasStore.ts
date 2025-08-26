@@ -10,7 +10,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
 import Konva from 'konva';
-import { logger } from '../../../core/lib/logger';
+// Removed unused import: logger
 import {
   CanvasElement,
   ElementId,
@@ -32,8 +32,7 @@ import { createUIModule, UIState, UIActions } from './modules/uiModule';
 import { createEraserModule, EraserState, EraserActions } from './modules/eraserModule';
 import { createEventModule, EventState, EventActions } from './modules/eventModule';
 
-// Import selectors
-import { combinedSelectors } from './selectors';
+// Removed unused import: combinedSelectors
 import { StoreApi } from 'zustand';
 import { WritableDraft } from 'immer';
 
@@ -87,13 +86,7 @@ export interface UnifiedCanvasActions extends
 
 export type UnifiedCanvasStore = UnifiedCanvasState & UnifiedCanvasActions;
 
-// Helper function to get element ID from Konva node
-const getElementIdFromNode = (node: Konva.Node): ElementId | null => {
-  if (node && node.id()) {
-    return node.id() as ElementId;
-  }
-  return null;
-};
+// Removed unused helper function: getElementIdFromNode
 
 type Get = StoreApi<UnifiedCanvasStore>['getState'];
 type Set = (fn: (draft: WritableDraft<UnifiedCanvasStore>) => void) => void;

@@ -6,6 +6,8 @@ import { logger } from '../../../../core/lib/logger';
  */
 export interface EventState {
   // No additional state needed - event handlers are stateless
+  // This empty interface is intentional - events are stateless
+  readonly __eventStateMarker?: never;
 }
 
 /**

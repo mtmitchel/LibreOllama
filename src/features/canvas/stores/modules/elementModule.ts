@@ -1,12 +1,12 @@
 import { nanoid } from 'nanoid';
-import { produce } from 'immer';
+// Removed unused import: produce
 import { 
   CanvasElement, 
   ElementId, 
   ElementOrSectionId,
   isTableElement,
   TableCell,
-  GroupId // Import GroupId
+  GroupId
 } from '../../types/enhanced.types';
 import { StoreModule, StoreSet, StoreGet } from './types';
 
@@ -55,8 +55,9 @@ export const createElementModule = (
   get: StoreGet
 ): StoreModule<ElementState, ElementActions> => {
   const getElementCenter = (element: CanvasElement): { x: number; y: number } => {
-    const width = (element as any).width ?? (element as any).radius * 2 ?? 0;
-    const height = (element as any).height ?? (element as any).radius * 2 ?? 0;
+    const elementAny = element as any;
+    const width = elementAny.width ?? (elementAny.radius ? elementAny.radius * 2 : 0);
+    const height = elementAny.height ?? (elementAny.radius ? elementAny.radius * 2 : 0);
     return {
       x: element.x + width / 2,
       y: element.y + height / 2,

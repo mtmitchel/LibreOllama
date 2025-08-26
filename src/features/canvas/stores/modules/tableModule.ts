@@ -10,6 +10,8 @@ import { StoreModule, StoreSet, StoreGet } from './types';
  */
 export interface TableState {
   // Table state is managed within element state
+  // This empty interface is intentional - tables are stored in element state
+  readonly __tableStateMarker?: never;
 }
 
 /**

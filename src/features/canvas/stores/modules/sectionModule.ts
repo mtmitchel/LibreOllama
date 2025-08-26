@@ -36,8 +36,9 @@ export const createSectionModule = (
   get: StoreGet
 ): StoreModule<SectionState, SectionActions> => {
   const getElementCenter = (element: CanvasElement): { x: number; y: number } => {
-    const width = (element as any).width ?? (element as any).radius * 2 ?? 0;
-    const height = (element as any).height ?? (element as any).radius * 2 ?? 0;
+    const elementAny = element as any;
+    const width = elementAny.width ?? (elementAny.radius ? elementAny.radius * 2 : 0);
+    const height = elementAny.height ?? (elementAny.radius ? elementAny.radius * 2 : 0);
     return {
       x: element.x + width / 2,
       y: element.y + height / 2,

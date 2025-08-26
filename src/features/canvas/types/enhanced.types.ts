@@ -37,11 +37,11 @@ export type GroupId = Brand<string, 'GroupId'>;
 export type ElementOrSectionId = ElementId | SectionId;
 
 // Helper functions to create branded types safely
-export const ElementId = (id: string): ElementId => id as ElementId;
-export const SectionId = (id: string): SectionId => id as SectionId;
-export const LayerId = (id: string): LayerId => id as LayerId;
-export const ConnectorId = (id: string): ConnectorId => id as ConnectorId;
-export const GroupId = (id: string): GroupId => id as GroupId;
+export const createElementId = (id: string): ElementId => id as ElementId;
+export const createSectionId = (id: string): SectionId => id as SectionId;
+export const createLayerId = (id: string): LayerId => id as LayerId;
+export const createConnectorId = (id: string): ConnectorId => id as ConnectorId;
+export const createGroupId = (id: string): GroupId => id as GroupId;
 
 // Base element interface with enhanced typing
 export interface BaseElement {
