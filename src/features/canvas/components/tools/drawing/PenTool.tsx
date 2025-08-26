@@ -1,10 +1,3 @@
-/**
- * PenTool - Interactive pen drawing component
- * 
- * This component provides real-time pen drawing functionality with proper
- * state management and stroke rendering.
- */
-
 import React, { useCallback, useRef } from 'react';
 import { Line } from 'react-konva';
 import Konva from 'konva';
@@ -14,6 +7,7 @@ import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
 import { nanoid } from 'nanoid';
 import { PenElement } from '../../../types/enhanced.types';
 import { canvasLog } from '../../../utils/canvasLogger';
+import { useRafThrottle } from '../../../hooks/useRafThrottle';
 
 interface PenToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -75,9 +69,13 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     if (!pointer) return;
 
     isDrawingRef.current = true;
-    canvasLog.debug('🖊️ [PenTool] Starting drawing at:', pointer);
+    // Starting drawing
     startDrawing('pen', { x: pointer.x, y: pointer.y });
   }, [isActive, stageRef, startDrawing]);
+
+  const throttledUpdateDrawing = useRafThrottle((point: { x: number; y: number }) => {
+    updateDrawing(point);
+  });
 
   // Handle pointer move - update drawing
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -87,22 +85,22 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    canvasLog.debug('🖊️ [PenTool] Updating drawing at:', pointer);
-    updateDrawing({ x: pointer.x, y: pointer.y });
-  }, [isActive, stageRef, updateDrawing]);
+    // Updating drawing
+    throttledUpdateDrawing({ x: pointer.x, y: pointer.y });
+  }, [isActive, stageRef, throttledUpdateDrawing]);
 
   // Handle pointer up - finish drawing
   const handlePointerUp = useCallback(() => {
     if (!isActive || !isDrawingRef.current || !stageRef.current) return;
 
     isDrawingRef.current = false;
-    canvasLog.debug('🖊️ [PenTool] Finishing drawing');
+    // Finishing drawing
 
     // Use store's finishDrawing which now handles sticky note integration
     finishDrawing();
 
     // Keep pen tool active for multiple strokes
-    canvasLog.debug('🖊️ [PenTool] Pen stroke completed, keeping tool active');
+    // Pen stroke completed, keeping tool active
   }, [isActive, finishDrawing]);
 
   // Attach event listeners to stage when active

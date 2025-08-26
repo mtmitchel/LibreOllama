@@ -26,6 +26,7 @@ import {
 import ShapesDropdown from './ShapesDropdown';
 import ConnectorDropdown from './ConnectorDropdown';
 import { Button } from '../../../components/ui';
+import { ColorSwatch } from '../../../components/ui/ColorSwatch';
 import { resolveCSSVariable } from '../utils/colorUtils';
 
 const basicTools = [
@@ -65,12 +66,18 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   
   // Direct store access without useShallow to test
   const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
+  
+  // Debug: Log when selectedTool changes
+  React.useEffect(() => {
+    console.log('🛠️ [Toolbar] Selected tool changed to:', selectedTool);
+  }, [selectedTool]);
   const selectedElementIds = useUnifiedCanvasStore(state => state.selectedElementIds);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
   const deleteElement = useUnifiedCanvasStore(state => state.deleteElement);
   const updateElement = useUnifiedCanvasStore(state => state.updateElement);
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const setStickyNoteColor = useUnifiedCanvasStore(state => state.setStickyNoteColor);
+  const stickyNoteColor = useUnifiedCanvasStore(state => state.stickyNoteColor);
   const canUndo = useUnifiedCanvasStore(state => state.canUndo);
   const canRedo = useUnifiedCanvasStore(state => state.canRedo);
   const viewport = useUnifiedCanvasStore(state => state.viewport);
@@ -170,6 +177,8 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   const handleToolClick = (toolId: string) => {
+    console.log('🛠️ [Toolbar] Tool clicked:', toolId);
+    
     // Special handling for image tool
     if (toolId === 'image') {
       fileInputRef.current?.click();
@@ -178,6 +187,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     
     // Set the tool directly
     setSelectedTool(toolId);
+    console.log('🛠️ [Toolbar] Selected tool set to:', toolId);
     
     // Hide color picker when switching tools
     if (showColorPicker) {
@@ -188,6 +198,8 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const handleColorChange = (color: string) => {
     // Resolve CSS variable to actual color value
     const resolvedColor = resolveCSSVariable(color);
+    
+    console.log('🎨 [Toolbar] Setting sticky note color:', resolvedColor);
     
     // Set default sticky note color for future elements
     setStickyNoteColor(resolvedColor);
@@ -306,16 +318,23 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                   variant={isActive ? "primary" : "ghost"}
                   size="icon"
                   onClick={() => handleToolClick(tool.id)}
-                  className="size-9"
+                  className="size-9 relative"
                   title={tool.name}
                   aria-label={tool.name}
                 >
                   <IconComponent size={16} />
+                  {tool.id === 'sticky-note' && stickyNoteColor && (
+                    <div 
+                      className="absolute -bottom-1 -right-1 size-3 rounded-full border-2 border-white"
+                      style={{ backgroundColor: stickyNoteColor }}
+                    />
+                  )}
                 </Button>
                 
-                {/* Color bar for sticky note tool when active */}
+                {/* Color picker for sticky note tool when active */}
                 {tool.id === 'sticky-note' && isActive && (
-                  <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 mb-2 flex -translate-x-1/2 gap-0.5 rounded-md border p-1.5 shadow-lg backdrop-blur-sm">
+                  <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 z-[1200] mb-2 min-w-max -translate-x-1/2 rounded-xl border p-4 shadow-xl backdrop-blur-sm">
+                    <div className="flex items-center justify-center gap-3">
                     {[
                       { color: '#FFE299', label: 'Yellow' },
                       { color: '#BAFFC9', label: 'Green' },
@@ -330,15 +349,23 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                           e.stopPropagation();
                           handleColorChange(colorOption.color);
                         }}
-                        className="focus:ring-accent-primary focus:ring-offset-elevated size-2.5 rounded-full border transition-transform focus:outline-none focus:ring-1 focus:ring-offset-1 motion-safe:hover:scale-125"
-                        style={{ 
-                          backgroundColor: colorOption.color, 
-                          border: '1px solid transparent'
+                        className="focus:ring-accent-primary focus:ring-offset-elevated rounded-full border-2 border-transparent transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 motion-safe:hover:scale-110"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          backgroundColor: colorOption.color,
+                          borderRadius: '50%',
+                          minWidth: '32px',
+                          minHeight: '32px',
+                          maxWidth: '32px',
+                          maxHeight: '32px',
+                          border: colorOption.color === stickyNoteColor ? '3px solid #6366f1' : '2px solid transparent'
                         }}
                         title={colorOption.label}
                         aria-label={`Select ${colorOption.label}`}
                       />
                     ))}
+                    </div>
                   </div>
                 )}
               </div>

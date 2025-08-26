@@ -10,6 +10,7 @@ interface ColorSwatchProps {
   className?: string;
   onClick?: () => void;
   showCheckmark?: boolean;
+  circular?: boolean;
 }
 
 export function ColorSwatch({
@@ -20,12 +21,19 @@ export function ColorSwatch({
   label,
   className = '',
   onClick,
-  showCheckmark = true
+  showCheckmark = true,
+  circular = false
 }: ColorSwatchProps) {
   const sizeClasses = {
     sm: 'w-6 h-6',
     md: 'w-8 h-8',
     lg: 'w-12 h-12'
+  };
+
+  const sizeStyles = {
+    sm: { width: '24px', height: '24px' },
+    md: { width: '32px', height: '32px' },
+    lg: { width: '48px', height: '48px' }
   };
 
   const checkmarkSizes = {
@@ -66,13 +74,21 @@ export function ColorSwatch({
     <button
       type="button"
       className={`
-        relative rounded-md border-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2
-        ${sizeClasses[size]}
+        relative ${circular ? 'rounded-full' : 'rounded-md'} border-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2
+        ${circular ? '' : sizeClasses[size]}
         ${selected ? 'border-accent-primary shadow-md' : 'border-default hover:border-primary'}
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer motion-safe:hover:scale-110'}
-        ${className}
+        ${circular ? '' : className}
       `.trim()}
-      style={{ backgroundColor: color }}
+      style={{
+        backgroundColor: color,
+        ...sizeStyles[size],
+        ...(circular && { 
+          borderRadius: '50% !important',
+          width: '48px !important',
+          height: '48px !important'
+        })
+      }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       disabled={disabled}

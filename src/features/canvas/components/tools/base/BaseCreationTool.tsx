@@ -226,7 +226,7 @@ export const BaseCreationTool = <T extends CanvasElement>({
       // Add to store
       addElement(element);
 
-      canvasLog.debug(`Created ${type} element:`, element.id);
+      // Element created
 
       // Call custom created handler if provided
       if (onCreated) {

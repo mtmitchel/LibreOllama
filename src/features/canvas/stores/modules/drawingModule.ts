@@ -138,14 +138,14 @@ export const createDrawingModule = (
           
           // Check if the stroke was created within a sticky note container
           const startPoint = { x: state.currentPath[0], y: state.currentPath[1] };
-          console.log('🖊️ [Store] Checking for sticky note at start point:', startPoint);
+          // Checking for sticky note at start point
           const stickyNoteId = get().findStickyNoteAtPoint?.(startPoint);
           
           if (stickyNoteId) {
-            console.log('🖊️ [Store] Adding pen stroke to sticky note container:', stickyNoteId);
+            // Adding pen stroke to sticky note container
             get().addElementToStickyNote?.(penElement.id as any, stickyNoteId);
           } else {
-            console.log('🖊️ [Store] No sticky note container found at start point');
+            // No sticky note container found at start point
           }
         }
         

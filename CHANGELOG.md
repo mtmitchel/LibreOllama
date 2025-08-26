@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2025-08-20
 
+### 🎨 Canvas Performance Improvements
+- **Throttled Drawing Tools**: Implemented `useRafThrottle` hook in `PenTool.tsx`, `MarkerTool.tsx`, and `HighlighterTool.tsx` to significantly reduce state updates during drawing, leading to smoother freehand drawing experience.
+- **Optimized Snapping Calculations**: Centralized drag handling in `UnifiedEventHandler.tsx` and refined `calculateSnapLines` and `findNearestSnapPoint` in `snappingUtils.ts` to operate only on visible elements, reducing computational overhead during element dragging and snapping.
+- **Improved Viewport Culling Integration**: Refactored `unifiedCanvasStore.ts` to correctly implement `getVisibleElements` without relying on React hooks, and ensured `CanvasLayerManager.tsx` efficiently passes visible elements to relevant components for rendering and event handling.
+
+### 📦 Dependency Updates
+- Updated `konva` from `^9.3.20` to `^9.3.22`.
+- Updated `react-konva` from `^19.0.5` to `^19.0.7`.
+
 ## [Unreleased] - 2025-08-21
 
 ### 🔗 Link handling and custom browser

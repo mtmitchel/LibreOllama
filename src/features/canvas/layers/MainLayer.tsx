@@ -47,6 +47,7 @@ interface MainLayerProps {
   onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId | SectionId) => void;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
   onStartTextEdit: (elementId: ElementId) => void;
+  visibleElements: CanvasElement[];
 }
 
 export const MainLayer: React.FC<MainLayerProps> = ({
@@ -63,7 +64,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   onElementUpdate,
   onElementDragEnd,
   onElementClick,
-  onStartTextEdit
+  onStartTextEdit,
+  visibleElements
 }) => {
   // OPTIMIZED: Consolidated store subscriptions using useShallow
   const {
@@ -233,7 +235,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
           <KonvaElementBoundary key={element.id}>
             <SectionShape
               section={element as SectionElement}
-              isSelected={isSelected}
+              isSelected={Array.from(selectedElementIds).some(id => String(id) === String(section.id))}
               onSelect={(id, e) => selectElement(id as unknown as ElementId)}
               onElementDragEnd={(e, id) => {
                 const node = e.target;
@@ -276,7 +278,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
 
   // Memoized elements to prevent unnecessary re-renders
   const memoizedElements = useMemo(() => {
-    const validElements = Array.from(elements.values()).filter(el => {
+    const validElements = visibleElements.filter(el => {
       // Skip rendering elements that are children of sticky note containers
       if (el && ((el as any).parentId || (el as any).stickyNoteId)) {
         return false;
@@ -287,7 +289,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     const renderedElements = validElements.map(renderElement).filter(Boolean);
     
     return renderedElements;
-  }, [elements, renderElement]);
+  }, [visibleElements, renderElement]);
 
   // Draft section rendering for live preview - DISABLED to prevent infinite loops
   const draftSectionElement = null;

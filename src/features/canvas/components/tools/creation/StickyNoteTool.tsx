@@ -25,14 +25,15 @@ interface StickyNoteToolProps {
 
 export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActive }) => {
   // Store selectors for sticky note functionality
-  const stickyNoteState = useUnifiedCanvasStore(
-    useShallow((state) => ({
-      selectedStickyNoteColor: state.selectedStickyNoteColor,
-      enableStickyNoteContainer: state.enableStickyNoteContainer
-    }))
-  );
+  const selectedStickyNoteColor = useUnifiedCanvasStore(state => state.selectedStickyNoteColor);
+  const enableStickyNoteContainer = useUnifiedCanvasStore(state => state.enableStickyNoteContainer);
+  
 
-  const { selectedStickyNoteColor, enableStickyNoteContainer } = stickyNoteState;
+
+  // Debug: Log when selectedStickyNoteColor changes
+  React.useEffect(() => {
+    console.log('🎨 [StickyNoteTool] selectedStickyNoteColor changed to:', selectedStickyNoteColor);
+  }, [selectedStickyNoteColor]);
 
   // Cursor management is handled by CanvasStage's centralized cursor system
 
@@ -123,17 +124,52 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
     );
   }, [selectedStickyNoteColor]);
 
+  // Simple direct event handling to avoid the infinite loop
+  React.useEffect(() => {
+    if (!isActive || !stageRef.current) return;
+
+    const stage = stageRef.current;
+    
+    const handleClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+
+      const transform = stage.getAbsoluteTransform().copy().invert();
+      const position = transform.point(pointer);
+      
+      // Create sticky note directly with current color
+      const stickyNote = createStickyNoteElement(position);
+      
+      // Add to store
+      const addElement = useUnifiedCanvasStore.getState().addElement;
+      addElement(stickyNote);
+      
+      // Switch to select tool
+      const setSelectedTool = useUnifiedCanvasStore.getState().setSelectedTool;
+      setSelectedTool('select');
+      
+      // Select the new element
+      const selectElement = useUnifiedCanvasStore.getState().selectElement;
+      selectElement(stickyNote.id, false);
+      
+      // Start text editing
+      const setTextEditingElement = useUnifiedCanvasStore.getState().setTextEditingElement;
+      setTextEditingElement(stickyNote.id);
+    };
+
+    stage.on('click', handleClick);
+    
+    return () => {
+      stage.off('click', handleClick);
+    };
+  }, [isActive, stageRef, createStickyNoteElement]);
+
+  // Render preview
+  if (!isActive) return null;
+  
   return (
-    <BaseCreationTool
-      stageRef={stageRef}
-      isActive={isActive}
-      type="sticky-note"
-      onCreate={createStickyNoteElement}
-      onCreated={handleElementCreated}
-      renderPreview={renderPreview}
-      requiresDrag={false}
-      shouldSwitchToSelect={true}
-      shouldStartTextEdit={true}
-    />
+    <Group>
+      {/* Preview will be handled by the main canvas stage */}
+    </Group>
   );
 }; 

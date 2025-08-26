@@ -67,7 +67,7 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
     const stickyNoteId = findStickyNoteAtPoint({ x: element.x, y: element.y });
     
     if (stickyNoteId) {
-      console.log('📝 [TextTool] Adding text to sticky note container:', stickyNoteId);
+              console.log('📝 [TextTool] Adding text to sticky note container:', stickyNoteId);
       addElementToStickyNote(element.id, stickyNoteId);
     }
   }, [findStickyNoteAtPoint, addElementToStickyNote]);

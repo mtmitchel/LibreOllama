@@ -209,7 +209,7 @@ export const createStickyNoteModule = (
       createStickyNoteContainerDemo: () => {
         const { addElement, enableStickyNoteContainer } = get();
         
-        console.log('✨ [Demo] Creating sticky note container demo...');
+        // Creating sticky note container demo
         
         // Create a sticky note
         const stickyNote: StickyNoteElement = {
@@ -237,19 +237,13 @@ export const createStickyNoteModule = (
         
         addElement(stickyNote);
         
-        console.log('✨ [Demo] Created sticky note container:', {
-          id: stickyNote.id,
-          position: { x: stickyNote.x, y: stickyNote.y },
-          size: { width: stickyNote.width, height: stickyNote.height },
-          isContainer: stickyNote.isContainer,
-          allowedTypes: stickyNote.allowedChildTypes
-        });
+        // Created sticky note container
         
         // Test the detection
         setTimeout(() => {
           const testPoint = { x: 350, y: 275 }; // Center of sticky note
           const foundStickyNote = get().findStickyNoteAtPoint(testPoint);
-          console.log('🧪 [Demo] Testing detection at center point:', testPoint, 'Found:', foundStickyNote);
+          // Testing detection at center point
         }, 100);
         
         return stickyNote.id;

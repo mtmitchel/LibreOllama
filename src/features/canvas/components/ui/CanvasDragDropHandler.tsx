@@ -68,7 +68,7 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
         // Check for sticky note container
         const stickyNoteId = store.findStickyNoteAtPoint({ x, y });
         if (stickyNoteId) {
-          canvasLog.debug('🖼️ [CanvasDragDrop] Adding image to sticky note container:', stickyNoteId);
+          // Adding image to sticky note container
           store.addElementToStickyNote(imageElement.id, stickyNoteId);
         }
         
@@ -78,7 +78,7 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
           store.selectElement(imageElement.id, false);
         }, 10);
         
-        canvasLog.debug('🖼️ [CanvasDragDrop] Image added and selected:', imageElement.id);
+        // Image added and selected
       };
       img.src = event.target?.result as string;
     };
@@ -199,11 +199,7 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
           const transform = stage.getAbsoluteTransform().copy().invert();
           pos = transform.point(stagePos);
           
-          canvasLog.debug('🖼️ [DragDrop] Position calculation (paste):', {
-            client: { x: fakeEvent.clientX, y: fakeEvent.clientY },
-            stage: stagePos,
-            canvas: pos
-          });
+          // Position calculation for paste
         }
       }
       
@@ -233,7 +229,7 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
       
       if (hasImage) {
         e.preventDefault();
-        canvasLog.debug('🖼️ [CanvasDragDrop] Image pasted from clipboard');
+        // Image pasted from clipboard
       }
     };
 

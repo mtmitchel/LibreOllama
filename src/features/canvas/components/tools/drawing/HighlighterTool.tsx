@@ -9,6 +9,7 @@ import { Line } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+import { useRafThrottle } from '../../../hooks/useRafThrottle';
 import { useShallow } from 'zustand/react/shallow';
 import { nanoid } from 'nanoid';
 import { HighlighterElement } from '../../../types/enhanced.types';
@@ -86,6 +87,10 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
     setCurrentStroke([pointer.x, pointer.y]);
   }, [isActive, stageRef]);
 
+  const throttledSetCurrentStroke = useRafThrottle((point: { x: number; y: number }) => {
+    setCurrentStroke(prev => [...prev, point.x, point.y]);
+  });
+
   // Handle pointer move - update drawing with throttling
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     if (!isActive || !isDrawingRef.current || !stageRef.current) return;
@@ -94,18 +99,8 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    // Simple distance check to avoid adding too many points
-    if (currentStroke.length >= 2) {
-      const lastX = currentStroke[currentStroke.length - 2];
-      const lastY = currentStroke[currentStroke.length - 1];
-      const distance = Math.sqrt((pointer.x - lastX) ** 2 + (pointer.y - lastY) ** 2);
-      
-      // Only add point if moved at least 2 pixels (reduces point density)
-      if (distance < 2) return;
-    }
-
-    setCurrentStroke(prev => [...prev, pointer.x, pointer.y]);
-  }, [isActive, stageRef, currentStroke]);
+    throttledSetCurrentStroke({ x: pointer.x, y: pointer.y });
+  }, [isActive, stageRef, throttledSetCurrentStroke]);
 
   // Handle pointer up - finish drawing
   const handlePointerUp = useCallback(() => {

@@ -120,7 +120,6 @@ export const createElementModule = (
 
             // Update the Map to trigger re-renders
             state.elements.set(id, updatedElement);
-            console.log('🔄 [Store] Element updated in map');
 
             // If it's a section, update its children
             if (updatedElement.type === 'section') {
@@ -157,22 +156,12 @@ export const createElementModule = (
             if (updatedElement.type === 'sticky-note' && updatedElement.childElementIds && (updates.x !== undefined || updates.y !== undefined)) {
               const deltaX = (updates.x ?? element.x) - oldX;
               const deltaY = (updates.y ?? element.y) - oldY;
-              console.log('🗒️ [Store] Moving sticky note children:', {
-                stickyNoteId: updatedElement.id,
-                deltaX,
-                deltaY,
-                childCount: updatedElement.childElementIds.length
-              });
+              // Moving sticky note children
               if (deltaX !== 0 || deltaY !== 0) {
                 updatedElement.childElementIds.forEach((childId: ElementId) => {
                   const child = state.elements.get(childId);
                   if (child) {
-                    console.log('🗒️ [Store] Moving child element:', {
-                      childId,
-                      childType: child.type,
-                      oldPosition: { x: child.x, y: child.y },
-                      newPosition: { x: child.x + deltaX, y: child.y + deltaY }
-                    });
+                    // Moving child element
                     
                     let movedChild = { ...child, x: child.x + deltaX, y: child.y + deltaY };
                     
@@ -180,7 +169,7 @@ export const createElementModule = (
                     if (child.type === 'pen' || child.type === 'marker' || child.type === 'highlighter') {
                       const strokeChild = child as any; // Cast to access points
                       if (strokeChild.points && Array.isArray(strokeChild.points)) {
-                        console.log('🗒️ [Store] Updating stroke points for child:', childId);
+                        // Updating stroke points for child
                         const updatedPoints = strokeChild.points.map((point: number, index: number) => {
                           return index % 2 === 0 ? point + deltaX : point + deltaY;
                         });

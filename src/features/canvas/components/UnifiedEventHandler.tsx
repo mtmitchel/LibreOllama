@@ -3,17 +3,19 @@ import Konva from 'konva';
 import { useShallow } from 'zustand/react/shallow';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { logger } from '../../../core/lib/logger';
-import { ElementId, ElementOrSectionId } from '../types/enhanced.types';
+import { ElementId, ElementOrSectionId, CanvasElement } from '../types/enhanced.types';
+import { calculateSnapLines } from '../utils/snappingUtils';
 
 interface UnifiedEventHandlerProps {
   stageRef: React.RefObject<Konva.Stage | null>;
+  visibleElements: CanvasElement[];
 }
 
 /**
  * UnifiedEventHandler - Centralized event delegation for the canvas.
  * PERFORMANCE OPTIMIZATION: Reduced logging and optimized event handling
  */
-const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) => {
+const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef, visibleElements }) => {
   // Store access - using grouped selectors with useShallow
   const {
     updateElement,
@@ -64,10 +66,40 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
     const stage = stageRef.current;
     if (!stage) return;
 
+    const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+      const target = e.target;
+      const elementId = target.id() as ElementId;
+      const isSnappingEnabled = useUnifiedCanvasStore.getState().snapToGrid;
+
+      if (isSnappingEnabled) {
+        const element = useUnifiedCanvasStore.getState().elements.get(elementId) as CanvasElement;
+        const setSnapLines = useUnifiedCanvasStore.getState().setSnapLines;
+
+        const draggedElement = { ...element, x: e.target.x(), y: e.target.y() };
+        const newSnapLines = calculateSnapLines(draggedElement, visibleElements);
+        setSnapLines(newSnapLines);
+
+        let snappedX = e.target.x();
+        let snappedY = e.target.y();
+
+        newSnapLines.forEach(line => {
+          if (line.points[0] === line.points[2]) { // Vertical line
+            snappedX = line.points[0] - (draggedElement.x - e.target.x());
+          } else { // Horizontal line
+            snappedY = line.points[1] - (draggedElement.y - e.target.y());
+          }
+        });
+
+        e.target.position({ x: snappedX, y: snappedY });
+      }
+    };
+
     // Handle global drag end for element updates
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
       const target = e.target;
       const elementId = target.id() as ElementId;
+      const setSnapLines = useUnifiedCanvasStore.getState().setSnapLines;
+      setSnapLines([]); // Clear snap lines after drag
 
       if (elementId && target.isDragging()) {
         const element = useUnifiedCanvasStore.getState().elements.get(elementId);
@@ -140,8 +172,8 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
           return;
         }
         
-        // Don't handle stage clicks when text tool is active - let TextTool handle them
-        if (selectedTool === 'text') {
+        // Don't handle stage clicks when text or sticky-note tool is active - let dedicated tools handle them
+        if (selectedTool === 'text' || selectedTool === 'sticky-note') {
           return;
         }
         
@@ -173,12 +205,14 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
     };
 
     // Attach essential event listeners
+    stage.on('dragmove', handleDragMove);
     stage.on('dragend', handleDragEnd);
     stage.on('click', handleClick);
     stage.on('transformend', handleTransformEnd);
 
     // Cleanup function
     return () => {
+      stage.off('dragmove', handleDragMove);
       stage.off('dragend', handleDragEnd);
       stage.off('click', handleClick);
       stage.off('transformend', handleTransformEnd);

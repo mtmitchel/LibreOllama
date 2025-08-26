@@ -37,6 +37,7 @@ import { combinedSelectors } from './selectors';
 import { StoreApi } from 'zustand';
 import { WritableDraft } from 'immer';
 
+
 enableMapSet();
 
 // Legacy compatibility actions
@@ -81,7 +82,7 @@ export interface UnifiedCanvasActions extends
   EraserActions,
   EventActions,
   LegacyActions {
-  // No additional actions needed - all actions come from modules
+  getVisibleElements: () => CanvasElement[];
 }
 
 export type UnifiedCanvasStore = UnifiedCanvasState & UnifiedCanvasActions;
@@ -140,6 +141,48 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
     ...modules.eraser.actions,
     ...modules.event.actions,
 
+    getVisibleElements: () => {
+      const { elements, viewport } = get();
+      const visibleElements: CanvasElement[] = [];
+      const buffer = 300; // Generous buffer for smooth scrolling
+
+      // Calculate viewport bounds with buffer
+      const viewportBounds = {
+        left: (-viewport.x - buffer) / viewport.scale,
+        top: (-viewport.y - buffer) / viewport.scale,
+        right: (viewport.width - viewport.x + buffer) / viewport.scale,
+        bottom: (viewport.height - viewport.y + buffer) / viewport.scale,
+      };
+
+      // Simple intersection test for each element
+      elements.forEach(element => {
+        // Always show locked or text elements (critical for UX)
+        if (element.isLocked || element.type === 'text') {
+          visibleElements.push(element);
+          return;
+        }
+
+        const elementBounds = {
+          left: element.x,
+          top: element.y,
+          right: element.x + (element.width || 0),
+          bottom: element.y + (element.height || 0),
+        };
+        
+        // Simple AABB intersection test
+        const isVisible =
+          elementBounds.left < viewportBounds.right &&
+          elementBounds.right > viewportBounds.left &&
+          elementBounds.top < viewportBounds.bottom &&
+          elementBounds.bottom > viewportBounds.top;
+
+        if (isVisible) {
+          visibleElements.push(element);
+        }
+      });
+      return visibleElements;
+    },
+
     // Legacy compatibility actions
     handleElementDrop: (elementId: ElementId, targetId?: ElementId) => {
       // Element drop functionality - move element to target position or container
@@ -184,21 +227,6 @@ export const useUnifiedCanvasStore = create<UnifiedCanvasStore>()(
   )
 );
 
-// Add debugging to detect infinite loops
-if (process.env.NODE_ENV === 'development') {
-  let renderCount = 0;
-  const originalSubscribe = useUnifiedCanvasStore.subscribe;
-  
-  useUnifiedCanvasStore.subscribe = (listener: (state: UnifiedCanvasStore, prevState: UnifiedCanvasStore) => void) => {
-    return originalSubscribe((state, prevState) => {
-      renderCount++;
-      if (renderCount > 100) {
-        console.error('⚠️ [MODULAR STORE] Potential infinite loop detected! Render count:', renderCount);
-        renderCount = 0; // Reset to prevent spam
-      }
-      listener(state, prevState);
-    });
-  };
-}
+// Debug loop detection disabled for performance
 
-logger.debug('[Store] Unified Canvas Store initialized');
+// Store initialized

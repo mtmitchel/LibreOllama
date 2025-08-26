@@ -147,7 +147,7 @@ export const createHistoryModule = (
               draft.currentIndex = targetIndex;
             });
             
-            console.log('✅ [Store] Undo successful - restored to:', targetEntry.operation);
+            // Undo successful
           }
         }
       },
@@ -176,7 +176,7 @@ export const createHistoryModule = (
               draft.currentIndex = targetIndex;
             });
             
-            console.log('✅ [Store] Redo successful - restored to:', targetEntry.operation);
+            // Redo successful
           }
         }
       },

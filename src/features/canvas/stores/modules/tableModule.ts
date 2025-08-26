@@ -38,16 +38,16 @@ export const createTableModule = (
     
     actions: {
       updateTableCell: (tableId, row, col, value) => {
-        console.log('🔥 [updateTableCell] CALLED with:', { tableId, row, col, value });
+        // Updating table cell
         
         set(state => {
           const table = state.elements.get(tableId);
-          console.log('🔥 [updateTableCell] Found table:', !!table, table?.type);
+          // Found table
           
           if (table && isTableElement(table)) {
             // Ensure enhancedTableData exists
             if (!table.enhancedTableData) {
-              console.log('🔥 [updateTableCell] Creating enhancedTableData');
+              // Creating enhancedTableData
               table.enhancedTableData = {
                 rows: Array(table.rows).fill(null).map((_, i) => ({ height: 40, id: `row-${i}` })),
                 columns: Array(table.cols).fill(null).map((_, i) => ({ width: 120, id: `col-${i}` })),
@@ -61,7 +61,7 @@ export const createTableModule = (
             if (!table.enhancedTableData.cells || 
                 table.enhancedTableData.cells.length !== table.rows ||
                 table.enhancedTableData.cells[0]?.length !== table.cols) {
-              console.log('🔥 [updateTableCell] Fixing cells array dimensions');
+              // Fixing cells array dimensions
               table.enhancedTableData.cells = Array(table.rows).fill(null).map((_, r) => 
                 Array(table.cols).fill(null).map((_, c) => 
                   table.enhancedTableData?.cells?.[r]?.[c] || { content: '', text: '' }
@@ -71,7 +71,7 @@ export const createTableModule = (
 
             // Update the specific cell
             if (table.enhancedTableData.cells[row] && table.enhancedTableData.cells[row][col]) {
-              console.log('🔥 [updateTableCell] OLD cell value:', table.enhancedTableData.cells[row][col]);
+              // Updating cell value
               
               // Clone the cell object to avoid mutating in-place
               const newCell = {
@@ -85,7 +85,7 @@ export const createTableModule = (
                 verticalAlign: 'middle'
               } as TableCell;
 
-              console.log('🔥 [updateTableCell] NEW cell value:', newCell);
+              // New cell value set
 
               // Replace the cell to ensure new reference
               const newRow = [...table.enhancedTableData.cells[row]];
@@ -113,8 +113,7 @@ export const createTableModule = (
 
               state.elements = newElements;
 
-              console.log('🔥 [updateTableCell] Updated cell (immutable):', { tableId, row, col, value });
-              console.log('🔥 [updateTableCell] New table data:', newTable.enhancedTableData?.cells[row][col]);
+              // Updated cell (immutable)
 
               return;
             }
@@ -122,7 +121,7 @@ export const createTableModule = (
             // Update timestamp
             table.updatedAt = Date.now();
 
-            console.log('🔥 [updateTableCell] Updated cell (mutable path):', { tableId, row, col, value });
+            // Updated cell (mutable path)
           } else {
             console.error('🔥 [updateTableCell] Table not found or not a table element');
           }
@@ -159,7 +158,7 @@ export const createTableModule = (
             }
             
             table.updatedAt = Date.now();
-            console.log('➕ [addTableRow] Added row at position:', insertIndex);
+            // Added row
           }
         });
         get().addToHistory('addTableRow');
@@ -180,7 +179,7 @@ export const createTableModule = (
             }
             
             table.updatedAt = Date.now();
-            console.log('➖ [removeTableRow] Removed row at index:', rowIndex);
+            // Removed row
           }
         });
         get().addToHistory('removeTableRow');
@@ -216,7 +215,7 @@ export const createTableModule = (
             }
             
             table.updatedAt = Date.now();
-            console.log('➕ [addTableColumn] Added column at position:', insertIndex);
+            // Added column
           }
         });
         get().addToHistory('addTableColumn');
@@ -239,7 +238,7 @@ export const createTableModule = (
             }
             
             table.updatedAt = Date.now();
-            console.log('➖ [removeTableColumn] Removed column at index:', colIndex);
+            // Removed column
           }
         });
         get().addToHistory('removeTableColumn');

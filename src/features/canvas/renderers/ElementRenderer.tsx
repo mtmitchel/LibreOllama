@@ -61,41 +61,13 @@ const ElementRendererComponent: React.FC<ElementRendererProps> = ({
   const snapLines = useUnifiedCanvasStore(state => state.snapLines);
   const setSnapLines = useUnifiedCanvasStore(state => state.setSnapLines);
 
-  const handleDragMove = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
-    if (!isSnappingEnabled) return;
-
-    const draggedElement = { ...element, x: e.target.x(), y: e.target.y() };
-    const newSnapLines = calculateSnapLines(draggedElement, Array.from(elements.values()));
-    setSnapLines(newSnapLines);
-
-    let snappedX = e.target.x();
-    let snappedY = e.target.y();
-
-    newSnapLines.forEach(line => {
-      if (line.points[0] === line.points[2]) { // Vertical line
-        snappedX = line.points[0] - (draggedElement.x - e.target.x());
-      } else { // Horizontal line
-        snappedY = line.points[1] - (draggedElement.y - e.target.y());
-      }
-    });
-
-    e.target.position({ x: snappedX, y: snappedY });
-  }, [isSnappingEnabled, element, elements, snapTolerance, setSnapLines]);
-
-  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
-    setSnapLines([]); // Clear snap lines after drag
-    onElementDragEnd(e, element.id);
-  }, [onElementDragEnd, element.id, setSnapLines]);
-
-  // ARCHITECTURAL FIX: Remove drag handlers - UnifiedEventHandler handles all drag operations
-  // The SectionHandler's Group component handles the coordinate transformation automatically
   const konvaProps = {
       id: element.id,
       x: element.x, // These are relative coordinates when inside a section
       y: element.y, // These are relative coordinates when inside a section
       rotation: element.rotation || 0,
       draggable: !element.isLocked && !isPenElement(element), // Pen elements should never be draggable
-      // REMOVED: onDragMove, onDragEnd - handled by UnifiedEventHandler at stage level
+      onDragEnd: (e) => onElementDragEnd(e, element.id),
       ...overrideKonvaProps
   };
 

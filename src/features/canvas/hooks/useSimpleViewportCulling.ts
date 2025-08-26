@@ -128,12 +128,6 @@ export const useSimpleViewportCulling = ({
 
     // Simple intersection test for each element
     for (const element of elements) {
-      // Always show locked or text elements (critical for UX)
-      if (element.isLocked || element.type === 'text') {
-        visibleElements.push(element);
-        continue;
-      }
-
       const elementBounds = getElementBounds(element);
       
       // Simple AABB intersection test

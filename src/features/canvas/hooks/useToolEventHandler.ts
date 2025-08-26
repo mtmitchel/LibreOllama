@@ -50,9 +50,7 @@ export const useToolEventHandler = ({
     const useNamespaced = currentHandlers.useNamespacedEvents;
     const eventSuffix = useNamespaced ? `.${toolName}` : '';
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🎯 [${toolName}] Attaching event handlers${useNamespaced ? ' (namespaced)' : ''}`);
-    }
+    // Event handlers attached
 
     // Attach event listeners
     if (currentHandlers.onPointerDown) {
@@ -88,9 +86,7 @@ export const useToolEventHandler = ({
 
     // Cleanup function - guaranteed to run
     return () => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🧹 [${toolName}] Cleaning up event handlers${useNamespaced ? ' (namespaced)' : ''}`);
-      }
+      // Cleaning up event handlers
 
       // Remove all event listeners for this tool
       if (currentHandlers.onPointerDown) {
@@ -124,7 +120,19 @@ export const useToolEventHandler = ({
         stage.off(`mouseup${eventSuffix}`, currentHandlers.onMouseUp);
       }
     };
-  }, [isActive, stageRef, toolName, handlers]);
+  }, [isActive, stageRef, toolName, 
+    currentHandlers.onPointerDown,
+    currentHandlers.onPointerMove,
+    currentHandlers.onPointerUp,
+    currentHandlers.onPointerLeave,
+    currentHandlers.onPointerEnter,
+    currentHandlers.onPointerCancel,
+    currentHandlers.onClick,
+    currentHandlers.onMouseDown,
+    currentHandlers.onMouseMove,
+    currentHandlers.onMouseUp,
+    currentHandlers.useNamespacedEvents
+  ]);
 
   // Return utility functions if needed
   return {

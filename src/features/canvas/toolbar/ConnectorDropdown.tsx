@@ -62,12 +62,12 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
       </Button>
       
       {isOpen && (
-        <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 z-[1200] mb-2 w-44 -translate-x-1/2 rounded-xl border p-2 shadow-xl backdrop-blur-sm">
+        <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 z-[1200] mb-2 min-w-max -translate-x-1/2 rounded-xl border p-2 shadow-xl backdrop-blur-sm">
           <div className="flex flex-col gap-1">
             <div className="text-text-muted px-2 py-1 text-center text-[11px] font-semibold uppercase tracking-wide">
               Connectors
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-center gap-1">
               {connectorTools.map(tool => {
                 const IconComponent = tool.icon;
                 const isToolActive = selectedTool === tool.id;
@@ -75,12 +75,12 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
                   <Button
                     key={tool.id}
                     variant={isToolActive ? "primary" : "ghost"}
+                    size="icon"
                     onClick={() => handleConnectorSelect(tool.id)}
-                    className="flex h-auto w-full items-center justify-start gap-2 px-2 py-1.5 text-left"
+                    className="flex size-9 items-center justify-center"
                     title={tool.name}
                   >
                     <IconComponent size={16} />
-                    <span className="asana-text-sm font-medium">{tool.name}</span>
                   </Button>
                 );
               })}

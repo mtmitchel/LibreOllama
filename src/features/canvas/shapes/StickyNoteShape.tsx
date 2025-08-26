@@ -1,6 +1,6 @@
 // src/features/canvas/shapes/StickyNoteShape.tsx
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Group, Rect, Text, Transformer, Line, Circle, Image } from 'react-konva';
+import { Group, Rect, Text, Line } from 'react-konva';
 import Konva from 'konva';
 import { StickyNoteElement, ElementId, CanvasElement, isMarkerElement, isHighlighterElement, isTextElement, isConnectorElement, isImageElement, isTableElement, isPenElement } from '../types/enhanced.types';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
@@ -154,11 +154,12 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
   const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
   const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
+
+  
   // Refs - sticky note specific pattern
   const groupRef = useRef<Konva.Group>(null);
   const rectRef = useRef<Konva.Rect>(null); // Main shape for transformer
   const textNodeRef = useRef<Konva.Text>(null);
-  const transformerRef = useRef<Konva.Transformer>(null);
   const cleanupEditorRef = useRef<(() => void) | null>(null);
   const isDuplicating = useRef<boolean>(false);
   
@@ -170,12 +171,9 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
     ensureFontsLoaded();
   }, []);
 
-  // Attach transformer to rect when selected - standard Konva pattern
+  // No internal transformer; managed centrally to avoid duplicate transforms
   useEffect(() => {
-    if (isSelected && transformerRef.current && rectRef.current) {
-      transformerRef.current.nodes([rectRef.current]);
-      transformerRef.current.getLayer()?.batchDraw();
-}
+    // noop
   }, [isSelected, element.id]);
 
   // Calculate textarea position for text editing - simplified version of TextShape
@@ -243,19 +241,14 @@ const finalText = newText.trim();
         });
         
         if (isBlurringToCanvas) {
-          useUnifiedCanvasStore.getState().clearSelection();
+          clearSelection();
         } else {
-          setTimeout(() => {
-            const store = useUnifiedCanvasStore.getState();
-store.setSelectedTool('select');
-            
-            setTimeout(() => {
-              store.clearSelection();
-              setTimeout(() => {
-                store.selectElement(element.id, false);
-}, 50);
-            }, 50);
-          }, 100);
+          // Use requestAnimationFrame to avoid React-Konva recursion
+          requestAnimationFrame(() => {
+            setSelectedTool('select');
+            clearSelection();
+            selectElement(element.id, false);
+          });
         }
       },
       () => {
@@ -291,7 +284,7 @@ cleanupEditorRef.current = null;
       // Add the duplicate to canvas
       addElement(duplicatedElement);
       
-      logger.log('🗒️ [STICKY NOTE] Alt+drag duplication created:', duplicatedElement.id);
+      // Alt+drag duplication created
     }
   }, [element, addElement]);
 
@@ -621,6 +614,7 @@ const finalText = newText.trim();
         onDragMove={handleDragMove}
         draggable={!shouldAllowDrawing}
         listening={!shouldAllowDrawing}
+        name="sticky-note"
       >
         {/* Sticky note background */}
         <Rect
@@ -664,32 +658,6 @@ const finalText = newText.trim();
         />
       </Group>
       
-      {/* Transformer with corner-only handles - same pattern as TextShape */}
-      {isSelected && !cleanupEditorRef.current && (
-        <Transformer
-          ref={transformerRef}
-          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
-          rotateEnabled={false}
-          borderStroke="#3B82F6"
-          borderStrokeWidth={1}
-          anchorStroke="#3B82F6"
-          anchorFill="#ffffff"
-          anchorSize={6}
-          anchorStrokeWidth={1}
-          keepRatio={false}
-          ignoreStroke={true}
-          boundBoxFunc={(oldBox, newBox) => {
-            const MIN_WIDTH = 120;
-            const MIN_HEIGHT = 80;
-            
-            return {
-              ...newBox,
-              width: Math.max(MIN_WIDTH, newBox.width),
-              height: Math.max(MIN_HEIGHT, newBox.height),
-            };
-          }}
-        />
-      )}
     </>
   );
 });

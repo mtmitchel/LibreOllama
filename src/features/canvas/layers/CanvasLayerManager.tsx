@@ -226,6 +226,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
               onElementDragEnd={onElementDragEnd}
               onElementClick={onElementClick}
               onStartTextEdit={onStartTextEdit}
+              visibleElements={visibleElements}
             />
         </React.Fragment>
       ),

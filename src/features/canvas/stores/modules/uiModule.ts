@@ -13,6 +13,7 @@ export interface UIState {
   snapToGrid: boolean;
   isUploading: boolean;
   snapLines: number[]; // Added snapLines state
+  visibleElementIds: Set<ElementId>;
 }
 
 /**
@@ -24,6 +25,7 @@ export interface UIActions {
   setSelectedStickyNoteColor: (color: string) => void;
   setPenColor: (color: string) => void;
   setSnapLines: (lines: number[]) => void; // Added setSnapLines action
+  setVisibleElementIds: (ids: Set<ElementId>) => void;
   
   // Legacy compatibility
   setStickyNoteColor: (color: string) => void;
@@ -52,6 +54,7 @@ export const createUIModule = (
       snapToGrid: false,
       isUploading: false,
       snapLines: [], // Initialize snapLines
+      visibleElementIds: new Set<ElementId>(),
     },
     
     actions: {
@@ -61,12 +64,12 @@ export const createUIModule = (
         // Log the state change for debugging in development
         if (process.env.NODE_ENV === 'development') {
           const currentId = get().textEditingElementId;
-          console.log('🎯 [Store] setTextEditingElement:', { from: currentId, to: id });
+          // Removed excessive logging
           
           // If we're setting a new element while another is being edited,
           // we need to ensure cleanup happens
           if (currentId && id && currentId !== id) {
-            console.log('⚠️ [Store] Switching text editing from', currentId, 'to', id);
+            // Switching text editing focus
           }
         }
         
@@ -78,6 +81,8 @@ export const createUIModule = (
       setPenColor: (color) => set(state => { state.penColor = color; }),
 
       setSnapLines: (lines) => set(state => { state.snapLines = lines; }), // Added implementation for setSnapLines
+
+      setVisibleElementIds: (ids) => set(state => { state.visibleElementIds = ids; }),
 
       // Legacy compatibility
       setStickyNoteColor: (color) => set(state => { state.selectedStickyNoteColor = color; }),
