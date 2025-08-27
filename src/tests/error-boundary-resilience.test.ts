@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createUnifiedTestStore } from './helpers/createUnifiedTestStore';
-import { RectangleElement, TextElement, ElementId } from '../features/canvas/types/enhanced.types';
+import { RectangleElement, TextElement, ElementId, createElementId } from '../features/canvas/types/enhanced.types';
 import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasStore';
 import type { 
   CircleElement
@@ -33,7 +33,7 @@ describe('Error Boundary and Resilience Tests', () => {
     it('should handle invalid element operations gracefully', () => {
       // Test operations with invalid IDs
       expect(() => {
-        store.getState().updateElement(ElementId('empty-id'), { x: 100 });
+        store.getState().updateElement(createElementId('empty-id'), { x: 100 });
       }).not.toThrow();
 
       expect(() => {
@@ -45,7 +45,7 @@ describe('Error Boundary and Resilience Tests', () => {
       }).not.toThrow();
 
       expect(() => {
-        store.getState().selectElement(ElementId('empty-id'));
+        store.getState().selectElement(createElementId('empty-id'));
       }).not.toThrow();
 
       // Store state should remain consistent
@@ -98,7 +98,7 @@ describe('Error Boundary and Resilience Tests', () => {
     it('should handle selection of non-existent elements', () => {
       // Select non-existent elements
       expect(() => {
-        store.getState().selectElement(ElementId('non-existent-id'));
+        store.getState().selectElement(createElementId('non-existent-id'));
       }).not.toThrow();
 
       // Selection behavior: Store may add non-existent elements to selection
@@ -358,9 +358,9 @@ describe('Error Boundary and Resilience Tests', () => {
 
       // Perform various operations that might cause errors
       try {
-        store.getState().updateElement(ElementId('non-existent-id'), { x: 100 });
-        store.getState().selectElement(ElementId('non-existent-id'));
-        store.getState().deleteElement(ElementId('non-existent-id'));
+        store.getState().updateElement(createElementId('non-existent-id'), { x: 100 });
+        store.getState().selectElement(createElementId('non-existent-id'));
+        store.getState().deleteElement(createElementId('non-existent-id'));
       } catch (error) {
         // Errors are expected and should be handled gracefully
       }

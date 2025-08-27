@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { createUnifiedTestStore } from '@/tests/helpers/createUnifiedTestStore';
-import { ElementId } from '../types/enhanced.types';
+import { ElementId, createElementId } from '../types/enhanced.types';
 
 /**
  * EraserTool Store-First Tests
@@ -21,7 +21,7 @@ describe('Eraser Functionality (Store-First)', () => {
     test('should erase pen strokes at point', () => {
       // Add a pen stroke element with points that intersect the eraser
       const penElement = {
-        id: ElementId('pen-1'),
+        id: createElementId('pen-1'),
         type: 'pen' as const,
         points: [95, 95, 105, 105], // Points close to (100, 100)
         stroke: '#000000',
@@ -42,14 +42,14 @@ describe('Eraser Functionality (Store-First)', () => {
       const erasedIds = store.getState().eraseAtPoint(100, 100, 20);
       
       // Should have erased the pen stroke
-      expect(erasedIds).toContain(ElementId('pen-1'));
+      expect(erasedIds).toContain(createElementId('pen-1'));
       expect(store.getState().elements.size).toBe(0);
     });
 
     test('should erase marker strokes at point', () => {
       // Add a marker element with points that intersect the eraser
       const markerElement = {
-        id: ElementId('marker-1'),
+        id: createElementId('marker-1'),
         type: 'marker' as const,
         points: [55, 55, 65, 65], // Points close to (60, 60)
         style: {
@@ -77,14 +77,14 @@ describe('Eraser Functionality (Store-First)', () => {
       // Erase at point that intersects
       const erasedIds = store.getState().eraseAtPoint(60, 60, 15);
       
-      expect(erasedIds).toContain(ElementId('marker-1'));
-      expect(store.getState().elements.has(ElementId('marker-1'))).toBe(false);
+      expect(erasedIds).toContain(createElementId('marker-1'));
+      expect(store.getState().elements.has(createElementId('marker-1'))).toBe(false);
     });
 
     test('should erase highlighter strokes at point', () => {
       // Add a highlighter element with points that intersect the eraser
       const highlighterElement = {
-        id: ElementId('highlighter-1'),
+        id: createElementId('highlighter-1'),
         type: 'highlighter' as const,
         points: [220, 205, 230, 215], // Points close to (225, 210)
         style: {
@@ -110,14 +110,14 @@ describe('Eraser Functionality (Store-First)', () => {
       // Erase at point
       const erasedIds = store.getState().eraseAtPoint(225, 210, 20);
       
-      expect(erasedIds).toContain(ElementId('highlighter-1'));
-      expect(store.getState().elements.has(ElementId('highlighter-1'))).toBe(false);
+      expect(erasedIds).toContain(createElementId('highlighter-1'));
+      expect(store.getState().elements.has(createElementId('highlighter-1'))).toBe(false);
     });
 
     test('should not erase non-erasable elements', () => {
       // Add non-erasable elements
        const rectElement = {
-         id: ElementId('rect-1'),
+         id: createElementId('rect-1'),
          type: 'rectangle' as const,
          x: 90,
          y: 90,
@@ -131,7 +131,7 @@ describe('Eraser Functionality (Store-First)', () => {
        };
        
        const textElement = {
-         id: ElementId('text-1'),
+         id: createElementId('text-1'),
          type: 'text' as const,
          x: 90,
          y: 90,
@@ -153,14 +153,14 @@ describe('Eraser Functionality (Store-First)', () => {
       // Should not erase non-erasable elements
       expect(erasedIds).toHaveLength(0);
       expect(store.getState().elements.size).toBe(2);
-      expect(store.getState().elements.has(ElementId('rect-1'))).toBe(true);
-      expect(store.getState().elements.has(ElementId('text-1'))).toBe(true);
+      expect(store.getState().elements.has(createElementId('rect-1'))).toBe(true);
+      expect(store.getState().elements.has(createElementId('text-1'))).toBe(true);
     });
 
     test('should only erase elements within eraser radius', () => {
       // Add pen strokes at different distances from eraser point (100, 100)
       const nearStroke = {
-        id: ElementId('near-1'),
+        id: createElementId('near-1'),
         type: 'pen' as const,
         points: [98, 98, 102, 102], // Very close to (100, 100) - should be erased
         stroke: '#000000',
@@ -172,7 +172,7 @@ describe('Eraser Functionality (Store-First)', () => {
       };
       
       const farStroke = {
-        id: ElementId('far-1'),
+        id: createElementId('far-1'),
         type: 'pen' as const,
         points: [150, 150, 160, 160], // Far from (100, 100) - should NOT be erased
         stroke: '#000000',
@@ -191,10 +191,10 @@ describe('Eraser Functionality (Store-First)', () => {
       const erasedIds = store.getState().eraseAtPoint(100, 100, 20);
       
       // Should only erase the near stroke
-      expect(erasedIds).toContain(ElementId('near-1'));
-      expect(erasedIds).not.toContain(ElementId('far-1'));
-      expect(store.getState().elements.has(ElementId('near-1'))).toBe(false);
-      expect(store.getState().elements.has(ElementId('far-1'))).toBe(true);
+      expect(erasedIds).toContain(createElementId('near-1'));
+      expect(erasedIds).not.toContain(createElementId('far-1'));
+      expect(store.getState().elements.has(createElementId('near-1'))).toBe(false);
+      expect(store.getState().elements.has(createElementId('far-1'))).toBe(true);
     });
   });
 
@@ -202,7 +202,7 @@ describe('Eraser Functionality (Store-First)', () => {
     test('should erase strokes along eraser path', () => {
       // Add multiple pen strokes
        const stroke1 = {
-         id: ElementId('stroke-1'),
+         id: createElementId('stroke-1'),
          type: 'pen' as const,
          points: [50, 50, 60, 60],
          stroke: '#000000',
@@ -214,7 +214,7 @@ describe('Eraser Functionality (Store-First)', () => {
        };
        
        const stroke2 = {
-         id: ElementId('stroke-2'),
+         id: createElementId('stroke-2'),
          type: 'pen' as const,
          points: [100, 100, 110, 110],
          stroke: '#000000',
@@ -233,15 +233,15 @@ describe('Eraser Functionality (Store-First)', () => {
       const erasedIds = store.getState().eraseInPath(eraserPath, 20);
       
       // Should erase both strokes
-      expect(erasedIds).toContain(ElementId('stroke-1'));
-      expect(erasedIds).toContain(ElementId('stroke-2'));
+      expect(erasedIds).toContain(createElementId('stroke-1'));
+      expect(erasedIds).toContain(createElementId('stroke-2'));
       expect(store.getState().elements.size).toBe(0);
     });
 
     test('should handle empty eraser path', () => {
       // Add a stroke
        const stroke = {
-         id: ElementId('stroke-1'),
+         id: createElementId('stroke-1'),
          type: 'pen' as const,
          points: [50, 50, 60, 60],
          stroke: '#000000',
@@ -267,7 +267,7 @@ describe('Eraser Functionality (Store-First)', () => {
     test('should find elements in spatial index correctly', () => {
       // Add the same pen element as in the failing test
       const penElement = {
-        id: ElementId('pen-1'),
+        id: createElementId('pen-1'),
         type: 'pen' as const,
         points: [90, 90, 110, 110, 130, 130],
         stroke: '#000000',
@@ -295,13 +295,13 @@ describe('Eraser Functionality (Store-First)', () => {
       };
       
       const intersections = spatialIndex!.findIntersections(eraserBounds);
-      expect(intersections).toContain(ElementId('pen-1'));
+      expect(intersections).toContain(createElementId('pen-1'));
     });
 
     test('should update spatial index with erasable elements', () => {
       // Add mix of erasable and non-erasable elements
        const penStroke = {
-         id: ElementId('pen-1'),
+         id: createElementId('pen-1'),
          type: 'pen' as const,
          points: [50, 50, 60, 60],
          stroke: '#000000',
@@ -313,7 +313,7 @@ describe('Eraser Functionality (Store-First)', () => {
        };
        
        const rectangle = {
-         id: ElementId('rect-1'),
+         id: createElementId('rect-1'),
          type: 'rectangle' as const,
          x: 100,
          y: 100,
@@ -339,7 +339,7 @@ describe('Eraser Functionality (Store-First)', () => {
     test('should clear spatial index', () => {
       // Add elements and update index
        const penStroke = {
-         id: ElementId('pen-1'),
+         id: createElementId('pen-1'),
          type: 'pen' as const,
          points: [50, 50, 60, 60],
          stroke: '#000000',
@@ -364,17 +364,17 @@ describe('Eraser Functionality (Store-First)', () => {
   describe('Element Type Checking', () => {
     test('should identify erasable elements correctly', () => {
       // Test erasable elements
-      const penElement = { type: 'pen', id: ElementId('pen-1'), points: [], stroke: '#000', strokeWidth: 2, x: 0, y: 0, createdAt: Date.now(), updatedAt: Date.now() };
-      const markerElement = { type: 'marker', id: ElementId('marker-1'), points: [], style: { color: '#000', width: 5, opacity: 0.8, smoothness: 0.5, lineCap: 'round', lineJoin: 'round', blendMode: 'source-over', widthVariation: true, minWidth: 3, maxWidth: 8, pressureSensitive: false }, x: 0, y: 0, createdAt: Date.now(), updatedAt: Date.now() };
-      const highlighterElement = { type: 'highlighter', id: ElementId('highlighter-1'), points: [], style: { color: '#ffff00', width: 15, opacity: 0.5, smoothness: 0.5, lineCap: 'round', lineJoin: 'round', blendMode: 'multiply', baseOpacity: 0.3, highlightColor: '#ffff00' }, x: 0, y: 0, createdAt: Date.now(), updatedAt: Date.now() };
+      const penElement = { type: 'pen', id: createElementId('pen-1'), points: [], stroke: '#000', strokeWidth: 2, x: 0, y: 0, createdAt: Date.now(), updatedAt: Date.now() };
+      const markerElement = { type: 'marker', id: createElementId('marker-1'), points: [], style: { color: '#000', width: 5, opacity: 0.8, smoothness: 0.5, lineCap: 'round', lineJoin: 'round', blendMode: 'source-over', widthVariation: true, minWidth: 3, maxWidth: 8, pressureSensitive: false }, x: 0, y: 0, createdAt: Date.now(), updatedAt: Date.now() };
+      const highlighterElement = { type: 'highlighter', id: createElementId('highlighter-1'), points: [], style: { color: '#ffff00', width: 15, opacity: 0.5, smoothness: 0.5, lineCap: 'round', lineJoin: 'round', blendMode: 'multiply', baseOpacity: 0.3, highlightColor: '#ffff00' }, x: 0, y: 0, createdAt: Date.now(), updatedAt: Date.now() };
       
       expect(store.getState().isElementErasable(penElement as any)).toBe(true);
       expect(store.getState().isElementErasable(markerElement as any)).toBe(true);
       expect(store.getState().isElementErasable(highlighterElement as any)).toBe(true);
       
       // Test non-erasable elements
-      const rectElement = { type: 'rectangle', id: ElementId('rect-1'), x: 0, y: 0, width: 50, height: 50, fill: '#ff0000', createdAt: Date.now(), updatedAt: Date.now() };
-      const textElement = { type: 'text', id: ElementId('text-1'), x: 0, y: 0, text: 'Test', fontSize: 16, fill: '#000', fontFamily: 'Inter', createdAt: Date.now(), updatedAt: Date.now() };
+      const rectElement = { type: 'rectangle', id: createElementId('rect-1'), x: 0, y: 0, width: 50, height: 50, fill: '#ff0000', createdAt: Date.now(), updatedAt: Date.now() };
+      const textElement = { type: 'text', id: createElementId('text-1'), x: 0, y: 0, text: 'Test', fontSize: 16, fill: '#000', fontFamily: 'Inter', createdAt: Date.now(), updatedAt: Date.now() };
       
       expect(store.getState().isElementErasable(rectElement as any)).toBe(false);
       expect(store.getState().isElementErasable(textElement as any)).toBe(false);
@@ -424,7 +424,7 @@ describe('Eraser Functionality (Store-First)', () => {
       
       // Add erasable element
        const penStroke = {
-         id: ElementId('pen-1'),
+         id: createElementId('pen-1'),
          type: 'pen' as const,
          points: [50, 50, 60, 60],
          stroke: '#000000',

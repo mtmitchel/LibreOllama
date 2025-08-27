@@ -1,7 +1,7 @@
 // src/features/canvas/layers/CanvasLayerManager.tsx
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Konva from 'konva';
-import { Layer } from 'react-konva';
+import { Layer, Rect, Text } from 'react-konva';
 import { BackgroundLayer } from './BackgroundLayer';
 import { MainLayer } from './MainLayer';
 
@@ -11,8 +11,8 @@ import { TransformerManager } from '../utils/TransformerManager';
 
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { verifyStoreInitialization } from '../stores/storeInitialization';
 
-// import { Layer as LayerData } from '../stores/slices/layerStore'; // Legacy import
 import { useShallow } from 'zustand/react/shallow';
 import {
   CanvasElement,
@@ -22,8 +22,9 @@ import {
   SectionElement
 } from '../types/enhanced.types';
 // import { canvasSelectors } from '../stores/selectors'; 
-import { useSimpleViewportCulling } from '../hooks/useSimpleViewportCulling';
 import { canvasLog } from '../utils/canvasLogger';
+import { useSimpleViewportCulling } from '../hooks/useSimpleViewportCulling';
+import { markInit, measureInit, initMarkers } from '../utils/performance/initInstrumentation';
 
 interface CanvasLayerManagerProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -51,30 +52,38 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   onElementClick,
   onStartTextEdit
 }) => {
+  // Mark layer manager mount start
+  useEffect(() => {
+    markInit(initMarkers.LAYER_MANAGER_MOUNT_START);
+    return () => {
+      markInit(initMarkers.LAYER_MANAGER_MOUNT_END);
+      measureInit('layer-manager-mount', initMarkers.LAYER_MANAGER_MOUNT_START, initMarkers.LAYER_MANAGER_MOUNT_END);
+    };
+  }, []);
   // OPTIMIZED: Consolidated store subscriptions using useShallow - MUST be called before any returns
+  const store = useUnifiedCanvasStore();
   const { selectedTool, viewport } = useUnifiedCanvasStore(useShallow((state) => ({
     selectedTool: state.selectedTool,
     viewport: state.viewport
   })));
 
-  // Deferred - sections (commented out - not implemented in store yet)
-  // const sections = useUnifiedCanvasStore(canvasSelectors.sections);
-  // const updateSection = useUnifiedCanvasStore(state => state.updateSection);
-  // const selectElement = useUnifiedCanvasStore(state => state.selectElement);
-  // const clearSelection = useUnifiedCanvasStore(state => state.clearSelection);
+  // Comprehensive store initialization check
+  const initReport = verifyStoreInitialization(store);
+  if (!initReport.isReady) {
+    console.error('[CanvasLayerManager] Store not fully initialized:', initReport);
+    return (
+      <Layer>
+        <Rect x={0} y={0} width={150} height={80} fill="red" stroke="white" strokeWidth={2} />
+        <Text x={10} y={20} text="Store Initialization" fontSize={12} fill="white" fontStyle="bold" />
+        <Text x={10} y={35} text="Error Detected" fontSize={12} fill="white" fontStyle="bold" />
+        <Text x={10} y={55} text={`${initReport.initializationErrors.length} errors`} fontSize={10} fill="white" />
+      </Layer>
+    );
+  }
 
-  // DISABLED: Drawing state that might cause loops
+  // Drawing state (currently disabled to prevent loops)
   const storeIsDrawing = false;
   const currentPath: number[] = [];
-
-  // Drawing functions - using stubs until proper implementation
-  // const startDrawing = () => {};
-  // const updateDrawing = () => {};
-  // const finishDrawing = () => {};
-  
-  // Feature flags
-  // const useGroupedSections = enhancedFeatureFlagManager.getFlag('grouped-section-rendering');
-  // const useCentralizedTransformer = enhancedFeatureFlagManager.getFlag('centralized-transformer');
   
 
   
@@ -102,20 +111,70 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
     }
   }, [stageRef, handleResize]);
   
-  // Convert Map to array for processing
-  const elementsArray = useMemo(() => Array.from(elements.values()), [elements]);
+  // Comprehensive defensive checks for store initialization
+  if (!elements || !(elements instanceof Map)) {
+    console.warn('[CanvasLayerManager] Elements Map not properly initialized');
+    return (
+      <Layer>
+        <Rect x={0} y={0} width={120} height={50} fill="red" />
+        <Text x={10} y={15} text="Canvas loading..." fontSize={14} fill="white" />
+      </Layer>
+    );
+  }
 
-  // Use viewport culling for performance
+  // Defensive check for selectedElementIds Set
+  if (!selectedElementIds || !(selectedElementIds instanceof Set)) {
+    console.warn('[CanvasLayerManager] SelectedElementIds Set not properly initialized');
+    return (
+      <Layer>
+        <Rect x={0} y={0} width={120} height={50} fill="orange" />
+        <Text x={10} y={15} text="Store loading..." fontSize={14} fill="white" />
+      </Layer>
+    );
+  }
+
+  // Defensive check for viewport object
+  if (!viewport || typeof viewport !== 'object') {
+    console.warn('[CanvasLayerManager] Viewport not properly initialized');
+    return (
+      <Layer>
+        <Rect x={0} y={0} width={120} height={50} fill="yellow" />
+        <Text x={10} y={15} text="Viewport loading..." fontSize={14} fill="black" />
+      </Layer>
+    );
+  }
+
+  // Defensive check for stage ref
+  if (!stageRef.current) {
+    console.warn('[CanvasLayerManager] Stage ref not initialized');
+    return null;
+  }
+
+  // Convert Map to array for processing
+  const elementsArray = useMemo(() => {
+    try {
+      return Array.from(elements.values());
+    } catch (e) {
+      console.error('[CanvasLayerManager] Failed to convert elements Map to array:', e);
+      return [];
+    }
+  }, [elements]);
+
+  // Removed: camera object - viewport handling is now integrated into advanced optimizations
+
+  // STANDARDIZED: Use simple viewport culling for consistent performance
   const cullingResult = useSimpleViewportCulling({
     elements: elementsArray,
-    zoomLevel: viewport.scale || 1,
-    panOffset: { x: viewport.x || 0, y: viewport.y || 0 },
-    canvasSize: stageSize.width > 0 ? stageSize : null,
-    buffer: 300 // Generous buffer for smooth scrolling
+    camera: {
+      zoomLevel: viewport.scale || 1,
+      panOffset: { x: viewport.x || 0, y: viewport.y || 0 },
+      canvasSize: { width: stageSize.width || 1000, height: stageSize.height || 1000 }
+    },
+    buffer: 200 // Standard buffer
   });
-  
+
   const visibleElements = cullingResult.visibleElements;
-  // const cullingStats = cullingResult.cullingStats;
+  const { cullingStats } = cullingResult;
 
   // OPTIMIZED: Element categorization using culled visible elements  
   const {
@@ -137,12 +196,13 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
       }
     }
     
-    // Log performance gain when significant culling occurs
-    if (elementsArray.length > 50 && visibleElements.length < elementsArray.length * 0.8) {
-      canvasLog.debug('🚀 [Viewport Culling] Performance boost:', {
-        total: elementsArray.length,
-        visible: visibleElements.length,
-        culled: `${Math.round((1 - visibleElements.length/elementsArray.length) * 100)}%`
+    // Log simple culling performance gains
+    if (cullingStats.totalElements > 50 && cullingStats.culledElements > 0) {
+      canvasLog.debug('🚀 [Simple Culling] Performance boost:', {
+        total: cullingStats.totalElements,
+        visible: cullingStats.visibleElements,
+        culled: cullingStats.culledElements,
+        optimized: `${Math.round((cullingStats.culledElements/cullingStats.totalElements) * 100)}%`
       });
     }
     
@@ -167,29 +227,18 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
     return !sectionElements.some(section => String(section.id) === String(id));
   }) as ElementId[]);
 
-  // Simplified event handlers (temporarily disabled)
-  // const handleMouseDown = useCallback(() => {}, []);
-  // const handleMouseMove = useCallback(() => {}, []);
-  // const handleMouseUp = useCallback(() => {}, []);
-
-  // Define missing variables with default values
+  // Define layer configuration
   const layers = [
     { id: 'background', name: 'Background', visible: true },
     { id: 'main', name: 'Main', visible: true },
-    { id: 'connector', name: 'Connector', visible: true },
     { id: 'ui', name: 'UI', visible: true },
   ];
 
-  // Temporary stubs for missing state - these should be properly implemented
-  // const isDrawingConnector = false;
-  // const connectorStart = null;
-  // const connectorEnd = null;
+  // UI state for sections
   const isDrawingSection = false;
   const previewSection = null;
   const hoveredSnapPoint = null;
-  const addHistoryEntry = () => {}; // Stub
-  // const onElementDragStart = undefined;
-  // const onElementDragMove = undefined;
+  const addHistoryEntry = () => {}; // TODO: Implement history integration
 
   // Simple DrawingContainment component stub
   const DrawingContainment: React.FC<{ isDrawing: boolean; currentTool: string; stageRef: React.RefObject<Konva.Stage | null> }> = () => null;
@@ -227,10 +276,17 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
               onElementClick={onElementClick}
               onStartTextEdit={onStartTextEdit}
               visibleElements={visibleElements}
+              enableProgressiveRendering={true}
+              viewport={{
+                x: viewport.x || 0,
+                y: viewport.y || 0,
+                scale: viewport.scale || 1,
+                width: stageSize.width || 1000,
+                height: stageSize.height || 1000
+              }}
             />
         </React.Fragment>
       ),
-      connector: null, // Connectors now rendered through MainLayer/ElementRenderer
       ui: (
         <UILayer
           key="ui"
@@ -254,14 +310,24 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
       const component = layerComponents[layerData.id];
       if (!component) return;
 
-      if (['background', 'main', 'connector'].includes(layerData.id)) {
+      if (layerData.id === 'main') {
         contentLayerComponents.push(component);
       } else {
         otherLayers.push(component);
       }
     });
 
+    // Separate background layer to render first
+    const backgroundLayer = layerComponents.background && layers.find(l => l.id === 'background')?.visible ? 
+      [layerComponents.background] : [];
+    
+    // Other layers (excluding background which is handled separately)
+    const otherLayersFiltered = otherLayers.filter(layer => 
+      React.isValidElement(layer) && layer.key !== 'background'
+    );
+
     const finalLayers = [
+      ...backgroundLayer, // BackgroundLayer (non-listening Layer) renders first as Stage sibling
       <Layer key="content-layer">
         {contentLayerComponents}
         <DrawingContainment
@@ -270,7 +336,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
           stageRef={stageRef}
         />
       </Layer>,
-      ...otherLayers,
+      ...otherLayersFiltered,
       // Add TransformerManager as a separate layer
       <Layer key="transformer-layer">
         <TransformerManager stageRef={stageRef} />

@@ -1,5 +1,13 @@
+import { UnifiedCanvasStore } from '../unifiedCanvasStore';
 import { StoreModule, StoreSet, StoreGet } from './types';
 import { logger } from '../../../../core/lib/logger';
+import { 
+  KonvaMouseEvent, 
+  KonvaPointerEvent, 
+  KonvaDragEvent, 
+  Position 
+} from '../../types/event.types';
+import { ElementId, ElementOrSectionId } from '../../types/enhanced.types';
 
 /**
  * Event module state
@@ -11,19 +19,20 @@ export interface EventState {
 }
 
 /**
- * Event module actions
+ * Event module actions with proper type safety
  */
 export interface EventActions {
-  handleMouseDown: (e: any, pos: { x: number; y: number } | null) => void;
-  handleMouseMove: (e: any, pos: { x: number; y: number } | null) => void;
-  handleMouseUp: (e: any, pos: { x: number; y: number } | null) => void;
-  handleMouseLeave: (e: any, pos: { x: number; y: number } | null) => void;
-  handleClick: (e: any, pos: { x: number; y: number } | null) => void;
-  handleDoubleClick: (e: any, pos: { x: number; y: number } | null) => void;
-  handleContextMenu: (e: any, pos: { x: number; y: number } | null) => void;
-  handleDragStart: (e: any, pos: { x: number; y: number } | null) => void;
-  handleDragMove: (e: any, pos: { x: number; y: number } | null) => void;
-  handleDragEnd: (e: any, pos: { x: number; y: number } | null) => void;
+  handleMouseDown: (e: KonvaMouseEvent, pos: Position | null) => void;
+  handleMouseMove: (e: KonvaMouseEvent, pos: Position | null) => void;
+  handleMouseUp: (e: KonvaMouseEvent, pos: Position | null) => void;
+  handleMouseLeave: (e: KonvaMouseEvent, pos: Position | null) => void;
+  handleClick: (e: KonvaMouseEvent, pos: Position | null) => void;
+  handleDoubleClick: (e: KonvaMouseEvent, pos: Position | null) => void;
+  handleContextMenu: (e: KonvaMouseEvent, pos: Position | null) => void;
+  handleDragStart: (e: KonvaDragEvent, pos: Position | null) => void;
+  handleDragMove: (e: KonvaDragEvent, pos: Position | null) => void;
+  handleDragEnd: (e: KonvaDragEvent, pos: Position | null) => void;
+  resolveElementFromTarget: (target: any) => string | null;
 }
 
 /**
@@ -31,16 +40,46 @@ export interface EventActions {
  */
 export const createEventModule = (
   set: StoreSet,
-  get: StoreGet
+  get: () => UnifiedCanvasStore
 ): StoreModule<EventState, EventActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as any;
+  const getState = get;
+  
   return {
     state: {
       // No state needed for event handlers
     },
     
     actions: {
+      /**
+       * Enhanced target resolution that finds nearest ancestor with an ID
+       * This helps with composite shapes where child elements may not have IDs
+       */
+      resolveElementFromTarget: (target) => {
+        if (!target) return null;
+        
+        let current = target;
+        let maxDepth = 10; // Prevent infinite loops
+        
+        while (current && maxDepth-- > 0) {
+          // Check if current node has an ID
+          if (current.id && typeof current.id === 'function') {
+            const id = current.id();
+            if (id && typeof id === 'string') {
+              return id;
+            }
+          }
+          
+          // Move up to parent
+          current = current.getParent ? current.getParent() : null;
+        }
+        
+        return null;
+      },
+
       handleMouseDown: (e, pos) => {
-        const { selectedTool, startDrawing, clearSelection, selectElement, createElement } = get();
+        const { selectedTool, startDrawing, clearSelection, selectElement, createElement, resolveElementFromTarget } = get();
         
         if (!pos) return;
         
@@ -64,11 +103,10 @@ export const createEventModule = (
             break;
             
           case 'select':
-            // Check if we clicked on an element
-            const target = e?.target;
-            if (target && target.id && target.id()) {
-              const elementId = target.id();
-              selectElement(elementId, e?.evt?.ctrlKey || e?.evt?.metaKey);
+            // Enhanced hit-testing: resolve target to nearest ancestor with ID
+            const elementId = resolveElementFromTarget(e?.target);
+            if (elementId) {
+              selectElement(elementId as ElementId, e?.evt?.ctrlKey || e?.evt?.metaKey);
             } else {
               clearSelection();
             }
@@ -117,18 +155,17 @@ export const createEventModule = (
       },
 
       handleDoubleClick: (e, pos) => {
-        const { setTextEditingElement } = get();
+        const { setTextEditingElement, resolveElementFromTarget } = get();
         
         if (!pos) return;
         
-        // Check if we double-clicked on a text element
-        const target = e?.target;
-        if (target && target.id && target.id()) {
-          const elementId = target.id();
-          const element = get().elements.get(elementId);
+        // Enhanced hit-testing for double-click
+        const elementId = resolveElementFromTarget(e?.target);
+        if (elementId) {
+          const element = getState().elements.get(elementId);
           
-          if (element && (element.type === 'text' || element.type === 'rectangle' || element.type === 'circle' || element.type === 'triangle')) {
-            setTextEditingElement(elementId);
+          if (element && (element.type === 'text' || element.type === 'rectangle' || element.type === 'circle' || element.type === 'triangle' || element.type === 'sticky-note')) {
+            setTextEditingElement(elementId as ElementId);
           }
         }
       },
@@ -157,7 +194,7 @@ export const createEventModule = (
         const elementId = target.id();
         
         if (elementId) {
-          updateElement(elementId, {
+          updateElement(elementId as ElementOrSectionId, {
             x: target.x(),
             y: target.y(),
           });

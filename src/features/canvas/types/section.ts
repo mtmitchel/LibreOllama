@@ -198,19 +198,37 @@ export const sectionTemplates: Record<string, SectionTemplate> = {
   }
 };
 
+import { CanvasElement } from './enhanced.types';
+
 // Helper functions for section operations
-export function getElementBounds(element: any): BoundingBox {
-  const width = element.width || element.radius * 2 || 100;
-  const height = element.height || element.radius * 2 || 100;
+export function getElementBounds(element: CanvasElement): BoundingBox {
+  // Handle different element types with proper type safety
+  let width = 100; // Default fallback
+  let height = 100;
+  let x = element.x;
+  let y = element.y;
   
-  // For circles, adjust position to top-left corner
-  const x = element.type === 'circle' ? element.x - element.radius : element.x;
-  const y = element.type === 'circle' ? element.y - element.radius : element.y;
+  // Check if element has width/height properties
+  if ('width' in element && element.width !== undefined) {
+    width = element.width;
+  }
+  if ('height' in element && element.height !== undefined) {
+    height = element.height;
+  }
+  
+  // Special handling for circles
+  if (element.type === 'circle' && 'radius' in element) {
+    const radius = (element as any).radius ?? 50;
+    width = radius * 2;
+    height = radius * 2;
+    x = element.x - radius; // Adjust to top-left corner
+    y = element.y - radius;
+  }
   
   return { x, y, width, height };
 }
 
-export function isElementInSection(element: any, section: SectionElement): boolean {
+export function isElementInSection(element: CanvasElement, section: SectionElement): boolean {
   const elementBounds = getElementBounds(element);
   
   // For more robust section detection, require that the element's center 
@@ -236,7 +254,10 @@ export function doSectionsOverlap(section1: SectionElement, section2: SectionEle
 }
 
 // Coordinate conversion utilities
-export function convertAbsoluteToRelative(element: any, section: SectionElement): { x: number; y: number } {
+export function convertAbsoluteToRelative(
+  element: CanvasElement, 
+  section: SectionElement
+): { x: number; y: number } {
   return {
     x: element.x - section.x,
     y: element.y - section.y

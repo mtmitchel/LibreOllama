@@ -1,0 +1,196 @@
+Canvas System Architecture Audit and Analysis
+
+Author: Rovo Dev (AI)
+Date: 2025-08-26 (Updated - Production State Verified)
+
+Scope
+- This audit covers the full canvas system across frontend (React + react-konva + Zustand) and backend (Tauri Rust commands). It reviews architecture, dependencies, state management, performance strategies, core features, persistence/integration, type safety, testing, and provides recommendations.
+
+1) High-Level Architecture Overview
+
+1.1 System Topology (frontend)
+- Entry: CanvasContainer → CanvasStage → Stage (react-konva)
+  - CanvasContainer: Hosts toolbar and drag/drop wrapper; prepares a stageRef.
+  - CanvasStage: Owns the Konva Stage, synchronizes pan/zoom with store, sets up wheel-zoom, centralizes cursor, error/memory monitoring. Orchestrates rendering via CanvasLayerManager and UnifiedEventHandler. Includes ToolLayer for interactive tools and global loading overlays.
+- Rendering Layers: CanvasLayerManager composes specific layers:
+  - BackgroundLayer (not opened here but present) for grid/background.
+  - MainLayer: renders elements by type inline (no ElementRenderer at runtime); nests SectionShape to host children; routes drag/update/select to store; connectors are also rendered here (ConnectorLayer removed).
+  - **ARCHITECTURAL CHANGE**: ConnectorLayer has been completely removed - connectors are now rendered through MainLayer/ElementRenderer for better performance and consistency.
+  - UILayer: draws selection overlays (selection box, snap guides). TransformerManager + CustomTransformer manage the Konva Transformer (anchors) in a dedicated layer for resize/rotate.
+  - ToolLayer: overlays active tool UIs (pen, marker, highlighter, eraser, text, shapes, sticky-note, section, table, connector, mindmap, pan).
+- Event Handling: UnifiedEventHandler attaches stage-level handlers. Tools attach namespaced events through useToolEventHandler. BaseCreationTool/BaseShapeTool abstract repeated creation logic.
+- State: A single modular Zustand store (useUnifiedCanvasStore) composes slices: element, selection, viewport, drawing, history, section, table, stickyNote, loading, UI, eraser, and event. Store-first architecture: Stage syncs to store; interactions call store actions.
+- Utilities: performance (cursorManager, performanceMonitor, productionMonitoring), memoryManager, coordinate/snapping/text editing utils, export utils. Monitoring: canvasMonitor ErrorBoundary wrappers.
+
+1.2 Backend Topology (Tauri)
+- src-tauri/commands/canvas.rs exposes: ensure_encryption_key, save_canvas_data, load_canvas_data, list_canvas_files, delete_canvas_file.
+- src-tauri/lib.rs enables GPU acceleration for WebView2 with flags: "--ignore-gpu-blocklist --enable-accelerated-canvas --enable-webgl --enable-accelerated-2d-canvas" for accelerated canvas/webgl.
+- Persistence flow: UI calls useTauriCanvas hook → invoke Rust commands → AES-256-GCM encryption w/ keyring storage → files under app_data_dir/canvas.
+
+1.3 Interaction Flow
+- Pointer events → UnifiedEventHandler or tool handlers → store actions (e.g., startDrawing/updateDrawing/finishDrawing, selectElement, updateElement) → modules mutate store via immer → layers re-render subscribed parts; Stage synchronizes scale/position from viewport slice; SelectionLayer/CustomTransformer update nodes.
+
+2) Detailed Dependency Analysis
+
+Major libs and how used:
+- react-konva/Konva: Scene graph, Stage/Layer/Shape components, Transformer; events via stage.on with namespacing (useToolEventHandler); custom Transformer controls (CustomTransformer), element hit detection, pointer pos transforms.
+- Zustand + immer + subscribeWithSelector: Modular store with Map/Set-heavy state; selective subscription via useShallow and explicit selectors to minimize re-renders; immer enableMapSet for Map/Set mutation semantics; history middleware is bespoke (historyModule) not external.
+- nanoid: IDs for elements, sections, groups.
+- Tauri invoke: Backend persistence. Backend uses keyring, aes_gcm, serde, chrono; enables GPU flags.
+- Testing stack: vitest/react-testing-library present; canvas has numerous tests under src/features/canvas/tests and src/tests.
+- Misc utils: ResizeObserver, RAF throttles, debounces, monitoring modules.
+
+Custom middleware/plugins:
+- History implemented in historyModule with addHistoryEntry/undo/redo; useCanvasHistory wraps it.
+- Event module consolidates handlers into store-friendly API.
+- Memory manager: custom WeakMap-based tracker with pools and cleanup hooks.
+- Performance monitor and canvasMonitor: custom metrics, diagnostic logging and mutation observers.
+
+3) State Management
+
+3.1 Store Structure
+- unifiedCanvasStore composes modules:
+  - elementModule: CRUD on elements Map<ElementId, CanvasElement>, bulk ops, stress element creation; updateElement funnels mutations; integration with snapping and timestamps.
+  - selectionModule: Set of selectedElementIds, lastSelectedElementId, groups map and element-to-group map; select/deselect/clear, group/ungroup; getSelectedElements derives from elements Map.
+  - viewportModule: viewport {x,y,scale,width,height}, pan/zoom helpers; CanvasStage syncs Stage from this state and updates on resize/wheel.
+  - drawingModule: isDrawing/currentPath, stroke configs, start/update/finish/cancel; integrates with sticky notes upon finish.
+  - historyModule: history array of operations with currentIndex; canUndo/canRedo/undo/redo/addHistoryEntry/clear; useCanvasHistory provides helpers and batching (UI-level composition).
+  - sectionModule: startDraftSection/update/commit; SectionShape handles drag + click; SectionTool previews and commits.
+  - tableModule, stickyNoteModule, eraserModule, loadingModule, uiModule, eventModule (typed events, selection, text editing id, snap lines, uploads).
+- Legacy compatibility functions exposed for older call sites (groupElements/ungroupElements/clearCanvas, etc.).
+
+3.2 Immutability & Subscriptions
+- immer with enableMapSet allows ergonomic Map/Set mutation inside set(). State is mutated immutably; updatedAt timestamps used in ElementRenderer memo comparison.
+- Subscriptions: useShallow in many components (CanvasStage, ToolLayer, tools, BaseShapeTool) to batch selectors; subscribeWithSelector enhances targeted updates.
+- Advanced middleware: no redux-like middleware; historyModule serves as undo/redo system; no persistence middleware on store itself; Tauri persistence is explicit via hooks.
+
+3.3 Selection & Transformer
+- SelectionLayer draws selection rect/handles and a standard Konva Transformer. CustomTransformer and TransformerManager centralize multi-node transformer control. Selection uses Set<ElementId> with lastSelectedElementId for primary. SelectionBox component also exists.
+
+4) Performance Strategies
+
+4.1 Rendering
+- Layer separation: Background/Main/Selection/Tool layers (ConnectorLayer completely removed, connectors now in MainLayer); Layer.listening tuned; elements rendered via memoized ElementRenderer with custom props equality; shapes are memoized; SectionShape memo comparator.
+- Caching: useShapeCaching hook, image smoothing disabled, perfectDrawEnabled=false; pixelRatio=1 to reduce GPU load; Stage scale/position updates are batched.
+- Viewport culling: useSimpleViewportCulling and store.getVisibleElements for AABB-based culling with buffer; not a quadtree, but suitable for <~1000 elements.
+- Transformer management: CustomTransformer anchors; TransformerManager centralizes lifecycle and prevents conflicts.
+
+4.2 Event Handling
+- useToolEventHandler attaches/detaches namespaced events; guaranteed cleanup; hover/cursor managed centrally via cursorManager; RAF-throttled wheel zoom via useSingleRAF wrapper and requestAnimationFrame batching; PenTool now uses direct drawing updates without throttling for smooth line rendering.
+- UnifiedEventHandler consolidates stage-level handlers; EventModule provides typed, store-integrated handlers; selection uses target.id and modifiers; double-click to enter text edit.
+
+4.3 Resource Management
+- memoryManager uses WeakMaps to track elements, DOM refs, computed props; periodic logging and cleanup; element pooling arrays; cleanup triggered in CanvasStage unmount; prevents leaking Konva nodes via destroy/remove.
+- Production monitoring (productionMonitoring.ts) tracks durations and thresholds; canvasMonitor monitors console, performance timeline, MutationObservers for Konva canvas container, and logs.
+
+5) Core Features Implementation
+- Shapes: RectangleShape/CircleShape/TriangleShape/StickyNoteShape/TextShape/ImageShape/PenShape with Konva primitives; ElementRenderer dispatches by type, passes selection and update handlers.
+- Selection: click to select (ctrl/cmd multi-select), selection highlight rect + corner handle circles in SelectionLayer; Transformer anchors configured; SelectionBox overlays.
+- Transformations: onTransformEnd collects node scaleX/scaleY, resets scale, updates width/height/rotation; CustomTransformer extends capabilities and supports multiple nodes; TransformerManager feeds ids to transformer.
+- Connectors: **UPDATED**: Connectors are now rendered through MainLayer/ElementRenderer instead of dedicated ConnectorLayer; ConnectorTool manages creation/edit with BaseCreationTool foundation; ConnectorShape has interaction; fallback drawing provided in error boundary.
+- Text editing: CanvasTextInput implements hidden textarea syncing and onSave/onCancel/onTab; textEditingUtils utilities; text editing initiation via setTextEditingElement and double-click handler.
+- Pen/Marker/Highlighter: PenTool draws preview Line while drawing with direct updates for smooth rendering (no RAF throttling); StrokeRenderer renders persisted strokes; eraser supports spatial index and batched deletion; drawingModule maintains state and integrates with sticky notes.
+- Sections: SectionTool creates draft then commit; SectionShape wraps children, draggable group with background and title.
+- Tables: TableElement exists with CanvasTextInput integration, plus TableTool for creation.
+
+6) Persistence & Integration (Tauri)
+- Frontend hook useTauriCanvas provides:
+  - ensureEncryptionKey() on startup or before first save/load
+  - saveCanvas(data, filename) invokes save_canvas_data (AES-256-GCM) with key from keyring
+  - loadCanvas(filename) invokes load_canvas_data, returning JSON string; caller deserializes to store
+  - list/delete operations available via Rust commands (hook includes save/load; listing present in Rust and can be wired)
+- Rust canvas.rs
+  - AES-256-GCM w/ random 96-bit nonce; stores nonce + ciphertext; versioned CanvasData JSON; files kept in app_data_dir/canvas
+  - keyring for 256-bit key (hex), auto-create and store; helpful println diagnostics
+- WebView2 acceleration flags set to improve Konva/canvas performance.
+
+7) Code Quality & Type Safety
+- TypeScript: strongly typed element discriminated unions in enhanced.types.ts; Konva-specific types in types/konva.types.ts; event.types.ts for handler signatures; tools/types for previews; utility type-safe replacements in memoryManager imports.
+- Minimal any usage; most shapes and tools use explicit types. Some casts exist (as any) around ElementRenderer common props and konvaProps, and in a few utilities; overall type hygiene is good.
+- Selectors use Set/Map which are supported by immer with enableMapSet.
+
+8) Testing & Reliability
+- Tests under src/features/canvas/tests and src/tests validate shapes, tools, sections, connectors, minimal Konva setup, reliability and performance, integration, and text editing portal.
+- Mocks in src/tests/__mocks__/konva.ts and react-konva.* ensure deterministic runs.
+- Coverage appears broad for core interactions; however, backend persistence via Tauri is not unit-tested in frontend suites; Rust module has basic serialization test and a placeholder key generation test.
+
+9) Areas for Improvement
+- Event targeting and selection robustness: current selection often relies on target.id(); when shapes are groups, child hits may not have ids. Adopt ancestor hit resolution and group-level hit areas per workspace note to ensure reliable selection/resize re-selection.
+- Transformer listening: ensure CustomTransformer/SelectionLayer Transformer instances have listening(true) and hit graph participation; audit for any transformer.listening(false) calls.
+- Group hit areas: For composite shapes (sticky notes, tables), add transparent Rect hit areas and set children listening=false when appropriate to guarantee consistent clicks.
+- Viewport module: zoomViewport ignores center and simply sets scale; implement proper zoom pivoting using pointer and stage transform (CanvasStage does this manually; consolidate into store or a utility to avoid duplication).
+- Culling integration: store.getVisibleElements and useSimpleViewportCulling exist concurrently; standardize on one path to avoid duplication and drift; document thresholds.
+- History: historyModule interface simplified; ensure all element mutations add proper history entries or provide batch APIs; verify redo/undo integrates with connectors and sections.
+- MemoryManager pools: monitor actual reuse and size growth; ensure canvas node destruction runs on element removal everywhere; consider Konva node pooling for heavy interactive preview shapes.
+- Text input: hidden textarea lifecycle is managed manually; consider portal-based DOM overlay tied to stage container with pointer event propagation coordination; ensure stopImmediatePropagation when committing from overlay to avoid selection race (see workspace guidance).
+- Snapping: utilities exist but not fully wired into drag/transform flows; integrate with dragMove and transformer change callbacks to show snap lines (uiModule.snapLines) and apply snapping.
+- Table/Sticky note: ensure element-level groups set listening appropriately to avoid event duplication; consider consolidating text editing across elements.
+- **IMPLEMENTED**: CanvasLibrary UI component now provides management interface for saved canvases using list_canvas_files and delete_canvas_file APIs. Add error handling for missing keyring environments.
+- Performance: consider FastLayer for static layers (background, connectors when not interacting); adopt Scene caching for groups with many children; add drawHit optimizations after enabling group hit areas.
+- Tests: add tests for persistence hooks (mock @tauri-apps/api/core invoke), for zoom pivot correctness, for snapping behavior, and for memoryManager cleanup on unmount. Add regression tests for re-selection/transformer anchors interactions.
+
+10) Recommendations (Prioritized)
+
+P1 – Interaction Reliability and Selection
+- Implement the workspace guideline:
+  - Ensure Transformer.listening(true) and anchors receive pointer events
+  - Add invisible hit-area Rect to composite Groups (StickyNoteShape, TextShape, TableElement) and set group.listening(true) only on selection; refresh hit graph via layer.drawHit
+  - In stage mousedown, resolve selection to nearest Group ancestor with id (shape.findAncestor(...))
+- Centralize selection logic in a SelectTool or UnifiedEventHandler that ascends to Group level; remove reliance on e.target.id() directly.
+
+P1 – Zoom/Pan Consistency
+- Move zoom pivot math from CanvasStage to viewportModule.zoomViewport(centerX, centerY) to keep a single source of truth; update Stage in an effect subscribed to viewport state as today.
+
+P1 – Snapping UX
+- Wire calculateSnapLines and findNearestSnapPoint into drag/transform flows; render snapLines from uiModule in a lightweight overlay; apply snapping adjustments in onDragMove/boundBoxFunc.
+
+P2 – Transformer Lifecycle
+- Replace ad-hoc Transformer instances with TransformerManager + CustomTransformer everywhere; ensure multi-select works; anchors styled per design system; add tests for resizing/rotating on re-selection.
+
+P2 – Culling Standardization
+- Choose useSimpleViewportCulling as the primary mechanism; replace getVisibleElements or refactor the store function to delegate to the hook's algorithm so both stay consistent. Expose config (buffer) via settings.
+
+P2 – History Fidelity
+- Ensure updateElement/addElement/deleteElement invoke addHistoryEntry with meaningful operation names; add batchOperations wrappers in places like SectionTool commits and ConnectorTool edits.
+
+P2 – Performance
+- Consider FastLayer for BackgroundLayer and non-interactive connector previews.
+- Use pixelRatio adaptation when zoomed-out heavily to reduce overdraw cost.
+- Audit memoization: ElementRenderer memo compares updatedAt; ensure all shape mutations set updatedAt.
+
+P3 – Text Editing Robustness
+- Introduce DOM portal overlay editor positioned via stage.getAbsoluteTransform for Text/StickyNote/Table cells. Use safe commit-on-click-outside with stopImmediatePropagation + setTimeout(0) per workspace notes. Add tests.
+
+P3 – Persistence UX  
+- **COMPLETED**: CanvasLibrary UI implemented with list/load/delete functionality using list_canvas_files/delete_canvas_file APIs. Consider adding autosave with debounce and ensureEncryptionKey gating. Add version migration handling in frontend for CanvasData.version.
+
+P3 – Type Safety and API Hygiene
+- Remove remaining any casts in ElementRenderer/commonShapeProps. Tighten shape prop types and konvaProps typing. Ensure discriminated unions cover all element kinds (marker/highlighter/connector variants).
+
+P3 – Monitoring and Memory
+- Record periodic metrics via productionMonitoring on big operations. Integrate memoryManager stats in a developer panel. Add teardown tests asserting Konva node destruction on element removal.
+
+Appendix: Key Files Referenced (UPDATED PATHS)
+- Components: CanvasContainer.tsx, CanvasStage.tsx, UnifiedEventHandler.tsx, CanvasLayerManager.tsx, ToolLayer.tsx, CanvasLibrary.tsx
+- Layers: MainLayer.tsx, SelectionLayer.tsx, UILayer.tsx, BackgroundLayer.tsx
+- Shapes: RectangleShape.tsx, CircleShape.tsx, TriangleShape.tsx, TextShape.tsx, StickyNoteShape.tsx, ImageShape.tsx, PenShape.tsx, ConnectorShape.tsx, SectionShape.tsx
+- Tools: **UPDATED PATHS**
+  - Base: components/tools/base/BaseCreationTool.tsx, components/tools/base/BaseShapeTool.tsx
+  - Drawing: components/tools/drawing/PenTool.tsx, components/tools/drawing/HighlighterTool.tsx, components/tools/drawing/MarkerTool.tsx, components/tools/drawing/EraserTool.tsx
+  - Creation: components/tools/creation/TextTool.tsx, components/tools/creation/StickyNoteTool.tsx, components/tools/creation/RectangleTool.tsx, components/tools/creation/CircleTool.tsx, components/tools/creation/TriangleTool.tsx, components/tools/creation/SectionTool.tsx, components/tools/creation/ConnectorTool.tsx, components/tools/creation/MindmapTool.tsx
+  - Core: components/tools/core/PanTool.tsx
+- Store: unifiedCanvasStore.ts + modules (elementModule.ts, selectionModule.ts, viewportModule.ts, drawingModule.ts, historyModule.ts, sectionModule.ts, tableModule.ts, stickyNoteModule.ts, uiModule.ts, eraserModule.ts, eventModule.ts)
+- Hooks: useToolEventHandler.ts, useCanvasSizing.ts, useSimpleViewportCulling.ts, useCanvasHistory.ts, useSelectionManager.ts, useShapeCaching.ts, useTauriCanvas.ts
+- Utils: TransformerManager.tsx, CustomTransformer.tsx, performance/productionMonitoring.ts, performance/cursorManager.ts, coordinateUtils.ts, snappingUtils.ts, textEditingUtils.tsx, exportUtils.ts
+- Backend: src-tauri/src/commands/canvas.rs, src-tauri/src/lib.rs (GPU flags: "--ignore-gpu-blocklist --enable-accelerated-canvas --enable-webgl --enable-accelerated-2d-canvas")
+- Tests: src/features/canvas/tests/*.test.tsx, src/tests/konva-minimal.test.ts and related suites
+
+**CHANGES FROM ORIGINAL AUDIT:**
+1. **ConnectorLayer Completely Removed**: ConnectorLayer has been fully removed from the codebase. Connectors are now rendered through MainLayer/ElementRenderer for better performance and consistency.
+2. **Tool Path Structure Updated**: Tools are organized in subdirectories (base/, drawing/, creation/, core/) rather than being flat files.
+3. **GPU Acceleration Flags Specified**: Added the exact WebView2 acceleration flags used in production.
+4. **PenTool Performance Fix**: Removed RAF throttling from PenTool for smooth real-time drawing without dropped points.
+5. **CanvasLibrary Implementation**: Implemented complete UI for canvas persistence management using backend list/delete APIs.
+6. **CircleShape Fixes**: Fixed textDisplayProperties implementation for proper text rendering in circles.
+
+End of Report.

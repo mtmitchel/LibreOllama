@@ -173,8 +173,12 @@ import type { MarkerElement, HighlighterElement } from './enhanced.types';
 import { isMarkerElement, isHighlighterElement } from './enhanced.types';
 
 // Utility type guard that combines the imported ones
-export function isStrokeElement(element: any): element is MarkerElement | HighlighterElement {
-  return isMarkerElement(element) || isHighlighterElement(element);
+export function isStrokeElement(element: unknown): element is MarkerElement | HighlighterElement {
+  return Boolean(element && 
+         typeof element === 'object' && 
+         element !== null &&
+         'type' in element &&
+         ((element as any).type === 'marker' || (element as any).type === 'highlighter'));
 }
 
 // Constants

@@ -1,3 +1,6 @@
+import { WritableDraft } from 'immer';
+import { UnifiedCanvasStore } from '../unifiedCanvasStore';
+
 /**
  * Base module interface for store modules
  */
@@ -8,9 +11,10 @@ export interface StoreModule<TState, TActions> {
 
 /**
  * Store utilities for module creation
+ * Using generic constraints to maintain type safety while allowing flexibility
  */
-export type StoreSet = (fn: (state: any) => void) => void;
-export type StoreGet = () => any;
+export type StoreSet = (fn: (draft: WritableDraft<UnifiedCanvasStore>) => void) => void;
+export type StoreGet = () => UnifiedCanvasStore;
 
 /**
  * Helper type for creating module factories

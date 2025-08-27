@@ -28,6 +28,7 @@ import { createHistoryModule, HistoryState, HistoryActions } from './modules/his
 import { createSectionModule, SectionState, SectionActions } from './modules/sectionModule';
 import { createTableModule, TableState, TableActions } from './modules/tableModule';
 import { createStickyNoteModule, StickyNoteState, StickyNoteActions } from './modules/stickyNoteModule';
+import { createLoadingModule, LoadingState, LoadingActions } from './modules/loadingModule';
 import { createUIModule, UIState, UIActions } from './modules/uiModule';
 import { createEraserModule, EraserState, EraserActions } from './modules/eraserModule';
 import { createEventModule, EventState, EventActions } from './modules/eventModule';
@@ -61,6 +62,7 @@ export interface UnifiedCanvasState extends
   SectionState,
   TableState,
   StickyNoteState,
+  LoadingState,
   UIState,
   EraserState,
   EventState {
@@ -77,6 +79,7 @@ export interface UnifiedCanvasActions extends
   SectionActions,
   TableActions,
   StickyNoteActions,
+  LoadingActions,
   UIActions,
   EraserActions,
   EventActions,
@@ -92,92 +95,58 @@ type Get = StoreApi<UnifiedCanvasStore>['getState'];
 type Set = (fn: (draft: WritableDraft<UnifiedCanvasStore>) => void) => void;
 
 export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore = (set, get) => {
-  // Create all modules
+  // Create all modules with guaranteed initialization
   const modules = {
-    element: createElementModule(set, get),
-    selection: createSelectionModule(set, get),
-    viewport: createViewportModule(set, get),
-    drawing: createDrawingModule(set, get),
-    history: createHistoryModule(set, get),
-    section: createSectionModule(set, get),
-    table: createTableModule(set, get),
-    stickyNote: createStickyNoteModule(set, get),
-    ui: createUIModule(set, get),
-    eraser: createEraserModule(set, get),
-    event: createEventModule(set, get),
+    element: createElementModule(set as any, get as any),
+    selection: createSelectionModule(set as any, get as any),
+    viewport: createViewportModule(set as any, get as any),
+    drawing: createDrawingModule(set as any, get as any),
+    history: createHistoryModule(set as any, get as any),
+    section: createSectionModule(set as any, get as any),
+    table: createTableModule(set as any, get as any),
+    stickyNote: createStickyNoteModule(set as any, get as any),
+    loading: createLoadingModule(set as any, get as any),
+    ui: createUIModule(set as any, get as any),
+    eraser: createEraserModule(set as any, get as any),
+    event: createEventModule(set as any, get as any),
   };
 
   return {
-    // Spread all state
+    // Spread all state and actions from modules
     ...modules.element.state,
-    ...modules.selection.state,
-    ...modules.viewport.state,
-    ...modules.drawing.state,
-    ...modules.history.state,
-    ...modules.section.state,
-    ...modules.table.state,
-    ...modules.stickyNote.state,
-    ...modules.ui.state,
-    ...modules.eraser.state,
-    ...modules.event.state,
-
-    // Spread all actions
     ...modules.element.actions,
+    ...modules.selection.state,
     ...modules.selection.actions,
+    ...modules.viewport.state,
     ...modules.viewport.actions,
+    ...modules.drawing.state,
     ...modules.drawing.actions,
+    ...modules.history.state,
     ...modules.history.actions,
+    ...modules.section.state,
     ...modules.section.actions,
+    ...modules.table.state,
     ...modules.table.actions,
+    ...modules.stickyNote.state,
     ...modules.stickyNote.actions,
+    ...modules.loading.state,
+    ...modules.loading.actions,
+    ...modules.ui.state,
     ...modules.ui.actions,
+    ...modules.eraser.state,
     ...modules.eraser.actions,
+    ...modules.event.state,
     ...modules.event.actions,
 
     getVisibleElements: () => {
+      // Use standardized simple viewport culling - no duplicate logic
       const { elements, viewport } = get();
-      const visibleElements: CanvasElement[] = [];
-      const buffer = 300; // Generous buffer for smooth scrolling
-
-      // Calculate viewport bounds with buffer
-      const viewportBounds = {
-        left: (-viewport.x - buffer) / viewport.scale,
-        top: (-viewport.y - buffer) / viewport.scale,
-        right: (viewport.width - viewport.x + buffer) / viewport.scale,
-        bottom: (viewport.height - viewport.y + buffer) / viewport.scale,
-      };
-
-      // Simple intersection test for each element
-      elements.forEach(element => {
-        // Always show locked or text elements (critical for UX)
-        if (element.isLocked || element.type === 'text') {
-          visibleElements.push(element);
-          return;
-        }
-
-        const elementBounds = {
-          left: element.x,
-          top: element.y,
-          right: element.x + (element.width || 0),
-          bottom: element.y + (element.height || 0),
-        };
-        
-        // Simple AABB intersection test
-        const isVisible =
-          elementBounds.left < viewportBounds.right &&
-          elementBounds.right > viewportBounds.left &&
-          elementBounds.top < viewportBounds.bottom &&
-          elementBounds.bottom > viewportBounds.top;
-
-        if (isVisible) {
-          visibleElements.push(element);
-        }
-      });
-      return visibleElements;
+      console.warn('[UnifiedCanvasStore] getVisibleElements is deprecated. Use useSimpleViewportCulling hook instead.');
+      return Array.from(elements.values());
     },
 
     // Legacy compatibility actions
-    handleElementDrop: (elementId: ElementId, targetId?: ElementId) => {
+    handleElementDrop: (elementId: ElementId, targetId?: ElementId | SectionId) => {
       // Element drop functionality - move element to target position or container
       const element = get().elements.get(elementId);
       if (!element) return;
@@ -187,7 +156,7 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
         if (targetElement && targetElement.type === 'section') {
           // Move element into section
           get().updateElement(elementId, { 
-            sectionId: targetId as unknown as SectionId,
+            sectionId: targetId as SectionId,
             x: targetElement.x + 10,
             y: targetElement.y + 40 
           });

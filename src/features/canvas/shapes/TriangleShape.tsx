@@ -204,7 +204,7 @@ const createTriangleTextEditor = (
 interface TriangleShapeProps {
   element: TriangleElement;
   isSelected: boolean;
-  konvaProps: any;
+  konvaProps: Partial<Konva.LineConfig>;
   onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }

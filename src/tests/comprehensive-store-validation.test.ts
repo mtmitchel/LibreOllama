@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createUnifiedTestStore } from './helpers/createUnifiedTestStore';
-import { CircleElement, RectangleElement, TextElement, ElementId } from '../features/canvas/types/enhanced.types';
+import { CircleElement, RectangleElement, TextElement, ElementId, createElementId } from '../features/canvas/types/enhanced.types';
 import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasStore';
 import type { 
   PenElement,
@@ -128,7 +128,7 @@ describe('Comprehensive Store Validation Tests', () => {
       expect(store.getState().elementOrder).toEqual(['order-1', 'order-2', 'order-3']);
 
       // Delete middle element
-      store.getState().deleteElement(ElementId('order-2'));
+      store.getState().deleteElement(createElementId('order-2'));
       expect(store.getState().elementOrder).toEqual(['order-1', 'order-3']);
     });
   });
@@ -183,9 +183,9 @@ describe('Comprehensive Store Validation Tests', () => {
       });
 
       // Multi-select
-      const multiId1 = ElementId('multi-1');
-      const multiId2 = ElementId('multi-2');
-      const multiId3 = ElementId('multi-3');
+      const multiId1 = createElementId('multi-1');
+      const multiId2 = createElementId('multi-2');
+      const multiId3 = createElementId('multi-3');
       
       store.getState().selectElement(multiId1);
       store.getState().selectElement(multiId2, true); // multiSelect: true
@@ -491,8 +491,9 @@ describe('Comprehensive Store Validation Tests', () => {
       store.getState().addElement(element2);
       expect(store.getState().canUndo).toBe(true);
 
-      // Update element
-      store.getState().updateElement(element.id, { text: 'Updated Text' });
+      // Update element with explicit history entry (new default is skipHistory=true)
+      store.getState().updateElement(element.id, { text: 'Updated Text' }, { skipHistory: false });
+      store.getState().addToHistory('Update Text');
       const updatedElement = store.getState().elements.get(element.id);
       expect((updatedElement as TextElement)?.text).toBe('Updated Text');
 
@@ -544,17 +545,17 @@ describe('Comprehensive Store Validation Tests', () => {
     it('should handle invalid element operations gracefully', () => {
       // Try to update non-existent element
       expect(() => {
-        store.getState().updateElement(ElementId('non-existent-id'), { x: 100 });
+        store.getState().updateElement(createElementId('non-existent-id'), { x: 100 });
       }).not.toThrow();
 
       // Try to delete non-existent element
       expect(() => {
-        store.getState().deleteElement(ElementId('non-existent-id'));
+        store.getState().deleteElement(createElementId('non-existent-id'));
       }).not.toThrow();
 
       // Try to select non-existent element
       expect(() => {
-        store.getState().selectElement(ElementId('non-existent-id'));
+        store.getState().selectElement(createElementId('non-existent-id'));
       }).not.toThrow();
     });
 

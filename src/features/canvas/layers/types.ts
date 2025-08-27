@@ -26,10 +26,6 @@ export interface MainLayerProps extends LayerProps {
   onElementDoubleClick?: (elementId: string, event: Konva.KonvaEventObject<MouseEvent>) => void;
 }
 
-export interface ConnectorLayerProps extends LayerProps {
-  connectors: Record<string, CanvasElement>;
-  selectedElementIds: string[];
-}
 
 export interface UILayerProps extends LayerProps {
   selectedElementIds: string[];

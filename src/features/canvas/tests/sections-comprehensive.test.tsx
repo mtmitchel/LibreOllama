@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { ElementId, SectionId } from '../types/enhanced.types';
+import { ElementId, SectionId, createElementId } from '../types/enhanced.types';
 
 // Mock Konva
 vi.mock('konva', () => ({
@@ -63,7 +63,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('2.1 should auto-capture elements when section encompasses them', () => {
       // Create elements first
       const circle = {
-        id: ElementId('circle1'),
+        id: createElementId('circle1'),
         type: 'circle' as const,
         x: 150,
         y: 150,
@@ -76,7 +76,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       };
 
       const rectangle = {
-        id: ElementId('rect1'),
+        id: createElementId('rect1'),
         type: 'rectangle' as const,
         x: 200,
         y: 200,
@@ -104,8 +104,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       console.log('🧪 TEST 2.1 - Updated rectangle:', updatedRect);
 
       // Both elements should be captured
-      expect(section?.childElementIds).toContain(ElementId('circle1'));
-      expect(section?.childElementIds).toContain(ElementId('rect1'));
+      expect(section?.childElementIds).toContain(createElementId('circle1'));
+      expect(section?.childElementIds).toContain(createElementId('rect1'));
       
       // Elements should reference the section
       expect(updatedCircle?.sectionId).toBe(sectionId);
@@ -121,7 +121,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('2.2 should NOT capture elements outside section bounds', () => {
       // Create element outside the section area
       const outsideElement = {
-        id: ElementId('outside1'),
+        id: createElementId('outside1'),
         type: 'circle' as const,
         x: 500, // Far outside
         y: 500,
@@ -148,7 +148,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('2.3 should capture only elements whose center is inside section', () => {
       // Create element that partially overlaps section
       const partialElement = {
-        id: ElementId('partial1'),
+        id: createElementId('partial1'),
         type: 'rectangle' as const,
         x: 180, // Center at 230, which is outside section bounds
         y: 180,
@@ -174,7 +174,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       console.log('🧪 TEST 2.3 - Captured elements:', section?.childElementIds);
 
       // Element center (230, 230) should be inside section (100-300, 100-300)
-      expect(section?.childElementIds).toContain(ElementId('partial1'));
+      expect(section?.childElementIds).toContain(createElementId('partial1'));
     });
   });
 
@@ -182,7 +182,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('3.1 should move all child elements when section moves', () => {
       // Create section with child elements
       const element1 = {
-        id: ElementId('elem1'),
+        id: createElementId('elem1'),
         type: 'circle' as const,
         x: 150,
         y: 150,
@@ -195,7 +195,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       };
 
       const element2 = {
-        id: ElementId('elem2'),
+        id: createElementId('elem2'),
         type: 'rectangle' as const,
         x: 200,
         y: 200,
@@ -252,7 +252,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('3.2 should preserve relative positions between child elements', () => {
       // Create elements with specific relative positioning
       const elem1 = {
-        id: ElementId('rel1'),
+        id: createElementId('rel1'),
         type: 'circle' as const,
         x: 120,
         y: 120,
@@ -265,7 +265,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       };
 
       const elem2 = {
-        id: ElementId('rel2'),
+        id: createElementId('rel2'),
         type: 'circle' as const,
         x: 180,
         y: 180,
@@ -316,7 +316,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('4.1 should allow individual element movement without affecting section', () => {
       // Create section with child element
       const element = {
-        id: ElementId('movable1'),
+        id: createElementId('movable1'),
         type: 'circle' as const,
         x: 150,
         y: 150,
@@ -334,7 +334,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       const initialSection = store.getState().sections.get(sectionId);
 
       // Move individual element
-      store.getState().updateElement(ElementId('movable1'), { x: 170, y: 170 });
+      store.getState().updateElement(createElementId('movable1'), { x: 170, y: 170 });
 
       const updatedElement = store.getState().elements.get('movable1');
       const updatedSection = store.getState().sections.get(sectionId);
@@ -358,7 +358,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('4.2 should constrain element movement within section boundaries', () => {
       // Create element near section boundary
       const element = {
-        id: ElementId('constrained1'),
+        id: createElementId('constrained1'),
         type: 'rectangle' as const,
         x: 150,
         y: 150,
@@ -380,7 +380,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       // Try to move element outside section bounds
       // Section is 100-200 x 100-200, element is 30x30
       // So valid range is roughly 110-170 x 110-170 (with padding)
-      store.getState().updateElement(ElementId('constrained1'), { x: 250, y: 250 }); // Way outside
+      store.getState().updateElement(createElementId('constrained1'), { x: 250, y: 250 }); // Way outside
 
       const constrainedElement = store.getState().elements.get('constrained1');
 
@@ -400,7 +400,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('5.1 should resize section boundary without moving children', () => {
       // Create section with child elements
       const element1 = {
-        id: ElementId('resize1'),
+        id: createElementId('resize1'),
         type: 'circle' as const,
         x: 120,
         y: 120,
@@ -413,7 +413,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       };
 
       const element2 = {
-        id: ElementId('resize2'),
+        id: createElementId('resize2'),
         type: 'rectangle' as const,
         x: 160,
         y: 160,
@@ -469,7 +469,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('5.2 should allow children to extend outside section after resize', () => {
       // Create section with child element
       const element = {
-        id: ElementId('extend1'),
+        id: createElementId('extend1'),
         type: 'rectangle' as const,
         x: 150,
         y: 150,
@@ -514,7 +514,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('6.1 should maintain coordinate stability through multiple operations', () => {
       // Create element
       const element = {
-        id: ElementId('stable1'),
+        id: createElementId('stable1'),
         type: 'circle' as const,
         x: 150,
         y: 150,
@@ -544,7 +544,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       coords.push({ x: afterSectionMove!.x, y: afterSectionMove!.y, operation: 'after_section_move' });
 
       // Move element individually
-      store.getState().updateElement(ElementId('stable1'), { x: afterSectionMove!.x + 10, y: afterSectionMove!.y + 10 });
+      store.getState().updateElement(createElementId('stable1'), { x: afterSectionMove!.x + 10, y: afterSectionMove!.y + 10 });
       const afterElementMove = store.getState().elements.get('stable1');
       coords.push({ x: afterElementMove!.x, y: afterElementMove!.y, operation: 'after_element_move' });
 
@@ -565,7 +565,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('6.2 should handle section deletion properly', () => {
       // Create section with child elements
       const element1 = {
-        id: ElementId('delete1'),
+        id: createElementId('delete1'),
         type: 'circle' as const,
         x: 120,
         y: 120,
@@ -578,7 +578,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       };
 
       const element2 = {
-        id: ElementId('delete2'),
+        id: createElementId('delete2'),
         type: 'rectangle' as const,
         x: 160,
         y: 160,
@@ -627,7 +627,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('7.1 should maintain bidirectional references', () => {
       // Create elements and section
       const elem1 = {
-        id: ElementId('ref1'),
+        id: createElementId('ref1'),
         type: 'circle' as const,
         x: 120,
         y: 120,
@@ -646,7 +646,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       const element = store.getState().elements.get('ref1');
 
       // Check bidirectional references
-      expect(section?.childElementIds).toContain(ElementId('ref1'));
+      expect(section?.childElementIds).toContain(createElementId('ref1'));
       expect(element?.sectionId).toBe(sectionId);
 
       console.log('🧪 TEST 7.1 - Bidirectional refs:', {
@@ -658,7 +658,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
     it('7.2 should handle multiple sections correctly', () => {
       // Create elements for two different sections
       const elem1 = {
-        id: ElementId('multi1'),
+        id: createElementId('multi1'),
         type: 'circle' as const,
         x: 120,
         y: 120,
@@ -671,7 +671,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       };
 
       const elem2 = {
-        id: ElementId('multi2'),
+        id: createElementId('multi2'),
         type: 'circle' as const,
         x: 320,
         y: 320,
@@ -698,8 +698,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       // Each section should have one child
       expect(section1?.childElementIds).toHaveLength(1);
       expect(section2?.childElementIds).toHaveLength(1);
-      expect(section1?.childElementIds).toContain(ElementId('multi1'));
-      expect(section2?.childElementIds).toContain(ElementId('multi2'));
+      expect(section1?.childElementIds).toContain(createElementId('multi1'));
+      expect(section2?.childElementIds).toContain(createElementId('multi2'));
 
       // Elements should reference correct sections
       expect(element1?.sectionId).toBe(section1Id);
@@ -719,7 +719,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       // Create different types of elements
       const elements = [
         {
-          id: ElementId('circle_test'),
+          id: createElementId('circle_test'),
           type: 'circle' as const,
           x: 120,
           y: 120,
@@ -731,7 +731,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
           updatedAt: Date.now()
         },
         {
-          id: ElementId('rect_test'),
+          id: createElementId('rect_test'),
           type: 'rectangle' as const,
           x: 160,
           y: 160,
@@ -744,7 +744,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
           updatedAt: Date.now()
         },
         {
-          id: ElementId('text_test'),
+          id: createElementId('text_test'),
           type: 'text' as const,
           x: 140,
           y: 200,
@@ -770,9 +770,9 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
 
       // All elements should be captured
       expect(section?.childElementIds).toHaveLength(3);
-      expect(section?.childElementIds).toContain(ElementId('circle_test'));
-      expect(section?.childElementIds).toContain(ElementId('rect_test'));
-      expect(section?.childElementIds).toContain(ElementId('text_test'));
+      expect(section?.childElementIds).toContain(createElementId('circle_test'));
+      expect(section?.childElementIds).toContain(createElementId('rect_test'));
+      expect(section?.childElementIds).toContain(createElementId('text_test'));
     });
   });
 
@@ -785,7 +785,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       console.log('🧪 Step 1: Creating free elements...');
       const freeElements = [
         {
-          id: ElementId('workflow_circle'),
+          id: createElementId('workflow_circle'),
           type: 'circle' as const,
           x: 150,
           y: 150,
@@ -797,7 +797,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
           updatedAt: Date.now()
         },
         {
-          id: ElementId('workflow_rect'),
+          id: createElementId('workflow_rect'),
           type: 'rectangle' as const,
           x: 200,
           y: 200,
@@ -860,7 +860,7 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       // Step 4: Move individual element within section
       console.log('🧪 Step 4: Moving individual element...');
       const individualMove = { x: movedCircle!.x + 20, y: movedCircle!.y + 20 };
-      store.getState().updateElement(ElementId('workflow_circle'), individualMove);
+      store.getState().updateElement(createElementId('workflow_circle'), individualMove);
 
       const individuallyMovedCircle = store.getState().elements.get('workflow_circle');
       const unchangedRect = store.getState().elements.get('workflow_rect');

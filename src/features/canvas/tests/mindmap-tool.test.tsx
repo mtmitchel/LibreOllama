@@ -10,7 +10,7 @@ import { render, cleanup } from '@testing-library/react';
 import { MindmapTool } from '../components/tools/creation/MindmapTool';
 import { createUnifiedTestStore } from '@/tests/helpers/createUnifiedTestStore';
 import type { TextElement, ConnectorElement } from '../types/enhanced.types';
-import { ElementId } from '../types/enhanced.types';
+import { ElementId, createElementId } from '../types/enhanced.types';
 import { createMindmapStructure } from '../utils/mindmapUtils';
 
 // Mock Konva Stage for UI tests
@@ -359,7 +359,7 @@ describe('Mindmap Functionality (Store-First)', () => {
   describe('Mindmap Element Management', () => {
     it('should add individual mindmap elements', () => {
       const centralNode: TextElement = {
-        id: ElementId('mindmap-central'),
+        id: createElementId('mindmap-central'),
         type: 'text',
         x: 100,
         y: 100,
@@ -373,7 +373,7 @@ describe('Mindmap Functionality (Store-First)', () => {
       };
 
       const childNode: TextElement = {
-        id: ElementId('mindmap-child'),
+        id: createElementId('mindmap-child'),
         type: 'text',
         x: 200,
         y: 100,
@@ -387,7 +387,7 @@ describe('Mindmap Functionality (Store-First)', () => {
       };
 
       const connector: ConnectorElement = {
-        id: ElementId('mindmap-connector'),
+        id: createElementId('mindmap-connector'),
         type: 'connector',
         subType: 'curved',
         x: 0,

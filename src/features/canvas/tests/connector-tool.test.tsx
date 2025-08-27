@@ -10,7 +10,7 @@ import { render, cleanup } from '@testing-library/react';
 import { ConnectorTool } from '../components/tools/creation/ConnectorTool';
 import { createUnifiedTestStore } from '../../../tests/helpers/createUnifiedTestStore';
 import type { ConnectorElement } from '../types/enhanced.types';
-import { ElementId } from '../types/enhanced.types';
+import { ElementId, createElementId } from '../types/enhanced.types';
 import { CanvasTestWrapper } from '../../../tests/helpers/CanvasTestWrapper';
 import { UnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
@@ -228,7 +228,7 @@ describe('Connector Functionality (Store-First)', () => {
   describe('Connector Creation', () => {
     it('should create connector with basic properties', () => {
       const connector: ConnectorElement = {
-        id: ElementId('connector-1'),
+        id: createElementId('connector-1'),
         type: 'connector',
         subType: 'line',
         x: 0,
@@ -259,7 +259,7 @@ describe('Connector Functionality (Store-First)', () => {
 
     it('should create connector with attachment points', () => {
       const connector: ConnectorElement = {
-        id: ElementId('connector-attach'),
+        id: createElementId('connector-attach'),
         type: 'connector',
         subType: 'arrow',
         x: 0,
@@ -276,8 +276,8 @@ describe('Connector Functionality (Store-First)', () => {
           startArrow: 'none'
         },
         pathPoints: [0, 0, 100, 100],
-        startElementId: ElementId('rect-1'),
-        endElementId: ElementId('rect-2'),
+        startElementId: createElementId('rect-1'),
+        endElementId: createElementId('rect-2'),
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
@@ -292,7 +292,7 @@ describe('Connector Functionality (Store-First)', () => {
 
     it('should create curved connector', () => {
       const curvedConnector: ConnectorElement = {
-        id: ElementId('curved-connector'),
+        id: createElementId('curved-connector'),
         type: 'connector',
         subType: 'line',
         x: 0,
@@ -324,7 +324,7 @@ describe('Connector Functionality (Store-First)', () => {
   describe('Connector Management', () => {
     it('should update connector endpoints', () => {
       const connector: ConnectorElement = {
-        id: ElementId('update-connector'),
+        id: createElementId('update-connector'),
         type: 'connector',
         subType: 'line',
         x: 0,
@@ -361,7 +361,7 @@ describe('Connector Functionality (Store-First)', () => {
 
     it('should update connector attachments', () => {
       const connector: ConnectorElement = {
-        id: ElementId('attach-connector'),
+        id: createElementId('attach-connector'),
         type: 'connector',
         subType: 'arrow',
         x: 0,
@@ -378,8 +378,8 @@ describe('Connector Functionality (Store-First)', () => {
           startArrow: 'none'
         },
         pathPoints: [0, 0, 100, 100],
-        startElementId: ElementId('old-start'),
-        endElementId: ElementId('old-end'),
+        startElementId: createElementId('old-start'),
+        endElementId: createElementId('old-end'),
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
@@ -388,18 +388,18 @@ describe('Connector Functionality (Store-First)', () => {
 
       // Update attachments
       store.getState().updateElement(connector.id, {
-        startElementId: ElementId('element-a'),
-        endElementId: ElementId('element-b')
+        startElementId: createElementId('element-a'),
+        endElementId: createElementId('element-b')
       });
 
       const updatedConnector = store.getState().elements.get(connector.id) as any;
-      expect(updatedConnector.startElementId).toBe(ElementId('element-a'));
-      expect(updatedConnector.endElementId).toBe(ElementId('element-b'));
+      expect(updatedConnector.startElementId).toBe(createElementId('element-a'));
+      expect(updatedConnector.endElementId).toBe(createElementId('element-b'));
     });
 
     it('should delete connector correctly', () => {
       const connector: ConnectorElement = {
-        id: ElementId('delete-connector'),
+        id: createElementId('delete-connector'),
         type: 'connector',
         subType: 'line',
         x: 0,
@@ -434,7 +434,7 @@ describe('Connector Functionality (Store-First)', () => {
   describe('Connector Selection', () => {
     it('should select connector', () => {
       const connector: ConnectorElement = {
-        id: ElementId('select-connector'),
+        id: createElementId('select-connector'),
         type: 'connector',
         subType: 'arrow',
         x: 0,
@@ -464,7 +464,7 @@ describe('Connector Functionality (Store-First)', () => {
 
     it('should handle connector in multi-selection', () => {
       const connector1: ConnectorElement = {
-        id: ElementId('multi-connector-1'),
+        id: createElementId('multi-connector-1'),
         type: 'connector',
         subType: 'line',
         x: 0,
@@ -486,7 +486,7 @@ describe('Connector Functionality (Store-First)', () => {
       };
 
       const connector2: ConnectorElement = {
-        id: ElementId('multi-connector-2'),
+        id: createElementId('multi-connector-2'),
         type: 'connector',
         subType: 'arrow',
         x: 100,
@@ -524,7 +524,7 @@ describe('Connector Functionality (Store-First)', () => {
     it('should work with element creation workflow', () => {
       // Create some shapes to connect
       const rect1 = {
-        id: ElementId('rect-1'),
+        id: createElementId('rect-1'),
         type: 'rectangle' as const,
         x: 0, y: 0, width: 100, height: 100,
         fill: '#red', stroke: '#black', strokeWidth: 1,
@@ -532,7 +532,7 @@ describe('Connector Functionality (Store-First)', () => {
       };
 
       const rect2 = {
-        id: ElementId('rect-2'),
+        id: createElementId('rect-2'),
         type: 'rectangle' as const,
         x: 200, y: 200, width: 100, height: 100,
         fill: '#blue', stroke: '#black', strokeWidth: 1,
@@ -540,7 +540,7 @@ describe('Connector Functionality (Store-First)', () => {
       };
 
       const connector: ConnectorElement = {
-        id: ElementId('workflow-connector'),
+        id: createElementId('workflow-connector'),
         type: 'connector',
         subType: 'arrow',
         x: 0,
@@ -583,7 +583,7 @@ describe('Connector Functionality (Store-First)', () => {
 
       // Create connector while tool is active
       const connector: ConnectorElement = {
-        id: ElementId('tool-connector'),
+        id: createElementId('tool-connector'),
         type: 'connector',
         subType: 'line',
         x: 0,
@@ -613,7 +613,7 @@ describe('Connector Functionality (Store-First)', () => {
   describe('Connector Endpoint Editing (FigJam-style)', () => {
     it('should update start point without affecting end point', () => {
       const connector: ConnectorElement = {
-        id: ElementId('endpoint-edit-1'),
+        id: createElementId('endpoint-edit-1'),
         type: 'connector',
         subType: 'line',
         x: 0,
@@ -656,7 +656,7 @@ describe('Connector Functionality (Store-First)', () => {
 
     it('should update end point without affecting start point', () => {
       const connector: ConnectorElement = {
-        id: ElementId('endpoint-edit-2'),
+        id: createElementId('endpoint-edit-2'),
         type: 'connector',
         subType: 'arrow',
         x: 0,
@@ -699,7 +699,7 @@ describe('Connector Functionality (Store-First)', () => {
 
     it('should recalculate bounding box when endpoints change', () => {
       const connector: ConnectorElement = {
-        id: ElementId('bounding-box-test'),
+        id: createElementId('bounding-box-test'),
         type: 'connector',
         subType: 'line',
         x: 50,
@@ -744,7 +744,7 @@ describe('Connector Functionality (Store-First)', () => {
 
     it('should handle extreme endpoint positions correctly', () => {
       const connector: ConnectorElement = {
-        id: ElementId('extreme-positions'),
+        id: createElementId('extreme-positions'),
         type: 'connector',
         subType: 'arrow',
         x: 0,
@@ -789,7 +789,7 @@ describe('Connector Functionality (Store-First)', () => {
 
     it('should preserve connector type and style during endpoint editing', () => {
       const connector: ConnectorElement = {
-        id: ElementId('preserve-style'),
+        id: createElementId('preserve-style'),
         type: 'connector',
         subType: 'arrow',
         x: 0,

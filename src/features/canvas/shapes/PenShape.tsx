@@ -25,12 +25,13 @@ export const PenShape: React.FC<PenShapeProps> = ({ element, konvaProps }) => {
       points={points}
       stroke={stroke}
       strokeWidth={strokeWidth}
-      tension={0.5}
+      tension={0}  // No tension for accurate path rendering
       lineCap="round"
       lineJoin="round"
       globalCompositeOperation={
         stroke === 'erase' ? 'destination-out' : 'source-over'
       }
+      perfectDrawEnabled={false}  // Performance optimization
     />
   );
 };

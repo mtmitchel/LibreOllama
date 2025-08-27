@@ -540,7 +540,7 @@ function ComposeModal({
                   Cc
                 </span>
                 <EmailAutocomplete
-                  value={compose.cc.map(addr => typeof addr === 'string' ? addr : addr.email)}
+                  value={compose.cc?.map(addr => typeof addr === 'string' ? addr : addr.email) || []}
                   onChange={(emails) => {
                     setCompose(prev => ({
                       ...prev,
@@ -561,7 +561,7 @@ function ComposeModal({
                   Bcc
                 </span>
                 <EmailAutocomplete
-                  value={compose.bcc.map(addr => typeof addr === 'string' ? addr : addr.email)}
+                  value={compose.bcc?.map(addr => typeof addr === 'string' ? addr : addr.email) || []}
                   onChange={(emails) => {
                     setCompose(prev => ({
                       ...prev,

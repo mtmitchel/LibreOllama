@@ -2,12 +2,17 @@ import { useMemo } from 'react';
 import { PanZoom, Size } from '../types';
 import type { CanvasElement } from '../types/enhanced.types';
 import { isRectangularElement } from '../types/enhanced.types';
+import { SimpleQuadTree, Rectangle } from '../utils/spatialIndex';
 
-export interface SimpleViewportCullingProps {
-  elements: CanvasElement[];
+export interface Camera {
   zoomLevel: number;
   panOffset: PanZoom;
   canvasSize: Size | null;
+}
+
+export interface SimpleViewportCullingProps {
+  elements: CanvasElement[];
+  camera: Camera;
   buffer?: number; // Optional buffer around viewport
 }
 
@@ -20,6 +25,9 @@ export interface SimpleCullingResult {
     culledElements: number;
   };
 }
+
+// QuadTree optimization threshold
+const QUADTREE_THRESHOLD = 2000;
 
 /**
  * Get simple bounding box for any element type
@@ -88,20 +96,55 @@ const getElementBounds = (element: CanvasElement): { left: number; top: number; 
 };
 
 /**
- * Simple viewport culling - MVP focused
+ * Calculate canvas bounds that encompass all elements for QuadTree initialization
+ */
+const calculateCanvasBounds = (elements: CanvasElement[]): Rectangle => {
+  if (elements.length === 0) {
+    return { x: -5000, y: -5000, width: 10000, height: 10000 }; // Default large area
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const element of elements) {
+    const bounds = getElementBounds(element);
+    minX = Math.min(minX, bounds.left);
+    minY = Math.min(minY, bounds.top);
+    maxX = Math.max(maxX, bounds.right);
+    maxY = Math.max(maxY, bounds.bottom);
+  }
+
+  // Add padding around elements
+  const padding = 1000;
+  return {
+    x: minX - padding,
+    y: minY - padding,
+    width: (maxX - minX) + (padding * 2),
+    height: (maxY - minY) + (padding * 2)
+  };
+};
+
+/**
+ * Simple viewport culling with QuadTree optimization for large element counts
  * 
- * Only does basic intersection testing - no LOD, no quadtree, no complex memory optimization
- * Perfect for <1000 elements which covers 90% of real-world canvas usage
+ * - Uses linear intersection testing for <= 2000 elements (covers 90% of real-world usage)
+ * - Automatically switches to QuadTree spatial indexing for > 2000 elements
+ * - Maintains same interface for seamless performance scaling
+ * 
+ * PERFORMANCE: Uses single useMemo with [elements, camera] dependency for optimal re-render control
  */
 export const useSimpleViewportCulling = ({
   elements,
-  zoomLevel,
-  panOffset,
-  canvasSize,
+  camera,
   buffer = 200 // Default 200px buffer around viewport
 }: SimpleViewportCullingProps): SimpleCullingResult => {
   
   return useMemo(() => {
+    // Destructure camera properties for use
+    const { zoomLevel, panOffset, canvasSize } = camera;
+    
     // Early return for invalid parameters
     if (!canvasSize || canvasSize.width === 0 || canvasSize.height === 0 || zoomLevel === 0) {
       return {
@@ -123,6 +166,39 @@ export const useSimpleViewportCulling = ({
       bottom: (canvasSize.height - panOffset.y + buffer) / zoomLevel,
     };
 
+    // QuadTree optimization for large element counts
+    if (elements.length > QUADTREE_THRESHOLD) {
+      // Calculate canvas bounds for QuadTree initialization
+      const canvasBounds = calculateCanvasBounds(elements);
+      
+      // Create and build QuadTree
+      const quadTree = new SimpleQuadTree(canvasBounds);
+      quadTree.build(elements);
+      
+      // Convert viewport bounds to Rectangle format for QuadTree query
+      const viewportRect: Rectangle = {
+        x: viewportBounds.left,
+        y: viewportBounds.top,
+        width: viewportBounds.right - viewportBounds.left,
+        height: viewportBounds.bottom - viewportBounds.top
+      };
+      
+      // Query visible elements using QuadTree
+      const visibleElements = quadTree.query(viewportRect);
+      const culledElements = elements.filter(el => !visibleElements.includes(el));
+      
+      return {
+        visibleElements,
+        culledElements,
+        cullingStats: {
+          totalElements: elements.length,
+          visibleElements: visibleElements.length,
+          culledElements: culledElements.length,
+        }
+      };
+    }
+
+    // Linear culling for smaller element counts (existing logic)
     const visibleElements: CanvasElement[] = [];
     const culledElements: CanvasElement[] = [];
 
@@ -153,5 +229,5 @@ export const useSimpleViewportCulling = ({
         culledElements: culledElements.length,
       }
     };
-  }, [elements, zoomLevel, panOffset.x, panOffset.y, canvasSize?.width, canvasSize?.height, buffer]);
+  }, [elements, camera, buffer]); // PERFORMANCE: Optimized dependency array using camera object
 }; 

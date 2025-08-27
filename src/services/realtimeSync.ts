@@ -65,13 +65,7 @@ class RealtimeSync {
       const allTasks = (remoteData as any).tasks;
       const taskArray = Object.values(allTasks || {});
       const completedCount = taskArray.filter((t: any) => t.status === 'completed').length;
-      console.log('🔍 [RealtimeSync] Total tasks from backend:', taskArray.length);
-      console.log('🔍 [RealtimeSync] Completed tasks from backend:', completedCount);
-      console.log('🔍 [RealtimeSync] Sample task statuses:', taskArray.slice(0, 5).map((t: any) => ({ 
-        title: t.title, 
-        status: t.status,
-        google_task_id: t.google_task_id
-      })));
+      // Backend task sync completed
       
       const { tasks: taskData, columns } = remoteData as { 
         tasks: Record<string, {

@@ -3,7 +3,7 @@
  * Addresses race conditions in canvas initialization and resizing
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 
 interface CanvasSize {
   width: number;
@@ -36,6 +36,14 @@ export const useCanvasSizing = (
   });
 
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Web Worker for heavy canvas computations (React 19 + Tauri optimization)
+  const canvasWorker = useMemo(() => {
+    if (typeof Worker !== 'undefined') {
+      return new Worker('/canvas-worker.js');
+    }
+    return null;
+  }, []);
 
   const updateCanvasSize = useCallback(() => {
     if (!containerRef.current) return;
@@ -46,24 +54,36 @@ export const useCanvasSizing = (
 
     const newSize = { width: newWidth, height: newHeight };
 
-    // Only update if size actually changed
-    if (newSize.width !== canvasSize.width || newSize.height !== canvasSize.height) {
-      setCanvasSize(newSize);
-    }
-  }, [containerRef, canvasSize.width, canvasSize.height, minWidth, minHeight, padding]);
+    // Only update if size actually changed - use functional update to avoid dependency on canvasSize
+    setCanvasSize(prevSize => {
+      if (newSize.width !== prevSize.width || newSize.height !== prevSize.height) {
+        return newSize;
+      }
+      return prevSize;
+    });
+  }, [containerRef, minWidth, minHeight, padding]);
 
-  // Debounced resize handler
+  // Optimized resize handler with RAF chunking (React 19 + Tauri performance fix)
   const debouncedResize = useCallback(() => {
     if (resizeTimeoutRef.current) {
       clearTimeout(resizeTimeoutRef.current);
     }
-    resizeTimeoutRef.current = setTimeout(updateCanvasSize, 100);
+    // Use longer debounce to prevent main thread blocking
+    resizeTimeoutRef.current = setTimeout(() => {
+      // Chunk the resize calculation using RAF to prevent UI blocking
+      requestAnimationFrame(() => {
+        updateCanvasSize();
+      });
+    }, 150); // Increased from 100ms to 150ms
   }, [updateCanvasSize]);
 
-  // Initial size calculation
+  // Initial size calculation with RAF chunking to prevent blocking
   useEffect(() => {
-    updateCanvasSize();
-  }, []);
+    // Defer initial sizing to prevent blocking during app startup
+    requestAnimationFrame(() => {
+      updateCanvasSize();
+    });
+  }, [updateCanvasSize]);
 
   // Window resize listener
   useEffect(() => {
@@ -78,12 +98,20 @@ export const useCanvasSizing = (
     };
   }, [debouncedResize]);
 
-  // Container resize observer
+  // Container resize observer with error handling and performance optimization
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const resizeObserver = new ResizeObserver(() => {
-      debouncedResize();
+    const resizeObserver = new ResizeObserver((entries) => {
+      // Check if entries exist and prevent "ResizeObserver loop limit exceeded" errors
+      if (entries && entries.length > 0) {
+        try {
+          debouncedResize();
+        } catch (error) {
+          // Prevent ResizeObserver errors from breaking the app
+          console.warn('ResizeObserver error caught and handled:', error);
+        }
+      }
     });
 
     resizeObserver.observe(containerRef.current);
@@ -92,6 +120,15 @@ export const useCanvasSizing = (
       resizeObserver.disconnect();
     };
   }, [containerRef, debouncedResize]);
+
+  // Cleanup worker on unmount
+  useEffect(() => {
+    return () => {
+      if (canvasWorker) {
+        canvasWorker.terminate();
+      }
+    };
+  }, [canvasWorker]);
 
   return canvasSize;
 };

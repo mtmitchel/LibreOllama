@@ -4,6 +4,7 @@ import {
   HighlighterConfig, 
   EraserConfig 
 } from '../../types/drawing.types';
+import { createElementId } from '../../types/enhanced.types';
 import { StoreModule, StoreSet, StoreGet } from './types';
 
 /**
@@ -12,7 +13,7 @@ import { StoreModule, StoreSet, StoreGet } from './types';
 export interface DrawingState {
   isDrawing: boolean;
   currentPath?: number[];
-  drawingTool: 'pen' | 'pencil' | null;
+  drawingTool: 'pen' | 'pencil' | 'marker' | 'highlighter' | null;
   drawingStartPoint: { x: number; y: number } | null;
   drawingCurrentPoint: { x: number; y: number } | null;
   
@@ -38,7 +39,7 @@ export interface DrawingState {
  */
 export interface DrawingActions {
   // Drawing operations
-  startDrawing: (tool: 'pen' | 'pencil', point: { x: number; y: number }) => void;
+  startDrawing: (tool: 'pen' | 'pencil' | 'marker' | 'highlighter', point: { x: number; y: number }) => void;
   updateDrawing: (point: { x: number; y: number }) => void;
   finishDrawing: () => void;
   cancelDrawing: () => void;
@@ -60,6 +61,10 @@ export const createDrawingModule = (
   set: StoreSet,
   get: StoreGet
 ): StoreModule<DrawingState, DrawingActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as any;
+  const getState = get as any;
+
   return {
     state: {
       isDrawing: false,
@@ -95,7 +100,7 @@ export const createDrawingModule = (
     
     actions: {
       startDrawing: (tool, point) => {
-        set(state => {
+        setState((state: any) => {
           state.isDrawing = true;
           state.drawingTool = tool;
           state.drawingStartPoint = point;
@@ -105,7 +110,7 @@ export const createDrawingModule = (
       },
       
       updateDrawing: (point) => {
-        set(state => {
+        setState((state: any) => {
           if (state.isDrawing && state.currentPath) {
             state.currentPath.push(point.x, point.y);
             state.drawingCurrentPoint = point;
@@ -114,14 +119,14 @@ export const createDrawingModule = (
       },
       
       finishDrawing: () => {
-        const state = get();
+        const state = getState() as any;
         if (state.isDrawing && state.currentPath && state.currentPath.length >= 4) {
           // Create pen element with fallback color
-          const penColor = get().penColor || '#000000';
+          const penColor = (getState() as any).penColor || '#000000';
           
           const penElement = {
-            id: nanoid(),
-            type: 'pen',
+            id: createElementId(nanoid()),
+            type: 'pen' as const,
             x: 0,
             y: 0,
             points: [...state.currentPath],
@@ -134,23 +139,23 @@ export const createDrawingModule = (
           };
           
           // Add to store
-          get().addElement(penElement as any);
+          (getState() as any).addElement(penElement);
           
           // Check if the stroke was created within a sticky note container
           const startPoint = { x: state.currentPath[0], y: state.currentPath[1] };
           // Checking for sticky note at start point
-          const stickyNoteId = get().findStickyNoteAtPoint?.(startPoint);
+          const stickyNoteId = (getState() as any).findStickyNoteAtPoint?.(startPoint);
           
           if (stickyNoteId) {
             // Adding pen stroke to sticky note container
-            get().addElementToStickyNote?.(penElement.id as any, stickyNoteId);
+            (getState() as any).addElementToStickyNote?.(penElement.id, stickyNoteId);
           } else {
             // No sticky note container found at start point
           }
         }
         
         // Reset drawing state
-        set(state => {
+        setState((state: any) => {
           state.isDrawing = false;
           state.drawingTool = null;
           state.drawingStartPoint = null;
@@ -160,7 +165,7 @@ export const createDrawingModule = (
       },
       
       cancelDrawing: () => {
-        set(state => {
+        setState((state: any) => {
           state.isDrawing = false;
           state.drawingTool = null;
           state.drawingStartPoint = null;
@@ -171,7 +176,7 @@ export const createDrawingModule = (
 
       // Section draft operations  
       startDraftSection: (point) => {
-        set(state => {
+        setState((state: any) => {
           state.draftSection = {
             id: nanoid(),
             x: point.x,
@@ -183,7 +188,7 @@ export const createDrawingModule = (
       },
       
       updateDraftSection: (point) => {
-        set(state => {
+        setState((state: any) => {
           if (state.draftSection) {
             const startX = state.draftSection.x;
             const startY = state.draftSection.y;
@@ -203,9 +208,9 @@ export const createDrawingModule = (
       },
       
       commitDraftSection: () => {
-        const state = get();
+        const state = getState() as any;
         if (state.draftSection && state.draftSection.width > 10 && state.draftSection.height > 10) {
-          const sectionId = get().createSection?.(
+          const sectionId = (getState() as any).createSection?.(
             state.draftSection.x,
             state.draftSection.y,
             state.draftSection.width,
@@ -213,7 +218,7 @@ export const createDrawingModule = (
           );
           
           // Clear draft
-          set(state => {
+          setState((state: any) => {
             state.draftSection = null;
           });
           
@@ -221,7 +226,7 @@ export const createDrawingModule = (
         }
         
         // Clear draft even if too small
-        set(state => {
+        setState((state: any) => {
           state.draftSection = null;
         });
         
@@ -229,14 +234,14 @@ export const createDrawingModule = (
       },
       
       cancelDraftSection: () => {
-        set(state => {
+        setState((state: any) => {
           state.draftSection = null;
         });
       },
 
       // Stroke Configuration
       updateStrokeConfig: (tool, config) => {
-        set(state => {
+        setState((state: any) => {
           Object.assign(state.strokeConfig[tool], config);
         });
       },

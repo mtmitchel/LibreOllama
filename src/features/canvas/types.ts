@@ -90,7 +90,7 @@ export interface CanvasLayer {
 export interface CanvasTool {
   id: string;
   name: string;
-  icon: any;
+  icon: React.ComponentType | string;
   description?: string;
   category?: string;
 }
@@ -111,7 +111,7 @@ export interface PerformanceMetrics {
 }
 
 // Caching types
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   data: T;
   timestamp: number;
   expiresAt: number;

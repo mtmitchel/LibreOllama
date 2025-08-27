@@ -125,7 +125,7 @@ class ProductionPerformanceMonitor {
   /**
    * Report performance issues to monitoring service
    */
-  private async reportPerformanceIssue(type: string, data: any) {
+  private async reportPerformanceIssue(type: string, data: Record<string, unknown>) {
     try {
       // In production, send to monitoring service
       if (process.env.NODE_ENV === 'production') {

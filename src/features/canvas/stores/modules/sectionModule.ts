@@ -1,3 +1,4 @@
+import { UnifiedCanvasStore } from '../unifiedCanvasStore';
 import { nanoid } from 'nanoid';
 import { 
   SectionElement, 
@@ -33,8 +34,12 @@ export interface SectionActions {
  */
 export const createSectionModule = (
   set: StoreSet,
-  get: StoreGet
+  get: () => UnifiedCanvasStore
 ): StoreModule<SectionState, SectionActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as (fn: (draft: UnifiedCanvasStore) => void) => void;
+  const getState = get;
+
   const getElementCenter = (element: CanvasElement): { x: number; y: number } => {
     const elementAny = element as any;
     const width = elementAny.width ?? (elementAny.radius ? elementAny.radius * 2 : 0);
@@ -72,7 +77,7 @@ export const createSectionModule = (
           isHidden: false
         };
 
-        set((state) => {
+        setState((state: UnifiedCanvasStore) => {
           const newSections = new Map(state.sections).set(newSectionId, newSection);
           const newElements = new Map(state.elements).set(newSectionId, newSection);
           const newElementOrder = [...state.elementOrder, newSectionId];
@@ -86,13 +91,13 @@ export const createSectionModule = (
           };
         });
 
-        get().captureElementsInSection(newSectionId);
-        get().addToHistory('createSection');
+        getState().captureElementsInSection(newSectionId);
+        getState().addToHistory('createSection');
         return newSectionId;
       },
 
       updateSection: (id, updates) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const section = state.sections.get(id);
           if (section) {
             const oldX = section.x;
@@ -120,11 +125,11 @@ export const createSectionModule = (
             }
           }
         });
-        get().addToHistory('updateSection');
+        getState().addToHistory('updateSection');
       },
 
       captureElementsInSection: (sectionId) => {
-        const section = get().sections.get(sectionId);
+        const section = getState().sections.get(sectionId);
         if (!section) return;
 
         const sectionBounds = {
@@ -134,10 +139,10 @@ export const createSectionModule = (
           y2: section.y + section.height,
         };
 
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const childIds = new Set<ElementId>();
           for (const element of state.elements.values()) {
-            if (element.type === 'section' || element.id === sectionId) continue;
+            if (element.type === 'section' || (element.id as string) === (sectionId as string)) continue;
 
             const elementCenter = getElementCenter(element);
             if (
@@ -164,7 +169,7 @@ export const createSectionModule = (
       },
 
       deleteSection: (id) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           if (!state.sections.has(id)) return;
           
           // Release child elements
@@ -181,15 +186,15 @@ export const createSectionModule = (
           state.sections.delete(id);
           state.elements.delete(id); // Also remove from elements map
           state.sectionElementMap.delete(id);
-          state.elementOrder = state.elementOrder.filter((elId: ElementId | SectionId) => elId !== id);
+          state.elementOrder = state.elementOrder.filter((elId) => elId !== id);
           // Only delete from selectedElementIds if it's actually an ElementId, not a SectionId
           // state.selectedElementIds.delete(id as ElementId);
         });
-        get().addToHistory('deleteSection');
+        getState().addToHistory('deleteSection');
       },
 
       findSectionAtPoint: (point) => {
-        const { sections, elementOrder } = get();
+        const { sections, elementOrder } = getState();
         // Iterate backwards through elementOrder to find the top-most section
         for (let i = elementOrder.length - 1; i >= 0; i--) {
             const id = elementOrder[i] as SectionId;
@@ -206,7 +211,7 @@ export const createSectionModule = (
       },
 
       addElementToSection: (elementId, sectionId) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const section = state.sections.get(sectionId);
           const element = state.elements?.get(elementId);
           
@@ -226,7 +231,7 @@ export const createSectionModule = (
       },
 
       updateElementCoordinatesOnSectionMove: (sectionId, deltaX, deltaY) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const section = state.sections.get(sectionId);
           if (section && state.elements) {
             section.childElementIds.forEach((elementId: ElementId) => {

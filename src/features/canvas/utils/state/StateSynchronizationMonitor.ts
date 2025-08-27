@@ -31,8 +31,8 @@ export interface SynchronizationIssue {
   type: 'tool_mismatch' | 'drawing_state_mismatch' | 'selection_mismatch' | 'viewport_mismatch';
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
-  expectedValue: any;
-  actualValue: any;
+  expectedValue: unknown;
+  actualValue: unknown;
   timestamp: number;
   autoFixed: boolean;
 }
@@ -349,14 +349,14 @@ export class StateSynchronizationMonitor {
    */
   private findStateChanges(snapshots: StateSnapshot[], path: string): Array<{
     timestamp: number;
-    oldValue: any;
-    newValue: any;
+    oldValue: unknown;
+    newValue: unknown;
   }> {
-    const changes: Array<{ timestamp: number; oldValue: any; newValue: any }> = [];
+    const changes: Array<{ timestamp: number; oldValue: unknown; newValue: unknown }> = [];
     
     for (let i = 1; i < snapshots.length; i++) {
-      const prevValue = this.getNestedValue(snapshots[i - 1], path);
-      const currentValue = this.getNestedValue(snapshots[i], path);
+      const prevValue = this.getNestedValue(snapshots[i - 1] as unknown as Record<string, unknown>, path);
+      const currentValue = this.getNestedValue(snapshots[i] as unknown as Record<string, unknown>, path);
       
       if (!this.deepEqual(prevValue, currentValue)) {
         changes.push({
@@ -373,14 +373,14 @@ export class StateSynchronizationMonitor {
   /**
    * Get nested value from object using dot notation
    */
-  private getNestedValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+    return path.split('.').reduce((current: any, key: string) => current?.[key], obj);
   }
 
   /**
    * Deep equality check for state comparison
    */
-  private deepEqual(a: any, b: any): boolean {
+  private deepEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true;
     if (a instanceof Set && b instanceof Set) {
       return a.size === b.size && [...a].every(item => b.has(item));
@@ -389,7 +389,7 @@ export class StateSynchronizationMonitor {
       const keysA = Object.keys(a);
       const keysB = Object.keys(b);
       if (keysA.length !== keysB.length) return false;
-      return keysA.every(key => this.deepEqual(a[key], b[key]));
+      return keysA.every(key => this.deepEqual((a as any)[key], (b as any)[key]));
     }
     return false;
   }

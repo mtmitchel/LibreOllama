@@ -137,18 +137,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
 
       // Only move if dropping in a different column
-      console.log('Drag end:', { taskId, activeColumn, targetColumnId });
+      // Drag operation completed
       if (activeColumn !== targetColumnId) {
-        console.log('Moving task between columns...');
+        // Moving task between columns
         try {
           await moveTask(taskId, targetColumnId);
-          console.log('Move task completed');
+          // Task move completed successfully
         } catch (error) {
           console.error('Failed to move task:', error);
           alert(`Failed to move task: ${error}`);
         }
       } else {
-        console.log('Same column, not moving');
+        // Same column, no move needed
       }
     },
     [activeColumn, columns, moveTask]

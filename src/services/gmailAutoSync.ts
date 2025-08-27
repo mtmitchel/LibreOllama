@@ -5,8 +5,23 @@ class GmailAutoSync {
   private syncInterval: NodeJS.Timeout | null = null;
   private isEnabled = true;
   private syncIntervalMinutes = 5; // Default 5 minutes
+  private isInitialized = false;
 
   constructor() {
+    // Don't auto-initialize to allow deferred initialization
+  }
+
+  /**
+   * Initialize the auto-sync system (called by deferredGmailSync)
+   */
+  public initialize(): void {
+    if (this.isInitialized) {
+      logger.warn('[GMAIL-SYNC] Already initialized');
+      return;
+    }
+    
+    logger.debug('[GMAIL-SYNC] Initializing auto-sync system');
+    this.isInitialized = true;
     this.setupAutoSync();
   }
 

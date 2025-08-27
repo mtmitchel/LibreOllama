@@ -5,6 +5,45 @@
  */
 
 import { ElementId, CanvasElement } from './enhanced.types';
+import { 
+  KonvaMouseEvent, 
+  KonvaPointerEvent, 
+  KonvaDragEvent, 
+  KonvaKeyboardEvent,
+  KonvaEvent
+} from './event.types';
+import Konva from 'konva';
+
+// Type-safe Konva filter interface
+export interface KonvaFilter {
+  name: string;
+  config?: Record<string, any>;
+}
+
+// Type-safe global composite operations
+export type GlobalCompositeOperation = 
+  | 'source-over'
+  | 'source-in'
+  | 'source-out'
+  | 'source-atop'
+  | 'destination-over'
+  | 'destination-in'
+  | 'destination-out'
+  | 'destination-atop'
+  | 'lighter'
+  | 'copy'
+  | 'xor'
+  | 'multiply'
+  | 'screen'
+  | 'overlay'
+  | 'darken'
+  | 'lighten'
+  | 'color-dodge'
+  | 'color-burn'
+  | 'hard-light'
+  | 'soft-light'
+  | 'difference'
+  | 'exclusion';
 
 /**
  * Common Konva props passed to all shape components
@@ -29,51 +68,28 @@ export interface KonvaShapeProps {
   id?: string;
   name?: string;
   
-  // Event handlers
-  onClick?: (event: any) => void;
-  onMouseDown?: (event: any) => void;
-  onMouseUp?: (event: any) => void;
-  onMouseMove?: (event: any) => void;
-  onMouseEnter?: (event: any) => void;
-  onMouseLeave?: (event: any) => void;
-  onDragStart?: (event: any) => void;
-  onDragMove?: (event: any) => void;
-  onDragEnd?: (event: any) => void;
-  onTransform?: (event: any) => void;
-  onTransformEnd?: (event: any) => void;
+  // Event handlers with proper Konva types
+  onClick?: (event: KonvaMouseEvent) => void;
+  onMouseDown?: (event: KonvaMouseEvent) => void;
+  onMouseUp?: (event: KonvaMouseEvent) => void;
+  onMouseMove?: (event: KonvaMouseEvent) => void;
+  onMouseEnter?: (event: KonvaMouseEvent) => void;
+  onMouseLeave?: (event: KonvaMouseEvent) => void;
+  onDragStart?: (event: KonvaDragEvent) => void;
+  onDragMove?: (event: KonvaDragEvent) => void;
+  onDragEnd?: (event: KonvaDragEvent) => void;
+  onTransform?: (event: KonvaEvent) => void;
+  onTransformEnd?: (event: KonvaEvent) => void;
   
   // Performance optimizations
   perfectDrawEnabled?: boolean;
   shadowForStrokeEnabled?: boolean;
   hitStrokeWidth?: number;
-  globalCompositeOperation?: 
-    | 'source-over'
-    | 'source-in'
-    | 'source-out'
-    | 'source-atop'
-    | 'destination-over'
-    | 'destination-in'
-    | 'destination-out'
-    | 'destination-atop'
-    | 'lighter'
-    | 'copy'
-    | 'xor'
-    | 'multiply'
-    | 'screen'
-    | 'overlay'
-    | 'darken'
-    | 'lighten'
-    | 'color-dodge'
-    | 'color-burn'
-    | 'hard-light'
-    | 'soft-light'
-    | 'difference'
-    | 'exclusion'
-    | '';
+  globalCompositeOperation?: GlobalCompositeOperation;
   opacity?: number;
   
-  // Visual effects
-  filters?: any[];
+  // Visual effects with type safety
+  filters?: KonvaFilter[];
   cache?: boolean;
   clearBeforeDraw?: boolean;
 }
@@ -93,7 +109,7 @@ export interface BaseShapeProps<T extends CanvasElement> {
   onDragEnd?: (elementId: ElementId) => void;
   onElementDoubleClick?: (elementId: ElementId) => void;
   stageScale?: number;
-  nodeRef?: React.MutableRefObject<any>;
+  nodeRef?: React.MutableRefObject<Konva.Node | null>;
 }
 
 /**
@@ -103,9 +119,9 @@ export interface ShapeInteractionHandlers {
   onHover?: (elementId: ElementId, isHovering: boolean) => void;
   onFocus?: (elementId: ElementId) => void;
   onBlur?: (elementId: ElementId) => void;
-  onContextMenu?: (elementId: ElementId, event: any) => void;
-  onKeyDown?: (elementId: ElementId, event: any) => void;
-  onKeyUp?: (elementId: ElementId, event: any) => void;
+  onContextMenu?: (elementId: ElementId, event: KonvaMouseEvent) => void;
+  onKeyDown?: (elementId: ElementId, event: KonvaKeyboardEvent) => void;
+  onKeyUp?: (elementId: ElementId, event: KonvaKeyboardEvent) => void;
 }
 
 /**
@@ -125,6 +141,6 @@ export interface CompleteShapeProps<T extends CanvasElement>
   extends BaseShapeProps<T>, 
           Partial<ShapeInteractionHandlers>, 
           Partial<ShapePerformanceProps> {
-  // Additional shape-specific customization
-  customProps?: Record<string, any>;
+  // Additional shape-specific customization (use specific types when possible)
+  customProps?: Record<string, unknown>;
 }

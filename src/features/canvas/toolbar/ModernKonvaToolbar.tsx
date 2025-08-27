@@ -21,13 +21,19 @@ import {
   Brush,
   Image as ImageIcon,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Save,
+  FolderOpen,
+  FileText,
+  X
 } from 'lucide-react';
 import ShapesDropdown from './ShapesDropdown';
 import ConnectorDropdown from './ConnectorDropdown';
 import { Button } from '../../../components/ui';
 import { ColorSwatch } from '../../../components/ui/ColorSwatch';
 import { resolveCSSVariable } from '../utils/colorUtils';
+import { useTauriCanvas } from '../hooks/useTauriCanvas';
+import { CanvasLibrary } from '../components/CanvasLibrary';
 
 const basicTools = [
   { id: 'select', name: 'Select', icon: MousePointer2 },
@@ -61,15 +67,25 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   onRedo
 }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showFileManager, setShowFileManager] = useState(false);
+  const [canvasFiles, setCanvasFiles] = useState<string[]>([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [saveFileName, setSaveFileName] = useState('');
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showCanvasLibrary, setShowCanvasLibrary] = useState(false);
+  const [focusedToolIndex, setFocusedToolIndex] = useState(0);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { saveToFile, loadFromFile, listCanvasFiles, deleteCanvasFile } = useTauriCanvas();
   
   // Direct store access without useShallow to test
   const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
-  // Debug: Log when selectedTool changes
+  // Debug: Log when selectedTool changes (dev-only)
   React.useEffect(() => {
-    console.log('🛠️ [Toolbar] Selected tool changed to:', selectedTool);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🛠️ [Toolbar] Selected tool changed to:', selectedTool);
+    }
   }, [selectedTool]);
   const selectedElementIds = useUnifiedCanvasStore(state => state.selectedElementIds);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
@@ -77,21 +93,107 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const updateElement = useUnifiedCanvasStore(state => state.updateElement);
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const setStickyNoteColor = useUnifiedCanvasStore(state => state.setStickyNoteColor);
-  const stickyNoteColor = useUnifiedCanvasStore(state => state.stickyNoteColor);
+  const stickyNoteColor = useUnifiedCanvasStore(state => state.selectedStickyNoteColor);
   const canUndo = useUnifiedCanvasStore(state => state.canUndo);
   const canRedo = useUnifiedCanvasStore(state => state.canRedo);
   const viewport = useUnifiedCanvasStore(state => state.viewport);
   const setViewport = useUnifiedCanvasStore(state => state.setViewport);
 
-  // STABLE: Use useMemo to prevent recalculation on every render
+  // STABLE: Use useMemo to prevent recalculation on every render with null safety
   const selectedElementId = React.useMemo(() => {
-    return selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] as ElementId : null;
-  }, [selectedElementIds.size]); // Only depend on size, not the Set itself
+    if (!selectedElementIds || selectedElementIds.size === 0) return null;
+    return Array.from(selectedElementIds)[0] as ElementId;
+  }, [selectedElementIds?.size]); // Only depend on size, not the Set itself
   
   // STABLE: Use selector with stable dependency
   const selectedElement = useUnifiedCanvasStore(state => 
     selectedElementId ? state.elements.get(selectedElementId) || null : null
   );
+
+  // Create flattened tool array for keyboard navigation
+  const allTools = React.useMemo(() => [
+    ...basicTools,
+    ...contentTools,
+    ...drawingTools,
+    { id: 'undo', name: 'Undo', icon: Undo2 },
+    { id: 'redo', name: 'Redo', icon: Redo2 },
+    { id: 'save', name: 'Save', icon: Save },
+    { id: 'load', name: 'Load', icon: FolderOpen },
+  ], []);
+
+  // Handler functions (moved before handleKeyDown to avoid TDZ)
+  const handleToolClick = (toolId: string) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🛠️ [Toolbar] Tool clicked:', toolId);
+    }
+    
+    // Special handling for image tool
+    if (toolId === 'image') {
+      fileInputRef.current?.click();
+      return;
+    }
+    
+    // Set the tool directly
+    setSelectedTool(toolId);
+    console.log('🛠️ [Toolbar] Selected tool set to:', toolId);
+    
+    // Announce tool change for screen readers
+    const toolName = allTools.find(t => t.id === toolId)?.name || toolId;
+    const announcement = document.createElement('div');
+    announcement.setAttribute('aria-live', 'polite');
+    announcement.setAttribute('aria-atomic', 'true');
+    announcement.style.position = 'absolute';
+    announcement.style.left = '-9999px';
+    announcement.textContent = `${toolName} tool selected`;
+    document.body.appendChild(announcement);
+    setTimeout(() => {
+      if (document.body.contains(announcement)) {
+        document.body.removeChild(announcement);
+      }
+    }, 1000);
+    
+    // Hide color picker when switching tools
+    if (showColorPicker) {
+      setShowColorPicker(false);
+    }
+  };
+
+  // Canvas persistence handlers
+  const handleSaveCanvas = () => {
+    setShowSaveDialog(true);
+  };
+
+  const handleLoadCanvas = () => {
+    setShowCanvasLibrary(true);
+  };
+
+  // Keyboard navigation handler
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const direction = e.key === 'ArrowRight' ? 1 : -1;
+      const newIndex = (focusedToolIndex + direction + allTools.length) % allTools.length;
+      setFocusedToolIndex(newIndex);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      const tool = allTools[focusedToolIndex];
+      if (tool) {
+        if (tool.id === 'undo') onUndo();
+        else if (tool.id === 'redo') onRedo();
+        else if (tool.id === 'save') handleSaveCanvas();
+        else if (tool.id === 'load') handleLoadCanvas();
+        else handleToolClick(tool.id);
+      }
+    }
+  }, [focusedToolIndex, allTools, onUndo, onRedo, handleSaveCanvas, handleLoadCanvas, handleToolClick]);
+
+  // Focus management
+  const toolbarRef = React.useRef<HTMLDivElement>(null);
+  
+  React.useEffect(() => {
+    const currentButton = toolbarRef.current?.querySelector(`[data-tool-index="${focusedToolIndex}"]`) as HTMLElement;
+    currentButton?.focus();
+  }, [focusedToolIndex]);
 
   // Zoom controls functions
   const currentZoom = Math.round(viewport.scale * 100);
@@ -176,22 +278,43 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     }
   };
 
-  const handleToolClick = (toolId: string) => {
-    console.log('🛠️ [Toolbar] Tool clicked:', toolId);
+
+  const handleSaveConfirm = async () => {
+    if (!saveFileName.trim()) return;
     
-    // Special handling for image tool
-    if (toolId === 'image') {
-      fileInputRef.current?.click();
-      return;
+    try {
+      const filename = saveFileName.endsWith('.canvas') || saveFileName.endsWith('.json') 
+        ? saveFileName 
+        : `${saveFileName}.canvas`;
+      
+      await saveToFile(filename);
+      setShowSaveDialog(false);
+      setSaveFileName('');
+      console.log('Canvas saved successfully');
+    } catch (error) {
+      console.error('Failed to save canvas:', error);
     }
-    
-    // Set the tool directly
-    setSelectedTool(toolId);
-    console.log('🛠️ [Toolbar] Selected tool set to:', toolId);
-    
-    // Hide color picker when switching tools
-    if (showColorPicker) {
-      setShowColorPicker(false);
+  };
+
+  const handleLoadFile = async (filename: string) => {
+    try {
+      await loadFromFile(filename);
+      setShowFileManager(false);
+      console.log('Canvas loaded successfully');
+    } catch (error) {
+      console.error('Failed to load canvas:', error);
+    }
+  };
+
+  const handleDeleteFile = async (filename: string) => {
+    try {
+      await deleteCanvasFile(filename);
+      // Refresh the file list
+      const files = await listCanvasFiles();
+      setCanvasFiles(files);
+      console.log('Canvas file deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete canvas file:', error);
     }
   };
 
@@ -213,8 +336,8 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   
 
   
-  // Check if current selection can be grouped/ungrouped
-  const canGroup = selectedElementIds.size >= 2;
+  // Check if current selection can be grouped/ungrouped with null safety
+  const canGroup = selectedElementIds && selectedElementIds.size >= 2;
   const canUngroup = selectedElementId ? !!isElementInGroup() : false;
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,7 +401,13 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[1000] flex justify-center">
-      <div className="pointer-events-auto flex max-w-[95vw] items-center justify-center gap-3 overflow-visible"
+      <div 
+        ref={toolbarRef}
+        className="pointer-events-auto flex max-w-[95vw] items-center justify-center gap-3 overflow-visible"
+        onKeyDown={handleKeyDown}
+        role="toolbar"
+        aria-label="Canvas tools"
+        tabIndex={0}
         style={{
           background: 'var(--bg-primary)',
           border: '1px solid var(--border-default)',
@@ -288,9 +417,11 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
         }}>
         {/* Basic Tools */}
         <div className="flex items-center gap-1">
-          {basicTools.map(tool => {
+          {basicTools.map((tool, index) => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
+            const toolIndex = allTools.findIndex(t => t.id === tool.id);
+            const isFocused = focusedToolIndex === toolIndex;
             return (
               <Button
                 key={tool.id}
@@ -299,7 +430,10 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 onClick={() => handleToolClick(tool.id)}
                 className="size-9"
                 title={tool.name}
-                aria-label={tool.name}
+                aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
+                tabIndex={isFocused ? 0 : -1}
+                data-tool-index={toolIndex}
+                aria-pressed={isActive}
               >
                 <IconComponent size={16} />
               </Button>
@@ -309,9 +443,11 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
         {/* Content Tools */}
         <div className="flex items-center gap-1">
-          {contentTools.map(tool => {
+          {contentTools.map((tool, index) => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
+            const toolIndex = allTools.findIndex(t => t.id === tool.id);
+            const isFocused = focusedToolIndex === toolIndex;
             return (
               <div key={tool.id} className="relative">
                 <Button
@@ -320,7 +456,10 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                   onClick={() => handleToolClick(tool.id)}
                   className="size-9 relative"
                   title={tool.name}
-                  aria-label={tool.name}
+                  aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
+                  tabIndex={isFocused ? 0 : -1}
+                  data-tool-index={toolIndex}
+                  aria-pressed={isActive}
                 >
                   <IconComponent size={16} />
                   {tool.id === 'sticky-note' && stickyNoteColor && (
@@ -379,9 +518,11 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             <ShapesDropdown onToolSelect={handleToolClick} />
           </div>
           
-          {drawingTools.map(tool => {
+          {drawingTools.map((tool, index) => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
+            const toolIndex = allTools.findIndex(t => t.id === tool.id);
+            const isFocused = focusedToolIndex === toolIndex;
             return (
               <Button
                 key={tool.id}
@@ -390,7 +531,10 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 onClick={() => handleToolClick(tool.id)}
                 className="size-9"
                 title={tool.name}
-                aria-label={tool.name}
+                aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
+                tabIndex={isFocused ? 0 : -1}
+                data-tool-index={toolIndex}
+                aria-pressed={isActive}
               >
                 <IconComponent size={16} />
               </Button>
@@ -403,6 +547,36 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
           <ConnectorDropdown onToolSelect={handleToolClick} />
         </div>
 
+        {/* File Operations */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSaveCanvas}
+            title="Save Canvas"
+            aria-label="Save Canvas"
+            className="size-9"
+            tabIndex={focusedToolIndex === allTools.findIndex(t => t.id === 'save') ? 0 : -1}
+            data-tool-index={allTools.findIndex(t => t.id === 'save')}
+          >
+            <Save size={16} />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLoadCanvas}
+            disabled={isLoadingFiles}
+            title="Load Canvas"
+            aria-label="Load Canvas"
+            className="size-9"
+            tabIndex={focusedToolIndex === allTools.findIndex(t => t.id === 'load') ? 0 : -1}
+            data-tool-index={allTools.findIndex(t => t.id === 'load')}
+          >
+            <FolderOpen size={16} />
+          </Button>
+        </div>
+
         {/* Action Tools & Zoom - Combined right cluster */}
         <div className="flex items-center gap-1">
           <Button
@@ -411,8 +585,10 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             onClick={onUndo}
             disabled={!canUndo}
             title={canUndo ? "Undo" : "Nothing to undo"}
-            aria-label="Undo"
+            aria-label={canUndo ? "Undo" : "Nothing to undo"}
             className="size-9"
+            tabIndex={focusedToolIndex === allTools.findIndex(t => t.id === 'undo') ? 0 : -1}
+            data-tool-index={allTools.findIndex(t => t.id === 'undo')}
           >
             <Undo2 size={16} />
           </Button>
@@ -423,8 +599,10 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             onClick={onRedo}
             disabled={!canRedo}
             title={canRedo ? "Redo" : "Nothing to redo"}
-            aria-label="Redo"
+            aria-label={canRedo ? "Redo" : "Nothing to redo"}
             className="size-9"
+            tabIndex={focusedToolIndex === allTools.findIndex(t => t.id === 'redo') ? 0 : -1}
+            data-tool-index={allTools.findIndex(t => t.id === 'redo')}
           >
             <Redo2 size={16} />
           </Button>
@@ -524,6 +702,120 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
         onChange={handleFileInput}
         style={{ display: 'none' }}
         aria-label="Canvas image upload"
+      />
+      
+      {/* Save Dialog */}
+      {showSaveDialog && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-bg-elevated border-border-default rounded-xl border p-6 shadow-2xl min-w-[400px]">
+            <h3 className="text-lg font-semibold mb-4">Save Canvas</h3>
+            <div className="mb-4">
+              <label htmlFor="save-filename" className="block text-sm font-medium mb-2">
+                File Name
+              </label>
+              <input
+                id="save-filename"
+                type="text"
+                value={saveFileName}
+                onChange={(e) => setSaveFileName(e.target.value)}
+                className="w-full px-3 py-2 border border-border-default rounded-lg bg-bg-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                placeholder="Enter filename..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveConfirm();
+                  } else if (e.key === 'Escape') {
+                    setShowSaveDialog(false);
+                    setSaveFileName('');
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowSaveDialog(false);
+                  setSaveFileName('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSaveConfirm}
+                disabled={!saveFileName.trim()}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* File Manager Dialog */}
+      {showFileManager && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-bg-elevated border-border-default rounded-xl border p-6 shadow-2xl min-w-[500px] max-h-[70vh]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Load Canvas</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowFileManager(false)}
+                className="size-8"
+              >
+                <X size={16} />
+              </Button>
+            </div>
+            
+            <div className="max-h-[400px] overflow-y-auto">
+              {canvasFiles.length === 0 ? (
+                <div className="text-center py-8 text-muted">
+                  <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>No saved canvas files found</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {canvasFiles.map((filename) => (
+                    <div
+                      key={filename}
+                      className="flex items-center justify-between p-3 border border-border-default rounded-lg hover:bg-bg-hover transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText size={20} />
+                        <span className="font-medium">{filename}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleLoadFile(filename)}
+                        >
+                          Load
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteFile(filename)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Canvas Library Modal */}
+      <CanvasLibrary 
+        isOpen={showCanvasLibrary} 
+        onClose={() => setShowCanvasLibrary(false)} 
       />
     </div>
   );

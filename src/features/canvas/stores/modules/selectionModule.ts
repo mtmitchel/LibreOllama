@@ -31,6 +31,10 @@ export const createSelectionModule = (
   set: StoreSet,
   get: StoreGet
 ): StoreModule<SelectionState, SelectionActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as any;
+  const getState = get as any;
+
   return {
     state: {
       selectedElementIds: new Set(),
@@ -41,7 +45,11 @@ export const createSelectionModule = (
     
     actions: {
       selectElement: (id, multiSelect = false) => {
-        set(state => {
+        setState((state: any) => {
+          // Defensive check - ensure selectedElementIds Set exists
+          if (!state.selectedElementIds || !(state.selectedElementIds instanceof Set)) {
+            state.selectedElementIds = new Set();
+          }
           // Note: We don't validate element existence here to allow temporary selections
           // during element creation workflows. Validation happens in getSelectedElements()
           if (multiSelect) {
@@ -61,7 +69,7 @@ export const createSelectionModule = (
       },
 
       deselectElement: (id) => {
-        set(state => {
+        setState((state: any) => {
           state.selectedElementIds.delete(id);
           if (state.lastSelectedElementId === id) {
             state.lastSelectedElementId = null;
@@ -70,41 +78,58 @@ export const createSelectionModule = (
       },
 
       clearSelection: () => {
-        set(state => {
+        setState((state: any) => {
           state.selectedElementIds.clear();
           state.lastSelectedElementId = null;
         });
       },
 
       getSelectedElements: () => {
-        const { elements, selectedElementIds } = get();
+        const { elements, selectedElementIds } = getState();
         return Array.from(selectedElementIds).map(id => elements.get(id)).filter(Boolean) as CanvasElement[];
       },
 
       groupElements: (elementIds: ElementId[]) => {
         const groupId = nanoid() as GroupId;
-        set(state => {
+        setState((state: any) => {
+          // Defensive check - ensure groups Map exists
+          if (!state.groups || !(state.groups instanceof Map)) {
+            state.groups = new Map();
+          }
+          if (!state.elementToGroupMap || !(state.elementToGroupMap instanceof Map)) {
+            state.elementToGroupMap = new Map();
+          }
+          
           const elementSet = new Set(elementIds);
-          state.groups.set(groupId, elementSet);
+          state.groups.setState(groupId, elementSet);
           
           // Update element to group mapping
           elementIds.forEach((elementId: ElementId) => {
-            state.elementToGroupMap.set(elementId, groupId);
+            state.elementToGroupMap.setState(elementId, groupId);
             // Also update the element itself to store the groupId
-            get().setElementGroup(elementId, groupId);
+            getState().setElementGroup(elementId, groupId);
           });
         });
         return groupId;
       },
 
       ungroupElements: (groupId: GroupId) => {
-        set(state => {
+        setState((state: any) => {
+          // Defensive check - ensure groups Map exists
+          if (!state.groups || !(state.groups instanceof Map)) {
+            state.groups = new Map();
+            return;
+          }
+          if (!state.elementToGroupMap || !(state.elementToGroupMap instanceof Map)) {
+            state.elementToGroupMap = new Map();
+          }
+          
           const elementIds = state.groups.get(groupId);
           if (elementIds) {
             // Remove elements from group mapping and clear groupId on element
             elementIds.forEach((elementId: ElementId) => {
               state.elementToGroupMap.delete(elementId);
-              get().setElementGroup(elementId, null);
+              getState().setElementGroup(elementId, null);
             });
             // Remove the group
             state.groups.delete(groupId);

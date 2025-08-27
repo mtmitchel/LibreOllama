@@ -3,7 +3,7 @@
 export interface CanvasTool {
   id: string;
   name: string;
-  icon: any;
+  icon: React.ComponentType | string;
   description?: string;
   category?: string;
 }

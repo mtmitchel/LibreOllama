@@ -1,20 +1,17 @@
 /**
- * MarkerTool - Interactive marker drawing component
+ * MarkerTool - High-performance marker drawing component
  * 
- * Simplified version based on working PenTool pattern
+ * Uses Konva refs and batchDraw for smooth real-time drawing without React re-renders
  */
 
-import React, { useCallback, useRef, useState } from 'react';
-import { Line, Group } from 'react-konva';
+import React, { useCallback, useRef } from 'react';
+import { Line, Layer } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
-import { useRafThrottle } from '../../../hooks/useRafThrottle';
 import { useShallow } from 'zustand/react/shallow';
 import { nanoid } from 'nanoid';
-import { MarkerElement } from '../../../types/enhanced.types';
-import { ElementId } from '../../../types';
-import { getStrokeBoundingBox } from '../../../utils/spatial/getStrokeBoundingBox';
+import { createElementId } from '../../../types/enhanced.types';
 
 interface MarkerToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -29,44 +26,19 @@ interface MarkerToolProps {
   };
 }
 
-// Simple stroke smoothing function
-const smoothStroke = (points: number[]): number[] => {
-  if (points.length < 6) return points;
-  
-  const smoothed = [points[0], points[1]]; // Keep first point
-  
-  for (let i = 2; i < points.length - 2; i += 2) {
-    const prevX = points[i - 2];
-    const prevY = points[i - 1];
-    const currX = points[i];
-    const currY = points[i + 1];
-    const nextX = points[i + 2];
-    const nextY = points[i + 3];
-    
-    // Simple smoothing: average with neighbors
-    const smoothX = (prevX + currX + nextX) / 3;
-    const smoothY = (prevY + currY + nextY) / 3;
-    
-    smoothed.push(smoothX, smoothY);
-  }
-  
-  // Keep last point
-  smoothed.push(points[points.length - 2], points[points.length - 1]);
-  return smoothed;
-};
-
 export const MarkerTool: React.FC<MarkerToolProps> = ({ 
   stageRef, 
   isActive, 
   strokeStyle 
 }) => {
+  // High-performance drawing refs - avoid React state updates during drawing
   const isDrawingRef = useRef(false);
-  const [currentStroke, setCurrentStroke] = useState<number[]>([]);
+  const pointsRef = useRef<number[]>([]);
+  const previewLineRef = useRef<Konva.Line | null>(null);
+  const previewLayerRef = useRef<Konva.Layer | null>(null);
 
-  // Cursor management is handled by CanvasStage's centralized cursor system
-
-  // Store actions using grouped selectors for optimization
-  const stickyNoteActions = useUnifiedCanvasStore(
+  // Store selectors - only for final stroke storage
+  const { addElement, findStickyNoteAtPoint, addElementToStickyNote } = useUnifiedCanvasStore(
     useShallow((state) => ({
       addElement: state.addElement,
       findStickyNoteAtPoint: state.findStickyNoteAtPoint,
@@ -74,9 +46,9 @@ export const MarkerTool: React.FC<MarkerToolProps> = ({
     }))
   );
 
-  // Handle pointer down - start drawing
+  // Handle pointer down - start drawing with high-performance refs
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isActive || !stageRef.current) return;
+    if (!isActive || !stageRef.current || !previewLineRef.current || !previewLayerRef.current) return;
     
     // Only start drawing if clicking on the stage (not on an element)
     if (e.target !== stageRef.current) return;
@@ -85,74 +57,85 @@ export const MarkerTool: React.FC<MarkerToolProps> = ({
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
+    // Initialize drawing with refs (no React state updates)
     isDrawingRef.current = true;
-    setCurrentStroke([pointer.x, pointer.y]);
-  }, [isActive, stageRef]);
+    pointsRef.current = [pointer.x, pointer.y];
+    
+    // Set up preview line on dedicated layer
+    previewLineRef.current.points(pointsRef.current);
+    previewLineRef.current.stroke(strokeStyle.color);
+    previewLineRef.current.strokeWidth(strokeStyle.width);
+    previewLineRef.current.opacity(strokeStyle.opacity);
+    previewLayerRef.current.batchDraw();
+  }, [isActive, stageRef, strokeStyle]);
 
-  const throttledSetCurrentStroke = useRafThrottle((point: { x: number; y: number }) => {
-    setCurrentStroke(prev => [...prev, point.x, point.y]);
-  });
-
-  // Handle pointer move - update drawing with throttling
+  // Handle pointer move - ultra-fast updates via Konva refs
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isActive || !isDrawingRef.current || !stageRef.current) return;
+    if (!isActive || !isDrawingRef.current || !stageRef.current || !previewLineRef.current || !previewLayerRef.current) return;
 
     const stage = stageRef.current;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    throttledSetCurrentStroke({ x: pointer.x, y: pointer.y });
-  }, [isActive, stageRef, throttledSetCurrentStroke]);
+    // Add points to ref and update Konva directly - no React re-renders
+    pointsRef.current.push(pointer.x, pointer.y);
+    previewLineRef.current.points(pointsRef.current);
+    
+    // Batch draw for optimal performance
+    previewLayerRef.current.batchDraw();
+  }, [isActive, stageRef]);
 
-  // Handle pointer up - finish drawing
+  // Handle pointer up - commit final stroke to store
   const handlePointerUp = useCallback(() => {
-    if (!isActive || !isDrawingRef.current || !stageRef.current) return;
+    if (!isActive || !isDrawingRef.current || !previewLineRef.current || !previewLayerRef.current) return;
 
     isDrawingRef.current = false;
+    
+    // Only commit to store if we have enough points for a meaningful stroke
+    if (pointsRef.current.length >= 4) {
+      // Create marker element
+      const markerElement = {
+        id: createElementId(nanoid()),
+        type: 'marker' as const,
+        x: 0,
+        y: 0,
+        points: [...pointsRef.current], // Copy the points array
+        style: { 
+          color: strokeStyle.color,
+          width: strokeStyle.width,
+          opacity: strokeStyle.opacity,
+          smoothness: strokeStyle.smoothness,
+          lineCap: strokeStyle.lineCap,
+          lineJoin: strokeStyle.lineJoin,
+          blendMode: 'source-over',
+          widthVariation: true,
+          minWidth: strokeStyle.width * 0.5,
+          maxWidth: strokeStyle.width * 1.5,
+          pressureSensitive: false
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isLocked: false,
+        isHidden: false
+      };
 
-    if (currentStroke.length < 4) {
-      setCurrentStroke([]);
-      return;
+      // Add to store
+      addElement(markerElement);
+
+      // Check for sticky note integration
+      const startPoint = { x: pointsRef.current[0], y: pointsRef.current[1] };
+      const stickyNoteId = findStickyNoteAtPoint?.(startPoint);
+      
+      if (stickyNoteId) {
+        addElementToStickyNote?.(markerElement.id, stickyNoteId);
+      }
     }
 
-    // Create marker element
-    const bounds = getStrokeBoundingBox(currentStroke);
-    
-    // Optional: Simple stroke smoothing for better appearance
-    const smoothedStroke = currentStroke.length > 8 ? smoothStroke(currentStroke) : currentStroke;
-    
-    const markerElement: MarkerElement = {
-      id: nanoid() as ElementId,
-      type: 'marker',
-      points: smoothedStroke,
-      style: { 
-        ...strokeStyle,
-        blendMode: 'source-over',
-        widthVariation: true,
-        minWidth: strokeStyle.width * 0.5,
-        maxWidth: strokeStyle.width * 1.5,
-        pressureSensitive: false
-      },
-      ...bounds,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      isLocked: false,
-      isHidden: false
-    };
-
-    // Add to store
-    stickyNoteActions.addElement(markerElement);
-
-    // Check for sticky note container
-    const startPoint = { x: currentStroke[0], y: currentStroke[1] };
-    const stickyNoteId = stickyNoteActions.findStickyNoteAtPoint(startPoint);
-    if (stickyNoteId) {
-      stickyNoteActions.addElementToStickyNote(markerElement.id, stickyNoteId);
-    }
-
-    // Clear current stroke
-    setCurrentStroke([]);
-  }, [isActive, currentStroke, strokeStyle, stickyNoteActions]);
+    // Clear preview line and reset
+    pointsRef.current = [];
+    previewLineRef.current.points([]);
+    previewLayerRef.current.batchDraw();
+  }, [isActive, strokeStyle, addElement, findStickyNoteAtPoint, addElementToStickyNote]);
 
   // Attach event listeners to stage when active
   useToolEventHandler({
@@ -166,26 +149,30 @@ export const MarkerTool: React.FC<MarkerToolProps> = ({
     }
   });
 
-  // Render current drawing stroke as preview
-  if (!isActive || !isDrawingRef.current || currentStroke.length < 4) {
+  // Render dedicated preview layer for high-performance drawing
+  if (!isActive) {
     return null;
   }
 
   return (
-    <Line
-      points={currentStroke}
-      stroke={strokeStyle.color}
-      strokeWidth={strokeStyle.width}
-      opacity={strokeStyle.opacity}
-      tension={strokeStyle.smoothness}
-      lineCap={strokeStyle.lineCap as any}
-      lineJoin={strokeStyle.lineJoin as any}
+    <Layer
+      ref={previewLayerRef}
       listening={false}
-      perfectDrawEnabled={false}
-      shadowForStrokeEnabled={false}
-      hitStrokeWidth={0}
-    />
+    >
+      <Line
+        ref={previewLineRef}
+        points={[]}
+        stroke={strokeStyle.color}
+        strokeWidth={strokeStyle.width}
+        opacity={strokeStyle.opacity}
+        tension={strokeStyle.smoothness}
+        lineCap={strokeStyle.lineCap as any}
+        lineJoin={strokeStyle.lineJoin as any}
+        listening={false}
+        perfectDrawEnabled={false}
+        shadowForStrokeEnabled={false}
+        hitStrokeWidth={0}
+      />
+    </Layer>
   );
 };
-
-export default MarkerTool; 

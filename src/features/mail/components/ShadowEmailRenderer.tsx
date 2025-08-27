@@ -130,8 +130,9 @@ export function ShadowEmailRenderer({ html, className = '', onLinkClick }: Shado
     });
 
     // Keyboard accessibility: handle Enter on link-like elements without href
-    shadowRoot.addEventListener('keydown', async (e) => {
-      if (e.key !== 'Enter') return;
+    shadowRoot.addEventListener('keydown', async (e: Event) => {
+      const keyboardEvent = e as KeyboardEvent;
+      if (keyboardEvent.key !== 'Enter') return;
       const target = e.target as HTMLElement;
       const link = target.closest('a[role="link"][data-original-href], [role="link"][data-original-href]') as HTMLElement | null;
       if (!link) return;

@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
 import { ElementId, isTableElement, isConnectorElement } from '../../types/enhanced.types';
 import { useCursorManager } from '../../utils/performance/cursorManager';
+import { createBoundBoxFunc } from '../../utils/snappingUtils';
 
 type CustomTransformerProps = {
   selectedNodeIds: ElementId[];
@@ -325,10 +326,21 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
       padding={0}
       // Keep handles usable on small elements
       keepRatio={false}
-      // Minimum size
+      // Minimum size and snapping
       boundBoxFunc={(oldBox, newBox) => {
+        // Apply minimum size constraints first
         if (newBox.width < 30) newBox.width = 30;
         if (newBox.height < 30) newBox.height = 30;
+        
+        // Apply snapping for the first selected element
+        const firstElementId = filteredSelectedNodeIds[0];
+        const firstElement = elements.get(firstElementId);
+        if (firstElement) {
+          const allElements = Array.from(elements.values()).filter(el => el.id !== firstElementId);
+          const snapBoundBoxFunc = createBoundBoxFunc(firstElement, allElements, true);
+          return snapBoundBoxFunc(oldBox, newBox);
+        }
+        
         return newBox;
       }}
     />

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createUnifiedTestStore } from '@/tests/helpers/createUnifiedTestStore';
-import { ElementId, TextElement } from '../types/enhanced.types';
+import { ElementId, TextElement, createElementId } from '../types/enhanced.types';
 
 /**
  * TextTool Store-First Tests
@@ -22,7 +22,7 @@ describe('TextTool', () => {
     it('should create text element with correct properties', () => {
       // Test text element creation through store
       const textElement: TextElement = {
-        id: ElementId('text-1'),
+        id: createElementId('text-1'),
         type: 'text',
         x: 100,
         y: 100,
@@ -39,7 +39,7 @@ describe('TextTool', () => {
       store.getState().addElement(textElement);
 
       expect(store.getState().elements.size).toBe(1);
-      const addedElement = store.getState().elements.get(ElementId('text-1'));
+      const addedElement = store.getState().elements.get(createElementId('text-1'));
       expect(addedElement).toBeDefined();
       expect(addedElement?.type).toBe('text');
       expect((addedElement as TextElement)?.text).toBe('Hello World');
@@ -47,7 +47,7 @@ describe('TextTool', () => {
 
     it('should set text editing element in store', () => {
       // Test text editing state management
-      const textId = ElementId('text-1');
+      const textId = createElementId('text-1');
       
       store.getState().setTextEditingElement(textId);
       expect(store.getState().textEditingElementId).toBe(textId);
@@ -60,7 +60,7 @@ describe('TextTool', () => {
     it('should handle text editing workflow through store state', () => {
       // Create text element
       const textElement: TextElement = {
-        id: ElementId('text-1'),
+        id: createElementId('text-1'),
         type: 'text',
         x: 100,
         y: 100,
@@ -77,15 +77,15 @@ describe('TextTool', () => {
       store.getState().addElement(textElement);
       
       // Start editing
-      store.getState().setTextEditingElement(ElementId('text-1'));
-      expect(store.getState().textEditingElementId).toBe(ElementId('text-1'));
+      store.getState().setTextEditingElement(createElementId('text-1'));
+      expect(store.getState().textEditingElementId).toBe(createElementId('text-1'));
 
       // Update text content
-      store.getState().updateElement(ElementId('text-1'), {
+      store.getState().updateElement(createElementId('text-1'), {
         text: 'Updated Text'
       });
 
-      const updatedElement = store.getState().elements.get(ElementId('text-1')) as TextElement;
+      const updatedElement = store.getState().elements.get(createElementId('text-1')) as TextElement;
       expect(updatedElement.text).toBe('Updated Text');
 
       // Finish editing
@@ -97,7 +97,7 @@ describe('TextTool', () => {
   describe('Text Element Properties', () => {
     it('should create text elements with correct initial properties', () => {
       const textElement: TextElement = {
-        id: ElementId('text-1'),
+        id: createElementId('text-1'),
         type: 'text',
         x: 150,
         y: 200,
@@ -113,7 +113,7 @@ describe('TextTool', () => {
 
       store.getState().addElement(textElement);
 
-      const element = store.getState().elements.get(ElementId('text-1')) as TextElement;
+      const element = store.getState().elements.get(createElementId('text-1')) as TextElement;
       expect(element.x).toBe(150);
       expect(element.y).toBe(200);
       expect(element.fontSize).toBe(24);
@@ -123,7 +123,7 @@ describe('TextTool', () => {
 
     it('should handle text element positioning correctly', () => {
       const textElement: TextElement = {
-        id: ElementId('text-1'),
+        id: createElementId('text-1'),
         type: 'text',
         x: 300,
         y: 400,
@@ -140,12 +140,12 @@ describe('TextTool', () => {
       store.getState().addElement(textElement);
 
       // Update position
-      store.getState().updateElement(ElementId('text-1'), {
+      store.getState().updateElement(createElementId('text-1'), {
         x: 350,
         y: 450
       });
 
-      const updatedElement = store.getState().elements.get(ElementId('text-1')) as TextElement;
+      const updatedElement = store.getState().elements.get(createElementId('text-1')) as TextElement;
       expect(updatedElement.x).toBe(350);
       expect(updatedElement.y).toBe(450);
     });
@@ -155,7 +155,7 @@ describe('TextTool', () => {
     it('should handle text selection and editing states', () => {
       // Create multiple text elements
       const text1: TextElement = {
-        id: ElementId('text-1'),
+        id: createElementId('text-1'),
         type: 'text',
         x: 100,
         y: 100,
@@ -170,7 +170,7 @@ describe('TextTool', () => {
       };
 
       const text2: TextElement = {
-        id: ElementId('text-2'),
+        id: createElementId('text-2'),
         type: 'text',
         x: 200,
         y: 200,
@@ -188,22 +188,22 @@ describe('TextTool', () => {
       store.getState().addElement(text2);
 
       // Select first text element
-      store.getState().selectElement(ElementId('text-1'));
-      expect(store.getState().selectedElementIds.has(ElementId('text-1'))).toBe(true);
+      store.getState().selectElement(createElementId('text-1'));
+      expect(store.getState().selectedElementIds.has(createElementId('text-1'))).toBe(true);
 
       // Start editing first element
-      store.getState().setTextEditingElement(ElementId('text-1'));
-      expect(store.getState().textEditingElementId).toBe(ElementId('text-1'));
+      store.getState().setTextEditingElement(createElementId('text-1'));
+      expect(store.getState().textEditingElementId).toBe(createElementId('text-1'));
 
       // Switch to editing second element
-      store.getState().setTextEditingElement(ElementId('text-2'));
-      expect(store.getState().textEditingElementId).toBe(ElementId('text-2'));
+      store.getState().setTextEditingElement(createElementId('text-2'));
+      expect(store.getState().textEditingElementId).toBe(createElementId('text-2'));
     });
 
     it('should integrate with sticky note elements', () => {
       // Create a sticky note element with text
       const stickyNote = {
-        id: ElementId('sticky-1'),
+        id: createElementId('sticky-1'),
         type: 'rich-text' as const,
         x: 100,
         y: 100,
@@ -221,15 +221,15 @@ describe('TextTool', () => {
       store.getState().addElement(stickyNote);
 
       // Start editing the sticky note text
-      store.getState().setTextEditingElement(ElementId('sticky-1'));
-      expect(store.getState().textEditingElementId).toBe(ElementId('sticky-1'));
+      store.getState().setTextEditingElement(createElementId('sticky-1'));
+      expect(store.getState().textEditingElementId).toBe(createElementId('sticky-1'));
 
       // Update sticky note text
-      store.getState().updateElement(ElementId('sticky-1'), {
+      store.getState().updateElement(createElementId('sticky-1'), {
         text: 'Updated sticky note content'
       });
 
-      const updatedNote = store.getState().elements.get(ElementId('sticky-1'));
+      const updatedNote = store.getState().elements.get(createElementId('sticky-1'));
       expect((updatedNote as any).text).toBe('Updated sticky note content');
     });
   });
@@ -248,7 +248,7 @@ describe('TextTool', () => {
     it('should clear text editing when tool changes', () => {
       // Create text element and start editing
       const textElement: TextElement = {
-        id: ElementId('text-1'),
+        id: createElementId('text-1'),
         type: 'text',
         x: 100,
         y: 100,
@@ -263,8 +263,8 @@ describe('TextTool', () => {
       };
 
       store.getState().addElement(textElement);
-      store.getState().setTextEditingElement(ElementId('text-1'));
-      expect(store.getState().textEditingElementId).toBe(ElementId('text-1'));
+      store.getState().setTextEditingElement(createElementId('text-1'));
+      expect(store.getState().textEditingElementId).toBe(createElementId('text-1'));
 
       // Change tool should clear text editing
       store.getState().setSelectedTool('rectangle');
@@ -278,7 +278,7 @@ describe('TextTool', () => {
       // Create multiple text elements
       for (let i = 0; i < 5; i++) {
         const textElement: TextElement = {
-          id: ElementId(`text-${i}`),
+          id: createElementId(`text-${i}`),
           type: 'text',
           x: 100 + i * 50,
           y: 100 + i * 30,
@@ -298,7 +298,7 @@ describe('TextTool', () => {
 
       // Test that all text elements are properly stored
       for (let i = 0; i < 5; i++) {
-        const element = store.getState().elements.get(ElementId(`text-${i}`)) as TextElement;
+        const element = store.getState().elements.get(createElementId(`text-${i}`)) as TextElement;
         expect(element).toBeDefined();
         expect(element.text).toBe(`Text ${i}`);
       }

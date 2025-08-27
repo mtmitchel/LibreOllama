@@ -9,7 +9,7 @@
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { createUnifiedTestStore } from '../helpers/createUnifiedTestStore';
-import { ElementId } from '@/features/canvas/types/enhanced.types';
+import { ElementId, createElementId } from '@/features/canvas/types/enhanced.types';
 
 describe('Canvas Store Save/Load Operations', () => {
   let testStore: ReturnType<typeof createUnifiedTestStore>;
@@ -23,7 +23,7 @@ describe('Canvas Store Save/Load Operations', () => {
     test('should export canvas data correctly', () => {
       // Add test elements to store
       const rect = {
-        id: ElementId('rect-1'),
+        id: createElementId('rect-1'),
         type: 'rectangle' as const,
         x: 10,
         y: 20,
@@ -38,7 +38,7 @@ describe('Canvas Store Save/Load Operations', () => {
       };
       
       const circle = {
-        id: ElementId('circle-1'),
+        id: createElementId('circle-1'),
         type: 'circle' as const,
         x: 100,
         y: 100,
@@ -56,16 +56,16 @@ describe('Canvas Store Save/Load Operations', () => {
       // Test export functionality
       const elements = testStore.getState().elements;
       expect(elements.size).toBe(2);
-      expect(elements.get(ElementId('rect-1'))).toBeDefined();
-      expect(elements.get(ElementId('circle-1'))).toBeDefined();
+      expect(elements.get(createElementId('rect-1'))).toBeDefined();
+      expect(elements.get(createElementId('circle-1'))).toBeDefined();
       
       // Verify element data integrity
-      const exportedRect = elements.get(ElementId('rect-1'));
+      const exportedRect = elements.get(createElementId('rect-1'));
       expect(exportedRect?.type).toBe('rectangle');
       expect(exportedRect?.x).toBe(10);
       expect(exportedRect?.y).toBe(20);
       
-      const exportedCircle = elements.get(ElementId('circle-1'));
+      const exportedCircle = elements.get(createElementId('circle-1'));
       expect(exportedCircle?.type).toBe('circle');
       expect(exportedCircle?.x).toBe(100);
       expect(exportedCircle?.y).toBe(100);
@@ -84,7 +84,7 @@ describe('Canvas Store Save/Load Operations', () => {
       // Test data to import
       const importData = [
         {
-          id: ElementId('imported-1'),
+          id: createElementId('imported-1'),
           type: 'rectangle' as const,
           x: 50,
           y: 75,
@@ -98,7 +98,7 @@ describe('Canvas Store Save/Load Operations', () => {
           updatedAt: Date.now()
         },
         {
-          id: ElementId('imported-2'),
+          id: createElementId('imported-2'),
           type: 'circle' as const,
           x: 200,
           y: 200,
@@ -119,12 +119,12 @@ describe('Canvas Store Save/Load Operations', () => {
       // Verify import
       expect(testStore.getState().elements.size).toBe(2);
       
-      const importedRect = testStore.getState().elements.get(ElementId('imported-1'));
+      const importedRect = testStore.getState().elements.get(createElementId('imported-1'));
       expect(importedRect?.type).toBe('rectangle');
       expect((importedRect as any)?.width).toBe(200);
       expect((importedRect as any)?.height).toBe(100);
       
-      const importedCircle = testStore.getState().elements.get(ElementId('imported-2'));
+      const importedCircle = testStore.getState().elements.get(createElementId('imported-2'));
       expect(importedCircle?.type).toBe('circle');
       expect((importedCircle as any)?.radius).toBe(50);
     });
@@ -132,7 +132,7 @@ describe('Canvas Store Save/Load Operations', () => {
     test('should handle data validation during import', () => {
       // Test valid element
       const validElement = {
-        id: ElementId('valid-1'),
+        id: createElementId('valid-1'),
         type: 'rectangle' as const,
         x: 0,
         y: 0,
@@ -148,7 +148,7 @@ describe('Canvas Store Save/Load Operations', () => {
 
       testStore.getState().addElement(validElement);
       expect(testStore.getState().elements.size).toBe(1);
-      expect(testStore.getState().elements.get(ElementId('valid-1'))).toBeDefined();
+      expect(testStore.getState().elements.get(createElementId('valid-1'))).toBeDefined();
     });
   });
 
@@ -156,7 +156,7 @@ describe('Canvas Store Save/Load Operations', () => {
     test('should preserve element relationships during export/import', () => {
       // Create elements with relationships
       const parentElement = {
-        id: ElementId('parent-1'),
+        id: createElementId('parent-1'),
         type: 'rectangle' as const,
         x: 0,
         y: 0,
@@ -171,7 +171,7 @@ describe('Canvas Store Save/Load Operations', () => {
       };
 
       const childElement = {
-        id: ElementId('child-1'),
+        id: createElementId('child-1'),
         type: 'circle' as const,
         x: 50,
         y: 50,
@@ -188,13 +188,13 @@ describe('Canvas Store Save/Load Operations', () => {
 
       // Verify elements are stored correctly
       expect(testStore.getState().elements.size).toBe(2);
-      expect(testStore.getState().elements.get(ElementId('parent-1'))).toBeDefined();
-      expect(testStore.getState().elements.get(ElementId('child-1'))).toBeDefined();
+      expect(testStore.getState().elements.get(createElementId('parent-1'))).toBeDefined();
+      expect(testStore.getState().elements.get(createElementId('child-1'))).toBeDefined();
       
       // Test element order preservation
       const elementOrder = testStore.getState().elementOrder;
-      expect(elementOrder).toContain(ElementId('parent-1'));
-      expect(elementOrder).toContain(ElementId('child-1'));
+      expect(elementOrder).toContain(createElementId('parent-1'));
+      expect(elementOrder).toContain(createElementId('child-1'));
     });
 
     test('should handle viewport state in export/import', () => {
@@ -213,7 +213,7 @@ describe('Canvas Store Save/Load Operations', () => {
       
       // Add elements to test full state
       const element = {
-        id: ElementId('viewport-test'),
+        id: createElementId('viewport-test'),
         type: 'rectangle' as const,
         x: 0,
         y: 0,
@@ -237,7 +237,7 @@ describe('Canvas Store Save/Load Operations', () => {
     test('should maintain selection state during operations', () => {
       // Add elements
       const element1 = {
-        id: ElementId('select-1'),
+        id: createElementId('select-1'),
         type: 'rectangle' as const,
         x: 0,
         y: 0,
@@ -252,7 +252,7 @@ describe('Canvas Store Save/Load Operations', () => {
       };
 
       const element2 = {
-        id: ElementId('select-2'),
+        id: createElementId('select-2'),
         type: 'circle' as const,
         x: 150,
         y: 150,
@@ -268,13 +268,13 @@ describe('Canvas Store Save/Load Operations', () => {
       testStore.getState().addElement(element2);
 
       // Test selection
-      testStore.getState().selectElement(ElementId('select-1'));
-      expect(testStore.getState().selectedElementIds.has(ElementId('select-1'))).toBe(true);
+      testStore.getState().selectElement(createElementId('select-1'));
+      expect(testStore.getState().selectedElementIds.has(createElementId('select-1'))).toBe(true);
       expect(testStore.getState().selectedElementIds.size).toBe(1);
 
       // Test multi-selection
-      testStore.getState().selectElement(ElementId('select-2'), true); // multiSelect: true
-      expect(testStore.getState().selectedElementIds.has(ElementId('select-2'))).toBe(true);
+      testStore.getState().selectElement(createElementId('select-2'), true); // multiSelect: true
+      expect(testStore.getState().selectedElementIds.has(createElementId('select-2'))).toBe(true);
       expect(testStore.getState().selectedElementIds.size).toBe(2);
     });
 
@@ -285,7 +285,7 @@ describe('Canvas Store Save/Load Operations', () => {
       
       // Add element (should create history entry)
       const element = {
-        id: ElementId('history-test'),
+        id: createElementId('history-test'),
         type: 'rectangle' as const,
         x: 0,
         y: 0,
@@ -315,7 +315,7 @@ describe('Canvas Store Save/Load Operations', () => {
       
       for (let i = 0; i < 100; i++) {
         const element = {
-          id: ElementId(`perf-${i}`),
+          id: createElementId(`perf-${i}`),
           type: 'rectangle' as const,
           x: i * 10,
           y: i * 10,
@@ -340,7 +340,7 @@ describe('Canvas Store Save/Load Operations', () => {
 
     test('should handle duplicate element IDs correctly', () => {
       const element1 = {
-        id: ElementId('duplicate-test'),
+        id: createElementId('duplicate-test'),
         type: 'rectangle' as const,
         x: 0,
         y: 0,
@@ -355,7 +355,7 @@ describe('Canvas Store Save/Load Operations', () => {
       };
 
       const element2 = {
-        id: ElementId('duplicate-test'), // Same ID
+        id: createElementId('duplicate-test'), // Same ID
         type: 'circle' as const,
         x: 50,
         y: 50,
@@ -371,7 +371,7 @@ describe('Canvas Store Save/Load Operations', () => {
       testStore.getState().addElement(element2); // Should replace first element
       
       expect(testStore.getState().elements.size).toBe(1);
-      const finalElement = testStore.getState().elements.get(ElementId('duplicate-test'));
+      const finalElement = testStore.getState().elements.get(createElementId('duplicate-test'));
       expect(finalElement?.type).toBe('circle'); // Should be the second element
     });
 
@@ -379,20 +379,20 @@ describe('Canvas Store Save/Load Operations', () => {
       // Simulate concurrent operations
       const operations = [
         () => testStore.getState().addElement({
-          id: ElementId('concurrent-1'),
+          id: createElementId('concurrent-1'),
           type: 'rectangle' as const,
           x: 0, y: 0, width: 100, height: 100,
           fill: '#000000', stroke: '#ffffff', strokeWidth: 1, cornerRadius: 0,
           createdAt: Date.now(), updatedAt: Date.now()
         }),
         () => testStore.getState().addElement({
-          id: ElementId('concurrent-2'),
+          id: createElementId('concurrent-2'),
           type: 'circle' as const,
           x: 50, y: 50, radius: 25,
           fill: '#ff0000', stroke: '#000000', strokeWidth: 1,
           createdAt: Date.now(), updatedAt: Date.now()
         }),
-        () => testStore.getState().selectElement(ElementId('concurrent-1')),
+        () => testStore.getState().selectElement(createElementId('concurrent-1')),
         () => testStore.getState().setViewport({ x: 100, y: 100, scale: 2 })
       ];
 
@@ -401,7 +401,7 @@ describe('Canvas Store Save/Load Operations', () => {
 
       // Verify final state integrity
       expect(testStore.getState().elements.size).toBe(2);
-      expect(testStore.getState().selectedElementIds.has(ElementId('concurrent-1'))).toBe(true);
+      expect(testStore.getState().selectedElementIds.has(createElementId('concurrent-1'))).toBe(true);
       expect(testStore.getState().viewport.scale).toBe(2);
     });
   });

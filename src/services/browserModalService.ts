@@ -36,7 +36,7 @@ class BrowserModalService {
       logger.debug('Opened browser modal:', { windowLabel, url: options.url });
 
       // Track the window if available
-      const openedWindow = WebviewWindow.getByLabel(windowLabel);
+      const openedWindow = await WebviewWindow.getByLabel(windowLabel);
       if (openedWindow) {
         this.openModals.set(windowLabel, openedWindow);
         try {

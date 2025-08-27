@@ -47,21 +47,34 @@ type UnifiedTaskStore = UnifiedTaskState & UnifiedTaskActions;
 
 const generateTaskId = () => `local-task-${uuidv4()}`;
 
+// Types for label migration
+type LabelColor = 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray';
+type TaskLabel = { name: string; color: LabelColor };
+type LegacyLabels = string | string[] | TaskLabel[] | Array<{ name: string; color: string }> | undefined | null;
+
 // Helper to migrate old string labels to new format
-const migrateLabelFormat = (labels: any): Array<{ name: string; color: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray' }> => {
+const migrateLabelFormat = (labels: LegacyLabels): TaskLabel[] => {
   if (!labels) return [];
   if (Array.isArray(labels)) {
     return labels.map((label, index) => {
       if (typeof label === 'string') {
         // Migrate from string to object with color based on index
-        const colors: Array<'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray'> = 
+        const colors: LabelColor[] = 
           ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
         return {
           name: label,
           color: colors[index % colors.length]
         };
+      } else if (typeof label === 'object' && 'name' in label && 'color' in label) {
+        // Handle both TaskLabel and { name: string; color: string } formats
+        const colors: LabelColor[] = 
+          ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
+        return {
+          name: label.name,
+          color: (colors.includes(label.color as LabelColor) ? label.color : colors[index % colors.length]) as LabelColor
+        };
       }
-      return label;
+      return label as TaskLabel;
     });
   }
   return [];
@@ -164,7 +177,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 labels: input.labels ? input.labels.map(label => {
                   if (typeof label === 'string') {
                     // If it's a string, assign a default color
-                    const colors: Array<'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray'> = 
+                    const colors: LabelColor[] = 
                       ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
                     return { name: label, color: colors[0] };
                   }
@@ -266,7 +279,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             Object.keys(updates).forEach(key => {
               const updateKey = key as keyof typeof updates;
               if (updates[updateKey] !== undefined) {
-                (task as any)[key] = updates[updateKey];
+                (task as UnifiedTask & Record<string, unknown>)[key] = updates[updateKey];
               }
             });
             task.updated = new Date().toISOString();
@@ -287,7 +300,18 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           try {
             // Update in Google Tasks via backend
             // Only send fields that Google Tasks API understands
-            const googleUpdates: any = {
+            const googleUpdates: {
+              account_id: string;
+              task_list_id: string;
+              task_id: string;
+              title?: string;
+              notes?: string;
+              due?: string;
+              status?: string;
+              priority?: string;
+              labels?: Array<{ name: string; color: string }>;
+              time_block?: { start_time: string; end_time: string } | null;
+            } = {
               account_id: activeAccount.id,
               task_list_id: task.googleTaskListId,
               task_id: taskId,
@@ -308,7 +332,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 googleUpdates.due = `${datePart}T00:00:00.000Z`;
               } else {
                 // Clear the due date
-                googleUpdates.due = null;
+                googleUpdates.due = undefined;
               }
             }
             if (updates.status !== undefined) googleUpdates.status = updates.status;
@@ -323,7 +347,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               googleUpdates.labels = updates.labels.map(label => {
                 if (typeof label === 'string') {
                   // If it's a string, assign a default color
-                  const colors: Array<'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray'> = 
+                  const colors: LabelColor[] = 
                     ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
                   return { name: label, color: colors[0] };
                 }
@@ -361,17 +385,25 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             });
             
             logger.debug('[UnifiedStore] Updated task in Google', { taskId, updates });
-          } catch (error: any) {
+          } catch (error: unknown) {
             // Check if this is a database schema error
-            if (error.toString().includes('no such column') || error.toString().includes('task_metadata')) {
+            if ((error as Error).toString().includes('no such column') || (error as Error).toString().includes('task_metadata')) {
               console.error('Database schema error detected. Running migrations...');
               try {
                 // Try to run migrations
                 await invoke('force_run_migrations');
-                console.log('Migrations completed. Retrying task update...');
+                // Migrations completed, retrying task update
                 
                 // Retry the update - need to re-declare googleUpdates here
-                const retryUpdates: any = {
+                const retryUpdates: {
+                  account_id: string;
+                  task_list_id: string;
+                  task_id: string;
+                  title?: string;
+                  notes?: string;
+                  due?: string;
+                  status?: string;
+                } = {
                   account_id: activeAccount.id,
                   task_list_id: task.googleTaskListId,
                   task_id: taskId,
@@ -479,7 +511,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
         
         // Move task between columns or reorder
         moveTask: async (taskId, targetColumnId, targetIndex) => {
-          console.log('[UnifiedStore] moveTask called:', { taskId, targetColumnId, targetIndex });
+          // Moving task to different column/position
           const state = get();
           const task = state.tasks[taskId];
           if (!task) {
@@ -497,11 +529,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           
           // Check if this is a cross-list move
           const isCrossListMove = task.googleTaskListId !== targetColumn.googleTaskListId;
-          console.log('[UnifiedStore] Cross-list move?', { 
-            isCrossListMove, 
-            taskListId: task.googleTaskListId, 
-            targetListId: targetColumn.googleTaskListId 
-          });
+          // Cross-list move detection
           
           if (isCrossListMove) {
             // Get active account
@@ -576,7 +604,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   labels: task.labels ? task.labels.map(label => {
                     if (typeof label === 'string') {
                       // If it's a string, assign a default color
-                      const colors: Array<'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray'> = 
+                      const colors: LabelColor[] = 
                         ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
                       return { name: label, color: colors[0] };
                     }
@@ -789,9 +817,11 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   // Use backend labels exactly as provided
                   labels: migrateLabelFormat(incomingTask.labels || []),
                   // Use backend priority exactly as provided
-                  priority: (!incomingTask.priority || (incomingTask as any).priority === 'normal')
+                  priority: (!incomingTask.priority || (incomingTask.priority as any) === 'normal')
                     ? 'none'
-                    : incomingTask.priority as UnifiedTask['priority'],
+                    : (incomingTask.priority === 'high' || incomingTask.priority === 'medium' || incomingTask.priority === 'low' 
+                       ? incomingTask.priority 
+                       : 'none'),
                   // Use backend recurring exactly as provided  
                   recurring: incomingTask.recurring,
                 };
@@ -804,9 +834,11 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   // Use backend labels exactly as provided
                   labels: migrateLabelFormat(incomingTask.labels || []),
                   // Use backend priority exactly as provided
-                  priority: (!incomingTask.priority || (incomingTask as any).priority === 'normal')
+                  priority: (!incomingTask.priority || (incomingTask.priority as any) === 'normal')
                     ? 'none'
-                    : incomingTask.priority as UnifiedTask['priority'],
+                    : (incomingTask.priority === 'high' || incomingTask.priority === 'medium' || incomingTask.priority === 'low' 
+                       ? incomingTask.priority 
+                       : 'none'),
                 };
               }
             }
@@ -876,7 +908,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
 
         // Toggle show completed state
         setShowCompleted: (show, listId) => {
-          console.log('🎛️ setShowCompleted called with:', show, 'for list:', listId);
+          // Toggle show completed for list
           set(state => {
             if (listId) {
               // Set per-list preference

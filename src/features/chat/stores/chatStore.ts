@@ -255,14 +255,14 @@ export const useChatStore = create<ChatState>()(
         },
 
         async deleteConversation(conversationId: string) {
-          console.log('🏪 chatStore deleteConversation called with ID:', conversationId);
+          // Deleting conversation
           set({ error: null });
           try {
             const success: boolean = await invoke('delete_session', { sessionId: conversationId });
-            console.log('🦀 Rust delete_session returned:', success);
+            // Backend delete completed
             
             if (success) {
-              console.log('✅ chatStore: Delete successful, updating store...');
+              // Delete successful, updating store
               set(state => {
                 // Remove conversation
                 state.conversations = state.conversations.filter(c => c.id !== conversationId);
@@ -645,7 +645,7 @@ export const useChatStore = create<ChatState>()(
               errorMessage = error.message;
               // Make error messages more user-friendly
               if (errorMessage.includes('model') && errorMessage.includes('not found')) {
-                errorMessage = `Model "${selectedModel}" is not available. Please select a different model in the settings.`;
+                errorMessage = `Model "${get().selectedModel}" is not available. Please select a different model in the settings.`;
               } else if (errorMessage.includes('not configured')) {
                 errorMessage = `The selected AI provider is not configured. Please check your API keys in settings.`;
               } else if (errorMessage.includes('API error')) {
@@ -975,7 +975,7 @@ export const useChatStore = create<ChatState>()(
             
             // If we have a selected conversation, restore its model settings
             if (state.selectedConversationId) {
-              const selectedConv = state.conversations.find(c => c.id === state.selectedConversationId);
+              const selectedConv = state.conversations.find((c: any) => c.id === state.selectedConversationId);
               if (selectedConv?.modelId) {
                 state.selectedModel = selectedConv.modelId;
                 state.selectedProvider = selectedConv.provider || state.selectedProvider;
@@ -989,10 +989,10 @@ export const useChatStore = create<ChatState>()(
               state.fetchAvailableModels().then(() => {
                 // If we still have a selected conversation after fetching models, ensure its model is set
                 if (state.selectedConversationId) {
-                  const selectedConv = state.conversations.find(c => c.id === state.selectedConversationId);
+                  const selectedConv = state.conversations.find((c: any) => c.id === state.selectedConversationId);
                   if (selectedConv?.modelId) {
                     // Check if the model exists in available models
-                    const modelExists = state.availableModels.find(m => m.id === selectedConv.modelId);
+                    const modelExists = state.availableModels.find((m: any) => m.id === selectedConv.modelId);
                     if (modelExists) {
                       // Model exists, ensure it's selected
                       state.selectedModel = selectedConv.modelId;
@@ -1005,7 +1005,7 @@ export const useChatStore = create<ChatState>()(
                   }
                 } else if (state.selectedModel) {
                   // No selected conversation, validate the global selected model
-                  const modelExists = state.availableModels.find(m => m.id === state.selectedModel);
+                  const modelExists = state.availableModels.find((m: any) => m.id === state.selectedModel);
                   if (!modelExists && state.availableModels.length > 0) {
                     logger.warn('chatStore: Persisted model no longer available, selecting default');
                     // Model doesn't exist anymore, select the first available

@@ -2,7 +2,7 @@
  * Simple debounce utility for performance optimization
  * Used to reduce frequency of expensive operations during text editing
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -18,7 +18,7 @@ export function debounce<T extends (...args: any[]) => any>(
  * Debounce with immediate execution option
  * Useful for cases where you want immediate response + debounced cleanup
  */
-export function debounceWithImmediate<T extends (...args: any[]) => any>(
+export function debounceWithImmediate<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number,
   immediate = false

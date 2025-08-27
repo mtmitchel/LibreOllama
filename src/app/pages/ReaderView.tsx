@@ -64,7 +64,7 @@ export function ReaderView() {
       }
       
       // Pre-process: strip visual clutter before sanitize (images, figures, tables, superscript refs)
-      const tmpDoc = parser.parseFromString(parsedArticle.content, 'text/html');
+      const tmpDoc = parser.parseFromString(parsedArticle.content || '', 'text/html');
       const selectorsToRemove = ['img', 'picture', 'figure', 'figcaption', 'svg', 'table', 'sup'];
       selectorsToRemove.forEach((sel) => {
         tmpDoc.querySelectorAll(sel).forEach((el) => el.remove());

@@ -8,7 +8,9 @@ import { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 import { SelectionBox } from '../components/ui/SelectionBox';
 import { SnapPointIndicator } from '../components/ui/SnapPointIndicator';
+import { SnapLines } from '../components/ui/SnapLines';
 import { SectionPreview } from '../components/ui/SectionPreview';
+import { CanvasErrorBoundary } from '../components/CanvasErrorBoundary';
 
 interface UILayerProps {
   selectedElementIds: Set<ElementId>;
@@ -19,6 +21,8 @@ interface UILayerProps {
   stageRef: React.MutableRefObject<Konva.Stage | null>;
   selectionBox?: { x: number; y: number; width: number; height: number; visible: boolean; };
   hoveredSnapPoint?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
+  draggedElement?: CanvasElement | null;
+  showSnapLines?: boolean;
   onMouseDown?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseMove?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseUp?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
@@ -49,6 +53,8 @@ export const UILayer: React.FC<UILayerProps> = ({
   stageRef,
   selectionBox,
   hoveredSnapPoint,
+  draggedElement,
+  showSnapLines = false,
   onMouseDown = () => {},
   onMouseMove = () => {},
   onMouseUp = () => {},
@@ -61,18 +67,30 @@ export const UILayer: React.FC<UILayerProps> = ({
   const shouldListenToEvents = isDrawingSection || (selectionBox && selectionBox.visible);
   
   return (
-    <Layer
-      listening={shouldListenToEvents}
-      name="ui-layer"
-      onMouseDown={shouldListenToEvents ? onMouseDown : undefined}
-      onMouseMove={shouldListenToEvents ? onMouseMove : undefined}
-      onMouseUp={shouldListenToEvents ? onMouseUp : undefined}
+    <CanvasErrorBoundary
+      fallback={null} // UI layer errors are non-critical, just hide
+      onError={(error) => {
+        console.warn('⚠️ [UILayer] Non-critical UI error:', error.message);
+      }}
     >
-      <Group ref={layerRef}>
-        <SectionPreview isDrawingSection={isDrawingSection} previewSection={previewSection} />
-        <SelectionBox selectionBox={selectionBox} />
-        <SnapPointIndicator hoveredSnapPoint={hoveredSnapPoint} />
-      </Group>
-    </Layer>
+      <Layer
+        listening={shouldListenToEvents}
+        name="ui-layer"
+        onMouseDown={shouldListenToEvents ? onMouseDown : undefined}
+        onMouseMove={shouldListenToEvents ? onMouseMove : undefined}
+        onMouseUp={shouldListenToEvents ? onMouseUp : undefined}
+      >
+        <Group ref={layerRef}>
+          <SectionPreview isDrawingSection={isDrawingSection} previewSection={previewSection} />
+          <SelectionBox selectionBox={selectionBox} />
+          <SnapPointIndicator hoveredSnapPoint={hoveredSnapPoint} />
+          <SnapLines 
+            draggedElement={draggedElement || null} 
+            elements={Array.from(elements.values())} 
+            visible={showSnapLines} 
+          />
+        </Group>
+      </Layer>
+    </CanvasErrorBoundary>
   );
 };

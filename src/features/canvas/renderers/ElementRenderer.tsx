@@ -25,7 +25,7 @@ import { ConnectorShape } from '../shapes/ConnectorShape';
 import { TableElement } from '../elements/TableElement';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { calculateSnapLines } from '../utils/snappingUtils';
+import { calculateSnapLines, applySnapping } from '../utils/snappingUtils';
 import { Line } from 'react-konva';
 import { isMarkerElement, isHighlighterElement } from '../types/drawing.types';
 import { StrokeRenderer } from '../components/renderers/StrokeRenderer';
@@ -61,13 +61,32 @@ const ElementRendererComponent: React.FC<ElementRendererProps> = ({
   const snapLines = useUnifiedCanvasStore(state => state.snapLines);
   const setSnapLines = useUnifiedCanvasStore(state => state.setSnapLines);
 
+  // Handle drag move with snapping - declared before use
+  const handleDragMove = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    if (!isSnappingEnabled) return;
+    
+    const node = e.target;
+    const newPosition = { x: node.x(), y: node.y() };
+    const allElements = Array.from(elements.values()).filter(el => el.id !== element.id);
+    
+    const snappingResult = applySnapping(element, newPosition, allElements);
+    
+    if (snappingResult.snapped) {
+      node.position({ x: snappingResult.x, y: snappingResult.y });
+      setSnapLines([]); // For now, just clear snap lines as they're managed elsewhere
+    } else {
+      setSnapLines([]);
+    }
+  }, [isSnappingEnabled, elements, element, setSnapLines]);
+
   const konvaProps = {
       id: element.id,
       x: element.x, // These are relative coordinates when inside a section
       y: element.y, // These are relative coordinates when inside a section
       rotation: element.rotation || 0,
       draggable: !element.isLocked && !isPenElement(element), // Pen elements should never be draggable
-      onDragEnd: (e) => onElementDragEnd(e, element.id),
+      onDragMove: handleDragMove,
+      onDragEnd: (e: any) => onElementDragEnd(e, element.id), // Fix 'any' type issue
       ...overrideKonvaProps
   };
 
@@ -89,6 +108,7 @@ const ElementRendererComponent: React.FC<ElementRendererProps> = ({
   const handleUpdateWithId = useCallback((id: ElementId, updates: Partial<CanvasElement>) => {
     onElementUpdate(id, updates);
   }, [onElementUpdate]);
+
 
   if (isRectangleElement(element)) {
     return <RectangleShape {...(commonShapeProps as any)} element={element} onSelect={handleSelect} onUpdate={handleUpdate} />;

@@ -214,7 +214,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="xs"
+                        size="sm"
                         className="ml-2"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -273,7 +273,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             }
           >
             {isUploading ? (
-              <span className="inline-flex items-center gap-2"><LoadingSpinner size={16} /> Uploading…</span>
+              <span className="inline-flex items-center gap-2"><LoadingSpinner size="sm" /> Uploading…</span>
             ) : (
               'Insert image'
             )}

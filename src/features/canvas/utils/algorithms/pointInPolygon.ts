@@ -3,8 +3,29 @@
  * Used for geometric calculations and complex shape intersection testing
  */
 
+import { CanvasElement } from '../../types/enhanced.types';
+import { TypedCanvasElement, isCircleElement, isLineElement } from '../../types/type-safe-replacements';
+
 export type Point = [number, number];
 export type Polygon = Point[];
+
+// Enhanced element interfaces for geometric calculations
+interface ElementWithPoints {
+  points?: number[];
+  intermediatePoints?: Array<{ x: number; y: number }>;
+}
+
+interface StarElement {
+  innerRadius?: number;
+  outerRadius?: number;
+  numPoints?: number;
+}
+
+interface ConnectorElement {
+  startPoint?: { x: number; y: number };
+  endPoint?: { x: number; y: number };
+  intermediatePoints?: Array<{ x: number; y: number }>;
+}
 
 /**
  * Ray casting algorithm to determine if a point is inside a polygon
@@ -130,12 +151,24 @@ export function pointInEllipse(
  * Used to test if a shape intersects with a polygon
  * ENHANCED: Complete element type coverage for eraser tool
  */
-export function getShapeCheckPoints(element: any): Point[] {
+export function getShapeCheckPoints(element: CanvasElement): Point[] {
   const points: Point[] = [];
   
   // Always include center point for all elements
-  const centerX = element.x + (element.width || 0) / 2;
-  const centerY = element.y + (element.height || 0) / 2;
+  let width = 100;
+  let height = 100;
+  
+  if (element.type === 'rectangle' || element.type === 'sticky-note' || element.type === 'text' || element.type === 'image' || element.type === 'table' || element.type === 'section') {
+    width = (element as any).width ?? 100;
+    height = (element as any).height ?? 100;
+  } else if (element.type === 'circle') {
+    const radius = (element as any).radius ?? 50;
+    width = radius * 2;
+    height = radius * 2;
+  }
+  
+  const centerX = element.x + width / 2;
+  const centerY = element.y + height / 2;
   points.push([centerX, centerY]);
   
   // Handle different element types with specific geometry
@@ -195,7 +228,7 @@ export function getShapeCheckPoints(element: any): Point[] {
       
     case 'triangle':
       // Triangle elements: use actual triangle points
-      if (element.points && Array.isArray(element.points) && element.points.length >= 6) {
+      if ('points' in element && element.points && Array.isArray(element.points) && element.points.length >= 6) {
         // Extract triangle vertices
         const vertices: Point[] = [];
         for (let i = 0; i < element.points.length; i += 2) {
@@ -216,7 +249,7 @@ export function getShapeCheckPoints(element: any): Point[] {
           const midY = (vertices[i][1] + vertices[next][1]) / 2;
           points.push([midX, midY]);
         }
-      } else if (element.width && element.height) {
+      } else if ('width' in element && 'height' in element && element.width && element.height) {
         // Fallback for triangle without explicit points
         const { x, y, width, height } = element;
         // Standard triangle: top center, bottom left, bottom right
@@ -231,31 +264,7 @@ export function getShapeCheckPoints(element: any): Point[] {
       }
       break;
       
-    case 'star':
-      // Star elements: sample points around star shape
-      if (element.innerRadius && element.outerRadius && element.numPoints) {
-        const { x, y, innerRadius, outerRadius, numPoints } = element;
-        const angleStep = (Math.PI * 2) / numPoints;
-        
-        // Add outer points
-        for (let i = 0; i < numPoints; i++) {
-          const angle = i * angleStep;
-          points.push([
-            x + Math.cos(angle) * outerRadius,
-            y + Math.sin(angle) * outerRadius
-          ]);
-        }
-        
-        // Add inner points
-        for (let i = 0; i < numPoints; i++) {
-          const angle = i * angleStep + angleStep / 2;
-          points.push([
-            x + Math.cos(angle) * innerRadius,
-            y + Math.sin(angle) * innerRadius
-          ]);
-        }
-      }
-      break;
+
       
     case 'connector':
       // Connector elements: sample points along the path
@@ -264,8 +273,8 @@ export function getShapeCheckPoints(element: any): Point[] {
         points.push([element.endPoint.x, element.endPoint.y]);
         
         // Add intermediate points if they exist
-        if (element.intermediatePoints) {
-          element.intermediatePoints.forEach((point: any) => {
+        if ((element as ConnectorElement).intermediatePoints) {
+          (element as ConnectorElement).intermediatePoints!.forEach((point) => {
             points.push([point.x, point.y]);
           });
         }
@@ -298,7 +307,7 @@ export function getShapeCheckPoints(element: any): Point[] {
     case 'marker':
     case 'highlighter':
       // Stroke elements: sample points along the path
-      if (element.points && Array.isArray(element.points)) {
+      if ('points' in element && element.points && Array.isArray(element.points)) {
         // Sample every few points to avoid performance issues but ensure coverage
         const sampleRate = Math.max(2, Math.floor(element.points.length / 40));
         for (let i = 0; i < element.points.length; i += sampleRate * 2) {
@@ -317,23 +326,24 @@ export function getShapeCheckPoints(element: any): Point[] {
       
     default:
       // Generic fallback for unknown element types
-      if (element.points && Array.isArray(element.points)) {
+      if ('points' in element && element.points && Array.isArray(element.points)) {
         // Handle as stroke element
         for (let i = 0; i < element.points.length; i += 20) {
           if (i + 1 < element.points.length) {
             points.push([element.points[i], element.points[i + 1]]);
           }
         }
-      } else if (element.width && element.height) {
+      } else if ('width' in element && 'height' in element && element.width && element.height) {
         // Handle as rectangular element
         const { x, y, width, height } = element;
         points.push([x, y]);
         points.push([x + width, y]);
         points.push([x, y + height]);
         points.push([x + width, y + height]);
-      } else if (element.radius) {
+      } else if ('radius' in element && element.radius) {
         // Handle as circular element
-        const { x, y, radius } = element;
+        const { x, y } = element;
+        const radius = (element as any).radius;
         for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
           points.push([
             x + Math.cos(angle) * radius,
@@ -358,7 +368,7 @@ export function getShapeCheckPoints(element: any): Point[] {
  * Check if any part of a shape is inside a polygon
  * Uses multiple sample points for accurate detection
  */
-export function shapeIntersectsPolygon(element: any, polygon: Polygon): boolean {
+export function shapeIntersectsPolygon(element: CanvasElement, polygon: Polygon): boolean {
   if (polygon.length < 3) return false;
   
   const checkPoints = getShapeCheckPoints(element);

@@ -1,13 +1,11 @@
 import React, { useCallback, useRef } from 'react';
-import { Line } from 'react-konva';
+import { Line, Layer } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+import { createElementId } from '../../../types/enhanced.types';
 import { nanoid } from 'nanoid';
-import { PenElement } from '../../../types/enhanced.types';
-import { canvasLog } from '../../../utils/canvasLogger';
-import { useRafThrottle } from '../../../hooks/useRafThrottle';
 
 interface PenToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -15,93 +13,109 @@ interface PenToolProps {
 }
 
 export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
+  // High-performance drawing refs - avoid React state updates during drawing
   const isDrawingRef = useRef(false);
+  const pointsRef = useRef<number[]>([]);
+  const previewLineRef = useRef<Konva.Line | null>(null);
+  const previewLayerRef = useRef<Konva.Layer | null>(null);
 
-  // Cursor management is handled by CanvasStage's centralized cursor system
-
-  // Store selectors using grouped patterns with useShallow for optimization
-  const drawingState = useUnifiedCanvasStore(
+  // Store selectors - only for final stroke storage and pen color
+  const { penColor, addElement, findStickyNoteAtPoint, addElementToStickyNote } = useUnifiedCanvasStore(
     useShallow((state) => ({
-      isDrawing: state.isDrawing,
-      currentPath: state.currentPath,
-      penColor: state.penColor
-    }))
-  );
-  
-  const drawingActions = useUnifiedCanvasStore(
-    useShallow((state) => ({
-      startDrawing: state.startDrawing,
-      updateDrawing: state.updateDrawing,
-      finishDrawing: state.finishDrawing,
-      cancelDrawing: state.cancelDrawing
-    }))
-  );
-  
-  const toolActions = useUnifiedCanvasStore(
-    useShallow((state) => ({
-      setSelectedTool: state.setSelectedTool,
-      addElement: state.addElement
-    }))
-  );
-  
-  const stickyNoteActions = useUnifiedCanvasStore(
-    useShallow((state) => ({
+      penColor: state.penColor || '#000000',
+      addElement: state.addElement,
       findStickyNoteAtPoint: state.findStickyNoteAtPoint,
       addElementToStickyNote: state.addElementToStickyNote
     }))
   );
 
-  // Destructure for easier access
-  const { isDrawing: isDrawingStore, currentPath } = drawingState;
-  const { startDrawing, updateDrawing, finishDrawing, cancelDrawing } = drawingActions;
-  const { setSelectedTool, addElement } = toolActions;
-  const { findStickyNoteAtPoint, addElementToStickyNote } = stickyNoteActions;
-
-  // Handle pointer down - start drawing
+  // Handle pointer down - start drawing with high-performance refs
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isActive || !stageRef.current) return;
+    if (!isActive || !stageRef.current || !previewLineRef.current || !previewLayerRef.current) return;
     
-    // Only start drawing if clicking on the stage (not on an element)
-    if (e.target !== stageRef.current) return;
-
+    // Only start drawing if clicking on the stage or background layer (not on existing elements)
     const stage = stageRef.current;
+    const target = e.target;
+    
+    // Allow drawing on stage, background layer, or other non-element targets
+    if (target !== stage && target.getClassName() !== 'Layer') {
+      // Check if target is a shape element - if so, don't start drawing
+      if (target.getClassName() === 'Group' || target.getClassName() === 'Rect' || 
+          target.getClassName() === 'Circle' || target.getClassName() === 'Line' || 
+          target.getClassName() === 'Text') {
+        return;
+      }
+    }
+
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
+    // Initialize drawing with refs (no React state updates)
     isDrawingRef.current = true;
-    // Starting drawing
-    startDrawing('pen', { x: pointer.x, y: pointer.y });
-  }, [isActive, stageRef, startDrawing]);
+    pointsRef.current = [pointer.x, pointer.y];
+    
+    // Set up preview line on dedicated layer
+    previewLineRef.current.points(pointsRef.current);
+    previewLineRef.current.stroke(penColor);
+    previewLayerRef.current.batchDraw();
+  }, [isActive, stageRef, penColor]);
 
-  const throttledUpdateDrawing = useRafThrottle((point: { x: number; y: number }) => {
-    updateDrawing(point);
-  });
-
-  // Handle pointer move - update drawing
+  // Handle pointer move - ultra-fast updates via Konva refs
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isActive || !isDrawingRef.current || !stageRef.current) return;
+    if (!isActive || !isDrawingRef.current || !stageRef.current || !previewLineRef.current || !previewLayerRef.current) return;
 
     const stage = stageRef.current;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    // Updating drawing
-    throttledUpdateDrawing({ x: pointer.x, y: pointer.y });
-  }, [isActive, stageRef, throttledUpdateDrawing]);
+    // Add points to ref and update Konva directly - no React re-renders
+    pointsRef.current.push(pointer.x, pointer.y);
+    previewLineRef.current.points(pointsRef.current);
+    
+    // Batch draw for optimal performance
+    previewLayerRef.current.batchDraw();
+  }, [isActive, stageRef]);
 
-  // Handle pointer up - finish drawing
+  // Handle pointer up - commit final stroke to store
   const handlePointerUp = useCallback(() => {
-    if (!isActive || !isDrawingRef.current || !stageRef.current) return;
+    if (!isActive || !isDrawingRef.current || !previewLineRef.current || !previewLayerRef.current) return;
 
     isDrawingRef.current = false;
-    // Finishing drawing
+    
+    // Only commit to store if we have enough points for a meaningful stroke
+    if (pointsRef.current.length >= 4) {
+      // Create pen element and add to store
+      const penElement = {
+        id: createElementId(nanoid()),
+        type: 'pen' as const,
+        x: 0,
+        y: 0,
+        points: [...pointsRef.current], // Copy the points array
+        stroke: penColor,
+        strokeWidth: 2,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isLocked: false,
+        isHidden: false
+      };
+      
+      // Add to store
+      addElement(penElement);
+      
+      // Check for sticky note integration
+      const startPoint = { x: pointsRef.current[0], y: pointsRef.current[1] };
+      const stickyNoteId = findStickyNoteAtPoint?.(startPoint);
+      
+      if (stickyNoteId) {
+        addElementToStickyNote?.(penElement.id, stickyNoteId);
+      }
+    }
 
-    // Use store's finishDrawing which now handles sticky note integration
-    finishDrawing();
-
-    // Keep pen tool active for multiple strokes
-    // Pen stroke completed, keeping tool active
-  }, [isActive, finishDrawing]);
+    // Clear preview line and reset
+    pointsRef.current = [];
+    previewLineRef.current.points([]);
+    previewLayerRef.current.batchDraw();
+  }, [isActive, penColor, addElement, findStickyNoteAtPoint, addElementToStickyNote]);
 
   // Attach event listeners to stage when active
   useToolEventHandler({
@@ -115,21 +129,28 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     }
   });
 
-  // Render current drawing stroke as preview
-  if (!isActive || !isDrawingStore || !currentPath || currentPath.length < 4) {
+  // Render dedicated preview layer for high-performance drawing
+  if (!isActive) {
     return null;
   }
 
   return (
-    <Line
-      points={currentPath}
-      stroke="#000000"
-      strokeWidth={2}
-      tension={0.5}
-      lineCap="round"
-      lineJoin="round"
-      globalCompositeOperation="source-over"
+    <Layer
+      ref={previewLayerRef}
       listening={false}
-    />
+    >
+      <Line
+        ref={previewLineRef}
+        points={[]}
+        stroke={penColor}
+        strokeWidth={2}
+        tension={0}  // No tension for accurate path following
+        lineCap="round"
+        lineJoin="round"
+        globalCompositeOperation="source-over"
+        listening={false}
+        perfectDrawEnabled={false}  // Performance optimization
+      />
+    </Layer>
   );
 }; 

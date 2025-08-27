@@ -10,7 +10,7 @@ import { render, cleanup } from '@testing-library/react';
 import { TableTool } from '../components/tools/creation/TableTool';
 import { createUnifiedTestStore } from '@/tests/helpers/createUnifiedTestStore';
 import type { TableElement } from '../types/enhanced.types';
-import { ElementId } from '../types/enhanced.types';
+import { ElementId, createElementId } from '../types/enhanced.types';
 
 // Mock Konva Stage for UI tests
 const mockStage = {
@@ -192,7 +192,7 @@ describe('Table Functionality (Store-First)', () => {
   describe('Table Creation', () => {
     it('should create table with basic properties', () => {
       const table: TableElement = {
-        id: ElementId('table-1'),
+        id: createElementId('table-1'),
         type: 'table',
         x: 100,
         y: 100,
@@ -241,7 +241,7 @@ describe('Table Functionality (Store-First)', () => {
 
     it('should create table with correct default dimensions', () => {
       const table: TableElement = {
-        id: ElementId('table-default'),
+        id: createElementId('table-default'),
         type: 'table',
         x: 0,
         y: 0,
@@ -279,7 +279,7 @@ describe('Table Functionality (Store-First)', () => {
 
     it('should create table with enhanced table data structure', () => {
       const table: TableElement = {
-        id: ElementId('table-enhanced'),
+        id: createElementId('table-enhanced'),
         type: 'table',
         x: 50,
         y: 50,
@@ -331,7 +331,7 @@ describe('Table Functionality (Store-First)', () => {
     let tableId: ElementId;
 
     beforeEach(() => {
-      tableId = ElementId('test-table');
+      tableId = createElementId('test-table');
       const table: TableElement = {
         id: tableId,
         type: 'table',
@@ -384,7 +384,7 @@ describe('Table Functionality (Store-First)', () => {
     });
 
     it('should handle updating cell in non-existent table', () => {
-      const nonExistentId = ElementId('non-existent');
+      const nonExistentId = createElementId('non-existent');
       
       // Should not throw error
       expect(() => {
@@ -404,7 +404,7 @@ describe('Table Functionality (Store-First)', () => {
     let tableId: ElementId;
 
     beforeEach(() => {
-      tableId = ElementId('row-test-table');
+      tableId = createElementId('row-test-table');
       const table: TableElement = {
         id: tableId,
         type: 'table',
@@ -488,7 +488,7 @@ describe('Table Functionality (Store-First)', () => {
     let tableId: ElementId;
 
     beforeEach(() => {
-      tableId = ElementId('col-test-table');
+      tableId = createElementId('col-test-table');
       const table: TableElement = {
         id: tableId,
         type: 'table',
@@ -573,7 +573,7 @@ describe('Table Functionality (Store-First)', () => {
     let tableId: ElementId;
 
     beforeEach(() => {
-      tableId = ElementId('resize-test-table');
+      tableId = createElementId('resize-test-table');
       const table: TableElement = {
         id: tableId,
         type: 'table',
@@ -649,7 +649,7 @@ describe('Table Functionality (Store-First)', () => {
   describe('Table Selection', () => {
     it('should select table', () => {
       const table: TableElement = {
-        id: ElementId('select-table'),
+        id: createElementId('select-table'),
         type: 'table',
         x: 0,
         y: 0,
@@ -685,7 +685,7 @@ describe('Table Functionality (Store-First)', () => {
 
     it('should handle table in multi-selection', () => {
       const table1: TableElement = {
-        id: ElementId('multi-table-1'),
+        id: createElementId('multi-table-1'),
         type: 'table',
         x: 0,
         y: 0,
@@ -704,7 +704,7 @@ describe('Table Functionality (Store-First)', () => {
       };
 
       const table2: TableElement = {
-        id: ElementId('multi-table-2'),
+        id: createElementId('multi-table-2'),
         type: 'table',
         x: 400,
         y: 0,
@@ -738,7 +738,7 @@ describe('Table Functionality (Store-First)', () => {
   describe('Table Deletion', () => {
     it('should delete table correctly', () => {
       const table: TableElement = {
-        id: ElementId('delete-table'),
+        id: createElementId('delete-table'),
         type: 'table',
         x: 0,
         y: 0,
@@ -780,7 +780,7 @@ describe('Table Functionality (Store-First)', () => {
     it('should work with element creation workflow', () => {
       // Create table
       const table: TableElement = {
-        id: ElementId('integration-table'),
+        id: createElementId('integration-table'),
         type: 'table',
         x: 100,
         y: 100,
@@ -826,7 +826,7 @@ describe('Table Functionality (Store-First)', () => {
 
     it('should work with undo/redo operations', () => {
       const table: TableElement = {
-        id: ElementId('undo-table'),
+        id: createElementId('undo-table'),
         type: 'table',
         x: 0,
         y: 0,

@@ -5,6 +5,21 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-08-26
+
+### 🎨 Canvas Architecture Improvements
+- **Removed ConnectorLayer**: Connectors are now rendered through MainLayer/ElementRenderer for better performance and consistency. Deleted unused ConnectorLayer.tsx file.
+- **Tool Directory Reorganization**: Reorganized canvas tools into subdirectories (base/, drawing/, creation/, core/) with barrel exports for cleaner imports.
+- **Canvas Library UI**: Added new CanvasLibrary component for managing saved canvases - list, load, and delete functionality integrated into toolbar.
+- **Performance Instrumentation**: Enhanced performance monitoring with detailed initialization phase markers for store hydration, layer mounting, tool initialization, and font/image loading.
+- **GPU Acceleration Documentation**: Added comprehensive documentation for WebView2 GPU acceleration flags in lib.rs.
+- **Code Cleanup**: Removed commented-out code and unused artifacts from CanvasLayerManager.
+
+### 🚀 Performance Optimizations
+- **LLMProviderManager Debouncing**: Implemented DeferredProviderManager to prevent repeated reinitializations during startup.
+- **Deferred Gmail Sync**: Gmail auto-sync now defers initialization until after canvas is ready and during idle time.
+- **Message Handler Optimization**: Prepared framework for deferring heavy message bus handling until UI is interactive.
+
 ## [Unreleased] - 2025-08-20
 
 ### 🎨 Canvas Performance Improvements

@@ -33,11 +33,14 @@ export default defineConfig(async () => {
     },
   },
   
-  // Optimize dependencies for browser
+  // Optimize dependencies for browser (Vite 6.0 + React 19 + Konva performance)
   optimizeDeps: {
-    include: ["konva", "react-konva"],
-    // No longer need to exclude canvas as it's properly aliased
+    include: ["konva", "react-konva", "scheduler", "zustand", "immer"],
+    exclude: ["@tauri-apps/api", "@tauri-apps/plugin-dialog", "@tauri-apps/plugin-fs"],
     force: true, // Force re-optimization to ensure proper canvas handling
+    esbuildOptions: {
+      target: 'es2020', // Better performance for modern browsers
+    }
   },
   
   // Build configuration for Tauri

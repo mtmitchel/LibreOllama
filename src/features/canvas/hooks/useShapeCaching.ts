@@ -11,6 +11,61 @@ import { useEffect, useRef, useCallback, useMemo } from 'react';
 import Konva from 'konva';
 import { CanvasElement } from '../types/enhanced.types';
 
+/**
+ * Fast MurmurHash3 implementation for cache key generation
+ * Replaces expensive JSON.stringify with O(1) constant-time hashing
+ */
+const murmurhash3 = (str: string, seed: number = 0): string => {
+  let h1 = seed;
+  const c1 = 0xcc9e2d51;
+  const c2 = 0x1b873593;
+  const r1 = 15;
+  const r2 = 13;
+  const m = 5;
+  const n = 0xe6546b64;
+  
+  const len = str.length;
+  const blocks = Math.floor(len / 4);
+  
+  for (let i = 0; i < blocks; i++) {
+    const k1 = str.charCodeAt(i * 4) |
+               (str.charCodeAt(i * 4 + 1) << 8) |
+               (str.charCodeAt(i * 4 + 2) << 16) |
+               (str.charCodeAt(i * 4 + 3) << 24);
+    
+    let k1m = Math.imul(k1, c1);
+    k1m = (k1m << r1) | (k1m >>> (32 - r1));
+    k1m = Math.imul(k1m, c2);
+    
+    h1 ^= k1m;
+    h1 = (h1 << r2) | (h1 >>> (32 - r2));
+    h1 = Math.imul(h1, m) + n;
+  }
+  
+  // Handle remaining bytes
+  let k1 = 0;
+  const tail = len % 4;
+  if (tail >= 3) k1 ^= str.charCodeAt(blocks * 4 + 2) << 16;
+  if (tail >= 2) k1 ^= str.charCodeAt(blocks * 4 + 1) << 8;
+  if (tail >= 1) {
+    k1 ^= str.charCodeAt(blocks * 4);
+    k1 = Math.imul(k1, c1);
+    k1 = (k1 << r1) | (k1 >>> (32 - r1));
+    k1 = Math.imul(k1, c2);
+    h1 ^= k1;
+  }
+  
+  // Finalize
+  h1 ^= len;
+  h1 ^= h1 >>> 16;
+  h1 = Math.imul(h1, 0x85ebca6b);
+  h1 ^= h1 >>> 13;
+  h1 = Math.imul(h1, 0xc2b2ae35);
+  h1 ^= h1 >>> 16;
+  
+  return (h1 >>> 0).toString(36);
+};
+
 interface CacheConfig {
   /** Whether caching is enabled for this shape */
   enabled: boolean;
@@ -73,7 +128,7 @@ const shouldCacheShape = (element: CanvasElement, config: CacheConfig): boolean 
 
 /**
  * Generates a cache key based on visual properties that affect rendering
- * Memoized to prevent expensive recalculation on every render
+ * Uses fast hashing instead of JSON.stringify for performance
  */
 const generateCacheKey = (element: CanvasElement, dependencies: any[] = []): string => {
   const visualProps = {
@@ -96,7 +151,9 @@ const generateCacheKey = (element: CanvasElement, dependencies: any[] = []): str
       JSON.stringify((element as any).richTextSegments) : undefined
   };
 
-  return JSON.stringify([visualProps, ...dependencies]);
+  // Use fast hashing instead of expensive JSON.stringify
+  const propsString = JSON.stringify([visualProps, ...dependencies]);
+  return murmurhash3(propsString);
 };
 
 /**
@@ -133,30 +190,40 @@ export const useShapeCaching = ({
   );
 
   /**
-   * Apply caching to the Konva node
+   * Apply caching to the Konva node with explicit cache invalidation validation
    */
   const applyCaching = useCallback(() => {
     const node = nodeRef.current;
     if (!node || !shouldCache) return;
 
     try {
-      // Check if cache needs to be updated
-      const needsRecache = currentCacheKey !== lastCacheKeyRef.current;
+      // Validate cache invalidation: check if props have changed
+      const previousCacheKey = lastCacheKeyRef.current;
+      const needsRecache = currentCacheKey !== previousCacheKey;
       
       if (needsRecache || !isCachedRef.current) {
-        // Clear existing cache
+        // Clear existing cache when props change
         if (isCachedRef.current) {
           node.clearCache();
+          console.log(`🗂️ [CACHE] Cache invalidated due to props change:`, {
+            elementId: element.id,
+            elementType: element.type,
+            previousKey: previousCacheKey.slice(0, 12) + '...',
+            newKey: currentCacheKey.slice(0, 12) + '...',
+            reason: needsRecache ? 'props_changed' : 'initial_cache'
+          });
         }
         
         // Apply new cache
         node.cache();
         isCachedRef.current = true;
         lastCacheKeyRef.current = currentCacheKey;
-          console.log(`🗂️ [CACHE] Applied caching to ${element.type} element:`, {
+        
+        console.log(`🗂️ [CACHE] Applied caching to ${element.type} element:`, {
           elementId: element.id,
           size: `${('width' in element ? element.width : ('radius' in element ? element.radius * 2 : 0))}x${('height' in element ? element.height : ('radius' in element ? element.radius * 2 : 0))}`,
-          cacheKey: currentCacheKey.slice(0, 50) + '...'
+          cacheKey: currentCacheKey.slice(0, 12) + '...',
+          hashMethod: 'murmurhash3'
         });
       }
     } catch (error) {

@@ -26,6 +26,7 @@ export interface ViewportActions {
   setViewport: (viewport: Partial<ViewportState['viewport']>) => void;
   panViewport: (deltaX: number, deltaY: number) => void;
   zoomViewport: (scale: number, centerX?: number, centerY?: number) => void;
+  zoomTo: (x: number, y: number, scale?: number) => void;
   
   // Legacy compatibility
   pan: (deltaX: number, deltaY: number) => void;
@@ -43,6 +44,10 @@ export const createViewportModule = (
   set: StoreSet,
   get: StoreGet
 ): StoreModule<ViewportState, ViewportActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as any;
+  const getState = get as any;
+
   return {
     state: {
       viewport: { 
@@ -57,7 +62,7 @@ export const createViewportModule = (
     
     actions: {
       setViewport: (viewport) => {
-        set(state => {
+        setState((state: any) => {
           // Validate scale if provided
           if (viewport.scale !== undefined) {
             viewport.scale = Math.max(0.1, Math.min(10, viewport.scale));
@@ -67,46 +72,84 @@ export const createViewportModule = (
       },
       
       panViewport: (deltaX, deltaY) => {
-        set(state => {
+        setState((state: any) => {
           state.viewport.x += deltaX;
           state.viewport.y += deltaY;
         });
       },
       
       zoomViewport: (scale, centerX, centerY) => {
-        set(state => {
-          state.viewport.scale = Math.max(0.1, Math.min(10, scale));
+        setState((state: any) => {
+          const oldScale = state.viewport.scale;
+          const newScale = Math.max(0.1, Math.min(10, scale));
+          
+          // If center point is provided, adjust pan to zoom around that point
+          if (centerX !== undefined && centerY !== undefined) {
+            const dx = centerX - state.viewport.width / 2;
+            const dy = centerY - state.viewport.height / 2;
+            
+            // Calculate the difference in position due to scaling
+            const scaleFactor = newScale / oldScale;
+            state.viewport.x = centerX - (centerX - state.viewport.x) * scaleFactor;
+            state.viewport.y = centerY - (centerY - state.viewport.y) * scaleFactor;
+          }
+          
+          state.viewport.scale = newScale;
+        });
+      },
+
+      zoomTo: (x, y, scale) => {
+        setState((state: any) => {
+          const targetScale = scale || state.viewport.scale * 1.2;
+          const clampedScale = Math.max(0.1, Math.min(10, targetScale));
+          
+          // Calculate current viewport center
+          const viewportCenterX = state.viewport.width / 2;
+          const viewportCenterY = state.viewport.height / 2;
+          
+          // Transform target point to viewport coordinates
+          const currentX = (x - state.viewport.x) / state.viewport.scale;
+          const currentY = (y - state.viewport.y) / state.viewport.scale;
+          
+          // Calculate new viewport position to center the target point
+          const newX = x - currentX * clampedScale;
+          const newY = y - currentY * clampedScale;
+          
+          // Update viewport
+          state.viewport.x = newX;
+          state.viewport.y = newY;
+          state.viewport.scale = clampedScale;
         });
       },
 
       // Legacy compatibility
       pan: (deltaX, deltaY) => {
-        get().panViewport(deltaX, deltaY);
+        getState().panViewport(deltaX, deltaY);
       },
 
       zoom: (scale, centerX, centerY) => {
-        get().zoomViewport(scale, centerX, centerY);
+        getState().zoomViewport(scale, centerX, centerY);
       },
 
       setZoom: (scale) => {
-        get().zoomViewport(scale);
+        getState().zoomViewport(scale);
       },
 
       setPan: (x, y) => {
-        set(state => {
+        setState((state: any) => {
           state.viewport.x = x;
           state.viewport.y = y;
         });
       },
 
       zoomIn: () => {
-        const currentScale = get().viewport.scale;
-        get().zoomViewport(currentScale * 1.2);
+        const currentScale = getState().viewport.scale;
+        getState().zoomViewport(currentScale * 1.2);
       },
 
       zoomOut: () => {
-        const currentScale = get().viewport.scale;
-        get().zoomViewport(currentScale / 1.2);
+        const currentScale = getState().viewport.scale;
+        getState().zoomViewport(currentScale / 1.2);
       },
     },
   };

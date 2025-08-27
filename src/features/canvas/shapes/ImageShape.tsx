@@ -7,7 +7,7 @@ import { ImageElement, ElementId, CanvasElement } from '../types/enhanced.types'
 interface ImageShapeProps {
   element: ImageElement;
   isSelected: boolean;
-  konvaProps: any;
+  konvaProps: Partial<Konva.ImageConfig>;
   onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   onStartTextEdit: (elementId: ElementId) => void;
   onTransformEnd: (e: Konva.KonvaEventObject<any>) => void;
@@ -55,7 +55,7 @@ export const ImageShape = React.forwardRef<Konva.Image, ImageShapeProps>(({
       ref={ref}
       {...konvaProps}
       id={element.id}
-      image={image}
+      image={image || undefined}
       x={element.x}
       y={element.y}
       width={element.width || 100}

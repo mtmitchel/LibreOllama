@@ -205,7 +205,7 @@ const createCircleTextEditor = (
 interface CircleShapeProps {
   element: CircleElement;
   isSelected: boolean;
-  konvaProps: any;
+  konvaProps: Partial<Konva.CircleConfig>;
   onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
@@ -488,9 +488,20 @@ tweenRef.current?.destroy(); // Stop animation on unmount
     });
   }, [element.id, onUpdate]);
 
-  const hasContent = element.text && element.text.trim().length > 0;
-  const displayText = hasContent ? element.text! : 'Add text';
-  const textColor = hasContent ? (element.textColor || '#1F2937') : 'rgba(31, 41, 55, 0.6)';
+  // Memoized text display properties
+  const textDisplayProperties = useMemo(() => {
+    const hasContent = element.text && element.text.trim().length > 0;
+    const displayText = hasContent ? element.text! : 'Add text';
+    const textColor = hasContent ? (element.textColor || '#1F2937') : 'rgba(31, 41, 55, 0.6)';
+    const fontStyle = hasContent ? 'normal' : 'italic';
+    
+    return { hasContent, displayText, textColor, fontStyle };
+  }, [element.text, element.textColor]);
+
+  // Extract properties for backward compatibility
+  const hasContent = textDisplayProperties.hasContent;
+  const displayText = textDisplayProperties.displayText;
+  const textColor = textDisplayProperties.textColor;
 
   const isCurrentlyEditing = textEditingElementId === element.id;
   const shouldAllowDrawing = ['pen', 'marker', 'highlighter', 'eraser'].includes(selectedTool);
@@ -505,6 +516,11 @@ tweenRef.current?.destroy(); // Stop animation on unmount
         draggable={!shouldAllowDrawing}
         listening={!shouldAllowDrawing}
         onDragEnd={handleDragEnd}
+        name={`circle-${element.id}`}
+        // Accessibility attributes for screen readers
+        aria-label={`Circle with text: ${textDisplayProperties.displayText}`}
+        role="img"
+        tabIndex={isSelected ? 0 : -1}
       >
         <Circle
           onDblClick={startEditing}
@@ -537,7 +553,7 @@ tweenRef.current?.destroy(); // Stop animation on unmount
               fill={textColor}
               align="center"
               verticalAlign="middle"
-              fontStyle={hasContent ? 'normal' : 'italic'}
+              fontStyle={textDisplayProperties.fontStyle}
               wrap="word"
               padding={diameter * 0.05} // Much less padding for more text space
               ellipsis={false}

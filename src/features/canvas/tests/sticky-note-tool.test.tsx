@@ -10,7 +10,7 @@ import { render, cleanup } from '@testing-library/react';
 import { StickyNoteTool } from '../components/tools/creation/StickyNoteTool';
 import { createUnifiedTestStore } from '@/tests/helpers/createUnifiedTestStore';
 import type { StickyNoteElement } from '../types/enhanced.types';
-import { ElementId } from '../types/enhanced.types';
+import { ElementId, createElementId } from '../types/enhanced.types';
 
 // Mock Konva Stage for UI tests
 const mockStage = {
@@ -227,7 +227,7 @@ describe('StickyNote Functionality (Store-First)', () => {
   describe('Sticky Note Creation', () => {
     it('should create sticky note with basic properties', () => {
       const stickyNote: StickyNoteElement = {
-        id: ElementId('sticky-1'),
+        id: createElementId('sticky-1'),
         type: 'sticky-note',
         x: 100,
         y: 100,
@@ -259,7 +259,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
     it('should create sticky note with default dimensions', () => {
       const stickyNote: StickyNoteElement = {
-        id: ElementId('sticky-default'),
+        id: createElementId('sticky-default'),
         type: 'sticky-note',
         x: 0,
         y: 0,
@@ -292,7 +292,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
     it('should create sticky note with custom colors', () => {
       const stickyNote: StickyNoteElement = {
-        id: ElementId('sticky-colored'),
+        id: createElementId('sticky-colored'),
         type: 'sticky-note',
         x: 50,
         y: 50,
@@ -328,7 +328,7 @@ describe('StickyNote Functionality (Store-First)', () => {
     let stickyNoteId: ElementId;
 
     beforeEach(() => {
-      stickyNoteId = ElementId('container-sticky');
+      stickyNoteId = createElementId('container-sticky');
       const stickyNote: StickyNoteElement = {
         id: stickyNoteId,
         type: 'sticky-note',
@@ -400,7 +400,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
       // Create a text element to add
       const textElement = {
-        id: ElementId('text-1'),
+        id: createElementId('text-1'),
         type: 'rich-text' as const,
         x: 150,
         y: 150,
@@ -432,7 +432,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
       // Try to add a pen element (not allowed)
       const penElement = {
-        id: ElementId('pen-1'),
+        id: createElementId('pen-1'),
         type: 'pen' as const,
         x: 150,
         y: 150,
@@ -459,7 +459,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
       // Add first element
       const textElement1 = {
-        id: ElementId('text-1'),
+        id: createElementId('text-1'),
         type: 'rich-text' as const,
         x: 150,
         y: 150,
@@ -474,7 +474,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
       // Add second element
       const textElement2 = {
-        id: ElementId('text-2'),
+        id: createElementId('text-2'),
         type: 'rich-text' as const,
         x: 160,
         y: 160,
@@ -489,7 +489,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
       // Try to add third element (should be rejected)
       const textElement3 = {
-        id: ElementId('text-3'),
+        id: createElementId('text-3'),
         type: 'rich-text' as const,
         x: 170,
         y: 170,
@@ -520,7 +520,7 @@ describe('StickyNote Functionality (Store-First)', () => {
       store.getState().enableStickyNoteContainer(stickyNoteId);
 
       const textElement = {
-        id: ElementId('text-remove'),
+        id: createElementId('text-remove'),
         type: 'rich-text' as const,
         x: 150,
         y: 150,
@@ -557,7 +557,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
       // Add multiple elements
       const textElement1 = {
-        id: ElementId('child-1'),
+        id: createElementId('child-1'),
         type: 'rich-text' as const,
         x: 150,
         y: 150,
@@ -571,7 +571,7 @@ describe('StickyNote Functionality (Store-First)', () => {
       };
 
       const textElement2 = {
-        id: ElementId('child-2'),
+        id: createElementId('child-2'),
         type: 'rich-text' as const,
         x: 160,
         y: 160,
@@ -600,7 +600,7 @@ describe('StickyNote Functionality (Store-First)', () => {
       store.getState().enableStickyNoteContainer(stickyNoteId);
 
       const textElement1 = {
-        id: ElementId('clear-child-1'),
+        id: createElementId('clear-child-1'),
         type: 'rich-text' as const,
         x: 150,
         y: 150,
@@ -614,7 +614,7 @@ describe('StickyNote Functionality (Store-First)', () => {
       };
 
       const textElement2 = {
-        id: ElementId('clear-child-2'),
+        id: createElementId('clear-child-2'),
         type: 'rich-text' as const,
         x: 160,
         y: 160,
@@ -648,7 +648,7 @@ describe('StickyNote Functionality (Store-First)', () => {
   describe('Sticky Note Selection', () => {
     it('should select sticky note', () => {
       const stickyNote: StickyNoteElement = {
-        id: ElementId('select-sticky'),
+        id: createElementId('select-sticky'),
         type: 'sticky-note',
         x: 0,
         y: 0,
@@ -676,7 +676,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
     it('should handle sticky note in multi-selection', () => {
       const stickyNote1: StickyNoteElement = {
-        id: ElementId('multi-sticky-1'),
+        id: createElementId('multi-sticky-1'),
         type: 'sticky-note',
         x: 0,
         y: 0,
@@ -696,7 +696,7 @@ describe('StickyNote Functionality (Store-First)', () => {
       };
 
       const stickyNote2: StickyNoteElement = {
-        id: ElementId('multi-sticky-2'),
+        id: createElementId('multi-sticky-2'),
         type: 'sticky-note',
         x: 200,
         y: 0,
@@ -731,7 +731,7 @@ describe('StickyNote Functionality (Store-First)', () => {
   describe('Sticky Note Deletion', () => {
     it('should delete sticky note correctly', () => {
       const stickyNote: StickyNoteElement = {
-        id: ElementId('delete-sticky'),
+        id: createElementId('delete-sticky'),
         type: 'sticky-note',
         x: 0,
         y: 0,
@@ -762,7 +762,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
     it('should delete sticky note with children correctly', () => {
       const stickyNote: StickyNoteElement = {
-        id: ElementId('delete-container-sticky'),
+        id: createElementId('delete-container-sticky'),
         type: 'sticky-note',
         x: 0,
         y: 0,
@@ -782,7 +782,7 @@ describe('StickyNote Functionality (Store-First)', () => {
       };
 
       const childElement = {
-        id: ElementId('child-element'),
+        id: createElementId('child-element'),
         type: 'rich-text' as const,
         x: 50,
         y: 50,
@@ -815,7 +815,7 @@ describe('StickyNote Functionality (Store-First)', () => {
     it('should work with element creation workflow', () => {
       // Create sticky note
       const stickyNote: StickyNoteElement = {
-        id: ElementId('integration-sticky'),
+        id: createElementId('integration-sticky'),
         type: 'sticky-note',
         x: 100,
         y: 100,
@@ -841,7 +841,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
       // Add child element
       const childElement = {
-        id: ElementId('integration-child'),
+        id: createElementId('integration-child'),
         type: 'rich-text' as const,
         x: 120,
         y: 120,

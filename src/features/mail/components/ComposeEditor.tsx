@@ -43,7 +43,7 @@ interface CombinedColorPickerProps {
   onClose: () => void;
   onTextColorSelect: (color: string) => void;
   onBgColorSelect: (color: string) => void;
-  triggerRef: React.RefObject<HTMLElement>;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const CombinedColorPicker: React.FC<CombinedColorPickerProps> = ({
@@ -259,7 +259,7 @@ interface SmartFontPickerProps {
   isOpen: boolean;
   onClose: () => void;
   onFontSelect: (fontFamily: string, displayName: string) => void;
-  triggerRef: React.RefObject<HTMLElement>;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const SmartFontPicker: React.FC<SmartFontPickerProps> = ({
@@ -393,14 +393,14 @@ const ComposeEditor: React.FC<ComposeEditorProps> = ({ value, onChange }) => {
 	const [showFontPicker, setShowFontPicker] = useState(false);
 	const [currentFont, setCurrentFont] = useState('Sans Serif');
 	const [linkInitialText, setLinkInitialText] = useState('');
-	const colorPickerTriggerRef = useRef<HTMLDivElement>(null);
-	const fontPickerRef = useRef<HTMLDivElement>(null);
+	  const colorPickerTriggerRef = useRef<HTMLDivElement>(null);
+  const fontPickerRef = useRef<HTMLDivElement>(null);
 	const editorContainerRef = useRef<HTMLDivElement>(null);
 
 	// Font picker now handles its own click outside through the SmartFontPicker component
 
 	const initialBlocks = useMemo(() => {
-		try { return value ? (JSON.parse(value) as Block[]) : [{ type: 'paragraph', content: '' } as Block]; } catch { return [{ type: 'paragraph', content: '' } as Block]; }
+		try { return value ? (JSON.parse(value) as Block[]) : [{ type: 'paragraph', content: '' } as unknown as Block]; } catch { return [{ type: 'paragraph', content: '' } as unknown as Block]; }
 	}, [value]);
 
 	const editor: BlockNoteEditorType | null = useCreateBlockNote({ 
@@ -506,8 +506,15 @@ const ComposeEditor: React.FC<ComposeEditorProps> = ({ value, onChange }) => {
 				// Insert after current block
 				editor.insertBlocks([imageBlock] as any, currentBlock, 'after');
 			} else {
-				// Insert at the end
-				editor.insertBlocks([imageBlock] as any);
+				// Insert at the end - need to get the last block as reference
+				const topLevelBlocks = editor.topLevelBlocks;
+				const lastBlock = topLevelBlocks[topLevelBlocks.length - 1];
+				if (lastBlock) {
+					editor.insertBlocks([imageBlock] as any, lastBlock, 'after');
+				} else {
+					// No blocks exist, insert at the beginning
+					editor.insertBlocks([imageBlock] as any, editor.topLevelBlocks[0], 'before');
+				}
 			}
 			
 			console.log('[IMAGE] Image inserted successfully');

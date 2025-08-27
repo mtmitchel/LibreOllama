@@ -88,6 +88,8 @@ export interface RectangleElement extends BaseElement {
   fontFamily?: string;
   textColor?: string;
   textAlign?: 'left' | 'center' | 'right';
+  onActivate?: () => void;
+  onClick?: () => void | boolean;
 }
 
 export interface CircleElement extends BaseElement {
@@ -282,11 +284,19 @@ export interface GroupElement extends BaseElement {
   opacity?: number;
 }
 
+// Raw drawing point data structure
+export interface RawDrawingPoint {
+  x: number;
+  y: number;
+  pressure?: number;
+  timestamp?: number;
+}
+
 // Advanced drawing elements (inline to avoid circular imports)
 export interface MarkerElement extends BaseElement {
   type: 'marker';
   points: number[];
-  rawPoints?: any[];
+  rawPoints?: RawDrawingPoint[];
   style: {
     color: string;
     width: number;
@@ -305,7 +315,7 @@ export interface MarkerElement extends BaseElement {
 export interface HighlighterElement extends BaseElement {
   type: 'highlighter';
   points: number[];
-  rawPoints?: any[];
+  rawPoints?: RawDrawingPoint[];
   style: {
     color: string;
     width: number;
@@ -407,7 +417,7 @@ export function isContainerElement(el: CanvasElement): el is (SectionElement | S
 }
 
 export function isStickyNoteContainer(el: CanvasElement): el is StickyNoteElement & { childElementIds: ElementId[] } {
-  return el.type === 'sticky-note' && 'childElementIds' in el && Array.isArray((el as any).childElementIds);
+  return el.type === 'sticky-note' && 'childElementIds' in el && Array.isArray((el as StickyNoteElement).childElementIds);
 }
 
 // Strict event map ensures all event payloads are correctly typed
@@ -477,7 +487,7 @@ export interface CacheConfig {
   height?: number;
 }
 
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = CanvasElement | ViewportState | CanvasElementsState> {
   data: T;
   timestamp: number;
   expiresAt: number;
@@ -512,13 +522,21 @@ export interface SelectionState {
   isMultiSelecting: boolean;
 }
 
+// State snapshot for history operations
+export interface StateSnapshot {
+  elements: Map<ElementId | SectionId, CanvasElement>;
+  viewport: ViewportState;
+  selection: Set<ElementId>;
+  metadata?: Record<string, unknown>;
+}
+
 // History types for undo/redo
 export interface HistoryEntry {
   id: string;
   timestamp: number;
   operation: string;
-  beforeState: any;
-  afterState: any;
+  beforeState: StateSnapshot;
+  afterState: StateSnapshot;
   elementIds: ElementId[];
 }
 
@@ -569,10 +587,29 @@ export interface CanvasUIState {
   isDrawing: boolean;
 }
 
+// Modal data types
+export interface TableModalData {
+  rows: number;
+  columns: number;
+  position: { x: number; y: number };
+}
+
+export interface ImageModalData {
+  file: File;
+  position: { x: number; y: number };
+}
+
+export interface TextModalData {
+  content: string;
+  position: { x: number; y: number };
+}
+
+export type ModalData = TableModalData | ImageModalData | TextModalData | Record<string, unknown>;
+
 export interface ModalState {
   isOpen: boolean;
-  type: string;
-  data?: any;
+  type: 'table' | 'image' | 'text' | 'settings' | 'export' | string;
+  data?: ModalData;
 }
 
 export interface TooltipState {
@@ -599,11 +636,22 @@ export interface HistoryState {
   canRedo: boolean;
 }
 
+// Canvas metadata types
+export interface CanvasMetadata {
+  version: string;
+  creator: string;
+  description?: string;
+  tags?: string[];
+  customProperties?: Record<string, string | number | boolean>;
+  lastModified?: number;
+  createdAt?: number;
+}
+
 export interface Canvas {
   id: string;
   name: string;
   elements: CanvasElement[];
   sections: SectionElement[];
   viewport: ViewportState;
-  metadata?: any;
+  metadata?: CanvasMetadata;
 }

@@ -35,6 +35,10 @@ export const createStickyNoteModule = (
   set: StoreSet,
   get: StoreGet
 ): StoreModule<StickyNoteState, StickyNoteActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as any;
+  const getState = get as any;
+
   return {
     state: {
       selectedStickyNoteColor: '#FFF2CC',
@@ -42,7 +46,7 @@ export const createStickyNoteModule = (
     
     actions: {
       enableStickyNoteContainer: (stickyNoteId, options = {}) => {
-        set(state => {
+        setState((state: any) => {
           const stickyNote = state.elements.get(stickyNoteId);
           if (stickyNote && stickyNote.type === 'sticky-note') {
             const updatedStickyNote = {
@@ -53,14 +57,14 @@ export const createStickyNoteModule = (
               clipChildren: options.clipChildren ?? true,
               maxChildElements: options.maxChildren || 20
             };
-            state.elements.set(stickyNoteId, updatedStickyNote);
+            state.elements.setState(stickyNoteId, updatedStickyNote);
           }
         });
-        get().addToHistory('enableStickyNoteContainer');
+        getState().addToHistory('enableStickyNoteContainer');
       },
 
       addElementToStickyNote: (elementId, stickyNoteId) => {
-        set(state => {
+        setState((state: any) => {
           const stickyNote = state.elements.get(stickyNoteId);
           const element = state.elements.get(elementId);
           
@@ -88,7 +92,7 @@ export const createStickyNoteModule = (
               ...stickyNote,
               childElementIds: [...(stickyNote.childElementIds || []), elementId]
             };
-            state.elements.set(stickyNoteId, updatedStickyNote);
+            state.elements.setState(stickyNoteId, updatedStickyNote);
 
             // Update element to reference its parent
             const updatedElement = {
@@ -96,14 +100,14 @@ export const createStickyNoteModule = (
               parentId: stickyNoteId,
               stickyNoteId: stickyNoteId
             };
-            state.elements.set(elementId, updatedElement);
+            state.elements.setState(elementId, updatedElement);
           }
         });
-        get().addToHistory('addElementToStickyNote');
+        getState().addToHistory('addElementToStickyNote');
       },
 
       removeElementFromStickyNote: (elementId, stickyNoteId) => {
-        set(state => {
+        setState((state: any) => {
           const stickyNote = state.elements.get(stickyNoteId);
           const element = state.elements.get(elementId);
           
@@ -113,7 +117,7 @@ export const createStickyNoteModule = (
               ...stickyNote,
               childElementIds: (stickyNote.childElementIds || []).filter((id: ElementId) => id !== elementId)
             };
-            state.elements.set(stickyNoteId, updatedStickyNote);
+            state.elements.setState(stickyNoteId, updatedStickyNote);
 
             // Update element to remove parent reference
             const updatedElement = {
@@ -121,14 +125,14 @@ export const createStickyNoteModule = (
               parentId: undefined,
               stickyNoteId: undefined
             };
-            state.elements.set(elementId, updatedElement);
+            state.elements.setState(elementId, updatedElement);
           }
         });
-        get().addToHistory('removeElementFromStickyNote');
+        getState().addToHistory('removeElementFromStickyNote');
       },
 
       findStickyNoteAtPoint: (point) => {
-        const { elements } = get();
+        const { elements } = getState();
         
         for (const [id, element] of elements) {
           if (element.type === 'sticky-note' && element.isContainer) {
@@ -147,13 +151,13 @@ export const createStickyNoteModule = (
       },
 
       isStickyNoteContainer: (stickyNoteId) => {
-        const { elements } = get();
+        const { elements } = getState();
         const stickyNote = elements.get(stickyNoteId);
         return stickyNote?.type === 'sticky-note' && stickyNote.isContainer === true;
       },
 
       getStickyNoteChildren: (stickyNoteId) => {
-        const { elements } = get();
+        const { elements } = getState();
         const stickyNote = elements.get(stickyNoteId);
         if (stickyNote?.type === 'sticky-note' && stickyNote.childElementIds) {
           return stickyNote.childElementIds
@@ -164,7 +168,7 @@ export const createStickyNoteModule = (
       },
 
       constrainElementToStickyNote: (elementId, stickyNoteId) => {
-        set(state => {
+        setState((state: any) => {
           const stickyNote = state.elements.get(stickyNoteId);
           const element = state.elements.get(elementId);
           
@@ -188,26 +192,26 @@ export const createStickyNoteModule = (
                 x: constrainedX,
                 y: constrainedY
               };
-              state.elements.set(elementId, updatedElement);
+              state.elements.setState(elementId, updatedElement);
             }
           }
         });
       },
 
       clearStickyNoteChildren: (stickyNoteId) => {
-        const { getStickyNoteChildren, removeElementFromStickyNote } = get();
+        const { getStickyNoteChildren, removeElementFromStickyNote } = getState();
         const children = getStickyNoteChildren(stickyNoteId);
         
         children.forEach((child: CanvasElement) => {
           removeElementFromStickyNote(child.id, stickyNoteId);
         });
         
-        get().addToHistory('clearStickyNoteChildren');
+        getState().addToHistory('clearStickyNoteChildren');
       },
 
       // Demo function for sticky note containers
       createStickyNoteContainerDemo: () => {
-        const { addElement, enableStickyNoteContainer } = get();
+        const { addElement, enableStickyNoteContainer } = getState();
         
         // Creating sticky note container demo
         
@@ -242,7 +246,7 @@ export const createStickyNoteModule = (
         // Test the detection
         setTimeout(() => {
           const testPoint = { x: 350, y: 275 }; // Center of sticky note
-          const foundStickyNote = get().findStickyNoteAtPoint(testPoint);
+          const foundStickyNote = getState().findStickyNoteAtPoint(testPoint);
           // Testing detection at center point
         }, 100);
         

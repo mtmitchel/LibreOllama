@@ -4,6 +4,11 @@ import {
   CanvasElement, 
   ElementId, 
   ElementOrSectionId,
+  SectionId,
+  CircleElement,
+  MarkerElement,
+  HighlighterElement,
+  PenElement,
   isTableElement,
   TableCell,
   GroupId
@@ -15,7 +20,7 @@ import { StoreModule, StoreSet, StoreGet } from './types';
  */
 export interface ElementState {
   elements: Map<string, CanvasElement>;
-  elementOrder: string[];
+  elementOrder: (ElementId | SectionId)[];
 }
 
 /**
@@ -54,10 +59,28 @@ export const createElementModule = (
   set: StoreSet,
   get: StoreGet
 ): StoreModule<ElementState, ElementActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as any;
+  const getState = get as any;
+  // Type guards for elements with dimensions
+  const hasRadius = (el: CanvasElement): el is CircleElement => 
+    el.type === 'circle' && 'radius' in el;
+    
+  const hasDimensions = (el: CanvasElement): el is CanvasElement & { width: number; height: number } =>
+    'width' in el && 'height' in el;
+
   const getElementCenter = (element: CanvasElement): { x: number; y: number } => {
-    const elementAny = element as any;
-    const width = elementAny.width ?? (elementAny.radius ? elementAny.radius * 2 : 0);
-    const height = elementAny.height ?? (elementAny.radius ? elementAny.radius * 2 : 0);
+    let width = 0;
+    let height = 0;
+    
+    if (hasRadius(element)) {
+      width = element.radius * 2;
+      height = element.radius * 2;
+    } else if (hasDimensions(element)) {
+      width = element.width;
+      height = element.height;
+    }
+    
     return {
       x: element.x + width / 2,
       y: element.y + height / 2,
@@ -71,21 +94,37 @@ export const createElementModule = (
     },
     
     actions: {
-      getElementById: (id) => get().elements.get(id),
+      getElementById: (id) => getState().elements.get(id),
       
       addElement: (element) => {
-        set(state => {
+        setState((state: any) => {
+          // Comprehensive defensive checks with auto-recovery
+          if (!state.elements || !(state.elements instanceof Map)) {
+            console.warn('[ElementModule] Auto-recovering corrupted elements Map');
+            state.elements = new Map();
+          }
+          if (!Array.isArray(state.elementOrder)) {
+            console.warn('[ElementModule] Auto-recovering corrupted elementOrder array');
+            state.elementOrder = [];
+          }
           // Create a new Map to ensure proper change detection
           const newElements = new Map(state.elements);
           newElements.set(element.id, element);
           state.elements = newElements;
           state.elementOrder.push(element.id);
         });
-        get().addToHistory('addElement');
+        getState().addToHistory('addElement');
       },
 
       addElementFast: (element) => {
-        set(state => {
+        setState((state: any) => {
+          // Defensive checks even in fast path
+          if (!state.elements || !(state.elements instanceof Map)) {
+            state.elements = new Map();
+          }
+          if (!Array.isArray(state.elementOrder)) {
+            state.elementOrder = [];
+          }
           // Direct map insertion without creating new Map reference for performance
           state.elements.set(element.id, element);
           state.elementOrder.push(element.id);
@@ -95,13 +134,15 @@ export const createElementModule = (
 
       createElement: (type, position) => {
         const newElement = { id: nanoid(), type, ...position } as CanvasElement;
-        get().addElement(newElement);
+        getState().addElement(newElement);
       },
 
       updateElement: (id, updates, options = {}) => {
-        const { skipHistory = false, skipValidation = false } = options;
+        // ATOMICITY: Default to skipHistory=true for intermediate updates
+        // History should only be added on final events (onDragEnd, onTransformEnd, text-edit commit)
+        const { skipHistory = true, skipValidation = false } = options;
         
-        set(state => {
+        setState((state: any) => {
           const element = state.elements.get(id);
           if (element) {
             const oldX = element.x;
@@ -129,7 +170,7 @@ export const createElementModule = (
       
               if (hasPositionChanged) {
                 const newCenter = getElementCenter(updatedElement);
-                const newSectionId = get().findSectionAtPoint?.(newCenter);
+                const newSectionId = getState().findSectionAtPoint?.(newCenter);
       
                 if (oldSectionId && oldSectionId !== newSectionId) {
                   // Remove from old section
@@ -168,7 +209,7 @@ export const createElementModule = (
                     
                     // For stroke elements (pen, marker, highlighter), also update the points array
                     if (child.type === 'pen' || child.type === 'marker' || child.type === 'highlighter') {
-                      const strokeChild = child as any; // Cast to access points
+                      const strokeChild = child as MarkerElement | HighlighterElement | PenElement;
                       if (strokeChild.points && Array.isArray(strokeChild.points)) {
                         // Updating stroke points for child
                         const updatedPoints = strokeChild.points.map((point: number, index: number) => {
@@ -187,30 +228,50 @@ export const createElementModule = (
         });
         
         if (!skipHistory) {
-          get().addToHistory('updateElement');
+          getState().addToHistory('updateElement');
         }
       },
 
       batchUpdate: (updates, options = {}) => {
         const { skipHistory = false, skipValidation = false } = options;
         
-        set(state => {
-          updates.forEach(({ id, updates: elementUpdates }) => {
-            const element = state.elements.get(id);
-            if (element) {
-              if (skipValidation) {
-                // Fast path: direct assignment for performance
-                Object.assign(element, elementUpdates);
-              } else {
-                // Full validation path: create new object
-                const updatedElement = { ...element, ...elementUpdates };
+        // Cancel any pending RAF to prevent multiple batches
+        const rafId = (getState() as any).rafId;
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+        }
+        
+        // Schedule batch update in next animation frame
+        const newRafId = requestAnimationFrame(() => {
+          setState((state: any) => {
+            // Clear RAF ID
+            (state as any).rafId = null;
+            
+            updates.forEach(({ id, updates: elementUpdates }) => {
+              const element = state.elements.get(id);
+              if (element) {
+                if (skipValidation) {
+                  // Fast path: direct assignment for performance
+                  Object.assign(element, elementUpdates);
+                } else {
+                  // Full validation path: create new object
+                  const updatedElement = { ...element, ...elementUpdates };
                 
                 // Apply section constraints if needed
                 if (updatedElement.sectionId) {
                   const section = state.sections?.get(updatedElement.sectionId);
                   if (section) {
-                    const elementWidth = (updatedElement as any).width ?? 0;
-                    const elementHeight = (updatedElement as any).height ?? 0;
+                    let elementWidth = 0;
+                    let elementHeight = 0;
+                    
+                    if (hasRadius(updatedElement)) {
+                      elementWidth = updatedElement.radius * 2;
+                      elementHeight = updatedElement.radius * 2;
+                    } else if (hasDimensions(updatedElement)) {
+                      elementWidth = updatedElement.width;
+                      elementHeight = updatedElement.height;
+                    }
+                    
                     updatedElement.x = Math.max(section.x, Math.min(updatedElement.x, section.x + section.width - elementWidth));
                     updatedElement.y = Math.max(section.y, Math.min(updatedElement.y, section.y + section.height - elementHeight));
                   }
@@ -220,15 +281,19 @@ export const createElementModule = (
               }
             }
           });
+          });
+          
+          if (!skipHistory) {
+            getState().addToHistory('batchUpdate');
+          }
         });
         
-        if (!skipHistory) {
-          get().addToHistory('batchUpdate');
-        }
+        // Store RAF ID for potential cancellation
+        set({ rafId: newRafId } as any);
       },
 
       deleteElement: (id) => {
-        set(state => {
+        setState((state: any) => {
           if (!state.elements.has(id)) return;
       
           const elementToDelete = state.elements.get(id);
@@ -243,12 +308,12 @@ export const createElementModule = (
           state.elementOrder = state.elementOrder.filter((elementId: ElementId) => elementId !== id);
           state.selectedElementIds?.delete(id as ElementId);
         });
-        get().addToHistory('deleteElement');
+        getState().addToHistory('deleteElement');
       },
 
       deleteSelectedElements: () => {
-        const { selectedElementIds } = get();
-        set(state => {
+        const { selectedElementIds } = getState();
+        setState((state: any) => {
           for (const id of selectedElementIds) {
             if (!state.elements.has(id)) continue;
             const elementToDelete = state.elements.get(id);
@@ -263,11 +328,11 @@ export const createElementModule = (
           }
           state.selectedElementIds.clear();
         });
-        get().addToHistory('deleteSelectedElements');
+        getState().addToHistory('deleteSelectedElements');
       },
 
       clearAllElements: () => {
-        set(state => {
+        setState((state: any) => {
           state.elements = new Map();
           state.elementOrder = [];
           state.selectedElementIds = new Set();
@@ -275,11 +340,11 @@ export const createElementModule = (
           state.sections = new Map();
           state.sectionElementMap = new Map();
         });
-        get().addToHistory('clearAllElements');
+        getState().addToHistory('clearAllElements');
       },
 
       exportElements: () => {
-        const { elements } = get();
+        const { elements } = getState();
         const elementsArray = Array.from(elements.values());
         const dataStr = JSON.stringify(elementsArray, null, 2);
         const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
@@ -292,7 +357,7 @@ export const createElementModule = (
       },
 
       importElements: (elements: CanvasElement[]) => {
-        set(state => {
+        setState((state: any) => {
           // Clear existing elements
           state.elements.clear();
           state.elementOrder = [];
@@ -305,16 +370,16 @@ export const createElementModule = (
             state.elementOrder.push(element.id);
           });
         });
-        get().addToHistory('importElements');
+        getState().addToHistory('importElements');
       },
 
       isElementInGroup: (elementId: ElementId) => {
-        const element = get().elements.get(elementId);
+        const element = getState().elements.get(elementId);
         return element?.groupId || null; // Return groupId or null
       },
 
       setElementGroup: (elementId: ElementId, groupId: GroupId | null) => {
-        set(state => {
+        setState((state: any) => {
           const element = state.elements.get(elementId);
           if (element) {
             state.elements.set(elementId, { ...element, groupId });

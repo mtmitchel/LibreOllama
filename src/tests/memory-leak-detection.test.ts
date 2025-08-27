@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createUnifiedTestStore } from './helpers/createUnifiedTestStore';
-import { RectangleElement, TextElement, ElementId } from '../features/canvas/types/enhanced.types';
+import { RectangleElement, TextElement, ElementId, createElementId } from '../features/canvas/types/enhanced.types';
 import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasStore';
 
 /**
@@ -430,12 +430,12 @@ describe('Memory Leak Detection Tests', () => {
         // Select some elements
         const elementIds = Array.from(store.getState().elements.keys());
         for (let i = 0; i < Math.min(5, elementIds.length); i++) {
-          store.getState().selectElement(ElementId('mem-test-id'), true);
+          store.getState().selectElement(createElementId('mem-test-id'), true);
         }
 
         // Update some elements
         elementIds.slice(0, 3).forEach(id => {
-          store.getState().updateElement(ElementId('mem-test-id'), {
+          store.getState().updateElement(createElementId('mem-test-id'), {
             x: Math.random() * 500,
             y: Math.random() * 500
           });
@@ -451,7 +451,7 @@ describe('Memory Leak Detection Tests', () => {
         // Delete some elements
         if (elementIds.length > 5) {
           elementIds.slice(0, 2).forEach(id => {
-            store.getState().deleteElement(ElementId('mem-test-id'));
+            store.getState().deleteElement(createElementId('mem-test-id'));
           });
         }
 

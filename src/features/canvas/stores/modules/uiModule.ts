@@ -44,6 +44,10 @@ export const createUIModule = (
   set: StoreSet,
   get: StoreGet
 ): StoreModule<UIState, UIActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as any;
+  const getState = get as any;
+
   return {
     state: {
       selectedTool: 'select',
@@ -58,12 +62,12 @@ export const createUIModule = (
     },
     
     actions: {
-      setSelectedTool: (tool) => set(state => { state.selectedTool = tool; }),
+      setSelectedTool: (tool) => setState((state: any) => { state.selectedTool = tool; }),
 
       setTextEditingElement: (id) => {
         // Log the state change for debugging in development
         if (process.env.NODE_ENV === 'development') {
-          const currentId = get().textEditingElementId;
+          const currentId = getState().textEditingElementId;
           // Removed excessive logging
           
           // If we're setting a new element while another is being edited,
@@ -73,24 +77,24 @@ export const createUIModule = (
           }
         }
         
-        set(state => { state.textEditingElementId = id; });
+        setState((state: any) => { state.textEditingElementId = id; });
       },
 
-      setSelectedStickyNoteColor: (color) => set(state => { state.selectedStickyNoteColor = color; }),
+      setSelectedStickyNoteColor: (color) => setState((state: any) => { state.selectedStickyNoteColor = color; }),
 
-      setPenColor: (color) => set(state => { state.penColor = color; }),
+      setPenColor: (color) => setState((state: any) => { state.penColor = color; }),
 
-      setSnapLines: (lines) => set(state => { state.snapLines = lines; }), // Added implementation for setSnapLines
+      setSnapLines: (lines) => setState((state: any) => { state.snapLines = lines; }), // Added implementation for setSnapLines
 
-      setVisibleElementIds: (ids) => set(state => { state.visibleElementIds = ids; }),
+      setVisibleElementIds: (ids) => setState((state: any) => { state.visibleElementIds = ids; }),
 
       // Legacy compatibility
-      setStickyNoteColor: (color) => set(state => { state.selectedStickyNoteColor = color; }),
-      setActiveTool: (tool) => set(state => { state.selectedTool = tool; }),
+      setStickyNoteColor: (color) => setState((state: any) => { state.selectedStickyNoteColor = color; }),
+      setActiveTool: (tool) => setState((state: any) => { state.selectedTool = tool; }),
 
       // Utility methods
       uploadImage: async (file, position) => {
-        set(state => { state.isUploading = true; });
+        setState((state: any) => { state.isUploading = true; });
         try {
           // Create image element from uploaded file
           const imageUrl = URL.createObjectURL(file);
@@ -105,9 +109,9 @@ export const createUIModule = (
             draggable: true,
             visible: true,
           };
-          get().addElement(imageElement);
+          getState().addElement(imageElement);
         } finally {
-          set(state => { state.isUploading = false; });
+          setState((state: any) => { state.isUploading = false; });
         }
       },
 

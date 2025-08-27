@@ -395,7 +395,8 @@ function TodayStrip() {
   const totalTasks = Object.values(tasks).filter(t => t.status !== 'completed').length;
   const completedToday = Object.values(tasks).filter(t => {
     if (t.status !== 'completed') return false;
-    const completedDate = t.completed_at ? new Date(t.completed_at) : null;
+    // Use the updated timestamp as completion time since completed_at doesn't exist
+    const completedDate = t.updated ? new Date(t.updated) : null;
     return completedDate && isSameLocalDate(completedDate, now);
   }).length;
   const focusScore = totalTasks > 0 ? Math.round((completedToday / (completedToday + totalTasks)) * 100) : 0;

@@ -1,12 +1,12 @@
 /**
- * ConnectorShape - Optimized connector rendering for the dedicated connector layer
+ * ConnectorShape - Optimized connector rendering through MainLayer/ElementRenderer
  * 
- * This component is specifically designed for the ConnectorLayer and provides:
+ * This component provides:
  * - Lightweight rendering without transformation capabilities
  * - Enhanced cursor management for better UX
  * - Simplified drag handling optimized for connectors
  * 
- * For general element rendering with transformation support, see shapes/ConnectorShape.tsx
+ * Connectors are now rendered through MainLayer/ElementRenderer for better performance.
  * 
  * FIXES:
  * - Simplified drag handling to prevent position reset issues

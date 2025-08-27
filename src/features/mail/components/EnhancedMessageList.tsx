@@ -299,9 +299,7 @@ export function EnhancedMessageList({
         refreshToken: '', // Will be filled by the auth flow
         tokenExpiry: new Date(Date.now() + 3600000), // 1 hour from now
         isActive: true,
-        syncStatus: 'idle',
-        labels: [],
-        threads: []
+        syncStatus: 'idle'
       });
       
       // Refresh messages after reconnection

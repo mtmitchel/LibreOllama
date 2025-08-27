@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createUnifiedTestStore } from '@/tests/helpers/createUnifiedTestStore';
 import type { HighlighterElement, MarkerElement, PenElement } from '../types/enhanced.types';
-import { ElementId } from '../types/enhanced.types';
+import { ElementId, createElementId } from '../types/enhanced.types';
 
 describe('Drawing Tools Store-First Tests', () => {
   let store: ReturnType<typeof createUnifiedTestStore>;
@@ -95,7 +95,7 @@ describe('Drawing Tools Store-First Tests', () => {
   describe('Highlighter Element Creation', () => {
     it('should create highlighter element with correct properties', () => {
       const highlighterElement: HighlighterElement = {
-        id: ElementId('highlighter-1'),
+        id: createElementId('highlighter-1'),
         type: 'highlighter',
         points: [100, 100, 110, 110, 120, 120, 130, 130],
         style: {
@@ -130,7 +130,7 @@ describe('Drawing Tools Store-First Tests', () => {
     it('should calculate correct bounding box for highlighter', () => {
       const points = [50, 50, 150, 150, 200, 100];
       const highlighterElement: HighlighterElement = {
-        id: ElementId('highlighter-bounds'),
+        id: createElementId('highlighter-bounds'),
         type: 'highlighter',
         points,
         style: {
@@ -164,7 +164,7 @@ describe('Drawing Tools Store-First Tests', () => {
   describe('Marker Element Creation', () => {
     it('should create marker element with correct properties', () => {
       const markerElement: MarkerElement = {
-        id: ElementId('marker-1'),
+        id: createElementId('marker-1'),
         type: 'marker',
         points: [100, 100, 110, 110, 120, 120, 130, 130],
         style: {
@@ -206,7 +206,7 @@ describe('Drawing Tools Store-First Tests', () => {
       }
 
       const markerElement: MarkerElement = {
-        id: ElementId('marker-smooth'),
+        id: createElementId('marker-smooth'),
         type: 'marker',
         points: manyPoints,
         style: {
@@ -241,7 +241,7 @@ describe('Drawing Tools Store-First Tests', () => {
   describe('Pen Element Creation', () => {
     it('should create pen element with correct properties', () => {
       const penElement: PenElement = {
-        id: ElementId('pen-1'),
+        id: createElementId('pen-1'),
         type: 'pen',
         points: [100, 100, 110, 110, 120, 120, 130, 130],
         stroke: '#000000',
@@ -294,7 +294,7 @@ describe('Drawing Tools Store-First Tests', () => {
   describe('Drawing Element Integration', () => {
     it('should handle multiple drawing elements', () => {
       const highlighter: HighlighterElement = {
-        id: ElementId('highlighter-multi'),
+        id: createElementId('highlighter-multi'),
         type: 'highlighter',
         points: [0, 0, 50, 50],
         style: { color: '#FFFF00', width: 10, opacity: 0.5, blendMode: 'multiply', smoothness: 0.5, lineCap: 'round', lineJoin: 'round', baseOpacity: 0.3, highlightColor: '#FFFF00' },
@@ -303,7 +303,7 @@ describe('Drawing Tools Store-First Tests', () => {
       };
 
       const marker: MarkerElement = {
-        id: ElementId('marker-multi'),
+        id: createElementId('marker-multi'),
         type: 'marker',
         points: [100, 100, 150, 150],
         style: { color: '#FF0000', width: 8, opacity: 0.8, blendMode: 'source-over', smoothness: 0.5, lineCap: 'round', lineJoin: 'round', widthVariation: true, minWidth: 4, maxWidth: 12, pressureSensitive: false },
@@ -312,7 +312,7 @@ describe('Drawing Tools Store-First Tests', () => {
       };
 
       const pen: PenElement = {
-        id: ElementId('pen-multi'),
+        id: createElementId('pen-multi'),
         type: 'pen',
         points: [200, 200, 250, 250],
         stroke: '#000000',
@@ -333,7 +333,7 @@ describe('Drawing Tools Store-First Tests', () => {
 
     it('should handle drawing element deletion', () => {
       const penElement: PenElement = {
-        id: ElementId('pen-delete'),
+        id: createElementId('pen-delete'),
         type: 'pen',
         points: [100, 100, 200, 200],
         stroke: '#000000',
@@ -352,7 +352,7 @@ describe('Drawing Tools Store-First Tests', () => {
 
     it('should handle drawing element selection', () => {
       const highlighterElement: HighlighterElement = {
-        id: ElementId('highlighter-select'),
+        id: createElementId('highlighter-select'),
         type: 'highlighter',
         points: [50, 50, 100, 100],
         style: { color: '#FFFF00', width: 10, opacity: 0.5, blendMode: 'multiply', smoothness: 0.5, lineCap: 'round', lineJoin: 'round', baseOpacity: 0.3, highlightColor: '#FFFF00' },

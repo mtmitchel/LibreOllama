@@ -8,10 +8,10 @@ import { Copy, Edit3, CheckSquare, RotateCcw } from 'lucide-react';
 import { FormattedMessage } from './FormattedMessage';
 
 // Function to detect and linkify URLs in text
-function linkifyText(text: string): (string | JSX.Element)[] {
+function linkifyText(text: string): (string | React.ReactElement)[] {
   // Regex to match URLs
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts: (string | JSX.Element)[] = [];
+  const parts: (string | React.ReactElement)[] = [];
   let lastIndex = 0;
   let match;
   

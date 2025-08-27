@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { Group, Rect, Circle } from 'react-konva';
+import { Group, Rect, Circle, Layer } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../types/enhanced.types';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { CanvasErrorBoundary } from '../components/CanvasErrorBoundary';
 
 interface BackgroundLayerProps {
   width: number;
@@ -73,38 +74,57 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
   }, [shouldShowDots, worldBounds.left, worldBounds.top, worldBounds.right, worldBounds.bottom]);
 
   return (
-    <Group name="background-group">
-      {/* Invisible background rect for deselection */}
-      {onBackgroundClick && (
-        <Rect
-          x={-10000}
-          y={-10000}
-          width={20000}
-          height={20000}
-          fill="transparent"
-          name="background-rect"
-          onClick={onBackgroundClick}
-          listening={true}
-        />
-      )}
+    <CanvasErrorBoundary
+      fallback={
+        <Group name="background-error">
+          <Rect
+            x={0}
+            y={0}
+            width={canvasWidth || 1920}
+            height={canvasHeight || 1080}
+            fill="#f8f9fa"
+          />
+        </Group>
+      }
+      onError={(error) => {
+        console.error('🛑 [BackgroundLayer] Grid rendering error:', error.message);
+      }}
+    >
+      <Layer name="background-layer" listening={false}>
+        {/* Design system aligned dot grid pattern - optimized with non-listening Layer */}
+        {shouldShowDots && (
+          <Group name="dot-grid" listening={false}>
+            {dots.map((dot, index) => (
+              <Circle
+                key={`dot-${index}`}
+                x={dot.x}
+                y={dot.y}
+                radius={DOT_SIZE}
+                fill={DOT_COLOR}
+                perfectDrawEnabled={false}
+                listening={false}
+                opacity={0.4}
+              />
+            ))}
+          </Group>
+        )}
+      </Layer>
       
-      {/* Design system aligned dot grid pattern */}
-      {shouldShowDots && (
-        <Group name="dot-grid" listening={false}>
-          {dots.map((dot, index) => (
-            <Circle
-              key={`dot-${index}`}
-              x={dot.x}
-              y={dot.y}
-              radius={DOT_SIZE}
-              fill={DOT_COLOR}
-              perfectDrawEnabled={false}
-              listening={false}
-              opacity={0.4}
-            />
-          ))}
+      {/* Interactive background rect stays in regular layer for event handling */}
+      {onBackgroundClick && (
+        <Group name="background-interactive">
+          <Rect
+            x={-10000}
+            y={-10000}
+            width={20000}
+            height={20000}
+            fill="transparent"
+            name="background-rect"
+            onClick={onBackgroundClick}
+            listening={true}
+          />
         </Group>
       )}
-    </Group>
+    </CanvasErrorBoundary>
   );
 };

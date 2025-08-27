@@ -17,7 +17,7 @@ import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 interface ConnectorShapeProps {
   element: ConnectorElement;
   isSelected: boolean;
-  konvaProps: any;
+  konvaProps: Partial<Konva.LineConfig>;
   onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   onSelect: () => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null>;
@@ -266,6 +266,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
             shadowOffsetY={2}
             cursor="move"
             listening={true}
+            perfectDrawEnabled={false}
           />
           <Circle
             ref={endHandleRef}
@@ -286,6 +287,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
             shadowOffsetY={2}
             cursor="move"
             listening={true}
+            perfectDrawEnabled={false}
           />
           {/* Visual selection indicator - blue outline */}
           {isArrow ? (
@@ -295,6 +297,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
               strokeWidth={strokeProps.strokeWidth + 4}
               opacity={0.3}
               listening={false}
+              perfectDrawEnabled={false}
               fill="transparent"
               dash={[]}
             />
@@ -305,6 +308,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
               strokeWidth={strokeProps.strokeWidth + 4}
               opacity={0.3}
               listening={false}
+              perfectDrawEnabled={false}
               dash={[]}
             />
           )}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../../../components/ui/design-system/Button';
 import { Card } from '../../../components/ui/design-system/Card';
 import { Badge } from '../../../components/ui/design-system/Badge';
+import { ListItem } from '../../../components/ui/design-system/ListItem';
 import { Text, Heading, Input, Textarea } from '../../../components/ui';
 import { Tile } from '../../../components/ui/design-system/Tile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../../../components/ui/design-system/Dialog';
@@ -89,7 +90,7 @@ const getStatusBadge = (item: ContextItem) => {
     const priorityConfig = {
       'low': { variant: 'secondary' as const, label: 'Low' },
       'medium': { variant: 'warning' as const, label: 'Medium' },
-      'high': { variant: 'danger' as const, label: 'High' }
+      'high': { variant: 'error' as const, label: 'High' }
     };
     const config = priorityConfig[item.priority];
     return <Badge variant={config.variant} className="text-[11px]">{config.label}</Badge>;

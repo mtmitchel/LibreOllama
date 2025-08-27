@@ -7,6 +7,7 @@ import { useGoogleCalendarStore } from './googleCalendarStore';
 import { useUnifiedTaskStore } from './unifiedTaskStore';
 // Google Tasks now managed through unified task store
 import { LLMProviderManager, type LLMProvider, LLMModel } from '../services/llmProviders';
+import { deferredProviderManager } from '../core/lib/deferredProviderManager';
 import { invoke } from '@tauri-apps/api/core';
 
 // Forward declaration removed - use the main interface below
@@ -423,15 +424,22 @@ export const useSettingsStore = create<SettingsStore>()(
           
           await invoke('save_llm_provider_settings', { settings: get().integrations.apiKeys });
           
-          // Re-initialize the provider manager with new settings
-          LLMProviderManager.getInstance().reinitialize(get().integrations.apiKeys);
+          // Re-initialize the provider manager with new settings using debounced manager
+          deferredProviderManager.initializeProvider(get().integrations.apiKeys);
           logger.debug(`Set API key for ${provider}`);
         },
 
         // Model management actions
         fetchAvailableModels: async (provider: LLMProvider) => {
           try {
-            const providerManager = LLMProviderManager.getInstance(get().integrations.apiKeys);
+            // Ensure provider is initialized using debounced manager
+            deferredProviderManager.initializeProvider(get().integrations.apiKeys);
+            const providerManager = deferredProviderManager.getProviderManager();
+            
+            if (!providerManager) {
+              throw new Error('LLM Provider Manager not yet initialized');
+            }
+            
             const providerInstance = providerManager.getProvider(provider);
             
             if (!providerInstance) throw new Error(`Provider ${provider} not found.`);
@@ -564,8 +572,8 @@ export const useSettingsStore = create<SettingsStore>()(
               state.isInitialized = true;
             });
 
-            // Initialize manager with loaded settings
-            LLMProviderManager.getInstance(get().integrations.apiKeys);
+            // Initialize manager with loaded settings using debounced manager
+            deferredProviderManager.initializeProvider(get().integrations.apiKeys);
 
             logger.log('[SETTINGS] Settings initialized successfully.');
           } catch (error) {

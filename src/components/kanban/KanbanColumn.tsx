@@ -47,9 +47,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     state.showCompletedByList[column.id] ?? state.showCompleted
   );
   
-  console.log('🔍 KanbanColumn - Column:', column.id, 'showCompleted:', showCompleted);
-  
-  console.log('🔄 KanbanColumn render for column:', column.id, 'showCompleted:', showCompleted, 'tasks:', column.tasks.length);
+  // Column render cycle
   const [showInlineCreator, setShowInlineCreator] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -384,7 +382,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   <Button
                     type="button"
                     onClick={() => {
-                      console.log('🎯 Toggle button clicked! Current showCompleted:', showCompleted, 'for column:', column.id);
+                      // Toggle completed tasks visibility
                       setShowCompleted(!showCompleted, column.id);
                       setShowOptionsMenu(false);
                     }}
@@ -540,12 +538,12 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         }}
         onConfirm={async () => {
           if (deleteConfirm) {
-            console.log('Deleting task:', deleteConfirm);
+            // Deleting task
             const { deleteTask } = useUnifiedTaskStore.getState();
             
             // Fire and forget - task is optimistically removed so UI can close immediately
             deleteTask(deleteConfirm.taskId).then(() => {
-              console.log('Task deleted successfully');
+              // Task deleted successfully
               // Trigger sync to ensure deletion appears in Google immediately
               realtimeSync.requestSync(500);
             }).catch(error => {

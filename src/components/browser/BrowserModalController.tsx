@@ -113,7 +113,9 @@ export function BrowserModalController({ windowLabel, url, mode = 'overlay' }: B
       const readerUrl = window.location.hostname === 'localhost'
         ? `http://localhost:1423/reader?url=${encodeURIComponent(targetUrl)}`
         : `${window.location.origin}#/reader?url=${encodeURIComponent(targetUrl)}`;
-      await browserModalService.navigateModal(windowLabel, readerUrl);
+      if (windowLabel) {
+        await browserModalService.navigateModal(windowLabel, readerUrl);
+      }
     } catch (error) {
       console.error('Failed to open reader view:', error);
     }
@@ -143,7 +145,7 @@ export function BrowserModalController({ windowLabel, url, mode = 'overlay' }: B
         className="absolute top-0 left-0 right-0 h-14 flex items-center justify-end gap-1 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 px-3 z-50"
         data-tauri-drag-region
       >
-        <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' }}>
+        <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <Button size="icon" variant="ghost" onClick={handleRefresh} className="h-8 w-8" title="Refresh">
             <RefreshCw size={16} />
           </Button>

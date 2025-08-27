@@ -48,7 +48,9 @@
       "mcp__exa__web_search_exa",
       "Bash(git push:*)",
       "mcp__exa__deep_researcher_start",
-      "mcp__exa__deep_researcher_check"
+      "mcp__exa__deep_researcher_check",
+      "Read(/C:\\Users\\mtmit\\Desktop/**)",
+      "Read(/C:\\Users\\mtmit\\Desktop/**)"
     ],
     "deny": []
   },

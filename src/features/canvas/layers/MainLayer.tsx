@@ -28,9 +28,11 @@ import { PenShape } from '../shapes/PenShape';
 import { SectionShape } from '../shapes/SectionShape';
 import { TableElement } from '../elements/TableElement';
 import { KonvaElementBoundary } from '../utils/KonvaElementBoundary';
+import { CanvasErrorBoundary } from '../components/CanvasErrorBoundary';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { StrokeRenderer } from '../components/renderers/StrokeRenderer';
 import { ConnectorShape } from '../shapes/ConnectorShape';
+import { useProgressiveRender } from '../hooks/useProgressiveRender';
 
 interface MainLayerProps {
   name?: string;
@@ -48,6 +50,8 @@ interface MainLayerProps {
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
   onStartTextEdit: (elementId: ElementId) => void;
   visibleElements: CanvasElement[];
+  enableProgressiveRendering?: boolean;
+  viewport?: { x: number; y: number; scale: number; width: number; height: number };
 }
 
 export const MainLayer: React.FC<MainLayerProps> = ({
@@ -65,7 +69,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   onElementDragEnd,
   onElementClick,
   onStartTextEdit,
-  visibleElements
+  visibleElements,
+  enableProgressiveRendering = true,
+  viewport = { x: 0, y: 0, scale: 1, width: 1000, height: 1000 }
 }) => {
   // OPTIMIZED: Consolidated store subscriptions using useShallow
   const {
@@ -77,6 +83,23 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     setTextEditingElement: state.setTextEditingElement,
     selectElement: state.selectElement
   })));
+
+  // PROGRESSIVE RENDERING: Use progressive rendering for large element counts
+  const shouldUseProgressiveRender = enableProgressiveRendering && visibleElements.length > 200;
+  const progressiveRender = useProgressiveRender(
+    visibleElements,
+    viewport,
+    {
+      chunkSize: 50, // Render 50 elements per chunk
+      frameTime: 16, // Target 60fps (16ms per frame)
+      priorityThreshold: 200 // Enable progressive rendering for >200 elements
+    }
+  );
+
+  // Use progressive rendering result if enabled, otherwise use all visible elements
+  const elementsToRender = shouldUseProgressiveRender 
+    ? progressiveRender.visibleElements 
+    : visibleElements;
 
   // Memoized element rendering
   const renderElement = useCallback((element: CanvasElement) => {
@@ -235,7 +258,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
           <KonvaElementBoundary key={element.id}>
             <SectionShape
               section={element as SectionElement}
-              isSelected={Array.from(selectedElementIds).some(id => String(id) === String(section.id))}
+              isSelected={Array.from(selectedElementIds).some(id => String(id) === String(element.id))}
               onSelect={(id, e) => selectElement(id as unknown as ElementId)}
               onElementDragEnd={(e, id) => {
                 const node = e.target;
@@ -278,7 +301,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
 
   // Memoized elements to prevent unnecessary re-renders
   const memoizedElements = useMemo(() => {
-    const validElements = visibleElements.filter(el => {
+    const validElements = elementsToRender.filter(el => {
       // Skip rendering elements that are children of sticky note containers
       if (el && ((el as any).parentId || (el as any).stickyNoteId)) {
         return false;
@@ -288,8 +311,13 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     
     const renderedElements = validElements.map(renderElement).filter(Boolean);
     
+    // Log progressive rendering status when enabled
+    if (shouldUseProgressiveRender) {
+      console.log(`🎨 [MainLayer] Progressive rendering: ${renderedElements.length}/${visibleElements.length} elements (${Math.round(progressiveRender.progress * 100)}%)`);
+    }
+    
     return renderedElements;
-  }, [visibleElements, renderElement]);
+  }, [elementsToRender, renderElement, shouldUseProgressiveRender, visibleElements.length, progressiveRender.progress]);
 
   // Draft section rendering for live preview - DISABLED to prevent infinite loops
   const draftSectionElement = null;
@@ -329,36 +357,60 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   }, [memoizedElements, draftSectionElement, drawingLine]);
 
   return (
-    <KonvaElementBoundary>
-      <Group
-        name={name || "main-layer"}
-        perfectDrawEnabled={false}
-        listening={true}
-      >
-        {/* Render sections first (behind elements) */}
-        {sections.map(section => {
-          const sectionChildren = elementsBySection?.get(section.id) || [];
-          return (
-            <KonvaElementBoundary key={section.id}>
-              <SectionShape
-                section={section}
-                isSelected={Array.from(selectedElementIds).some(id => String(id) === String(section.id))}
-                onSelect={(id, e) => selectElement(id as unknown as ElementId)}
-                onElementDragEnd={(e, id) => {
-                  const node = e.target;
-                  updateElement(id, { x: node.x(), y: node.y() });
-                }}
-              >
-                {sectionChildren.map(child => renderElement(child))}
-              </SectionShape>
-            </KonvaElementBoundary>
-          );
-        })}
-        
-        {/* Render all elements */}
-        {allNodes}
-      </Group>
-    </KonvaElementBoundary>
+    <CanvasErrorBoundary
+      fallback={
+        <Group name="main-layer-error">
+          <Text
+            x={50}
+            y={50}
+            text="⚠️ MainLayer Error - Elements failed to render"
+            fontSize={16}
+            fill="#ff6b6b"
+            fontFamily="Arial"
+          />
+        </Group>
+      }
+      onError={(error, errorInfo) => {
+        console.error('🛑 [MainLayer] Rendering error:', {
+          error: error.message,
+          stack: error.stack,
+          componentStack: errorInfo.componentStack,
+          elementsCount: visibleElements.length,
+          progressiveMode: shouldUseProgressiveRender
+        });
+      }}
+    >
+      <KonvaElementBoundary>
+        <Group
+          name={name || "main-layer"}
+          perfectDrawEnabled={false}
+          listening={true}
+        >
+          {/* Render sections first (behind elements) */}
+          {sections.map(section => {
+            const sectionChildren = elementsBySection?.get(section.id) || [];
+            return (
+              <KonvaElementBoundary key={section.id}>
+                <SectionShape
+                  section={section}
+                  isSelected={Array.from(selectedElementIds).some(id => String(id) === String(section.id))}
+                  onSelect={(id, e) => selectElement(id as unknown as ElementId)}
+                  onElementDragEnd={(e, id) => {
+                    const node = e.target;
+                    updateElement(id, { x: node.x(), y: node.y() });
+                  }}
+                >
+                  {sectionChildren.map(child => renderElement(child))}
+                </SectionShape>
+              </KonvaElementBoundary>
+            );
+          })}
+          
+          {/* Render all elements */}
+          {allNodes}
+        </Group>
+      </KonvaElementBoundary>
+    </CanvasErrorBoundary>
   );
 };
 

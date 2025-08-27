@@ -14,6 +14,7 @@ import { MailStoreProvider } from '../features/mail/components/MailStoreProvider
 import { LinkPreviewProvider } from '../components/providers/LinkPreviewProvider';
 import { queryClient } from '../config/queryClient';
 import { invoke } from '@tauri-apps/api/core';
+import { deferredGmailSync } from '../core/lib/deferredGmailSync';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -82,6 +83,9 @@ export default function App() {
 
   useEffect(() => {
     initializeSettings();
+    
+    // Initialize deferred Gmail sync (will wait for canvas-ready event)
+    deferredGmailSync.initializeGmailSync();
     
     // Check and run database migrations on startup (desktop only)
     const runMigrations = async () => {

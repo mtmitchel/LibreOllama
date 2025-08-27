@@ -8,6 +8,8 @@ import { measureTextDimensions } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 import { useDebounce } from '@/core/hooks/useDebounce';
 import { SHAPE_FITTING_DEFAULTS } from '../utils/shapeFittingUtils';
+import { useSelectionProtection } from '../contexts/CanvasEventContext';
+import { useRAFManager } from '../hooks/useRAFManager';
 
 // Resize constants for consistency
 const RESIZE_CONSTANTS = {
@@ -78,6 +80,10 @@ const createRectangleTextEditor = (
   textarea.value = initialText || '';
   textarea.placeholder = 'Add text';
   textarea.setAttribute('spellcheck', 'false');
+  // Accessibility attributes
+  textarea.setAttribute('aria-label', 'Edit rectangle text');
+  textarea.setAttribute('role', 'textbox');
+  textarea.setAttribute('aria-multiline', 'true');
 
   container.appendChild(textarea);
   document.body.appendChild(container);
@@ -129,12 +135,21 @@ const createRectangleTextEditor = (
   };
 
   const handleBlur = () => {
-// Only save if editor was ready and user interacted, OR if there's actual text
+    // Only save if editor was ready and user interacted, OR if there's actual text
     if ((editorReady && hasUserInteracted) || textarea.value.trim().length > 0) {
-cleanup();
+      cleanup();
       onSave(textarea.value);
+      // Announce text change for screen readers
+      const announcement = document.createElement('div');
+      announcement.setAttribute('aria-live', 'polite');
+      announcement.setAttribute('aria-atomic', 'true');
+      announcement.style.position = 'absolute';
+      announcement.style.left = '-9999px';
+      announcement.textContent = `Text updated to: ${textarea.value || 'empty'}`;
+      document.body.appendChild(announcement);
+      setTimeout(() => document.body.removeChild(announcement), 1000);
     } else {
-// Don't save, just cleanup the DOM elements
+      // Don't save, just cleanup the DOM elements
       cleanup();
       onCancel(); // Use cancel instead of save to preserve original text
     }
@@ -169,7 +184,7 @@ textarea.removeEventListener('input', handleInput);
 interface RectangleShapeProps {
   element: RectangleElement;
   isSelected: boolean;
-  konvaProps: any;
+  konvaProps: Partial<Konva.RectConfig>;
   onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
@@ -184,6 +199,12 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   const textEditingElementId = useUnifiedCanvasStore(state => state.textEditingElementId);
   const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
   const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
+  
+  // Context-based selection protection
+  const { protectSelection } = useSelectionProtection();
+  
+  // Centralized RAF management
+  const rafManager = useRAFManager('RectangleShape');
   
   const [, forceUpdate] = useReducer(x => x + 1, 0);
   
@@ -338,7 +359,7 @@ isEditingRef.current = true;
     const store = useUnifiedCanvasStore.getState();
     store.clearSelection();
 
-    requestAnimationFrame(() => {
+    rafManager.scheduleRAF(() => {
       const positionData = calculateTextareaPosition();
       if (!positionData) {
         console.error('❌ [RectangleShape] Failed to calculate position');
@@ -389,6 +410,9 @@ onUpdate(element.id, fallbackData);
             const emptyData = { text: newText.trim(), updatedAt: Date.now() };
 onUpdate(element.id, emptyData);
           }
+          
+          // Protect selection before switching tools to prevent clearing
+          protectSelection();
           
           setTimeout(() => {
             const store = useUnifiedCanvasStore.getState();
@@ -472,6 +496,11 @@ editorRef.current.cleanup();
         draggable={!shouldAllowDrawing}
         listening={!shouldAllowDrawing}
         onDragEnd={handleDragEnd}
+        name={`rectangle-${element.id}`}
+        // Accessibility attributes for screen readers
+        aria-label={`Rectangle with text: ${textDisplayProperties.displayText}`}
+        role="img"
+        tabIndex={isSelected ? 0 : -1}
       >
         <Rect
           ref={rectRef}

@@ -1,6 +1,9 @@
 // Debug Utility for Production-Safe Logging
 // Implements research recommendation to remove console.log statements in production
 
+import { CanvasElement } from '../types/enhanced.types';
+import { ExtendedPerformance } from '../types/type-safe-replacements';
+
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -33,7 +36,7 @@ export const debug = {
   // Canvas-specific debugging utilities
   canvas: {
     // Log element operations
-    elementOperation: (operation: string, elementId: string, data?: any) => {
+    elementOperation: (operation: string, elementId: string, data?: unknown) => {
       if (shouldLog) {
         console.group(`🎨 Canvas: ${operation}`);
         console.log('Element ID:', elementId);
@@ -50,7 +53,7 @@ export const debug = {
     },
     
     // Log store state changes
-    storeUpdate: (slice: string, action: string, payload?: any) => {
+    storeUpdate: (slice: string, action: string, payload?: unknown) => {
       if (shouldLog) {
         console.group(`🏪 Store: ${slice}.${action}`);
         if (payload) console.log('Payload:', payload);
@@ -59,7 +62,7 @@ export const debug = {
     },
     
     // Log Konva events
-    konvaEvent: (event: string, target?: string, details?: any) => {
+    konvaEvent: (event: string, target?: string, details?: unknown) => {
       if (shouldLog) {
         console.log(`🎭 Konva: ${event}${target ? ` on ${target}` : ''}`, details || '');
       }
@@ -92,7 +95,7 @@ export const logMemoryUsage = (operation: string) => {
     return;
   }
   
-  const memory = (performance as any).memory;
+  const memory = (performance as ExtendedPerformance).memory!;
   console.log(`💾 Memory after ${operation}:`, {
     used: `${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
     total: `${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
@@ -101,13 +104,19 @@ export const logMemoryUsage = (operation: string) => {
 };
 
 // Canvas element debugging helper
-export const logElementState = (elementId: string, element: any) => {
+export const logElementState = (elementId: string, element: CanvasElement) => {
   if (!shouldLog) return;
   
   console.group(`🔍 Element State: ${elementId}`);
   console.log('Type:', element.type);
   console.log('Position:', { x: element.x, y: element.y });
-  console.log('Size:', { width: element.width, height: element.height });
+  if ('width' in element && 'height' in element) {
+    console.log('Size:', { width: (element as any).width, height: (element as any).height });
+  } else if ('radius' in element) {
+    console.log('Size:', { radius: (element as any).radius });
+  } else {
+    console.log('Size:', 'Not applicable for this element type');
+  }
   console.log('Properties:', element);
   console.groupEnd();
 };

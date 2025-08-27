@@ -492,7 +492,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                               <InlineTaskCreator
                                 columnId={column.id}
                                 onSubmit={async (data) => {
-                                  console.log('Creating task with data:', data);
+                                  // Creating task
                                   await createTask({
                                     title: data.title,
                                     notes: data.notes,

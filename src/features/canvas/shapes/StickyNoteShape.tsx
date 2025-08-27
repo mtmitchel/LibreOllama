@@ -55,6 +55,10 @@ const textarea = document.createElement('textarea');
   textarea.value = initialText || '';
   textarea.placeholder = 'Add text';
   textarea.setAttribute('spellcheck', 'false');
+  // Accessibility attributes
+  textarea.setAttribute('aria-label', 'Edit sticky note text');
+  textarea.setAttribute('role', 'textbox');
+  textarea.setAttribute('aria-multiline', 'true');
 document.body.appendChild(textarea);
 
   // Focus the textarea
@@ -126,7 +130,7 @@ textarea.removeEventListener('input', handleInput);
 interface StickyNoteShapeProps {
   element: StickyNoteElement;
   isSelected: boolean;
-  konvaProps: any;
+  konvaProps: Partial<Konva.RectConfig>;
   onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
@@ -241,13 +245,14 @@ const finalText = newText.trim();
         });
         
         if (isBlurringToCanvas) {
-          clearSelection();
+          useUnifiedCanvasStore.getState().clearSelection();
         } else {
           // Use requestAnimationFrame to avoid React-Konva recursion
           requestAnimationFrame(() => {
-            setSelectedTool('select');
-            clearSelection();
-            selectElement(element.id, false);
+            const store = useUnifiedCanvasStore.getState();
+            store.setSelectedTool('select');
+            store.clearSelection();
+            store.selectElement(element.id, false);
           });
         }
       },
@@ -614,8 +619,23 @@ const finalText = newText.trim();
         onDragMove={handleDragMove}
         draggable={!shouldAllowDrawing}
         listening={!shouldAllowDrawing}
-        name="sticky-note"
+        name={`sticky-note-${element.id}`}
+        // Accessibility attributes for screen readers
+        aria-label={`Sticky note: ${element.text || 'Empty sticky note'}`}
+        role="note"
+        tabIndex={isSelected ? 0 : -1}
       >
+        {/* Transparent hit zone for enhanced selection */}
+        <Rect
+          width={width + 10}
+          height={height + 10}
+          x={-5}
+          y={-5}
+          fill="transparent"
+          listening={true}
+          hitStrokeWidth={10}
+        />
+
         {/* Sticky note background */}
         <Rect
           ref={rectRef}

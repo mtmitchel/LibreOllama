@@ -1,0 +1,62 @@
+
+# Code Audit Report: React + react-konva Canvas Module
+
+## 1. Project Structure
+
+The project structure under `/features/canvas` is well-organized and follows best practices. The code is modularized into the following directories:
+
+*   `/components`: Contains the main canvas components, such as `CanvasContainer`, `CanvasStage`, and `UnifiedEventHandler`.
+*   `/hooks`: Contains custom hooks for managing canvas state and logic, such as `useCanvasHistory`, `useShapeCaching`, and `useSimpleViewportCulling`.
+*   `/layers`: Contains the different layers of the canvas, such as `BackgroundLayer`, `MainLayer`, and `UILayer`.
+*   `/shapes`: Contains the different shapes that can be rendered on the canvas, such as `CircleShape`, `RectangleShape`, and `TextShape`.
+*   `/stores`: Contains the Zustand store for managing the canvas state.
+*   `/types`: Contains the TypeScript type definitions for the canvas module.
+*   `/utils`: Contains utility functions for the canvas module.
+
+This modular structure makes the code easy to navigate, understand, and maintain.
+
+## 2. TypeScript Interfaces
+
+The codebase uses TypeScript effectively. The `CanvasElement` base type is a discriminated union, which is a best practice for type-safe handling of different element types. The use of branded types for IDs is an excellent practice that prevents ID misuse.
+
+I found only a few instances of the `any` type in the codebase, which is a good sign. I recommend replacing these with more specific types to improve type safety.
+
+## 3. Zustand Store
+
+The Zustand store is well-implemented. It uses `create<>()(immer())` for immutable updates, and the state is well-sliced into logical parts. The store is modularized into smaller slices, which makes it easier to maintain. The use of granular selectors helps to avoid over-subscribing to the store.
+
+## 4. Canvas Performance Patterns
+
+The codebase implements several important performance patterns, including:
+
+*   **Viewport Culling:** The `useSimpleViewportCulling` hook is used to determine which elements are visible in the viewport, which avoids rendering elements that are off-screen.
+*   **Layer Separation:** The canvas is separated into multiple layers, which ensures that only the layers that have changed are redrawn.
+*   **Strategic Caching:** The `useShapeCaching` hook is used to cache complex shapes, which improves rendering performance.
+*   **Event Delegation:** The `UnifiedEventHandler` component uses event delegation to handle events on the stage, which is more efficient than attaching event listeners to individual shapes.
+*   **Memoization:** The codebase uses `React.memo`, `useShallow`, `useMemo`, and `useCallback` to prevent unnecessary re-renders.
+
+## 5. Event Handling
+
+The event handling is centralized in the `UnifiedEventHandler` component, which is a good practice. The component uses event delegation and throttling to improve performance. The event handlers for drag, click, and transform operations are correctly implemented.
+
+## 6. Text Portal Implementation
+
+The text portal implementation uses a hybrid approach, with a DOM `textarea` for editing and a Konva `Text` shape for rendering. This provides a good user experience. The implementation correctly handles coordinate transformation, focus/blur events, and committing edits.
+
+## 7. Undo/Redo Actions
+
+The undo/redo logic is well-integrated with the Zustand store. The `useCanvasHistory` hook provides a convenient way to manage the history. The `batchOperations` function allows for batching multiple operations into a single history entry.
+
+## 8. Tauri Persistence Integration
+
+The Tauri persistence integration is handled in the `useTauriCanvas` and `exportUtils` files. The code uses the `invoke` function to call the Tauri backend, and it includes error handling and data serialization.
+
+However, I did not find any code that deals with database key unlocking or a debounced listener for saving the state. This might be handled in the Tauri backend or in another part of the application. I recommend investigating how these are handled in the application.
+
+## Potential Issues and Recommendations
+
+*   **`any` usage:** I found a few instances of the `any` type in the codebase. I recommend replacing these with more specific types to improve type safety.
+*   **Throttling Implementation:** The throttling implementation in `UnifiedEventHandler` is a bit basic. I recommend using `requestAnimationFrame` or a more sophisticated throttling library for better performance.
+*   **`JSON.stringify`:** The `generateCacheKey` function in `useShapeCaching` uses `JSON.stringify` to generate the cache key. I recommend using a more efficient hashing algorithm for better performance.
+*   **`setTimeout`:** The `TextShape` component uses `setTimeout` in several places to wait for the DOM to update. I recommend using a more robust solution, such as `requestAnimationFrame` or a library like `react-spring`.
+*   **Database Key Unlocking and Debounced Listener:** I did not find any code that deals with database key unlocking or a debounced listener for saving the state. I recommend investigating how these are handled in the application.

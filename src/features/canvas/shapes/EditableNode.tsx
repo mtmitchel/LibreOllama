@@ -5,13 +5,7 @@ import { CanvasElement } from '../types/enhanced.types';
 import { RectangleShape } from './RectangleShape';
 import { CircleShape } from './CircleShape';
 import { ImageShape } from './ImageShape';
-// TEMP FIX: Comment out broken imports and implement simple fallbacks
-// import UnifiedTextElement from '../components/UnifiedTextElement';
-// import StickyNoteElement from '../components/StickyNoteElement';
 import { TableElement } from '../elements/TableElement';
-// import SectionElement from '../components/SectionElement';
-// import ImageElement from '../components/ImageElement';
-// import { ConnectorRenderer } from '../components/ConnectorRenderer'; // REMOVED: Missing module
 import { Line, Star, Text, Rect } from 'react-konva';
 import { canvasTheme } from '../utils/canvasTheme';
 import { Html } from 'react-konva-utils';

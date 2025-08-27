@@ -3,7 +3,7 @@
  * Enhanced selectors to reduce multiple subscriptions
  */
 
-import { CanvasElement, ElementId } from '../types/enhanced.types';
+import { CanvasElement, ElementId, SectionElement } from '../types/enhanced.types';
 
 interface UnifiedCanvasState {
   elements: Map<string, CanvasElement>;
@@ -17,27 +17,27 @@ interface UnifiedCanvasState {
     height: number;
   };
   isDrawing: boolean;
-  draftSection: any;
-  sections: Map<string, any>;
+  draftSection: SectionElement | null;
+  sections: Map<string, CanvasElement>;
   canUndo: boolean;
   canRedo: boolean;
   lastSelectedElementId: ElementId | null;
   penColor: string;
   currentPath: number[] | null;
   textEditingElementId: ElementId | null;
-  startDrawing: any;
-  updateDrawing: any;
-  finishDrawing: any;
-  cancelDrawing: any;
-  setSelectedTool: any;
-  addElement: any;
-  findStickyNoteAtPoint: any;
-  addElementToStickyNote: any;
-  selectElement: any;
-  deselectElement: any;
-  clearSelection: any;
-  updateElement: any;
-  setTextEditingElement: any;
+  startDrawing: (point: { x: number; y: number }) => void;
+  updateDrawing: (point: { x: number; y: number }) => void;
+  finishDrawing: () => void;
+  cancelDrawing: () => void;
+  setSelectedTool: (tool: string) => void;
+  addElement: (element: CanvasElement) => void;
+  findStickyNoteAtPoint: (point: { x: number; y: number }) => CanvasElement | null;
+  addElementToStickyNote: (elementId: ElementId, stickyNoteId: ElementId) => void;
+  selectElement: (elementId: ElementId, multiSelect?: boolean) => void;
+  deselectElement: (elementId: ElementId) => void;
+  clearSelection: () => void;
+  updateElement: (elementId: ElementId, updates: Partial<CanvasElement>) => void;
+  setTextEditingElement: (elementId: ElementId | null) => void;
   selectedStickyNoteColor: string;
   enableStickyNoteContainer: boolean;
 }

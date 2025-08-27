@@ -25,6 +25,7 @@ import { TriangleTool } from '../components/tools/creation/TriangleTool';
 import { MindmapTool } from '../components/tools/creation/MindmapTool';
 
 import { SHAPE_CREATORS, ShapeType } from '../utils/shapeCreators';
+import { CanvasErrorBoundary } from '../components/CanvasErrorBoundary';
 
 interface ToolLayerProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -100,9 +101,19 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
   };
 
   return (
-    <Layer>
-      {renderToolComponent()}
-    </Layer>
+    <CanvasErrorBoundary
+      fallback={null} // Tool layer errors are non-critical
+      onError={(error) => {
+        console.warn('⚠️ [ToolLayer] Tool rendering error:', {
+          error: error.message,
+          selectedTool
+        });
+      }}
+    >
+      <Layer>
+        {renderToolComponent()}
+      </Layer>
+    </CanvasErrorBoundary>
   );
 };
 

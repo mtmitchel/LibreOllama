@@ -36,6 +36,10 @@ export const createEraserModule = (
   set: StoreSet,
   get: StoreGet
 ): StoreModule<EraserState, EraserActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as any;
+  const getState = get as any;
+  
   return {
     state: {
       spatialIndex: null,
@@ -75,7 +79,7 @@ export const createEraserModule = (
        * Update spatial index with current elements
        */
       updateSpatialIndex: () => {
-        set(state => {
+        setState((state: any) => {
           if (!state.spatialIndex) {
             state.spatialIndex = new SimpleEraserIndex();
           }
@@ -84,7 +88,7 @@ export const createEraserModule = (
           const erasableElements: CanvasElement[] = [];
           
           state.elements.forEach((element: CanvasElement) => {
-            if (get().isElementErasable(element)) {
+            if (getState().isElementErasable(element)) {
               erasableElements.push(element);
             }
           });
@@ -100,7 +104,7 @@ export const createEraserModule = (
        * Clear spatial index
        */
       clearSpatialIndex: () => {
-        set(state => {
+        setState((state: any) => {
           if (state.spatialIndex) {
             state.spatialIndex.clear();
           }
@@ -112,11 +116,11 @@ export const createEraserModule = (
        * Erase elements at a single point
        */
       eraseAtPoint: (x: number, y: number, eraserSize: number) => {
-        const { spatialIndex, spatialIndexDirty } = get();
+        const { spatialIndex, spatialIndexDirty } = getState();
         
         // Update spatial index if needed
         if (spatialIndexDirty || !spatialIndex) {
-          get().updateSpatialIndex();
+          getState().updateSpatialIndex();
         }
         
         const halfSize = eraserSize / 2;
@@ -128,17 +132,17 @@ export const createEraserModule = (
         };
         
         // Find candidate elements using spatial index
-        const candidateIds = get().spatialIndex!.findIntersections(eraserBounds);
+        const candidateIds = getState().spatialIndex!.findIntersections(eraserBounds);
         const deletedIds: ElementId[] = [];
         
-        set(state => {
+        setState((state: any) => {
           candidateIds.forEach((id: ElementId | import('../../types/enhanced.types').SectionId) => {
             const element = state.elements.get(id);
             
-            if (!element || !get().isElementErasable(element)) return;
+            if (!element || !getState().isElementErasable(element)) return;
             
             // Check if any point is within eraser radius
-            const points = (element as any).points;
+            const points = (element as { points?: number[] }).points;
             if (points && Array.isArray(points)) {
               for (let i = 0; i < points.length; i += 2) {
                 const px = points[i];
@@ -149,7 +153,7 @@ export const createEraserModule = (
 
                   deletedIds.push(id as ElementId);
                   state.elements.delete(id);
-                  state.elementOrder = state.elementOrder.filter((elId: any) => elId !== id);
+                  state.elementOrder = state.elementOrder.filter((elId: ElementId) => elId !== id);
                   state.spatialIndexDirty = true;
                   break;
                 }
@@ -159,7 +163,7 @@ export const createEraserModule = (
         });
         
         if (deletedIds.length > 0) {
-          get().addToHistory('Erase strokes');
+          getState().addToHistory('Erase strokes');
         }
         
         return deletedIds;
@@ -171,25 +175,25 @@ export const createEraserModule = (
       eraseInPath: (eraserPath: number[], eraserSize: number) => {
         if (eraserPath.length < 2) return [];
         
-        const { spatialIndex, spatialIndexDirty } = get();
+        const { spatialIndex, spatialIndexDirty } = getState();
         
         // Update spatial index if needed
         if (spatialIndexDirty || !spatialIndex) {
-          get().updateSpatialIndex();
+          getState().updateSpatialIndex();
         }
         
         // Get path bounds and find candidates
-        const candidateIds = get().spatialIndex!.findPathIntersections(eraserPath, eraserSize);
+        const candidateIds = getState().spatialIndex!.findPathIntersections(eraserPath, eraserSize);
         const deletedIds: ElementId[] = [];
         const halfSize = eraserSize / 2;
         
-        set(state => {
+        setState((state: any) => {
           candidateIds.forEach((id: ElementId | import('../../types/enhanced.types').SectionId) => {
             const element = state.elements.get(id);
-            if (!element || !get().isElementErasable(element)) return;
+            if (!element || !getState().isElementErasable(element)) return;
             
             // Check if any point intersects with eraser path
-            const points = (element as any).points;
+            const points = (element as { points?: number[] }).points;
             if (points && Array.isArray(points)) {
               let shouldDelete = false;
               
@@ -212,7 +216,7 @@ export const createEraserModule = (
               if (shouldDelete) {
                 deletedIds.push(id as ElementId);
                 state.elements.delete(id);
-                state.elementOrder = state.elementOrder.filter((elId: any) => elId !== id);
+                state.elementOrder = state.elementOrder.filter((elId: ElementId) => elId !== id);
                 state.spatialIndexDirty = true;
               }
             }
@@ -220,7 +224,7 @@ export const createEraserModule = (
         });
         
         if (deletedIds.length > 0) {
-          get().addToHistory('Erase strokes');
+          getState().addToHistory('Erase strokes');
         }
         
         return deletedIds;
@@ -230,20 +234,20 @@ export const createEraserModule = (
        * Erase elements within bounds
        */
       eraseInBounds: (bounds: BoundingBox) => {
-        const { spatialIndex, spatialIndexDirty } = get();
+        const { spatialIndex, spatialIndexDirty } = getState();
         
         // Update spatial index if needed
         if (spatialIndexDirty || !spatialIndex) {
-          get().updateSpatialIndex();
+          getState().updateSpatialIndex();
         }
         
-        const candidateIds = get().spatialIndex!.findIntersections(bounds);
+        const candidateIds = getState().spatialIndex!.findIntersections(bounds);
         const deletedIds: ElementId[] = [];
         
-        set(state => {
+        setState((state: any) => {
           candidateIds.forEach((id: ElementId | import('../../types/enhanced.types').SectionId) => {
             const element = state.elements.get(id);
-            if (!element || !get().isElementErasable(element)) return;
+            if (!element || !getState().isElementErasable(element)) return;
             
             // Simple bounds check - element center within bounds
             const elementX = element.x || 0;
@@ -262,7 +266,7 @@ export const createEraserModule = (
         });
         
         if (deletedIds.length > 0) {
-          get().addToHistory('Erase elements');
+          getState().addToHistory('Erase elements');
         }
         
         return deletedIds;

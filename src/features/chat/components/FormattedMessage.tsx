@@ -9,7 +9,7 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
   // Parse and render the formatted content
   const renderContent = () => {
     const lines = content.split('\n');
-    const elements: JSX.Element[] = [];
+    const elements: React.ReactElement[] = [];
     let currentParagraph: string[] = [];
     let inCodeBlock = false;
     let codeBlockContent: string[] = [];
@@ -27,13 +27,13 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
       }
     };
     
-    const renderInlineFormatting = (text: string): (string | JSX.Element)[] => {
-      const parts: (string | JSX.Element)[] = [];
+    const renderInlineFormatting = (text: string): (string | React.ReactElement)[] => {
+      const parts: (string | React.ReactElement)[] = [];
       let lastIndex = 0;
 
       type Pattern = {
         regex: RegExp;
-        render: (m: RegExpExecArray, key: string) => JSX.Element;
+        render: (m: RegExpExecArray, key: string) => React.ReactElement;
       };
 
       // Order matters: handle markdown links before raw URLs to avoid splitting
@@ -77,7 +77,7 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
 
       const combinedRegex = new RegExp(patterns.map(p => p.regex.source).join('|'), 'g');
       let match: RegExpExecArray | null;
-      const matches: Array<{ index: number; length: number; element: JSX.Element }> = [];
+      const matches: Array<{ index: number; length: number; element: React.ReactElement }> = [];
 
       while ((match = combinedRegex.exec(text)) !== null) {
         for (let i = 0; i < patterns.length; i++) {
@@ -152,7 +152,7 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
         flushParagraph();
         const level = headerMatch[1].length;
         const text = headerMatch[2];
-        const HeaderTag = `h${Math.min(level, 6)}` as keyof JSX.IntrinsicElements;
+        const headerLevel = Math.min(level, 6);
         const headerClasses = [
           'font-semibold mb-2 mt-4 first:mt-0',
           'text-2xl', // h1
@@ -162,11 +162,53 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
           'text-base', // h5
           'text-sm', // h6
         ];
-        elements.push(
-          <HeaderTag key={elements.length} className={headerClasses[level - 1] || headerClasses[0]}>
-            {renderInlineFormatting(text)}
-          </HeaderTag>
-        );
+        
+        const headerContent = renderInlineFormatting(text);
+        
+        switch (headerLevel) {
+          case 1:
+            elements.push(
+              <h1 key={elements.length} className={headerClasses[headerLevel - 1] || headerClasses[0]}>
+                {headerContent}
+              </h1>
+            );
+            break;
+          case 2:
+            elements.push(
+              <h2 key={elements.length} className={headerClasses[headerLevel - 1] || headerClasses[0]}>
+                {headerContent}
+              </h2>
+            );
+            break;
+          case 3:
+            elements.push(
+              <h3 key={elements.length} className={headerClasses[headerLevel - 1] || headerClasses[0]}>
+                {headerContent}
+              </h3>
+            );
+            break;
+          case 4:
+            elements.push(
+              <h4 key={elements.length} className={headerClasses[headerLevel - 1] || headerClasses[0]}>
+                {headerContent}
+              </h4>
+            );
+            break;
+          case 5:
+            elements.push(
+              <h5 key={elements.length} className={headerClasses[headerLevel - 1] || headerClasses[0]}>
+                {headerContent}
+              </h5>
+            );
+            break;
+          default:
+            elements.push(
+              <h6 key={elements.length} className={headerClasses[headerLevel - 1] || headerClasses[0]}>
+                {headerContent}
+              </h6>
+            );
+            break;
+        }
         continue;
       }
       

@@ -92,6 +92,7 @@ export function SelectionLayer({
           strokeWidth={1}
           dash={[2, 2]}
           listening={false}
+          perfectDrawEnabled={false}
         />
       )}
 
@@ -112,6 +113,7 @@ export function SelectionLayer({
               strokeWidth={2}
               fill="transparent"
               listening={false}
+              perfectDrawEnabled={false}
             />
             
             {/* Corner handles for resize */}
@@ -130,6 +132,7 @@ export function SelectionLayer({
                 stroke={canvasTheme.colors.primary}
                 strokeWidth={2}
                 listening={false}
+                perfectDrawEnabled={false}
               />
             ))}
           </React.Fragment>

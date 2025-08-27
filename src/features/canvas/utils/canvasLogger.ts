@@ -10,8 +10,8 @@ const isTest = process.env.NODE_ENV === 'test';
 
 // Simple RAF-based throttle for noisy dev logs
 let lastFrame = 0;
-const frameThrottle = (fn: (...args: any[]) => void) => {
-  return (...args: any[]) => {
+const frameThrottle = (fn: (...args: unknown[]) => void) => {
+  return (...args: unknown[]) => {
     const now = performance.now();
     if (now - lastFrame < 16) return; // Skip if already logged this frame
     lastFrame = now;
@@ -25,6 +25,9 @@ export const canvasLog = {
   
   // Info logs in development and test (throttled)
   log: (isDevelopment || isTest) ? frameThrottle(logger.log.bind(logger)) : () => {},
+  
+  // Info logs in development and test (throttled) - same as log but semantic distinction
+  info: (isDevelopment || isTest) ? frameThrottle((logger as any).info?.bind(logger) || logger.log.bind(logger)) : () => {},
   
   // Warnings always shown but throttled in production
   warn: logger.warn,

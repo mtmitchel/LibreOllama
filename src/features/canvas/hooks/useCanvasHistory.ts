@@ -40,12 +40,14 @@ export const useCanvasHistory = () => {
   // Add a new history entry with optional metadata
   const addToHistory = useCallback((
     action: string,
-    patches: any[] = [],
-    inversePatches: any[] = [],
+    patches: unknown[] = [],
+    inversePatches: unknown[] = [],
     metadata?: {
       elementIds?: string[];
       operationType?: 'create' | 'update' | 'delete' | 'move' | 'format';
       affectedCount?: number;
+      isBatch?: boolean;
+      operationCount?: number;
     }
   ) => {
     addHistoryEntry(action, metadata); // Simplified signature for unified store
@@ -83,16 +85,35 @@ export const useCanvasHistory = () => {
   }, [getHistoryState, history, currentIndex]);
 
   // Batch multiple operations into a single history entry
+  // ATOMICITY: Ensures multi-step operations create only one history entry
   const batchOperations = useCallback((
     batchName: string,
     operations: () => void,
-    metadata?: any
+    metadata?: {
+      elementIds?: string[];
+      operationType?: 'create' | 'update' | 'delete' | 'move' | 'format';
+      affectedCount?: number;
+      [key: string]: unknown;
+    }
   ) => {
-    // For now, just execute operations and add a single history entry
-    // In a more sophisticated implementation, this would group operations
+    // Store the current history state
+    const store = useUnifiedCanvasStore.getState();
+    const startHistoryLength = store.getHistoryLength();
+    
+    // Execute all operations without adding individual history entries
+    // Note: Operations should use skipHistory=true or the default
     operations();
+    
+    // Check if any operations added history entries (they shouldn't)
+    const endHistoryLength = store.getHistoryLength();
+    if (endHistoryLength > startHistoryLength) {
+      console.warn(`[BatchOperations] Operations added ${endHistoryLength - startHistoryLength} history entries. They should use skipHistory=true`);
+    }
+    
+    // Add a single history entry for the entire batch
     addToHistory(batchName, [], [], {
       isBatch: true,
+      operationCount: typeof metadata?.operationCount === 'number' ? metadata.operationCount : undefined,
       ...metadata
     });
   }, [addToHistory]);

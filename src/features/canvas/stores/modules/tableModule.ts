@@ -1,3 +1,4 @@
+import { UnifiedCanvasStore } from '../unifiedCanvasStore';
 import { 
   ElementId,
   isTableElement,
@@ -31,8 +32,12 @@ export interface TableActions {
  */
 export const createTableModule = (
   set: StoreSet,
-  get: StoreGet
+  get: () => UnifiedCanvasStore
 ): StoreModule<TableState, TableActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as (fn: (draft: UnifiedCanvasStore) => void) => void;
+  const getState = get;
+
   return {
     state: {
       // No additional state needed
@@ -42,7 +47,7 @@ export const createTableModule = (
       updateTableCell: (tableId, row, col, value) => {
         // Updating table cell
         
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const table = state.elements.get(tableId);
           // Found table
           
@@ -128,11 +133,11 @@ export const createTableModule = (
             console.error('🔥 [updateTableCell] Table not found or not a table element');
           }
         });
-        get().addToHistory('updateTableCell');
+        getState().addToHistory('updateTableCell');
       },
 
       addTableRow: (tableId, position = -1) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const table = state.elements.get(tableId);
           if (table && isTableElement(table)) {
             const insertIndex = position === -1 ? table.rows : Math.max(0, Math.min(position, table.rows));
@@ -163,11 +168,11 @@ export const createTableModule = (
             // Added row
           }
         });
-        get().addToHistory('addTableRow');
+        getState().addToHistory('addTableRow');
       },
 
       removeTableRow: (tableId, rowIndex) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const table = state.elements.get(tableId);
           if (table && isTableElement(table) && table.rows > 1 && rowIndex >= 0 && rowIndex < table.rows) {
             // Update table dimensions
@@ -184,11 +189,11 @@ export const createTableModule = (
             // Removed row
           }
         });
-        get().addToHistory('removeTableRow');
+        getState().addToHistory('removeTableRow');
       },
 
       addTableColumn: (tableId, position = -1) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const table = state.elements.get(tableId);
           if (table && isTableElement(table)) {
             const insertIndex = position === -1 ? table.cols : Math.max(0, Math.min(position, table.cols));
@@ -220,11 +225,11 @@ export const createTableModule = (
             // Added column
           }
         });
-        get().addToHistory('addTableColumn');
+        getState().addToHistory('addTableColumn');
       },
 
       removeTableColumn: (tableId, colIndex) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const table = state.elements.get(tableId);
           if (table && isTableElement(table) && table.cols > 1 && colIndex >= 0 && colIndex < table.cols) {
             // Update table dimensions
@@ -243,11 +248,11 @@ export const createTableModule = (
             // Removed column
           }
         });
-        get().addToHistory('removeTableColumn');
+        getState().addToHistory('removeTableColumn');
       },
 
       resizeTableCell: (tableId, rowIndex, colIndex, width, height) => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           const table = state.elements.get(tableId);
           if (table && isTableElement(table) && table.enhancedTableData) {
             // Update column width if provided
@@ -269,7 +274,7 @@ export const createTableModule = (
             table.updatedAt = Date.now();
           }
         });
-        get().addToHistory('resizeTableCell');
+        getState().addToHistory('resizeTableCell');
       },
     },
   };

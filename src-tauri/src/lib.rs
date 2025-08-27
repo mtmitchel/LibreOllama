@@ -110,6 +110,11 @@ pub fn run() {
     }
 
     // CRITICAL FIX: Enable WebView2 hardware acceleration for canvas rendering
+    // These flags enable GPU acceleration for Konva.js canvas operations:
+    // --ignore-gpu-blocklist: Use GPU even if it's on the blocklist
+    // --enable-accelerated-canvas: Enable GPU acceleration for HTML5 canvas
+    // --enable-webgl: Enable WebGL support
+    // --enable-accelerated-2d-canvas: Enable GPU acceleration for 2D canvas operations
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", 
         "--ignore-gpu-blocklist --enable-accelerated-canvas --enable-webgl --enable-accelerated-2d-canvas");
 
@@ -247,6 +252,12 @@ pub fn run() {
             commands::chat::get_session_messages,
             commands::chat::get_database_stats,
             commands::chat::delete_session,
+            // Canvas commands - Secure persistence with AES-256-GCM
+            commands::canvas::ensure_encryption_key,
+            commands::canvas::save_canvas_data,
+            commands::canvas::load_canvas_data,
+            commands::canvas::list_canvas_files,
+            commands::canvas::delete_canvas_file,
             commands::chat::delete_session_v4,
             commands::chat::update_session_title,
             commands::chat::update_session_model,

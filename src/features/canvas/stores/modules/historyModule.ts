@@ -1,5 +1,6 @@
+import { UnifiedCanvasStore } from '../unifiedCanvasStore';
 import { nanoid } from 'nanoid';
-import { CanvasElement, ElementId } from '../../types/enhanced.types';
+import { CanvasElement, ElementId, SectionId } from '../../types/enhanced.types';
 import { StoreModule, StoreSet, StoreGet } from './types';
 
 /**
@@ -43,8 +44,12 @@ export interface HistoryActions {
  */
 export const createHistoryModule = (
   set: StoreSet,
-  get: StoreGet
+  get: () => UnifiedCanvasStore
 ): StoreModule<HistoryState, HistoryActions> => {
+  // Cast the set and get functions to work with any state for flexibility
+  const setState = set as (fn: (draft: UnifiedCanvasStore) => void) => void;
+  const getState = get;
+  
   return {
     state: {
       history: [],
@@ -57,8 +62,8 @@ export const createHistoryModule = (
     
     actions: {
       addToHistory: (operation) => {
-        const currentState = get();
-        set(state => {
+        const currentState = getState();
+        setState((state: UnifiedCanvasStore) => {
           // Simple history implementation
           const historyEntry = {
             id: nanoid(),
@@ -90,8 +95,8 @@ export const createHistoryModule = (
       },
 
       addHistoryEntry: (operation, metadata) => {
-        const currentState = get();
-        set(state => {
+        const currentState = getState();
+        setState((state: UnifiedCanvasStore) => {
           // Use the same logic as addToHistory for consistency
           const historyEntry = {
             id: nanoid(),
@@ -130,13 +135,13 @@ export const createHistoryModule = (
           const targetEntry = state.history[targetIndex];
           
           if (targetEntry) {
-            set(draft => {
+            setState((draft) => {
               // Restore elements from history snapshot
               draft.elements = new Map(targetEntry.elementsSnapshot);
               draft.selectedElementIds = new Set(targetEntry.selectionSnapshot);
               
               // Update element order to match restored elements
-              draft.elementOrder = Array.from(targetEntry.elementsSnapshot.keys());
+              draft.elementOrder = Array.from(targetEntry.elementsSnapshot.keys()) as (ElementId | SectionId)[];
               
               // Update history index
               draft.currentHistoryIndex = targetIndex;
@@ -159,13 +164,13 @@ export const createHistoryModule = (
           const targetEntry = state.history[targetIndex];
           
           if (targetEntry) {
-            set(draft => {
+            setState((draft) => {
               // Restore elements from history snapshot
               draft.elements = new Map(targetEntry.elementsSnapshot);
               draft.selectedElementIds = new Set(targetEntry.selectionSnapshot);
               
               // Update element order to match restored elements
-              draft.elementOrder = Array.from(targetEntry.elementsSnapshot.keys());
+              draft.elementOrder = Array.from(targetEntry.elementsSnapshot.keys()) as (ElementId | SectionId)[];
               
               // Update history index
               draft.currentHistoryIndex = targetIndex;
@@ -182,7 +187,7 @@ export const createHistoryModule = (
       },
       
       clearHistory: () => {
-        set(state => {
+        setState((state: UnifiedCanvasStore) => {
           state.history = [];
           state.currentHistoryIndex = -1;
           state.canUndo = false;
@@ -192,7 +197,7 @@ export const createHistoryModule = (
       },
       
       getHistoryLength: () => {
-        return get().history.length;
+        return getState().history.length;
       },
 
       updateHistoryFlags: () => {

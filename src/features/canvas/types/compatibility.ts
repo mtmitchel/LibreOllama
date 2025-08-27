@@ -74,8 +74,14 @@ export function setToArray<T>(set: Set<T>): T[] {
 }
 
 // Type guard to check if element has required enhanced properties
-export function hasEnhancedProperties(element: any): element is EnhancedCanvasElement {
-  return element && typeof element.createdAt === 'number' && typeof element.updatedAt === 'number';
+export function hasEnhancedProperties(element: unknown): element is EnhancedCanvasElement {
+  return Boolean(element && 
+         typeof element === 'object' && 
+         element !== null &&
+         'createdAt' in element && 
+         'updatedAt' in element &&
+         typeof (element as any).createdAt === 'number' && 
+         typeof (element as any).updatedAt === 'number');
 }
 
 // Convert legacy element to enhanced element

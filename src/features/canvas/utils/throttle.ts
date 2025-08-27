@@ -1,5 +1,5 @@
-// Basic throttle utility
-export function throttle<T extends (...args: any[]) => any>(
+// Basic throttle utility with proper type safety
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => void {

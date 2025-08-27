@@ -62,7 +62,12 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   useEffect(() => {
     const settingsState = useSettingsStore.getState();
     const apiKeys = settingsState.integrations.apiKeys;
-    providerManagerRef.current = LLMProviderManager.getInstance(apiKeys);
+    // Use debounced provider manager to avoid repeated initializations
+    import('../../core/lib/deferredProviderManager').then(({ deferredProviderManager }) => {
+      deferredProviderManager.initializeProvider(apiKeys, () => {
+        providerManagerRef.current = deferredProviderManager.getProviderManager();
+      });
+    });
   }, []);
   
   const { selection, clearSelection, replaceSelection } = useTextSelection({
@@ -264,11 +269,16 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
         }
       ];
 
-      // Use pre-initialized provider manager
+      // Use debounced provider manager
       if (!providerManagerRef.current) {
+        const { deferredProviderManager } = await import('../../core/lib/deferredProviderManager');
         const settingsState = useSettingsStore.getState();
         const apiKeys = settingsState.integrations.apiKeys;
-        providerManagerRef.current = LLMProviderManager.getInstance(apiKeys);
+        deferredProviderManager.initializeProvider(apiKeys);
+        providerManagerRef.current = deferredProviderManager.getProviderManager();
+        if (!providerManagerRef.current) {
+          throw new Error('LLM Provider Manager not yet initialized');
+        }
       }
       
       const llmProvider = providerManagerRef.current.getProvider(provider);
@@ -420,11 +430,16 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
           { role: 'user', content: prompt }
         ];
         
-        // Use pre-initialized provider manager
+        // Use debounced provider manager
         if (!providerManagerRef.current) {
+          const { deferredProviderManager } = await import('../../core/lib/deferredProviderManager');
           const settingsState = useSettingsStore.getState();
           const apiKeys = settingsState.integrations.apiKeys;
-          providerManagerRef.current = LLMProviderManager.getInstance(apiKeys);
+          deferredProviderManager.initializeProvider(apiKeys);
+          providerManagerRef.current = deferredProviderManager.getProviderManager();
+          if (!providerManagerRef.current) {
+            throw new Error('LLM Provider Manager not yet initialized');
+          }
         }
         
         const llmProvider = providerManagerRef.current.getProvider(provider);
