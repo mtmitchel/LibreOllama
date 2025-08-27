@@ -110,9 +110,7 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
         });
       }}
     >
-      <Layer>
-        {renderToolComponent()}
-      </Layer>
+      {renderToolComponent()}
     </CanvasErrorBoundary>
   );
 };
