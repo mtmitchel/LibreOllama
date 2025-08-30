@@ -1,13 +1,91 @@
 # Changelog
 
+## [Unreleased]
+
+### Bug Fixes - Canvas Sticky Notes
+- **Fixed Sticky Note Text Editing Issues**: Resolved critical errors when editing sticky note text
+  - Added comprehensive null checks for destroyed Konva nodes to prevent "Cannot read properties of undefined" errors
+  - Fixed textarea padding calculation with content-box sizing to ensure consistent text positioning
+  - Text no longer appears flush against edges during editing
+  - Added error handling for destroyed shape scenarios to prevent canvas crashes
+  - Ensured consistent padding between edit mode and display mode
+
+### Canvas performance and drawing stabilization
+- Adopted single-source, component-driven drawing for Pen/Marker/Highlighter (window.__USE_COMPONENT_DRAWING__ = true), disabling event-manager drawing for these tools to eliminate duplicate event paths and lag.
+- Disabled progressive rendering while drawing (MainLayer gates on !isDrawing and >500 visible elements) to avoid chunking artefacts during strokes.
+- Drawing preview layers now prefer a FastLayer and use batchDraw for smoother, lower-latency previews.
+- Pen tool: high-frequency input capture + interpolation between samples to reduce angular segments on fast curves.
+- Preview remains Konva-only; store commits occur on stroke finish to avoid frequent immutable updates while drawing.
+- Spatial index metrics integrated with PerformanceMonitor and a basic QuadTree perf test added.
+- Dynamic caching thresholds added for Text/Image/Rectangle/Sticky via cacheTuning for runtime tuning.
+
+### Notes test harness & stability
+- Test shim for ToastProvider and safeguards around FormattingToolbar.onSelectionChange to stabilize Notes tests.
+
+
 All notable changes to the LibreOllama project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-08-28
+
+### 🐛 Bug Fixes & 🚀 Performance — Canvas Critical Fixes
+- **Fixed Tool Selection Visual Feedback**: Enhanced active tool indicators with ring borders and shadow effects for all selectable tools in the toolbar
+  - Updated ModernKonvaToolbar, ShapesDropdown, and ConnectorDropdown components
+  - Active state now includes: `ring-2 ring-accent-primary ring-offset-2 shadow-lg`
+- **Fixed Element Creation and Rendering**: Resolved critical issue where creation tools (Text, Sticky Note, Table, Connector) were not rendering elements on canvas
+  - Root cause: Store subscription using `useShallow` wasn't detecting Map object changes
+  - Solution: Changed to direct subscription for elements Map in CanvasStage.tsx
+  - All creation tools now properly add elements to the canvas
+- **Implemented FastLayer for Images**: Added GPU-accelerated FastLayer for image rendering
+  - Images now render on separate FastLayer for improved performance
+  - Reduced lag during image drag and resize operations
+- **KonvaNodePool Enhancement**: Verified and optimized node pooling for Image nodes
+  - Already supported in KonvaNodePool factory
+  - Improves memory management during image operations
+- **Zoom Logic Consolidation**: Verified zoom pivot logic is properly centralized in viewportModule
+  - CanvasStage correctly uses `zoomViewport(scale, centerX, centerY)` from store
+
+Tags: bug-fix, performance, canvas
+
+## [Unreleased] - 2025-08-27
+
+### 🚀 Performance & ♻️ Refactor — Canvas Phase 1
+- Consolidated canvas layers to 3: Background, Main, Overlay.
+  - New OverlayLayer merges selection UI, snap indicators, live SectionPreview, and TransformerManager (anchors stay interactive).
+  - Removed legacy UILayer and ToolLayer; tool previews (Pen/Marker/Highlighter) now render inside MainLayer when active.
+- Introduced useSpatialIndex hook as the unified entry point for visible element resolution; migrated CanvasLayerManager from useSimpleViewportCulling.
+  - Updated hooks barrel exports and added deprecation notice in store for getVisibleElements.
+- Autosave tuning: increased debounce default from 500ms to 3000ms in useTauriCanvas with coarse JSON diff gating.
+- Dev-only smoke checks:
+  - CanvasStage warns when layer count exceeds 3 after consolidation.
+  - OverlayLayer mount assert for basic diagnostics.
+
+Tags: performance, refactor
+
+### ♻️ Refactor — Canvas Phase 2 (Step 1)
+- Consolidated stickyNoteModule into elementModule to reduce store fragmentation and improve memory behavior.
+  - Moved container/child management: enableStickyNoteContainer, addElementToStickyNote, removeElementFromStickyNote, findStickyNoteAtPoint, getStickyNoteChildren, constrainElementToStickyNote, clearStickyNoteChildren, createStickyNoteContainerDemo.
+  - Added elementModule.stickyNoteDefaults (colors and default size).
+  - Unified store no longer constructs stickyNoteModule; public actions remain available to avoid breaking callers.
+- Next: tableModule → elementModule, eraserModule → drawingModule, loadingModule → uiModule.
+
+Tags: performance, refactor
+
 ## [Unreleased] - 2025-08-26
 
 ### 🎨 Canvas Architecture Improvements
+
+- Migrated live runtime to a pure Konva pipeline (NonReactCanvasStage), removing react-konva from runtime paths
+- Introduced CanvasRendererV2 (imperative diff renderer) for persisted elements and selection/Transformer
+- Implemented blueprint-compliant sticky note auto-resize: text measurement + padding, clamped to optional maxHeight; synchronized rect height, group clip, hit-area, and store height in the same frame
+- Added HTML textarea overlay styling parity (padding, lineHeight, align, maxHeight) and live height updates; final commit with history
+- Added font-loaded re-measure pass to correct initial measurement mismatches
+- Hardened store persistence rehydration (Set/Map) and selection actions to prevent type errors
+- Replaced deprecated FastLayer usage with Layer({ listening: false }) for previews
+- Normalized renderer inputs to avoid elements.forEach type errors (Map | Array | entries)
+- Added tests: sticky-note auto-resize integration, renderer text measurement unit, and sticky-note wrap-height integration
 - **Removed ConnectorLayer**: Connectors are now rendered through MainLayer/ElementRenderer for better performance and consistency. Deleted unused ConnectorLayer.tsx file.
 - **Tool Directory Reorganization**: Reorganized canvas tools into subdirectories (base/, drawing/, creation/, core/) with barrel exports for cleaner imports.
 - **Canvas Library UI**: Added new CanvasLibrary component for managing saved canvases - list, load, and delete functionality integrated into toolbar.
