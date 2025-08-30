@@ -6,6 +6,7 @@ import { PenTool } from './tools/drawing/PenTool';
 import { MarkerTool } from './tools/drawing/MarkerTool';
 import { HighlighterTool } from './tools/drawing/HighlighterTool';
 import { StickyNoteTool } from './tools/creation/StickyNoteTool';
+import { ConnectorTool } from './tools/creation/ConnectorTool';
 import { ElementId, CanvasElement, createElementId } from '../types/enhanced.types';
 import { performanceLogger } from '../utils/performance/PerformanceLogger';
 import { CanvasRendererV2 } from '../services/CanvasRendererV2';
@@ -29,6 +30,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
   const zoomViewport = useUnifiedCanvasStore(s => s.zoomViewport);
   const setViewport = useUnifiedCanvasStore(s => s.setViewport);
   const selectedStickyNoteColor = useUnifiedCanvasStore(s => s.selectedStickyNoteColor);
+  const draft = useUnifiedCanvasStore(s => s.draft);
 
   // Create stage and layers imperatively
   useEffect(() => {
@@ -1170,6 +1172,87 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     // While editing, reflow the textarea position/size on viewport changes
   }, [textEditingElementId, setTextEditingElement, stageRef, viewportState]);
 
+  // DraftEdge rendering - imperative overlay for live edge preview
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    
+    const overlayLayer = stage.findOne<Konva.Layer>('.overlay-layer');
+    if (!overlayLayer) return;
+
+    let draftLine: Konva.Line | null = overlayLayer.findOne<Konva.Line>('.draft-line');
+    
+    if (draft) {
+      // Calculate draft points
+      const sourceElement = elements.get(draft.from.elementId);
+      if (!sourceElement) {
+        if (draftLine) {
+          draftLine.destroy();
+          draftLine = null;
+          overlayLayer.batchDraw();
+        }
+        return;
+      }
+
+      // Get source port world position
+      const sourcePort = { nx: 0, ny: 0 }; // Default to center for now
+      const sourceWorldPos = {
+        x: sourceElement.x + sourceElement.width * (sourcePort.nx + 0.5),
+        y: sourceElement.y + sourceElement.height * (sourcePort.ny + 0.5)
+      };
+
+      // Target position - either snapped port or pointer position
+      let targetPos = draft.pointer;
+      if (draft.snapTarget) {
+        const targetElement = elements.get(draft.snapTarget.elementId);
+        if (targetElement) {
+          const targetPort = { nx: 0, ny: 0 }; // Default to center for now
+          targetPos = {
+            x: targetElement.x + targetElement.width * (targetPort.nx + 0.5),
+            y: targetElement.y + targetElement.height * (targetPort.ny + 0.5)
+          };
+        }
+      }
+
+      const points = [sourceWorldPos.x, sourceWorldPos.y, targetPos.x, targetPos.y];
+
+      // Create or update draft line
+      if (!draftLine) {
+        draftLine = new Konva.Line({
+          points,
+          stroke: draft.snapTarget ? '#10b981' : '#6b7280', // Green if snapped, gray if not
+          strokeWidth: 2,
+          dash: [6, 4],
+          lineCap: 'round',
+          listening: false,
+          name: 'draft-line'
+        });
+        overlayLayer.add(draftLine);
+      } else {
+        draftLine.points(points);
+        draftLine.stroke(draft.snapTarget ? '#10b981' : '#6b7280');
+      }
+
+      overlayLayer.batchDraw();
+    } else {
+      // No draft - remove draft line
+      if (draftLine) {
+        draftLine.destroy();
+        draftLine = null;
+        overlayLayer.batchDraw();
+      }
+    }
+
+    // Cleanup on unmount
+    return () => {
+      const currentDraftLine = overlayLayer.findOne<Konva.Line>('.draft-line');
+      if (currentDraftLine) {
+        currentDraftLine.destroy();
+        overlayLayer.batchDraw();
+      }
+    };
+  }, [draft, elements, stageRef]);
+
   // Reflow active editor on viewport changes (placeTextarea)
   React.useEffect(() => {
     const container = containerRef.current;
@@ -1241,6 +1324,12 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       )}
       {stageRef && selectedTool === 'sticky-note' && (
         <StickyNoteTool stageRef={stageRef} isActive={true} />
+      )}
+      {stageRef && selectedTool === 'connector-line' && (
+        <ConnectorTool stageRef={stageRef} isActive={true} connectorType="line" />
+      )}
+      {stageRef && selectedTool === 'connector-arrow' && (
+        <ConnectorTool stageRef={stageRef} isActive={true} connectorType="arrow" />
       )}
     </div>
   );

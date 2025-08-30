@@ -1,5 +1,8 @@
 import Konva from 'konva';
 import { CanvasElement, ElementId, isRectangleElement } from '../types/enhanced.types';
+import { EdgeElement, NodeElement } from '../types/canvas-elements';
+import { routeEdge } from '../utils/routing';
+import { getElementBounds } from '../utils/routing';
 
 export interface RendererLayers {
   background: Konva.Layer;
@@ -558,7 +561,34 @@ export class CanvasRendererV2 {
         return;
       }
 
+      if (el.type === 'connector') {
+        const node = this.nodeMap.get(id) as Konva.Line | undefined;
+        if (node && node.getClassName() === 'Line') {
+          this.updateConnector(node as Konva.Line, el as any);
+        } else {
+          const line = this.createConnector(el as any);
+          if (line) {
+            main.add(line);
+            this.nodeMap.set(id, line);
+          }
+        }
+        return;
+      }
 
+      // Edge rendering - defer to EdgeRenderer
+      if (el.type === 'edge') {
+        const node = this.nodeMap.get(id) as Konva.Group | undefined;
+        if (node && node.getClassName() === 'Group') {
+          this.updateEdge(node as Konva.Group, el as any);
+        } else {
+          const group = this.createEdge(el as any);
+          if (group) {
+            main.add(group);
+            this.nodeMap.set(id, group);
+          }
+        }
+        return;
+      }
 
       // TODO: circles, sections, tables
     });
@@ -651,6 +681,221 @@ export class CanvasRendererV2 {
     }
     this.layers.overlay.batchDraw();
     try { (window as any).CANVAS_PERF?.incBatchDraw?.('overlay-layer'); } catch {}
+  }
+
+  // Connector rendering methods
+  private createConnector(el: any): Konva.Line | null {
+    try {
+      const id = String(el.id);
+      const points = [el.startPoint.x, el.startPoint.y, el.endPoint.x, el.endPoint.y];
+      
+      const line = new Konva.Line({
+        id,
+        points,
+        stroke: el.stroke || '#374151',
+        strokeWidth: el.strokeWidth || 2,
+        lineCap: 'round',
+        lineJoin: 'round',
+        listening: true,
+        name: 'connector'
+      });
+
+      // Add arrow head if needed
+      if (el.subType === 'arrow' && points.length >= 4) {
+        // Calculate arrow head
+        const x1 = points[points.length - 4];
+        const y1 = points[points.length - 3];
+        const x2 = points[points.length - 2];
+        const y2 = points[points.length - 1];
+        
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const arrowLength = 12;
+        const arrowAngle = Math.PI / 6;
+        
+        const x3 = x2 - arrowLength * Math.cos(angle - arrowAngle);
+        const y3 = y2 - arrowLength * Math.sin(angle - arrowAngle);
+        const x4 = x2 - arrowLength * Math.cos(angle + arrowAngle);
+        const y4 = y2 - arrowLength * Math.sin(angle + arrowAngle);
+        
+        // Add arrow head to the line points
+        const arrowPoints = [...points, x3, y3, x2, y2, x4, y4];
+        line.points(arrowPoints);
+      }
+
+      return line;
+    } catch (error) {
+      console.error('[ConnectorRenderer] Error creating connector:', error);
+      return null;
+    }
+  }
+
+  private updateConnector(line: Konva.Line, el: any): void {
+    try {
+      const points = [el.startPoint.x, el.startPoint.y, el.endPoint.x, el.endPoint.y];
+      
+      line.stroke(el.stroke || '#374151');
+      line.strokeWidth(el.strokeWidth || 2);
+
+      // Add arrow head if needed
+      if (el.subType === 'arrow' && points.length >= 4) {
+        const x1 = points[0];
+        const y1 = points[1];
+        const x2 = points[2];
+        const y2 = points[3];
+        
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const arrowLength = 12;
+        const arrowAngle = Math.PI / 6;
+        
+        const x3 = x2 - arrowLength * Math.cos(angle - arrowAngle);
+        const y3 = y2 - arrowLength * Math.sin(angle - arrowAngle);
+        const x4 = x2 - arrowLength * Math.cos(angle + arrowAngle);
+        const y4 = y2 - arrowLength * Math.sin(angle + arrowAngle);
+        
+        const arrowPoints = [...points, x3, y3, x2, y2, x4, y4];
+        line.points(arrowPoints);
+      } else {
+        line.points(points);
+      }
+    } catch (error) {
+      console.error('[ConnectorRenderer] Error updating connector:', error);
+    }
+  }
+
+  // Edge rendering methods
+  private createEdge(edgeEl: EdgeElement): Konva.Group | null {
+    try {
+      const id = String(edgeEl.id);
+      const group = new Konva.Group({ id, listening: true, draggable: false, name: 'edge' });
+
+      // Get source and target elements to calculate routing
+      const sourceElement = this.getElementFromStore(edgeEl.source.elementId);
+      const targetElement = this.getElementFromStore(edgeEl.target.elementId);
+
+      if (!sourceElement || !targetElement) {
+        console.warn('[EdgeRenderer] Source or target element not found for edge', id);
+        return null;
+      }
+
+      // Route the edge using routing utility
+      const points = routeEdge(edgeEl, sourceElement as NodeElement, targetElement as NodeElement);
+      
+      // Create the line
+      const line = new Konva.Line({
+        points,
+        stroke: edgeEl.stroke || '#374151',
+        strokeWidth: edgeEl.strokeWidth || 2,
+        lineCap: 'round',
+        lineJoin: 'round',
+        listening: true,
+        name: 'line'
+      });
+
+      group.add(line);
+
+      // Add arrow marker if needed
+      if (edgeEl.markerEnd === 'arrow' && points.length >= 4) {
+        const arrow = this.createArrowMarker(points, edgeEl.stroke || '#374151');
+        if (arrow) {
+          group.add(arrow);
+        }
+      }
+
+      return group;
+    } catch (error) {
+      console.error('[EdgeRenderer] Error creating edge:', error);
+      return null;
+    }
+  }
+
+  private updateEdge(group: Konva.Group, edgeEl: EdgeElement): void {
+    try {
+      // Get source and target elements for routing
+      const sourceElement = this.getElementFromStore(edgeEl.source.elementId);
+      const targetElement = this.getElementFromStore(edgeEl.target.elementId);
+
+      if (!sourceElement || !targetElement) {
+        console.warn('[EdgeRenderer] Source or target element not found for edge update');
+        return;
+      }
+
+      // Route the edge
+      const points = routeEdge(edgeEl, sourceElement as NodeElement, targetElement as NodeElement);
+      
+      // Update line
+      const line = group.findOne<Konva.Line>('.line');
+      if (line) {
+        line.points(points);
+        line.stroke(edgeEl.stroke || '#374151');
+        line.strokeWidth(edgeEl.strokeWidth || 2);
+      }
+
+      // Update or create arrow marker
+      const existingArrow = group.findOne('.arrow');
+      if (existingArrow) {
+        existingArrow.destroy();
+      }
+
+      if (edgeEl.markerEnd === 'arrow' && points.length >= 4) {
+        const arrow = this.createArrowMarker(points, edgeEl.stroke || '#374151');
+        if (arrow) {
+          group.add(arrow);
+        }
+      }
+    } catch (error) {
+      console.error('[EdgeRenderer] Error updating edge:', error);
+    }
+  }
+
+  private createArrowMarker(points: number[], color: string): Konva.Path | null {
+    try {
+      if (points.length < 4) return null;
+
+      // Get the last two points for arrow direction
+      const x1 = points[points.length - 4];
+      const y1 = points[points.length - 3];
+      const x2 = points[points.length - 2];
+      const y2 = points[points.length - 1];
+
+      // Calculate arrow direction
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      const arrowLength = 12;
+      const arrowAngle = Math.PI / 6; // 30 degrees
+
+      // Arrow head points
+      const x3 = x2 - arrowLength * Math.cos(angle - arrowAngle);
+      const y3 = y2 - arrowLength * Math.sin(angle - arrowAngle);
+      const x4 = x2 - arrowLength * Math.cos(angle + arrowAngle);
+      const y4 = y2 - arrowLength * Math.sin(angle + arrowAngle);
+
+      // Create arrow path
+      const pathData = `M ${x2} ${y2} L ${x3} ${y3} L ${x4} ${y4} Z`;
+      
+      return new Konva.Path({
+        data: pathData,
+        fill: color,
+        listening: false,
+        name: 'arrow'
+      });
+    } catch (error) {
+      console.error('[EdgeRenderer] Error creating arrow marker:', error);
+      return null;
+    }
+  }
+
+  private getElementFromStore(elementId: string): CanvasElement | null {
+    try {
+      // Access the global store to get element
+      const store = (window as any).__UNIFIED_CANVAS_STORE__;
+      if (store) {
+        const state = store.getState();
+        return state.elements.get(elementId) || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('[EdgeRenderer] Error accessing store:', error);
+      return null;
+    }
   }
 }
 

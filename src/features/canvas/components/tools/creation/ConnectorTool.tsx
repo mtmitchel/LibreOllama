@@ -1,22 +1,10 @@
 /**
- * ConnectorTool - Interactive connector drawing component (Enhanced)
- * 
- * Features:
- * - Real-time preview during drawing
- * - Smart detection of existing connectors for editing vs creation
- * - Support for line and arrow connectors
- * - Edit mode: adjust existing connectors without creating new ones
- * - Create mode: draw new connectors on empty canvas
+ * ConnectorTool - Simple connector creation tool that works with existing types
  */
 
-import React, { useCallback } from 'react';
-import { Line, Arrow } from 'react-konva';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { useShallow } from 'zustand/react/shallow';
-import { BaseCreationTool, Vector2d } from '../base';
-import { debug } from '../../../utils/debug';
-import { nanoid } from 'nanoid';
-import { ElementId, ConnectorElement, CanvasElement, createElementId } from '../../../types/enhanced.types';
+import { ElementId, ConnectorElement, CanvasElement } from '../../../types/enhanced.types';
 import Konva from 'konva';
 
 interface ConnectorToolProps {
@@ -30,202 +18,250 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   stageRef,
   connectorType
 }) => {
-  const { elements, setSelectedTool, clearSelection, selectElement } = useUnifiedCanvasStore(
-    useShallow((state) => ({
-      elements: state.elements,
-      setSelectedTool: state.setSelectedTool,
-      clearSelection: state.clearSelection,
-      selectElement: state.selectElement
-    }))
-  );
+  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
+  const [startElement, setStartElement] = useState<ElementId | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentPoint, setCurrentPoint] = useState<{ x: number; y: number } | null>(null);
+  const [snapTarget, setSnapTarget] = useState<{ elementId: ElementId; point: { x: number; y: number } } | null>(null);
+  
+  const addElement = useUnifiedCanvasStore(state => state.addElement);
+  const elements = useUnifiedCanvasStore(state => state.elements);
 
-  // Cursor management is handled by CanvasStage's centralized cursor system
+  // Get world pointer position from stage event (accounting for viewport transform)
+  const getWorldPointer = useCallback((e: Konva.KonvaEventObject<any>) => {
+    const stage = stageRef.current;
+    if (!stage) return { x: 0, y: 0 };
+    
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return { x: 0, y: 0 };
+    
+    // Convert from screen coordinates to world coordinates
+    const transform = stage.getAbsoluteTransform().copy();
+    transform.invert();
+    const worldPoint = transform.point(pointer);
+    
+    return { x: worldPoint.x, y: worldPoint.y };
+  }, [stageRef]);
 
-  // Custom pointer down handler to detect existing connectors
-  const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>, position: Vector2d): boolean => {
-    // Check if we clicked on an existing connector
-    const target = e.target;
-    if (target && target.id && target.id() && target.id() !== '') {
-      // Get the element from store
-      const targetId = target.id() as ElementId;
-      const element = elements.get(targetId);
-      
-      // If it's a connector, select it for editing (but stay in connector tool)
-      if (element && element.type === 'connector') {
-        debug.canvas.konvaEvent('connector-edit-mode', `Selecting connector ${targetId} for editing`);
-        
-        // Prevent event bubbling immediately
-        e.cancelBubble = true;
-        
-        // Select the connector for editing (but don't switch tools)
-        clearSelection();
-        setTimeout(() => {
-          selectElement(targetId, false);
-        }, 10);
-        
-        return true; // Indicate we handled the event
+  // Find element at position and return connection point
+  const findElementAtPosition = useCallback((point: { x: number; y: number }) => {
+    const SNAP_DISTANCE = 20;
+    
+    for (const element of elements.values()) {
+      // Skip drawing elements and connectors
+      if (element.type === 'pen' || element.type === 'marker' || element.type === 'highlighter' || element.type === 'connector') {
+        continue;
       }
-    }
-    
-    // For clicks on connector endpoints or other non-connector elements, also check parent
-    if (target && target.parent && target.parent.id && target.parent.id() !== '') {
-      const parentId = target.parent.id() as ElementId;
-      const parentElement = elements.get(parentId);
-      
-      if (parentElement && parentElement.type === 'connector') {
-        debug.canvas.konvaEvent('connector-edit-mode', `Selecting connector ${parentId} for editing (via child)`);
-        
-        // Prevent event bubbling
-        e.cancelBubble = true;
-        
-        // Select the connector for editing (but don't switch tools)
-        clearSelection();
-        setTimeout(() => {
-          selectElement(parentId, false);
-        }, 10);
-        
-        return true; // Indicate we handled the event
-      }
-    }
-    
-    return false; // Let BaseCreationTool handle normal creation
-  }, [elements, clearSelection, selectElement]);
-
-  // Create connector element function (for drag creation)
-  const createConnectorElement = useCallback((startPos: Vector2d, endPos?: Vector2d): ConnectorElement => {
-    const finalEndPos = endPos || startPos;
-    
-    // Calculate the bounding box for the connector
-    const minX = Math.min(startPos.x, finalEndPos.x);
-    const minY = Math.min(startPos.y, finalEndPos.y);
-    
-    const now = Date.now();
-    
-    const connectorElement: ConnectorElement = {
-      id: createElementId(nanoid()),
-      type: 'connector',
-      subType: connectorType,
-      x: minX,
-      y: minY,
-      startPoint: startPos,
-      endPoint: finalEndPos,
-      intermediatePoints: [],
-      stroke: '#000000',
-      strokeWidth: 2,
-      connectorStyle: {
-        strokeColor: '#000000',
-        strokeWidth: 2,
-        endArrow: connectorType === 'arrow' ? 'solid' : 'none',
-        startArrow: 'none'
-      },
-      pathPoints: [startPos.x, startPos.y, finalEndPos.x, finalEndPos.y],
-      createdAt: now,
-      updatedAt: now
-    };
-
-    debug.canvas.konvaEvent('connector-created', `${connectorElement.subType} connector ${connectorElement.id}`);
-    
-    return connectorElement;
-  }, [connectorType]);
-
-  // Find the nearest element to snap to
-  const findNearestElement = useCallback((x: number, y: number): { element: CanvasElement; anchor: string } | null => {
-    const elementsArray = Array.from(elements.values());
-    const snapDistance = 20;
-    
-    for (const element of elementsArray) {
-      if (element.type === 'connector') continue; // Skip other connectors
       
       const elementBounds = {
-        x: element.x,
-        y: element.y,
-        width: (element as any).width || (element as any).radius * 2 || 100,
-        height: (element as any).height || (element as any).radius * 2 || 100
+        left: element.x,
+        right: element.x + (element.width || 0),
+        top: element.y,
+        bottom: element.y + (element.height || 0)
       };
       
-      // Check if the point is near the element
-      const distance = Math.sqrt(
-        Math.pow(x - (elementBounds.x + elementBounds.width / 2), 2) + 
-        Math.pow(y - (elementBounds.y + elementBounds.height / 2), 2)
-      );
+      // Check if point is within snap distance of element edges
+      const snapPoints = [
+        { x: elementBounds.left, y: element.y + (element.height || 0) / 2 }, // left
+        { x: elementBounds.right, y: element.y + (element.height || 0) / 2 }, // right
+        { x: element.x + (element.width || 0) / 2, y: elementBounds.top }, // top
+        { x: element.x + (element.width || 0) / 2, y: elementBounds.bottom }, // bottom
+        { x: element.x + (element.width || 0) / 2, y: element.y + (element.height || 0) / 2 } // center
+      ];
       
-      if (distance < snapDistance) {
-        return { element, anchor: 'center' };
+      for (const snapPoint of snapPoints) {
+        const distance = Math.sqrt(
+          Math.pow(point.x - snapPoint.x, 2) + Math.pow(point.y - snapPoint.y, 2)
+        );
+        
+        if (distance <= SNAP_DISTANCE) {
+          return {
+            elementId: element.id,
+            point: snapPoint
+          };
+        }
       }
     }
     
     return null;
   }, [elements]);
 
-  // Render preview during creation and hover
-  const renderPreview = useCallback((position: Vector2d, showGuide: boolean, startPos?: Vector2d, endPos?: Vector2d) => {
-    // For drag mode, we get start and end positions from BaseCreationTool state
-    const realStartPos = startPos || position;
-    const realEndPos = endPos || position;
+  // Handle mouse down - start connector
+  const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!isActive) return;
     
-    const isCreating = startPos && endPos && (startPos !== endPos);
+    const worldPos = getWorldPointer(e);
+    const elementAtStart = findElementAtPosition(worldPos);
     
-    if (isCreating) {
-      // Render actual connector during drag
-      const points = [realStartPos.x, realStartPos.y, realEndPos.x, realEndPos.y];
-      
-      if (connectorType === 'arrow') {
-        return (
-          <Arrow
-            points={points}
-            stroke="#3B82F6"
-            strokeWidth={2}
-            fill="#3B82F6"
-            pointerLength={10}
-            pointerWidth={10}
-            lineCap="round"
-            lineJoin="round"
-            listening={false}
-            opacity={0.8}
-          />
-        );
-      } else {
-        return (
-          <Line
-            points={points}
-            stroke="#3B82F6"
-            strokeWidth={2}
-            lineCap="round"
-            lineJoin="round"
-            listening={false}
-            opacity={0.8}
-          />
-        );
-      }
-    } else if (showGuide) {
-      // Show simple preview dot when hovering
-      return (
-        <Line
-          points={[position.x - 5, position.y, position.x + 5, position.y]}
-          stroke="#3B82F6"
-          strokeWidth={2}
-          lineCap="round"
-          listening={false}
-          opacity={0.6}
-        />
-      );
+    if (elementAtStart) {
+      setStartPoint(elementAtStart.point);
+      setStartElement(elementAtStart.elementId);
+    } else {
+      setStartPoint(worldPos);
+      setStartElement(null);
     }
     
-    return null;
-  }, [connectorType]);
+    setCurrentPoint(worldPos);
+    setIsDrawing(true);
+    
+    e.cancelBubble = true;
+  }, [isActive, getWorldPointer, findElementAtPosition]);
 
-  return (
-    <BaseCreationTool
-      stageRef={stageRef}
-      isActive={isActive}
-      type="connector"
-      onCreate={createConnectorElement}
-      renderPreview={renderPreview}
-      requiresDrag={true}
-      minDragDistance={10}
-      shouldSwitchToSelect={false} // Stay in connector tool for multiple connector creation
-      shouldStartTextEdit={false}
-      onPointerDown={handlePointerDown} // Custom handler for edit mode detection
-    />
-  );
-}; 
+  // Handle mouse move - update current position and snapping
+  const handleMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!isActive || !isDrawing) return;
+    
+    const worldPos = getWorldPointer(e);
+    setCurrentPoint(worldPos);
+    
+    // Check for snap target
+    const elementAtEnd = findElementAtPosition(worldPos);
+    if (elementAtEnd && elementAtEnd.elementId !== startElement) {
+      setSnapTarget(elementAtEnd);
+    } else {
+      setSnapTarget(null);
+    }
+    
+    e.cancelBubble = true;
+  }, [isActive, isDrawing, getWorldPointer, findElementAtPosition, startElement]);
+
+  // Handle mouse up - create connector
+  const handleMouseUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!isActive || !isDrawing || !startPoint) return;
+    
+    let endPoint = getWorldPointer(e);
+    let endElementId = null;
+    
+    // Use snap target if available
+    if (snapTarget) {
+      endPoint = snapTarget.point;
+      endElementId = snapTarget.elementId;
+    }
+    
+    // Don't create connectors that are too small
+    const distance = Math.sqrt(
+      Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2)
+    );
+    
+    if (distance < 10) {
+      setIsDrawing(false);
+      setStartPoint(null);
+      setStartElement(null);
+      setSnapTarget(null);
+      setCurrentPoint(null);
+      return;
+    }
+    
+    // Create connector element with element connections
+    const connectorElement: ConnectorElement = {
+      id: `connector-${Date.now()}` as ElementId,
+      type: 'connector',
+      subType: connectorType === 'arrow' ? 'arrow' : 'line',
+      startElementId: startElement,
+      endElementId: endElementId,
+      startPoint,
+      endPoint,
+      stroke: snapTarget ? '#10b981' : '#374151', // Green if connected, gray if not
+      strokeWidth: 2,
+      x: Math.min(startPoint.x, endPoint.x),
+      y: Math.min(startPoint.y, endPoint.y),
+      width: Math.abs(endPoint.x - startPoint.x),
+      height: Math.abs(endPoint.y - startPoint.y),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      isLocked: false,
+      isHidden: false
+    };
+    
+    addElement(connectorElement);
+    console.log('[ConnectorTool] Created connector:', connectorElement.id, connectorType, {
+      startElement: startElement,
+      endElement: endElementId,
+      connected: !!(startElement && endElementId)
+    });
+    
+    // Reset state
+    setIsDrawing(false);
+    setStartPoint(null);
+    setStartElement(null);
+    setSnapTarget(null);
+    setCurrentPoint(null);
+    e.cancelBubble = true;
+  }, [isActive, isDrawing, startPoint, startElement, snapTarget, getWorldPointer, connectorType, addElement]);
+
+  // Attach/detach event handlers
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !isActive) return;
+    
+    stage.on('mousedown.connector', handleMouseDown);
+    stage.on('mousemove.connector', handleMouseMove);
+    stage.on('mouseup.connector', handleMouseUp);
+    
+    return () => {
+      stage.off('mousedown.connector');
+      stage.off('mousemove.connector');
+      stage.off('mouseup.connector');
+    };
+  }, [stageRef, isActive, handleMouseDown, handleMouseMove, handleMouseUp]);
+
+  // Update cursor when tool is active
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    
+    const container = stage.container();
+    if (isActive) {
+      container.style.cursor = 'crosshair';
+    } else {
+      container.style.cursor = 'default';
+    }
+    
+    return () => {
+      container.style.cursor = 'default';
+    };
+  }, [stageRef, isActive]);
+
+  // Draw preview line while drawing
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !isActive) return;
+    
+    const overlayLayer = stage.findOne<Konva.Layer>('.overlay-layer');
+    if (!overlayLayer) return;
+
+    // Remove existing preview line
+    const existingPreview = overlayLayer.findOne('.connector-preview');
+    if (existingPreview) {
+      existingPreview.destroy();
+    }
+
+    // Draw preview line if actively drawing
+    if (isDrawing && startPoint && currentPoint) {
+      const endPoint = snapTarget ? snapTarget.point : currentPoint;
+      const previewLine = new Konva.Line({
+        points: [startPoint.x, startPoint.y, endPoint.x, endPoint.y],
+        stroke: snapTarget ? '#10b981' : '#6b7280', // Green if snapping, gray otherwise
+        strokeWidth: 2,
+        dash: [6, 4],
+        lineCap: 'round',
+        listening: false,
+        name: 'connector-preview'
+      });
+      
+      overlayLayer.add(previewLine);
+      overlayLayer.batchDraw();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      const currentPreview = overlayLayer.findOne('.connector-preview');
+      if (currentPreview) {
+        currentPreview.destroy();
+        overlayLayer.batchDraw();
+      }
+    };
+  }, [isActive, isDrawing, startPoint, currentPoint, snapTarget, stageRef]);
+
+  return null;
+};
