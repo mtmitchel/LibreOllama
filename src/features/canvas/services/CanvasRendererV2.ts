@@ -371,6 +371,7 @@ export class CanvasRendererV2 {
     }
   }
 
+
   init(stage: Konva.Stage, layers: RendererLayers, opts?: { onUpdateElement?: (id: string, updates: any) => void }) {
     this.stage = stage;
     this.layers = layers;
@@ -440,9 +441,9 @@ export class CanvasRendererV2 {
       this.transformer?.destroy();
     } catch {}
     this.transformer = null;
-    for (const [, node] of this.nodeMap) {
+    Array.from(this.nodeMap.values()).forEach((node) => {
       try { node.destroy(); } catch {}
-    }
+    });
     this.nodeMap.clear();
     this.stage = null;
     this.layers = null;
@@ -558,16 +559,17 @@ export class CanvasRendererV2 {
       }
 
 
-      // TODO: connectors, images
+
+      // TODO: circles, sections, tables
     });
 
     // Remove stale nodes
-    for (const [id, node] of Array.from(this.nodeMap.entries())) {
+    Array.from(this.nodeMap.entries()).forEach(([id, node]) => {
       if (!alive.has(id)) {
         try { node.destroy(); } catch {}
         this.nodeMap.delete(id);
       }
-    }
+    });
 
     main.batchDraw();
     try { (window as any).CANVAS_PERF?.incBatchDraw?.('main-layer'); } catch {}
@@ -622,7 +624,7 @@ export class CanvasRendererV2 {
       const node = this.nodeMap.get(String(sid));
       if (node) {
         if (node.name() === 'sticky-note') {
-            const frame = node.findOne('.frame');
+            const frame = (node as Konva.Group).findOne('.frame');
             if (frame) {
                 nodes.push(frame);
             }
@@ -640,6 +642,7 @@ export class CanvasRendererV2 {
           (n as Konva.Line).draggable(true);
         }
       });
+      
       this.transformer.nodes(nodes);
       this.transformer.visible(true);
     } else {
