@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { canvasLog } from '../utils/canvasLogger';
-import { recordCanvasMetric } from '../monitoring/canvasMonitor';
+import { recordCanvasMetric } from '../utils/performance/performanceTracker';
 
 export type LoadingOperation = 
   | 'element-create'

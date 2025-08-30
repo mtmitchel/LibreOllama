@@ -4,7 +4,14 @@
  * Solves: "Section drawing aborts", state tracking failures, race conditions
  */
 
-import { logger } from "@/core/lib/logger";
+// Inline logger to avoid circular dependencies
+const logger = {
+  debug: (...args: any[]) => console.debug(...args),
+  info: (...args: any[]) => console.info(...args),
+  warn: (...args: any[]) => console.warn(...args),
+  error: (...args: any[]) => console.error(...args),
+  log: (...args: any[]) => console.log(...args),
+};
 import { CanvasTool } from '../../types/enhanced.types';
 
 export interface DrawingState {

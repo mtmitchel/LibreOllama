@@ -4,16 +4,17 @@ import {
   HighlighterConfig, 
   EraserConfig 
 } from '../../types/drawing.types';
-import { createElementId } from '../../types/enhanced.types';
+import { createElementId, ElementId, CanvasElement } from '../../types/enhanced.types';
 import { StoreModule, StoreSet, StoreGet } from './types';
+import { SimpleEraserIndex, BoundingBox } from '../../utils/spatial/SimpleEraserIndex';
 
 /**
- * Drawing module state
+ * Drawing module state (includes eraser functionality)
  */
 export interface DrawingState {
   isDrawing: boolean;
   currentPath?: number[];
-  drawingTool: 'pen' | 'pencil' | 'marker' | 'highlighter' | null;
+  drawingTool: 'pen' | 'pencil' | 'marker' | 'highlighter' | 'eraser' | null;
   drawingStartPoint: { x: number; y: number } | null;
   drawingCurrentPoint: { x: number; y: number } | null;
   
@@ -26,20 +27,24 @@ export interface DrawingState {
     height: number;
   } | null;
   
-  // Drawing tool configurations (removed washiTape)
+  // Drawing tool configurations
   strokeConfig: {
     marker: MarkerConfig;
     highlighter: HighlighterConfig;
     eraser: EraserConfig;
   };
+
+  // Eraser functionality (merged from eraserModule)
+  spatialIndex: SimpleEraserIndex | null;
+  spatialIndexDirty: boolean;
 }
 
 /**
- * Drawing module actions
+ * Drawing module actions (includes eraser functionality)
  */
 export interface DrawingActions {
   // Drawing operations
-  startDrawing: (tool: 'pen' | 'pencil' | 'marker' | 'highlighter', point: { x: number; y: number }) => void;
+  startDrawing: (tool: 'pen' | 'pencil' | 'marker' | 'highlighter' | 'eraser', point: { x: number; y: number }) => void;
   updateDrawing: (point: { x: number; y: number }) => void;
   finishDrawing: () => void;
   cancelDrawing: () => void;
@@ -52,6 +57,15 @@ export interface DrawingActions {
   
   // Stroke Configuration
   updateStrokeConfig: (tool: 'marker' | 'highlighter' | 'eraser', config: Partial<MarkerConfig | HighlighterConfig | EraserConfig>) => void;
+
+  // Eraser operations (merged from eraserModule)
+  eraseAtPoint: (x: number, y: number, eraserSize: number) => ElementId[];
+  eraseInPath: (eraserPath: number[], eraserSize: number) => ElementId[];
+  eraseInBounds: (bounds: BoundingBox) => ElementId[];
+  updateSpatialIndex: () => void;
+  clearSpatialIndex: () => void;
+  getPathBounds: (path: number[]) => BoundingBox;
+  isElementErasable: (element: CanvasElement) => boolean;
 }
 
 /**
@@ -96,6 +110,10 @@ export const createDrawingModule = (
           strength: 1
         }
       },
+
+      // Eraser state (merged from eraserModule)
+      spatialIndex: null,
+      spatialIndexDirty: true,
     },
     
     actions: {
@@ -104,17 +122,21 @@ export const createDrawingModule = (
           state.isDrawing = true;
           state.drawingTool = tool;
           state.drawingStartPoint = point;
-          state.currentPath = [point.x, point.y];
+          // Avoid populating currentPath in store to prevent per-move re-renders
+          state.currentPath = undefined;
           state.drawingCurrentPoint = point;
         });
       },
       
       updateDrawing: (point) => {
-        setState((state: any) => {
-          if (state.isDrawing && state.currentPath) {
-            state.currentPath.push(point.x, point.y);
-            state.drawingCurrentPoint = point;
-          }
+        const state = getState() as any;
+        if (!state.isDrawing || !state.currentPath) {
+          // Skip store updates during high-frequency drawing when using direct Konva preview
+          return;
+        }
+        setState((draft: any) => {
+          draft.currentPath.push(point.x, point.y);
+          draft.drawingCurrentPoint = point;
         });
       },
       
@@ -244,6 +266,208 @@ export const createDrawingModule = (
         setState((state: any) => {
           Object.assign(state.strokeConfig[tool], config);
         });
+      },
+
+      // Eraser operations (merged from eraserModule)
+      isElementErasable: (element: CanvasElement) => {
+        return element.type === 'pen' || element.type === 'marker' || element.type === 'highlighter';
+      },
+
+      getPathBounds: (path: number[]) => {
+        if (path.length < 2) return { x: 0, y: 0, width: 0, height: 0 };
+        
+        let minX = path[0];
+        let minY = path[1];
+        let maxX = path[0];
+        let maxY = path[1];
+        
+        for (let i = 2; i < path.length; i += 2) {
+          minX = Math.min(minX, path[i]);
+          maxX = Math.max(maxX, path[i]);
+          minY = Math.min(minY, path[i + 1]);
+          maxY = Math.max(maxY, path[i + 1]);
+        }
+        
+        return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+      },
+
+      updateSpatialIndex: () => {
+        setState((state: any) => {
+          if (!state.spatialIndex) {
+            state.spatialIndex = new SimpleEraserIndex();
+          }
+          
+          // Rebuild index with erasable elements only
+          const erasableElements: CanvasElement[] = [];
+          
+          state.elements.forEach((element: CanvasElement) => {
+            if (getState().isElementErasable(element)) {
+              erasableElements.push(element);
+            }
+          });
+          
+          state.spatialIndex.rebuild(erasableElements);
+          state.spatialIndexDirty = false;
+        });
+      },
+
+      clearSpatialIndex: () => {
+        setState((state: any) => {
+          if (state.spatialIndex) {
+            state.spatialIndex.clear();
+          }
+          state.spatialIndexDirty = true;
+        });
+      },
+
+      eraseAtPoint: (x: number, y: number, eraserSize: number) => {
+        const { spatialIndex, spatialIndexDirty } = getState();
+        
+        // Update spatial index if needed
+        if (spatialIndexDirty || !spatialIndex) {
+          getState().updateSpatialIndex();
+        }
+        
+        const halfSize = eraserSize / 2;
+        const eraserBounds = {
+          x: x - halfSize,
+          y: y - halfSize,
+          width: eraserSize,
+          height: eraserSize
+        };
+        
+        // Find candidate elements using spatial index
+        const candidateIds = getState().spatialIndex!.findIntersections(eraserBounds);
+        const deletedIds: ElementId[] = [];
+        
+        setState((state: any) => {
+          candidateIds.forEach((id: ElementId | import('../../types/enhanced.types').SectionId) => {
+            const element = state.elements.get(id);
+            
+            if (!element || !getState().isElementErasable(element)) return;
+            
+            // Check if any point is within eraser radius
+            const points = (element as { points?: number[] }).points;
+            if (points && Array.isArray(points)) {
+              for (let i = 0; i < points.length; i += 2) {
+                const px = points[i];
+                const py = points[i + 1];
+                const dist = Math.hypot(px - x, py - y);
+                
+                if (dist <= halfSize) {
+                  deletedIds.push(id as ElementId);
+                  state.elements.delete(id);
+                  state.elementOrder = state.elementOrder.filter((elId: ElementId) => elId !== id);
+                  state.spatialIndexDirty = true;
+                  break;
+                }
+              }
+            }
+          });
+        });
+        
+        if (deletedIds.length > 0) {
+          getState().addToHistory('Erase strokes');
+        }
+        
+        return deletedIds;
+      },
+
+      eraseInPath: (eraserPath: number[], eraserSize: number) => {
+        if (eraserPath.length < 2) return [];
+        
+        const { spatialIndex, spatialIndexDirty } = getState();
+        
+        // Update spatial index if needed
+        if (spatialIndexDirty || !spatialIndex) {
+          getState().updateSpatialIndex();
+        }
+        
+        // Get path bounds and find candidates
+        const candidateIds = getState().spatialIndex!.findPathIntersections(eraserPath, eraserSize);
+        const deletedIds: ElementId[] = [];
+        const halfSize = eraserSize / 2;
+        
+        setState((state: any) => {
+          candidateIds.forEach((id: ElementId | import('../../types/enhanced.types').SectionId) => {
+            const element = state.elements.get(id);
+            if (!element || !getState().isElementErasable(element)) return;
+            
+            // Check if any point intersects with eraser path
+            const points = (element as { points?: number[] }).points;
+            if (points && Array.isArray(points)) {
+              let shouldDelete = false;
+              
+              for (let i = 0; i < points.length && !shouldDelete; i += 2) {
+                const px = points[i];
+                const py = points[i + 1];
+                
+                // Check against each point in eraser path
+                for (let j = 0; j < eraserPath.length && !shouldDelete; j += 2) {
+                  const ex = eraserPath[j];
+                  const ey = eraserPath[j + 1];
+                  const dist = Math.hypot(px - ex, py - ey);
+                  
+                  if (dist <= halfSize) {
+                    shouldDelete = true;
+                  }
+                }
+              }
+              
+              if (shouldDelete) {
+                deletedIds.push(id as ElementId);
+                state.elements.delete(id);
+                state.elementOrder = state.elementOrder.filter((elId: ElementId) => elId !== id);
+                state.spatialIndexDirty = true;
+              }
+            }
+          });
+        });
+        
+        if (deletedIds.length > 0) {
+          getState().addToHistory('Erase strokes');
+        }
+        
+        return deletedIds;
+      },
+
+      eraseInBounds: (bounds: BoundingBox) => {
+        const { spatialIndex, spatialIndexDirty } = getState();
+        
+        // Update spatial index if needed
+        if (spatialIndexDirty || !spatialIndex) {
+          getState().updateSpatialIndex();
+        }
+        
+        const candidateIds = getState().spatialIndex!.findIntersections(bounds);
+        const deletedIds: ElementId[] = [];
+        
+        setState((state: any) => {
+          candidateIds.forEach((id: ElementId | import('../../types/enhanced.types').SectionId) => {
+            const element = state.elements.get(id);
+            if (!element || !getState().isElementErasable(element)) return;
+            
+            // Simple bounds check - element center within bounds
+            const elementX = element.x || 0;
+            const elementY = element.y || 0;
+            
+            if (elementX >= bounds.x && 
+                elementX <= bounds.x + bounds.width &&
+                elementY >= bounds.y && 
+                elementY <= bounds.y + bounds.height) {
+              deletedIds.push(id as ElementId);
+              state.elements.delete(id);
+              state.elementOrder = state.elementOrder.filter((elId: any) => elId !== id);
+              state.spatialIndexDirty = true;
+            }
+          });
+        });
+        
+        if (deletedIds.length > 0) {
+          getState().addToHistory('Erase elements');
+        }
+        
+        return deletedIds;
       },
     },
   };

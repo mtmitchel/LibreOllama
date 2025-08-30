@@ -434,14 +434,15 @@ class CanvasPerformanceMonitor {
 
   // Collect spatial index statistics
   private collectSpatialIndexStats(): void {
-    // This would integrate with the spatial indexing system
-    // For now, we'll simulate the collection
     const spatialStats = this.metrics.spatialIndexStats!;
-    
-    // In a real implementation, this would query the spatial index
-    // spatialStats.queryTimes.push(/* actual query time */);
-    // spatialStats.elementCounts.push(/* current element count */);
-    // spatialStats.cullingEfficiency.push(/* culling percentage */);
+    const last = (typeof window !== 'undefined' ? (window as any).__SPATIAL_INDEX_LAST__ : null);
+    if (last) {
+      spatialStats.queryTimes.push(last.queryTime);
+      spatialStats.elementCounts.push(last.total);
+      spatialStats.cullingEfficiency.push(Math.round(last.cullingEfficiency * 100));
+    }
+    // Fallback: keep previous simulated logic if no data
+    // If no new data was recorded, we can skip. Otherwise, stats are appended above.
   }
 
   // Collect RAF statistics

@@ -1,6 +1,6 @@
 // This file has been removed - shapes use their original resizing logic
 
-import { measureTextDimensions } from './textEditingUtils';
+import { measureText } from './textUtils';
 import { getAvailableFontFamily } from './fontLoader';
 
 export const SHAPE_FITTING_DEFAULTS = {
@@ -40,13 +40,10 @@ export const getRequiredCircleRadius = (
   // to get a more stable measurement. `2.5` was from original code, seems to work.
   const measurementWidth = currentRadius * 2.5;
 
-  const measured = measureTextDimensions(
+  const measured = measureText(
     text,
     fontSize,
     fontFamily || getAvailableFontFamily(),
-    measurementWidth,
-    true,
-    true
   );
 
   const textArea = measured.width * measured.height;
@@ -91,13 +88,10 @@ export const getRequiredTriangleSize = (
   const measurementWidth = avgWidth * 0.9; // 90% of average for padding
 
 
-  const measured = measureTextDimensions(
+  const measured = measureText(
     text,
     fontSize,
     fontFamily || getAvailableFontFamily(),
-    measurementWidth,
-    true,
-    true
   );
 
   const requiredTextArea = measured.width * measured.height;

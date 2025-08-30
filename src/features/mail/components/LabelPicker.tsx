@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tag, Plus, Check, X, Search, Loader2 } from 'lucide-react';
-import { logger, debugLogger } from '../../../core/lib/logger';
+import { logger } from '../../../core/lib/logger';
 
 interface Label {
   id: string;
@@ -120,7 +120,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
         throw new Error(data.error || 'Failed to load labels');
       }
     } catch (err) {
-      debugLogger.error('Error loading labels:', err); // Use debugLogger
+      logger.error('Error loading labels:', err);
       setError(err instanceof Error ? err.message : 'Failed to load labels');
     } finally {
       setLoading(false);
@@ -160,7 +160,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
         throw new Error(data.error || 'Failed to create label');
       }
     } catch (err) {
-      debugLogger.error('Error creating label:', err); // Use debugLogger
+      logger.error('Error creating label:', err);
       setError(err instanceof Error ? err.message : 'Failed to create label');
     } finally {
       setLoading(false);

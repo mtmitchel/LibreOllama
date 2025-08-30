@@ -6,13 +6,14 @@ Welcome to the central documentation hub for LibreOllama. This is your starting 
 
 ### 🎯 For Product Managers & Leadership
 - **[Production Readiness Plan](./PRODUCTION_READINESS.md)** - Complete roadmap with phases, status, and deliverables
-- **[Feature Roadmap](./roadmap/README.md)** - Detailed feature specifications and requirements
-- **[Task System Implementation](./TASK_SYSTEM_UNIFIED_STORE_IMPLEMENTATION.md)** - Unified task management architecture and sync strategy
+- **[Roadmaps](./roadmap/README.md)** - Feature-by-feature requirements and status
+- **[Tasks Roadmap](./roadmap/03_tasks_management.md)** - Architecture and sync strategy status
 
 ### 🎨 For Designers & UI/UX
-- **[Design System](./DESIGN_SYSTEM.md)** - Complete design system with tokens, components, and animations
-- **[Design Mockups](../design/mockups/)** - Visual mockups for all application screens
-- **[Component Explorer](https://storybook.js.org/)** - Run `npm run ladle` for interactive component gallery
+- **[Design System](./DESIGN_SYSTEM.md)** - Tokens, components, and patterns
+- **[Accessibility](./ACCESSIBILITY.md)** - Practical checklist and standards
+- **[Design System Migration](./design-system/MIGRATION.md)** - Current status and guidelines
+- **Component Explorer (Ladle)** - Run `npm run ladle` for interactive component gallery
 
 ### 👩‍💻 For Developers & Engineers
 - **[Architecture Guide](./ARCHITECTURE.md)** - Technical implementation patterns, system design, and security
@@ -26,7 +27,7 @@ Welcome to the central documentation hub for LibreOllama. This is your starting 
 ### System Architecture
 - **[Architecture Guide](./ARCHITECTURE.md)** - System design, patterns, and technical implementation
 - **[Testing Strategy](./TESTING_STRATEGY.md)** - Testing approach, frameworks, and best practices
-- **[Task System Implementation](./TASK_SYSTEM_UNIFIED_STORE_IMPLEMENTATION.md)** - Unified task management with Google Tasks sync
+- **[Tasks Roadmap](./roadmap/03_tasks_management.md)** - Unified task management and Google Tasks sync
 
 ### Design & User Experience  
 - **[Design System](./DESIGN_SYSTEM.md)** - Colors, typography, components, animations, and accessibility
@@ -39,7 +40,7 @@ Welcome to the central documentation hub for LibreOllama. This is your starting 
 ### Development Resources
 - **[Project Status](./PROJECT_STATUS.md)** - Implementation status and development guidelines
 - **[Roadmap Directory](./roadmap/)** - Feature-specific implementation guides
-- **[Claude.md](../CLAUDE.md)** - AI assistant guidance and project conventions
+- **[Contributor Guide](../.github/CONTRIBUTING.md)** - Contribution process, coding standards, and PR checklist
 
 ---
 

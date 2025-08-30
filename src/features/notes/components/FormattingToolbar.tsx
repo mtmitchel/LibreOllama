@@ -124,13 +124,20 @@ export const FormattingToolbar: React.FC<FormattingToolbarProps> = ({ editor, cl
     updateToolbarState();
 
     // Listen for selection changes
-    const unsubscribe = editor.onSelectionChange(() => {
-      updateToolbarState();
-    });
+    let unsubscribe: any;
+    if ((editor as any).onSelectionChange) {
+      unsubscribe = (editor as any).onSelectionChange(() => {
+        updateToolbarState();
+      });
+    }
 
     return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
+      try {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      } catch (e) {
+        /* no-op in tests */
       }
     };
   }, [editor]);

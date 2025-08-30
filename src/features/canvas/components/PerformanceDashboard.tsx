@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getPerformanceReport, exportPerformanceData } from '../utils/performance/performanceMonitor';
+import { performanceTracker, getPerformanceStats } from '../utils/performance/performanceTracker';
 import { usePerformanceMonitoring } from '../hooks/usePerformanceMonitoring';
 import { canvasLog } from '../utils/canvasLogger';
 
@@ -33,7 +33,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   // Update performance data
   const updateData = useCallback(() => {
     try {
-      const report = getPerformanceReport();
+      const report = getPerformanceStats();
       setPerformanceData(report);
     } catch (error) {
       canvasLog.error('Failed to get performance report:', error);
@@ -53,7 +53,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   // Export performance data
   const handleExportData = useCallback(() => {
     try {
-      const data = exportPerformanceData();
+      const data = JSON.stringify(getPerformanceStats(), null, 2);
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       

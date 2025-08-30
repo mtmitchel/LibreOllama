@@ -52,7 +52,7 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
         variant={isActive ? "primary" : "ghost"}
         size="icon"
         onClick={toggleDropdown}
-        className="relative size-9"
+        className={`relative size-9 ${isActive ? 'ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-primary shadow-lg' : ''}`}
         title={`Connectors (${currentConnectorTool.name} selected)`}
         aria-expanded={isOpen}
         aria-haspopup="true"

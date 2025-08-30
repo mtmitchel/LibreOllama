@@ -2,25 +2,32 @@ import React, { useRef, useMemo, useCallback, useEffect } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { useShallow } from 'zustand/react/shallow';
-import UnifiedEventHandler from './UnifiedEventHandler';
+import { canvasEventManager } from '../utils/CanvasEventManager';
+import { selectToolHandler } from '../tools/selectToolHandler';
+import { drawingToolHandler } from '../tools/drawingToolHandler';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
-import { ToolLayer } from '../layers/ToolLayer';
+// import { ToolLayer } from '../layers/ToolLayer';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { CanvasElement, ElementId, SectionId } from '../types';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
 import { useCursorManager, CanvasTool } from '../utils/performance/cursorManager';
 import { canvasLog } from '../utils/canvasLogger';
 import { useCanvasSizing } from '../hooks/useCanvasSizing';
-import { canvasPerformanceMonitor, markCanvasReady } from '../utils/performance/performanceMonitor';
+import { performanceTracker, measurePerformance } from '../utils/performance/performanceTracker';
 import { markInit, measureInit, initMarkers } from '../utils/performance/initInstrumentation';
 import { memoryManager, useElementCleanup } from '../utils/memoryManager';
 import { CanvasEventProvider } from '../contexts/CanvasEventContext';
-import { useSingleRAF } from '../hooks/useRAFManager';
-import { canvasMonitor, recordCanvasMetric, startCanvasTimer } from '../monitoring/canvasMonitor';
+import { useSingleRAF } from '../hooks/useRafManager';
+import { recordCanvasMetric, startCanvasTimer } from '../utils/performance/performanceTracker';
 import { GlobalLoadingOverlay, LoadingStateBar } from './LoadingOverlay';
+import { usePerformanceCircuitBreaker, isCanvasInEmergencyMode } from '../hooks/usePerformanceCircuitBreaker';
+import { initializeDirectKonvaDrawing, cleanupDirectKonvaDrawing } from '../utils/DirectKonvaDrawing';
+import { startEmergencyMonitoring, stopEmergencyMonitoring } from '../utils/performance/EmergencyPerformanceMonitor';
+import { optimizeTauriCanvas, optimizeCanvasContext, startTauriMemoryMonitoring } from '../utils/TauriCanvasOptimizations';
 
 interface CanvasStageProps {
   stageRef?: React.RefObject<Konva.Stage | null>;
+  selectedTool?: string;
 }
 
 /**
@@ -29,10 +36,10 @@ interface CanvasStageProps {
  * This component is responsible for:
  * - Creating the main Konva Stage.
  * - Fetching all necessary state from the unified Zustand store.
- * - Delegating event handling to UnifiedEventHandler.
+ * - Centralizing event handling via CanvasEventManager.
  * - Delegating element and layer rendering to CanvasLayerManager.
  */
-const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef }) => {
+const CanvasStageComponent: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef, selectedTool: selectedToolProp }) => {
   const internalStageRef = useRef<Konva.Stage | null>(null);
   const stageRef = externalStageRef || internalStageRef;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,42 +47,49 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   // Centralized RAF management
   const wheelRAF = useSingleRAF('CanvasStage-wheel');
   const latestWheelEvent = useRef<Konva.KonvaEventObject<WheelEvent> | null>(null);
+  
+  // EMERGENCY: Performance circuit breaker
+  const { emergencyMode, violationCount } = usePerformanceCircuitBreaker();
 
-  // OPTIMIZED: Consolidated store subscriptions using useShallow
-  markInit(initMarkers.STORE_HYDRATION_START);
-  const {
-    viewport,
-    selectedElementIds,
-    selectedTool,
-    elements,
-    updateElement,
-    selectElement,
-    setTextEditingElement,
-    setViewport,
-    isGlobalLoading,
-    globalOperation,
-    globalMessage,
-    globalProgress,
-    elementLoadingStates,
-    operationLoadingStates
-  } = useUnifiedCanvasStore(useShallow((state) => ({
-    viewport: state.viewport,
-    selectedElementIds: state.selectedElementIds,
-    selectedTool: state.selectedTool,
-    elements: state.elements,
-    updateElement: state.updateElement,
-    selectElement: state.selectElement,
-    setTextEditingElement: state.setTextEditingElement,
-    setViewport: state.setViewport,
-    isGlobalLoading: state.isGlobalLoading,
-    globalOperation: state.globalOperation,
-    globalMessage: state.globalMessage,
-    globalProgress: state.globalProgress,
-    elementLoadingStates: state.elementLoadingStates,
-    operationLoadingStates: state.operationLoadingStates
-  })));
-  markInit(initMarkers.STORE_HYDRATION_END);
-  measureInit('store-hydration', initMarkers.STORE_HYDRATION_START, initMarkers.STORE_HYDRATION_END);
+  // OPTIMIZED: Consolidated store subscriptions using useShallow (except for elements which needs direct subscription)
+  // PERFORMANCE: Only measure store hydration once during component mount, not on every render
+  const [storeHydrationMeasured, setStoreHydrationMeasured] = React.useState(false);
+  
+  React.useMemo(() => {
+    if (!storeHydrationMeasured) {
+      markInit(initMarkers.STORE_HYDRATION_START);
+      setStoreHydrationMeasured(true);
+    }
+  }, [storeHydrationMeasured]);
+  
+  // Direct subscription for elements to ensure Map changes are detected
+  const elements = useUnifiedCanvasStore(state => state.elements);
+  
+  // PERFORMANCE CRITICAL: Use selectedTool prop instead of store subscription to prevent remounts
+  const selectedTool = selectedToolProp || 'select';
+
+  // EMERGENCY FIX: Atomic selectors prevent cascade re-renders
+  const viewport = useUnifiedCanvasStore(state => state.viewport);
+  const selectedElementIds = useUnifiedCanvasStore(state => state.selectedElementIds);
+  const isGlobalLoading = useUnifiedCanvasStore(state => state.isGlobalLoading);
+  const globalOperation = useUnifiedCanvasStore(state => state.globalOperation);
+  const globalMessage = useUnifiedCanvasStore(state => state.globalMessage);
+  const globalProgress = useUnifiedCanvasStore(state => state.globalProgress);
+  const elementLoadingStates = useUnifiedCanvasStore(state => state.elementLoadingStates);
+  const operationLoadingStates = useUnifiedCanvasStore(state => state.operationLoadingStates);
+  
+  // CRITICAL: Function selectors - these are stable by design
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
+  const selectElement = useUnifiedCanvasStore(state => state.selectElement);
+  const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
+  const setViewport = useUnifiedCanvasStore(state => state.setViewport);
+  
+  React.useMemo(() => {
+    if (storeHydrationMeasured) {
+      markInit(initMarkers.STORE_HYDRATION_END);
+      measureInit('store-hydration', initMarkers.STORE_HYDRATION_START, initMarkers.STORE_HYDRATION_END);
+    }
+  }, [storeHydrationMeasured]);
 
   const canvasSize = useCanvasSizing(containerRef as React.RefObject<HTMLElement>, {});
 
@@ -132,89 +146,86 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
     }
   }, [selectedTool, cursorManager, stageRef]);
 
-  // Initialize cursor manager with stage and optimize canvas context
+  // SIMPLIFIED: Initialize cursor manager with minimal blocking operations  
   useEffect(() => {
-    if (stageRef.current) {
+    if (stageRef.current && !stageRef.current.__canvas_initialized) {
+      // Mark as initialized to prevent re-initialization
+      (stageRef.current as any).__canvas_initialized = true;
+      // Set up cursor manager (fast)
       cursorManager.setStage(stageRef.current);
       
-      // Apply high-performance canvas context settings (Tauri WebView optimization)
-      const canvas = stageRef.current.toCanvas();
-      const ctx = canvas?.getContext('2d');
-      if (ctx) {
-        ctx.imageSmoothingEnabled = false; // Disable anti-aliasing for performance
-        ctx.globalCompositeOperation = 'source-over'; // Fastest composite operation
-        // Request high-performance context
-        Object.assign(ctx, {
-          desynchronized: true,
-          powerPreference: 'high-performance'
-        });
-      }
+      // Set drawing mode flags (fast)
+      (window as any).CANVAS_DRAWING_MODE = 'DIRECT_KONVA';
+      (window as any).__USE_COMPONENT_DRAWING__ = true;
       
-      // Store stage DOM reference in memory manager for cleanup tracking
-      const stageContainer = stageRef.current.container();
-      if (stageContainer) {
-        // Create a dummy element to track stage resources
-        const stageElement = {
-          id: 'canvas-stage' as ElementId,
-          type: 'stage' as any,
-          x: 0,
-          y: 0
-        } as CanvasElement;
+      // DISABLED: DirectKonvaDrawing was competing with component-based tools causing delays
+      // Only ONE drawing system should be active at a time
+      // initializeDirectKonvaDrawing(stageRef.current);
+      
+      // DEFERRED: Move all heavy operations to next tick to avoid blocking pointer events
+      setTimeout(() => {
+        if (!stageRef.current) return;
         
-        memoryManager.trackElement(stageElement);
-        memoryManager.setDOMReference(stageElement, {
-          konvaNode: stageRef.current as any,
-          htmlElement: stageContainer,
-          eventListeners: new Map()
-        });
-      }
-      
-      // Expose canvas store to monitoring system
-      const canvasStore = useUnifiedCanvasStore.getState();
-      (window as any).__CANVAS_STORE__ = {
-        elements: elements,
-        selectedElementIds,
-        selectedTool,
-        viewport
-      };
-      
-      // Performance: Detailed initialization instrumentation
-            markInit('canvas-init-start');
-
-      // Mark canvas as ready for performance monitoring (high-level)
-      markCanvasReady();
-
-      // Mark key milestones we know at this point
-      markInit('canvas-store-exposed');
-
-      // Defer to next frame to capture layer creation
-      requestAnimationFrame(() => {
-        markInit('canvas-layers-created');
-
-        // Attempt to ensure fonts are loaded before first render
-        // This is async but we mark regardless for timing visibility
-        markInit('canvas-fonts-load-start');
-        (async () => {
-          try {
-            // Optionally import ensureFontsLoaded if needed
-            // const { ensureFontsLoaded } = await import('../utils/fontLoader');
-            // await ensureFontsLoaded();
-          } catch {}
-          markInit('canvas-fonts-loaded');
-          measureInit('fonts-load', 'canvas-fonts-load-start', 'canvas-fonts-loaded');
-
-          markInit('canvas-stage-ready');
-          measureInit('canvas-init-total', 'canvas-init-start', 'canvas-stage-ready');
-
-          // Broadcast a DOM event and a global flag so other subsystems can defer work
+        try {
+          // Canvas context optimization (moved to deferred)
+          const canvas = stageRef.current.toCanvas();
+          const ctx = canvas?.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.globalCompositeOperation = 'source-over';
+          }
+          
+          // Memory manager tracking (moved to deferred)
+          const stageContainer = stageRef.current.container();
+          if (stageContainer) {
+            const stageElement = {
+              id: 'canvas-stage' as ElementId,
+              type: 'stage' as any,
+              x: 0, y: 0
+            } as CanvasElement;
+            memoryManager.trackElement(stageElement);
+            memoryManager.setDOMReference(stageElement, {
+              konvaNode: stageRef.current as any,
+              htmlElement: stageContainer,
+              eventListeners: new Map()
+            });
+          }
+          
+          // DISABLED: Tauri optimizations were causing 1000-4000ms delays on every tool change
+          // These optimizations can be re-enabled later if needed, but they should only run once
+          // optimizeTauriCanvas().catch(err => console.warn('Tauri optimization failed:', err));
+          // optimizeCanvasContext(stageRef.current.toCanvas());
+          
+          // Set canvas store reference
+          (window as any).__CANVAS_STORE__ = { 
+            __USE_COMPONENT_DRAWING__: true,
+            elements: elements,
+            selectedElementIds,
+            viewport
+          };
+          
+          // Mark canvas as ready
           (window as any).__CANVAS_STAGE_READY__ = true;
           const evt = new Event('canvas-stage-ready');
           window.dispatchEvent(evt);
-
-        })();
-      });
+          
+        } catch (err) {
+          console.warn('Deferred canvas initialization failed:', err);
+        }
+      }, 0);
+      
+      // DISABLED: Monitoring systems were causing performance delays
+      // These can be re-enabled later if needed, but should not run on every re-initialization
+      // setTimeout(() => {
+      //   try {
+      //     startEmergencyMonitoring();
+      //     startTauriMemoryMonitoring();
+      //   } catch (err) {
+      //     console.warn('Monitoring system startup failed:', err);
+      //   }
+      // }, 100);
     }
-  }, [cursorManager, stageRef, elements, selectedElementIds, selectedTool, viewport]);
+  }, []); // FIXED: No dependencies to prevent re-initialization loops
 
   // RAF-optimized wheel zoom handler with centralized management and monitoring
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -286,56 +297,9 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   // Memory management cleanup
   const elementCleanup = useElementCleanup(Array.from(allElements.values()));
 
-  // Memory monitoring and statistics (dev-only with smart gating)
-  useEffect(() => {
-    let memoryMonitoringInterval: number | null = null;
-    const lastWarnRef = { current: 0 } as { current: number };
-
-    if (process.env.NODE_ENV === 'development') {
-      // Monitor memory usage every 10 seconds in development
-      memoryMonitoringInterval = window.setInterval(() => {
-        const stats = memoryManager.getMemoryStats();
-        const elementCount = allElements.size;
-
-        // Basic memory numbers (from performance.memory)
-        const perf: any = performance as any;
-        const mem = perf && perf.memory ? perf.memory : null;
-        const usedMB = mem ? mem.usedJSHeapSize / (1024 * 1024) : stats.metadataSize / (1024 * 1024);
-        const limitMB = mem && mem.jsHeapSizeLimit ? mem.jsHeapSizeLimit / (1024 * 1024) : 0;
-        const percentOfLimit = limitMB > 0 ? (usedMB / limitMB) * 100 : 0;
-
-        // Log memory stats when element count is significant
-        if (elementCount > 50) {
-          canvasLog.debug('🧠 [CanvasStage] Memory Stats:', {
-            elementCount,
-            memoryUsage: `${usedMB.toFixed(2)}MB`,
-            percentOfLimit: limitMB > 0 ? `${percentOfLimit.toFixed(2)}%` : 'n/a',
-          });
-        }
-
-        // Warn if memory usage is high relative to limit and canvas is active
-        const globalStats = (window as any).__RAF_MANAGER_STATS__;
-        const isActive = elementCount > 0 || (globalStats && globalStats.activeCount > 0);
-        const now = performance.now();
-        const exceedsThreshold = percentOfLimit > 70 || usedMB > 1024; // 1GB safeguard
-
-        if (isActive && exceedsThreshold && now - lastWarnRef.current > 60000) { // 60s cooldown
-          lastWarnRef.current = now;
-          canvasLog.warn('⚠️ [CanvasStage] High memory usage detected:', {
-            memoryUsageMB: usedMB.toFixed(2),
-            percentOfLimit: limitMB > 0 ? `${percentOfLimit.toFixed(2)}%` : 'n/a',
-            elementCount,
-          });
-        }
-      }, 10000);
-    }
-
-    return () => {
-      if (memoryMonitoringInterval) {
-        clearInterval(memoryMonitoringInterval);
-      }
-    };
-  }, [allElements.size]);
+  // DISABLED: Memory monitoring was causing 300-400ms delays
+  // Memory monitoring can be re-enabled later if needed, but should use requestIdleCallback
+  // or be moved to a web worker to avoid blocking the main thread
 
   // Memory cleanup on unmount (RAF cleanup is automatic via useRAFManager)
   useEffect(() => {
@@ -344,6 +308,61 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
       elementCleanup?.();
     };
   }, [elementCleanup]);
+
+  // DISABLED: Canvas event manager was competing with component tools
+  // Only the component-based tools should handle their own events
+  useEffect(() => {
+    return () => {
+      // Minimal cleanup only
+    };
+  }, [stageRef]);
+
+  // DISABLED: Canvas event manager completely disabled to prevent conflicts
+  // useEffect(() => {
+  //   // Only use CanvasEventManager for non-drawing tools when component drawing is enabled
+  //   if (!(window as any).__USE_COMPONENT_DRAWING__ || !['pen','marker','highlighter'].includes(String(selectedTool))) {
+  //     canvasEventManager.setActiveTool(selectedTool);
+  //   } else {
+  //     // For drawing tools with component drawing enabled, disable event manager to prevent double handling
+  //     canvasEventManager.setActiveTool('none');
+  //   }
+  // }, [selectedTool]);
+
+  // Dev-only layer count guard after consolidation (allow extra layers during drawing)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && stageRef.current) {
+      const layerCount = stageRef.current.getLayers().length;
+      // Allow up to 5 layers during drawing (background, main, ui, preview layers)
+      const maxLayers = (selectedTool === 'pen' || selectedTool === 'marker' || selectedTool === 'highlighter') ? 5 : 3;
+      if (layerCount > maxLayers) {
+        console.warn(`Canvas has ${layerCount} layers; expected ≤ ${maxLayers} (${selectedTool} tool active)`);
+      }
+    }
+  }, [stageRef, selectedTool, viewport.width, viewport.height]);
+
+  // Emergency mode check AFTER all hooks
+  const isEmergency = emergencyMode || isCanvasInEmergencyMode();
+  
+  if (isEmergency) {
+    console.warn('Canvas in emergency mode, rendering minimal UI');
+    return (
+      <div className="relative size-full flex-1 overflow-hidden bg-red-100">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center p-4 bg-red-200 rounded-lg border">
+            <h3 className="text-lg font-bold text-red-800">Canvas Emergency Mode</h3>
+            <p className="text-red-600">Performance issues detected. Canvas temporarily disabled.</p>
+            <p className="text-sm text-red-500">Violations: {violationCount}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Reload Canvas
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <CanvasEventProvider>
@@ -356,7 +375,7 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
             });
             
             // Report error to monitoring system
-            canvasMonitor.recordError(error, 'CanvasStage rendering error', {
+            performanceTracker.recordError(error, 'CanvasStage rendering error', {
               componentStack: errorInfo.componentStack,
               elementCount: allElements.size,
               viewport,
@@ -370,7 +389,9 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
             className="text-text-primary bg-canvas font-sans"
             onWheel={handleWheel}
           >
-            <UnifiedEventHandler stageRef={stageRef} visibleElements={Array.from(allElements.values())} />
+            
+  
+
             
             <CanvasLayerManager 
                 stageRef={stageRef}
@@ -382,8 +403,7 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
                 onStartTextEdit={setTextEditingElement}
               />
               
-            {/* Tool Layer - handles all drawing and selection tools */}
-            <ToolLayer stageRef={stageRef} />
+            {/* Tool Layer removed: tool previews now render within MainLayer as needed */}
           </Stage>
 
         </CanvasErrorBoundary>
@@ -422,6 +442,21 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
     </CanvasEventProvider>
   );
 };
+
+// EMERGENCY FIX: Comprehensive React.memo comparison to prevent remounts
+const CanvasStage = React.memo(CanvasStageComponent, (prevProps, nextProps) => {
+  // Compare ALL props that could cause remounts
+  return (
+    prevProps.selectedTool === nextProps.selectedTool &&
+    // DON'T compare stageRef - it's always stable by design
+    // Compare any other props that might be added in the future
+    Object.keys(prevProps).length === Object.keys(nextProps).length &&
+    Object.keys(prevProps).every(key => {
+      if (key === 'stageRef') return true; // Always stable
+      return prevProps[key as keyof typeof prevProps] === nextProps[key as keyof typeof nextProps];
+    })
+  );
+});
 
 CanvasStage.displayName = 'CanvasStage';
 

@@ -4,15 +4,17 @@ import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { CanvasElement, ElementId, TableElement as TableElementType } from '../types/enhanced.types';
 import { isTableElement } from '../types/enhanced.types';
-import { CanvasTextInput } from '../components/ui/CanvasTextInput';
+
 import { useRafThrottle } from '../hooks';
+import { TextEditOverlay } from '../components/ui/TextEditOverlay';
 import { canvasLog } from '../utils/canvasLogger';
+import { performanceTracker } from '../utils/performance/performanceTracker';
 
 interface TableElementProps {
   element: CanvasElement;
   isSelected: boolean;
   onSelect: (element: CanvasElement) => void;
-  onUpdate: (updates: Partial<CanvasElement>) => void;
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   stageRef: React.RefObject<Konva.Stage | null>;
 }
 
@@ -68,10 +70,10 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     const throttledForceUpdate = useRafThrottle(() => {
       // Use ref to get the latest isDragging state and avoid stale closures.
       if (!editingCell && !isDraggingRef.current) {
-        canvasLog.table('🔄 [TableElement] Throttled force update');
+        performanceTracker.recordMetric({ name: 'table-throttled-update', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: '🔄 [TableElement] Throttled force update' } });
         setForceUpdateCounter(c => c + 1);
       } else {
-        canvasLog.table('🚫 [TableElement] Skipping throttled update - cell being edited or table is being dragged');
+        performanceTracker.recordMetric({ name: 'table-throttled-update-skip', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: '🚫 [TableElement] Skipping throttled update - cell being edited or table is being dragged' } });
       }
     });
 
@@ -84,14 +86,14 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     useEffect(() => {
             // COMPLETELY SKIP ALL FORCE UPDATES WHILE EDITING
       if (editingCell) {
-        canvasLog.table('🚫 [TableElement] Skipping force update - cell is being edited');
+        performanceTracker.recordMetric({ name: 'table-force-update-skip-editing', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: '🚫 [TableElement] Skipping force update - cell is being edited' } });
         return;
       }
       
       // Smart data comparison will be handled by React's built-in comparison
       // since latestTableData reference changes only when data actually changes
       
-      canvasLog.table('🔄 [TableElement] Force update triggered');
+      performanceTracker.recordMetric({ name: 'table-force-update-triggered', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: '🔄 [TableElement] Force update triggered' } });
       setForceUpdateCounter(prev => prev + 1);
     }, [latestTableData, editingCell]);
 
@@ -104,7 +106,7 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
         
         // If the current editing cell is now out of bounds, adjust or stop editing
         if (row > maxRow || col > maxCol) {
-          canvasLog.table('📊 [TableElement] Cell editor out of bounds after structure change, stopping edit');
+          performanceTracker.recordMetric({ name: 'table-cell-editor-out-of-bounds', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: '📊 [TableElement] Cell editor out of bounds after structure change, stopping edit' } });
           setEditingCell(null);
         }
       }
@@ -196,26 +198,26 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     // Canvas-native cell editing with proper tab navigation
     const handleCellSave = useCallback((newText: string, clearEditing: boolean = true) => {
       if (!editingCell) return;
-      canvasLog.table(`🎯 [TableElement] handleCellSave called for cell (${editingCell.row}, ${editingCell.col}) with text: "${newText}", clearEditing: ${clearEditing}`);
+      performanceTracker.recordMetric({ name: 'table-cell-save', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: `🎯 [TableElement] handleCellSave called for cell (${editingCell.row}, ${editingCell.col}) with text: "${newText}", clearEditing: ${clearEditing}` } });
       updateTableCell(tableId, editingCell.row, editingCell.col, newText);
       if (clearEditing) {
         setEditingCell(null);
         setSelectedTool('select');
-        canvasLog.table('🎯 [TableElement] Cell saved, editingCell cleared, tool set to select');
+        performanceTracker.recordMetric({ name: 'table-cell-saved-select-tool', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: '🎯 [TableElement] Cell saved, editingCell cleared, tool set to select' } });
       } else {
-        canvasLog.table('🎯 [TableElement] Cell saved, keeping editingCell for navigation');
+        performanceTracker.recordMetric({ name: 'table-cell-saved-keep-editing', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: '🎯 [TableElement] Cell saved, keeping editingCell for navigation' } });
       }
     }, [editingCell, tableId, updateTableCell, setSelectedTool]);
 
     const handleTabNavigation = useCallback((backward: boolean = false, currentText?: string) => {
       if (!editingCell) return;
       
-      canvasLog.table(`🎯 [TableElement] Tab navigation called: current=(${editingCell.row}, ${editingCell.col}), backward=${backward}, text="${currentText}"`);
+      performanceTracker.recordMetric({ name: 'table-tab-navigation', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: `🎯 [TableElement] Tab navigation called: current=(${editingCell.row}, ${editingCell.col}), backward=${backward}, text="${currentText}"` } });
       
       // Save the current cell's text first if provided
       if (currentText !== undefined) {
         updateTableCell(tableId, editingCell.row, editingCell.col, currentText);
-        canvasLog.table(`🎯 [TableElement] Saved current cell text: "${currentText}"`);
+        performanceTracker.recordMetric({ name: 'table-cell-saved-current-text', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: `🎯 [TableElement] Saved current cell text: "${currentText}"` } });
       }
       
       const currentRow = editingCell.row;
@@ -241,10 +243,10 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
       
       // Move to next cell if different
       if (nextRow !== currentRow || nextCol !== currentCol) {
-        canvasLog.table(`🎯 [TableElement] Moving to next cell: (${nextRow}, ${nextCol})`);
+        performanceTracker.recordMetric({ name: 'table-moving-to-next-cell', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: `🎯 [TableElement] Moving to next cell: (${nextRow}, ${nextCol})` } });
         setEditingCell({ row: nextRow, col: nextCol });
       } else {
-        canvasLog.table('🎯 [TableElement] No more cells, stopping editing');
+        performanceTracker.recordMetric({ name: 'table-no-more-cells', value: 0, category: 'canvas', timestamp: Date.now(), metadata: { message: '🎯 [TableElement] No more cells, stopping editing' } });
         setEditingCell(null);
         setSelectedTool('select');
       }
@@ -339,7 +341,7 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
             node.scaleX(1);
             node.scaleY(1);
             
-            updateElement(element.id as ElementId, {
+            onUpdate(element.id as ElementId, {
               x: node.x(),
               y: node.y(),
               width: Math.max(240, totalWidth * scaleX),
@@ -589,7 +591,7 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
       );
 
       // SOLUTION 1: Render cell editor only when editing (prevents constant re-renders)
-      if (editingCell && groupRef.current && stageRef.current) {
+      if (editingCell && stageRef.current) {
         const { row, col } = editingCell;
         if (row < tableRows.length && col < tableColumns.length) {
           const cellData = getCellData(row, col);
@@ -609,23 +611,24 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
           const editorFontSize = isHeader ? 14 : 13;
 
           elements.push(
-            <CanvasTextInput
+            <TextEditOverlay
               key={`cell-editor-${row}-${col}-${tableId}`}
-              x={editorX}
-              y={editorY}
-              width={editorWidth}
-              height={editorHeight}
-              initialText={cellText}
-              fontSize={editorFontSize}
-              fontFamily="Inter, sans-serif"
-              fontWeight={isHeader ? '500' : '400'}
-              fill={isHeader ? '#374151' : '#4B5563'}
-              backgroundColor={isHeader ? '#F9FAFB' : '#FFFFFF'}
-              isHeader={isHeader}
-              absolute={false}
+              element={{
+                id: `${tableId}-${row}-${col}`,
+                x: element.x + cellX,
+                y: element.y + cellY,
+                width: actualColumnWidth,
+                height: actualRowHeight,
+                text: cellText,
+                fontSize: row === 0 ? 14 : 13,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: row === 0 ? '500' : '400',
+                fill: row === 0 ? '#374151' : '#4B5563',
+              }}
+              viewport={viewport}
+              stageRef={stageRef}
               onSave={handleCellSave}
               onCancel={() => setEditingCell(null)}
-              onTab={handleTabNavigation}
             />
           );
         }

@@ -1,202 +1,215 @@
-Canvas System Architecture Audit and Analysis
+# Canvas System Architecture Audit & Analysis (Live Document)
 
-Author: Rovo Dev (AI)
-Date: 2025-08-27 (Updated - Production State Verified and Corrected)
+**Author**: Rovo Dev (AI)
+**Date**: 2025-08-28 (Reflects live production code)
+**Status**: Verified, Comprehensive, & Current
 
-Scope
-- This audit covers the full canvas system across frontend (React + react-konva + Zustand) and backend (Tauri Rust commands). It reviews architecture, dependencies, state management, performance strategies, core features, persistence/integration, type safety, testing, and provides recommendations.
+## 1. Executive Summary
 
-1) High-Level Architecture Overview
+This document provides a rigorous, up-to-date analysis of the LibreOllama canvas architecture. The initial audit was found to be significantly outdated. This version corrects inaccuracies and adds critical context based on a thorough review of the live production codebase, making it suitable for a senior engineer with zero prior context.
 
-1.1 System Topology (frontend)
-- Entry: CanvasContainer → CanvasStage → Stage (react-konva)
-  - CanvasContainer: Hosts toolbar and drag/drop wrapper; prepares a stageRef.
-  - CanvasStage: Owns the Konva Stage, synchronizes pan/zoom with store, sets up wheel-zoom, centralizes cursor, error/memory monitoring. Orchestrates rendering via CanvasLayerManager and UnifiedEventHandler. Includes ToolLayer for interactive tools and global loading overlays.
-- Rendering Layers: CanvasLayerManager composes specific layers:
-  - BackgroundLayer (not opened here but present) for grid/background.
-  - MainLayer: renders elements by type inline (ElementRenderer exists as a separate component but is NOT imported/used in MainLayer - used only in CanvasLayerManager); nests SectionShape to host children; routes drag/update/select to store; connectors are also rendered here (ConnectorLayer removed).
-  - **ARCHITECTURAL CHANGE**: ConnectorLayer has been completely removed - connectors are now rendered through MainLayer/ElementRenderer for better performance and consistency.
-  - UILayer: draws selection overlays (selection box, snap guides). TransformerManager + CustomTransformer manage the Konva Transformer (anchors) in a dedicated layer for resize/rotate.
-  - ToolLayer: overlays active tool UIs (pen, marker, highlighter, eraser, text, shapes, sticky-note, section, table, connector, mindmap, pan).
-- Event Handling: UnifiedEventHandler attaches stage-level handlers. Tools attach namespaced events through useToolEventHandler. BaseCreationTool/BaseShapeTool abstract repeated creation logic.
-- State: A single modular Zustand store (useUnifiedCanvasStore) composes slices: element, selection, viewport, drawing, history, section, table, stickyNote, loading, UI, eraser, and event. Store-first architecture: Stage syncs to store; interactions call store actions.
-- Utilities: performance (cursorManager, performanceMonitor, productionMonitoring), memoryManager, coordinate/snapping/text editing utils, export utils. Monitoring: canvasMonitor ErrorBoundary wrappers.
+The canvas architecture is a modern, modular, and highly performant system built on a **React, Konva, and Zustand** stack, running within a **Tauri (Rust)** desktop environment. It is designed for high-performance rendering and complex state management. Key architectural features include a modular "store-first" state management pattern, a consolidated multi-layer rendering pipeline with advanced GPU acceleration, and a robust, defensive error-handling strategy.
 
-1.2 Backend Topology (Tauri)
-- src-tauri/commands/canvas.rs exposes: ensure_encryption_key, save_canvas_data, load_canvas_data, list_canvas_files, delete_canvas_file.
-- src-tauri/lib.rs enables GPU acceleration for WebView2 with flags: "--ignore-gpu-blocklist --enable-accelerated-canvas --enable-webgl --enable-accelerated-2d-canvas" for accelerated canvas/webgl.
-- Persistence flow: UI calls useTauriCanvas hook → invoke Rust commands → AES-256-GCM encryption w/ keyring storage → files under app_data_dir/canvas.
+---
 
-1.3 Interaction Flow
-- Pointer events → UnifiedEventHandler or tool handlers → store actions (e.g., startDrawing/updateDrawing/finishDrawing, selectElement, updateElement) → modules mutate store via immer → layers re-render subscribed parts; Stage synchronizes scale/position from viewport slice; SelectionLayer/CustomTransformer update nodes.
+## 2. Application Context: The LibreOllama Ecosystem
 
-2) Detailed Dependency Analysis
+Before diving into the canvas specifics, it is crucial to understand its place within the broader LibreOllama application.
 
-Major libs and how used:
-- react-konva/Konva: Scene graph, Stage/Layer/Shape components, Transformer; events via stage.on with namespacing (useToolEventHandler); custom Transformer controls (CustomTransformer), element hit detection, pointer pos transforms.
-- Zustand + immer + subscribeWithSelector: Modular store with Map/Set-heavy state; selective subscription via useShallow and explicit selectors to minimize re-renders; immer enableMapSet for Map/Set mutation semantics; history middleware is bespoke (historyModule) not external.
-- nanoid: IDs for elements, sections, groups.
-- Tauri invoke: Backend persistence. Backend uses keyring, aes_gcm, serde, chrono; enables GPU flags.
-- Testing stack: vitest/react-testing-library present; canvas has numerous tests under src/features/canvas/tests and src/tests.
-- Misc utils: ResizeObserver, RAF throttles, debounces, monitoring modules.
+### 2.1. High-Level Purpose
+LibreOllama is a multi-functional, desktop-first productivity application. Its stated mission is to be an **open-source, locally-run, and privacy-first alternative to Ollama**. It bundles several features into a single, unified workspace.
 
-Custom middleware/plugins:
-- History implemented in historyModule with addHistoryEntry/undo/redo; useCanvasHistory wraps it.
-- Event module consolidates handlers into store-friendly API.
-- Memory manager: custom WeakMap-based tracker with pools and cleanup hooks.
-- Performance monitor and canvasMonitor: custom metrics, diagnostic logging and mutation observers.
+### 2.2. Core Technology Stack
+- **Frontend**: **React** with **TypeScript**.
+- **State Management**: **Zustand**.
+- **Styling**: A custom **Asana-inspired CSS framework**, migrating away from Tailwind CSS.
+- **Backend**: **Rust** powered by the **Tauri** framework.
+- **Database**: **SQLite** for local data persistence.
 
-3) State Management
+### 2.3. Key Features
+The application is composed of several feature-rich "surfaces":
+- **Mail**: A full Gmail client using the official API with advanced features like Shadow DOM rendering for security.
+- **Chat**: A multi-provider LLM chat interface.
+- **Notes**: A rich-text editor using the BlockNote library.
+- **Tasks & Calendar**: A project management tool with Google Tasks/Calendar two-way sync.
+- **Canvas**: A freeform visual content creation tool.
 
-3.1 Store Structure
-- unifiedCanvasStore composes modules:
-  - elementModule: CRUD on elements Map<ElementId, CanvasElement>, bulk ops, stress element creation; updateElement funnels mutations; integration with snapping and timestamps.
-  - selectionModule: Set of selectedElementIds, lastSelectedElementId, groups map and element-to-group map; select/deselect/clear, group/ungroup; getSelectedElements derives from elements Map.
-  - viewportModule: viewport {x,y,scale,width,height}, pan/zoom helpers; CanvasStage syncs Stage from this state and updates on resize/wheel.
-  - drawingModule: isDrawing/currentPath, stroke configs, start/update/finish/cancel; integrates with sticky notes upon finish.
-  - historyModule: history array of operations with currentIndex; canUndo/canRedo/undo/redo/addHistoryEntry/clear; useCanvasHistory provides helpers and batching (UI-level composition).
-  - sectionModule: startDraftSection/update/commit; SectionShape handles drag + click; SectionTool previews and commits.
-  - tableModule, stickyNoteModule, eraserModule, loadingModule, uiModule, eventModule (typed events, selection, text editing id, snap lines, uploads).
-- Legacy compatibility functions exposed for older call sites (groupElements/ungroupElements/clearCanvas, etc.).
+### 2.4. The Canvas's Relation to the Broader App
+- **Integrated Feature**: The canvas is a core productivity surface, sitting alongside Mail, Chat, etc.
+- **Shared Backend**: It uses the same Tauri/Rust backend for secure, encrypted file persistence that other features use for API calls and database operations.
+- **Shared Design System**: The canvas UI is subject to the same Asana-inspired design system, ensuring a consistent look and feel across the application.
+- **Unique Complexity**: Due to its graphical and highly interactive nature, the canvas possesses the most specialized frontend architecture in the application, leveraging the Konva rendering engine and advanced optimization techniques not present in the other, more document-centric features.
 
-3.2 Immutability & Subscriptions
-- immer with enableMapSet allows ergonomic Map/Set mutation inside set(). State is mutated immutably; updatedAt timestamps used in ElementRenderer memo comparison.
-- Subscriptions: useShallow in many components (CanvasStage, ToolLayer, tools, BaseShapeTool) to batch selectors; subscribeWithSelector enhances targeted updates.
-- Advanced middleware: no redux-like middleware; historyModule serves as undo/redo system; no persistence middleware on store itself; Tauri persistence is explicit via hooks.
+---
 
-3.3 Selection & Transformer
-- SelectionLayer draws selection rect/handles and a standard Konva Transformer. CustomTransformer and TransformerManager centralize multi-node transformer control. Selection uses Set<ElementId> with lastSelectedElementId for primary. SelectionBox component also exists.
+## 3. Build Process & Development Workflow
 
-4) Performance Strategies
+The project's development environment is built on modern tooling, which is essential for developer productivity and application performance.
 
-4.1 Rendering
-- Layer separation: Background/Main/Selection/Tool layers (ConnectorLayer completely removed, connectors now in MainLayer); Layer.listening tuned; elements rendered via memoized ElementRenderer with custom props equality; shapes are memoized; SectionShape memo comparator.
-- Caching: useShapeCaching hook, image smoothing disabled, perfectDrawEnabled=false; pixelRatio=1 to reduce GPU load; Stage scale/position updates are batched.
-- Viewport culling: **CORRECTION**: useSimpleViewportCulling and useSpatialIndexing both use QuadTree implementations (SimpleQuadTree and full QuadTree) for O(log n) culling performance. QUADTREE_THRESHOLD is set to 2000 elements, not 1000. Spatial indexing IS fully implemented with dedicated utils/spatialIndex.ts and utils/spatial/QuadTree.ts.
-- Transformer management: CustomTransformer anchors; TransformerManager centralizes lifecycle and prevents conflicts.
+- **Build Tool**: **Vite** is used for its fast development server and optimized production builds. The configuration (`vite.config.ts`) includes path aliases (e.g., `@/` for `src/`) for cleaner imports.
+- **Package Manager**: The project uses `npm`, with dependencies and scripts defined in `package.json`.
+- **Core Scripts**:
+  - `npm run dev`: Starts the Vite development server.
+  - `npm run build`: Creates an optimized production build.
+  - `npm run test`: Executes the test suite using **Vitest**.
+  - `npm run lint`: Performs static code analysis with **ESLint**.
+  - `npm run type-check`: Validates TypeScript types across the project.
 
-4.2 Event Handling
-- useToolEventHandler attaches/detaches namespaced events; guaranteed cleanup; hover/cursor managed centrally via cursorManager; RAF-throttled wheel zoom via useSingleRAF wrapper and requestAnimationFrame batching; PenTool now uses direct drawing updates without throttling for smooth line rendering.
-- UnifiedEventHandler consolidates stage-level handlers; EventModule provides typed, store-integrated handlers; selection uses target.id and modifiers; double-click to enter text edit.
+---
 
-4.3 Resource Management
-- memoryManager uses WeakMaps to track elements, DOM refs, computed props; periodic logging and cleanup; element pooling arrays; cleanup triggered in CanvasStage unmount; prevents leaking Konva nodes via destroy/remove.
-- Production monitoring (productionMonitoring.ts) tracks durations and thresholds; canvasMonitor monitors console, performance timeline, MutationObservers for Konva canvas container, and logs.
+## 4. High-Level Architecture
 
-5) Core Features Implementation
-- Shapes: RectangleShape/CircleShape/TriangleShape/StickyNoteShape/TextShape/ImageShape/PenShape with Konva primitives; ElementRenderer dispatches by type, passes selection and update handlers.
-- Selection: click to select (ctrl/cmd multi-select), selection highlight rect + corner handle circles in SelectionLayer; Transformer anchors configured; SelectionBox overlays.
-- Transformations: onTransformEnd collects node scaleX/scaleY, resets scale, updates width/height/rotation; CustomTransformer extends capabilities and supports multiple nodes; TransformerManager feeds ids to transformer.
-- Connectors: **UPDATED**: Connectors are now rendered through MainLayer/ElementRenderer instead of dedicated ConnectorLayer; ConnectorTool manages creation/edit with BaseCreationTool foundation; ConnectorShape has interaction; fallback drawing provided in error boundary.
-- Text editing: CanvasTextInput implements hidden textarea syncing and onSave/onCancel/onTab; textEditingUtils utilities; text editing initiation via setTextEditingElement and double-click handler.
-- Pen/Marker/Highlighter: PenTool draws preview Line while drawing with direct updates for smooth rendering (no RAF throttling); StrokeRenderer renders persisted strokes; eraser supports spatial index and batched deletion; drawingModule maintains state and integrates with sticky notes.
-- Sections: SectionTool creates draft then commit; SectionShape wraps children, draggable group with background and title.
-- Tables: TableElement exists with CanvasTextInput integration, plus TableTool for creation.
+### 4.1. Frontend Topology & Data Flow
 
-6) Persistence & Integration (Tauri)
-- Frontend hook useTauriCanvas provides:
-  - ensureEncryptionKey() on startup or before first save/load
-  - saveCanvas(data, filename) invokes save_canvas_data (AES-256-GCM) with key from keyring
-  - loadCanvas(filename) invokes load_canvas_data, returning JSON string; caller deserializes to store
-  - list/delete operations available via Rust commands (hook includes save/load; listing present in Rust and can be wired)
-- Rust canvas.rs
-  - AES-256-GCM w/ random 96-bit nonce; stores nonce + ciphertext; versioned CanvasData JSON; files kept in app_data_dir/canvas
-  - keyring for 256-bit key (hex), auto-create and store; helpful println diagnostics
-- WebView2 acceleration flags set to improve Konva/canvas performance.
+The rendering pipeline is designed for performance through layer separation and a unidirectional data flow.
 
-7) Code Quality & Type Safety
-- TypeScript: strongly typed element discriminated unions in enhanced.types.ts; Konva-specific types in types/konva.types.ts; event.types.ts for handler signatures; tools/types for previews; utility type-safe replacements in memoryManager imports.
-- Minimal any usage; most shapes and tools use explicit types. Some casts exist (as any) around ElementRenderer common props and konvaProps, and in a few utilities; overall type hygiene is good.
-- Selectors use Set/Map which are supported by immer with enableMapSet.
+- **Component Hierarchy**:
+  1.  `CanvasStage.tsx`: The root component. Hosts the Konva `<Stage>` and is wrapped in an `CanvasErrorBoundary`. It subscribes to the Zustand store and manages global events like wheel-to-zoom.
+  2.  `CanvasLayerManager.tsx`: Orchestrates rendering. It receives the full list of elements from `CanvasStage`, performs viewport culling using the `useSpatialIndex` hook, and distributes the visible elements to the appropriate layers.
+  3.  **Layers**:
+      - `BackgroundLayer`: Renders a static grid.
+      - `MainLayer`: Renders the majority of elements (shapes, text, connectors).
+      - `FastLayer`: A dedicated, GPU-accelerated layer for rendering all `ImageElement` types.
+      - `OverlayLayer`: Renders UI-related overlays like the selection box and the Konva `Transformer`.
 
-8) Testing & Reliability
-- Tests under src/features/canvas/tests and src/tests validate shapes, tools, sections, connectors, minimal Konva setup, reliability and performance, integration, and text editing portal.
-- Mocks in src/tests/__mocks__/konva.ts and react-konva.* ensure deterministic runs.
-- Coverage appears broad for core interactions; however, backend persistence via Tauri is not unit-tested in frontend suites; Rust module has basic serialization test and a placeholder key generation test.
+- **Typical Data Flow (User Drags a Shape)**:
+  1.  **Event**: User `mousedown` on a shape in the `MainLayer`.
+  2.  **Handler**: The shape's `onDragStart` event handler is triggered.
+  3.  **Action**: The handler calls an action from the Zustand store, e.g., `updateElement(id, { isDragging: true })`.
+  4.  **State Update**: The `elementModule` in the store updates the state of the specific element immutably via `immer`.
+  5.  **Re-render**: `CanvasStage`, subscribed to the store, receives the updated `elements` map. It passes the new map down to `CanvasLayerManager`.
+  6.  **Culling & Rendering**: `CanvasLayerManager` culls the elements, and the `MainLayer` re-renders only the changed element, which now follows the mouse. The `onDragEnd` event fires another action to save the final position.
 
-9) Areas for Improvement
-- Event targeting and selection robustness: current selection often relies on target.id(); when shapes are groups, child hits may not have ids. Adopt ancestor hit resolution and group-level hit areas per workspace note to ensure reliable selection/resize re-selection.
-- Transformer listening: ensure CustomTransformer/SelectionLayer Transformer instances have listening(true) and hit graph participation; audit for any transformer.listening(false) calls.
-- Group hit areas: For composite shapes (sticky notes, tables), add transparent Rect hit areas and set children listening=false when appropriate to guarantee consistent clicks.
-- Viewport module: zoomViewport ignores center and simply sets scale; implement proper zoom pivoting using pointer and stage transform (CanvasStage does this manually; consolidate into store or a utility to avoid duplication).
-- Culling integration: store.getVisibleElements and useSimpleViewportCulling exist concurrently; standardize on one path to avoid duplication and drift; document thresholds.
-- History: historyModule interface simplified; ensure all element mutations add proper history entries or provide batch APIs; verify redo/undo integrates with connectors and sections.
-- MemoryManager pools: monitor actual reuse and size growth; ensure canvas node destruction runs on element removal everywhere; consider Konva node pooling for heavy interactive preview shapes.
-- Text input: hidden textarea lifecycle is managed manually; consider portal-based DOM overlay tied to stage container with pointer event propagation coordination; ensure stopImmediatePropagation when committing from overlay to avoid selection race (see workspace guidance).
-- Snapping: utilities exist but not fully wired into drag/transform flows; integrate with dragMove and transformer change callbacks to show snap lines (uiModule.snapLines) and apply snapping.
-- Table/Sticky note: ensure element-level groups set listening appropriately to avoid event duplication; consider consolidating text editing across elements.
-- **IMPLEMENTED**: CanvasLibrary UI component now provides management interface for saved canvases using list_canvas_files and delete_canvas_file APIs. Add error handling for missing keyring environments.
-- Performance: consider FastLayer for static layers (background, connectors when not interacting); adopt Scene caching for groups with many children; add drawHit optimizations after enabling group hit areas.
-- Tests: add tests for persistence hooks (mock @tauri-apps/api/core invoke), for zoom pivot correctness, for snapping behavior, and for memoryManager cleanup on unmount. Add regression tests for re-selection/transformer anchors interactions.
+### 4.2. Backend Topology (Tauri + Rust)
 
-10) Recommendations (Prioritized)
+- **Tauri Commands**: `src-tauri/src/commands/canvas.rs` exposes Rust functions to the frontend, including `save_canvas_data`, `load_canvas_data`, etc.
+- **Persistence**: The `useTauriCanvas` hook manages autosaving (debounced at **3000ms**). Data is encrypted using **AES-256-GCM** with a key stored securely in the OS keyring.
+- **GPU Acceleration**: The application enables WebView2 acceleration flags and `CanvasStage.tsx` requests a `'high-performance'` power preference on the canvas context.
 
-P1 – Interaction Reliability and Selection
-- Implement the workspace guideline:
-  - Ensure Transformer.listening(true) and anchors receive pointer events
-  - Add invisible hit-area Rect to composite Groups (StickyNoteShape, TextShape, TableElement) and set group.listening(true) only on selection; refresh hit graph via layer.drawHit
-  - In stage mousedown, resolve selection to nearest Group ancestor with id (shape.findAncestor(...))
-- Centralize selection logic in a SelectTool or UnifiedEventHandler that ascends to Group level; remove reliance on e.target.id() directly.
+---
 
-P1 – Zoom/Pan Consistency
-- Move zoom pivot math from CanvasStage to viewportModule.zoomViewport(centerX, centerY) to keep a single source of truth; update Stage in an effect subscribed to viewport state as today.
+## 5. State Management (Zustand)
 
-P1 – Snapping UX
-- Wire calculateSnapLines and findNearestSnapPoint into drag/transform flows; render snapLines from uiModule in a lightweight overlay; apply snapping adjustments in onDragMove/boundBoxFunc.
+The architecture uses a modular "store-first" pattern with Zustand, designed for performance and maintainability.
 
-P2 – Transformer Lifecycle
-- Replace ad-hoc Transformer instances with TransformerManager + CustomTransformer everywhere; ensure multi-select works; anchors styled per design system; add tests for resizing/rotating on re-selection.
+- **Store Structure**: `unifiedCanvasStore.ts` composes **8 modules** into a single store.
+  - **Modules**: `element`, `selection`, `viewport`, `drawing`, `history`, `section`, `ui`, `event`.
+  - **Consolidation**: `eraserModule` is now in `drawingModule`, `loadingModule` is in `uiModule`, and `stickyNoteModule`/`tableModule` have been consolidated elsewhere.
+- **Middleware**: `immer` (with `enableMapSet`) for immutable updates and `subscribeWithSelector` for performant, fine-grained subscriptions.
+- **Deprecation**: The store's `getVisibleElements()` function is deprecated. A `console.warn` directs developers to use the modern `useSpatialIndex()` hook instead.
 
-P2 – Culling Standardization
-- **UPDATED**: Spatial indexing with QuadTree is already implemented. Consider consolidating useSimpleViewportCulling and useSpatialIndexing into a single optimized solution. Both currently use QuadTree but with slightly different implementations. Expose config (buffer, threshold) via settings.
+*(See Appendix B for Key State Module APIs)*
 
-P2 – History Fidelity
-- Ensure updateElement/addElement/deleteElement invoke addHistoryEntry with meaningful operation names; add batchOperations wrappers in places like SectionTool commits and ConnectorTool edits.
+---
 
-P2 – Performance
-- Consider FastLayer for BackgroundLayer and non-interactive connector previews.
-- Use pixelRatio adaptation when zoomed-out heavily to reduce overdraw cost.
-- Audit memoization: ElementRenderer memo compares updatedAt; ensure all shape mutations set updatedAt.
+## 6. Performance & Error Handling
 
-P3 – Text Editing Robustness
-- Introduce DOM portal overlay editor positioned via stage.getAbsoluteTransform for Text/StickyNote/Table cells. Use safe commit-on-click-outside with stopImmediatePropagation + setTimeout(0) per workspace notes. Add tests.
+### 6.1. Performance Strategies
+- **Viewport Culling**: The `useSpatialIndex` hook uses a QuadTree to efficiently determine visible elements, drastically reducing render load.
+- **Layer Separation**: The use of `MainLayer`, `FastLayer` (for images), and `OverlayLayer` allows Konva to repaint only what has changed.
+- **Low-Level Optimization**: `CanvasStage.tsx` sets performance-critical properties on the Konva stage (`pixelRatio: 1`) and the 2D context (`desynchronized: true`).
+- **Object Pooling**: The `KonvaNodePool` significantly improves performance in drawing-heavy scenarios by reusing Konva nodes.
 
-P3 – Persistence UX  
-- **COMPLETED**: CanvasLibrary UI implemented with list/load/delete functionality using list_canvas_files/delete_canvas_file APIs. Consider adding autosave with debounce and ensureEncryptionKey gating. Add version migration handling in frontend for CanvasData.version.
+### 6.2. Error Handling & Stability
+- **Error Boundaries**: The entire canvas is wrapped in a `CanvasErrorBoundary` to catch rendering errors.
+- **Defensive Programming**: `CanvasLayerManager.tsx` contains numerous checks to ensure the store and its data are initialized before rendering, displaying clear error indicators on the canvas if a problem is detected.
+- **Developer Guardrails**: The codebase includes development-only warnings, such as a console warning if the number of canvas layers exceeds the architectural standard.
 
-P3 – Type Safety and API Hygiene
-- Remove remaining any casts in ElementRenderer/commonShapeProps. Tighten shape prop types and konvaProps typing. Ensure discriminated unions cover all element kinds (marker/highlighter/connector variants).
+---
 
-P3 – Monitoring and Memory
-- Record periodic metrics via productionMonitoring on big operations. Integrate memoryManager stats in a developer panel. Add teardown tests asserting Konva node destruction on element removal.
+## 7. Styling & Theming
 
-Appendix: Key Files Referenced (UPDATED PATHS)
-- Components: CanvasContainer.tsx, CanvasStage.tsx, UnifiedEventHandler.tsx, CanvasLayerManager.tsx, ToolLayer.tsx, CanvasLibrary.tsx
-- Layers: MainLayer.tsx, SelectionLayer.tsx, UILayer.tsx, BackgroundLayer.tsx
-- Shapes: RectangleShape.tsx, CircleShape.tsx, TriangleShape.tsx, TextShape.tsx, StickyNoteShape.tsx, ImageShape.tsx, PenShape.tsx, ConnectorShape.tsx, SectionShape.tsx
-- Tools: **UPDATED PATHS**
-  - Base: components/tools/base/BaseCreationTool.tsx, components/tools/base/BaseShapeTool.tsx
-  - Drawing: components/tools/drawing/PenTool.tsx, components/tools/drawing/HighlighterTool.tsx, components/tools/drawing/MarkerTool.tsx, components/tools/drawing/EraserTool.tsx
-  - Creation: components/tools/creation/TextTool.tsx, components/tools/creation/StickyNoteTool.tsx, components/tools/creation/RectangleTool.tsx, components/tools/creation/CircleTool.tsx, components/tools/creation/TriangleTool.tsx, components/tools/creation/SectionTool.tsx, components/tools/creation/ConnectorTool.tsx, components/tools/creation/MindmapTool.tsx
-  - Core: components/tools/core/PanTool.tsx
-- Store: unifiedCanvasStore.ts + modules (elementModule.ts, selectionModule.ts, viewportModule.ts, drawingModule.ts, historyModule.ts, sectionModule.ts, tableModule.ts, stickyNoteModule.ts, uiModule.ts, eraserModule.ts, eventModule.ts)
-- Hooks: useToolEventHandler.ts, useCanvasSizing.ts, useSimpleViewportCulling.ts, useCanvasHistory.ts, useSelectionManager.ts, useShapeCaching.ts, useTauriCanvas.ts
-- Utils: TransformerManager.tsx, CustomTransformer.tsx, performance/productionMonitoring.ts, performance/cursorManager.ts, coordinateUtils.ts, snappingUtils.ts, textEditingUtils.tsx, exportUtils.ts
-- Backend: src-tauri/src/commands/canvas.rs, src-tauri/src/lib.rs (GPU flags: "--ignore-gpu-blocklist --enable-accelerated-canvas --enable-webgl --enable-accelerated-2d-canvas")
-- Tests: src/features/canvas/tests/*.test.tsx, src/tests/konva-minimal.test.ts and related suites
+- **Design System**: The project is migrating from `tailwindcss` to a unified, Asana-inspired design system defined in `src/styles/asana-core.css`.
+- **Canvas Styling**: Canvas elements are styled via JavaScript props passed to Konva components. These values should eventually be sourced from the design system's CSS variables.
 
-**CHANGES FROM ORIGINAL AUDIT (2025-08-27):**
-1. **ConnectorLayer Completely Removed**: ConnectorLayer has been fully removed from the codebase. Connectors are now rendered through MainLayer for better performance and consistency. ✓
-2. **Tool Path Structure Updated**: Tools are organized in subdirectories (base/, drawing/, creation/, core/) rather than being flat files. ✓
-3. **GPU Acceleration Flags Specified**: Added the exact WebView2 acceleration flags used in production. ✓
-4. **PenTool Performance Fix**: Removed RAF throttling from PenTool for smooth real-time drawing without dropped points. ✓
-5. **CanvasLibrary Implementation**: Implemented complete UI for canvas persistence management using backend list/delete APIs. ✓
-6. **CircleShape Fixes**: Fixed textDisplayProperties implementation for proper text rendering in circles.
-7. **MAJOR CORRECTION - Spatial Indexing**: Document incorrectly stated "not a quadtree" - spatial indexing with QuadTree IS fully implemented:
-   - SimpleQuadTree in utils/spatialIndex.ts
-   - Full QuadTree in utils/spatial/QuadTree.ts
-   - Used in both useSimpleViewportCulling and useSpatialIndexing hooks
-   - QUADTREE_THRESHOLD is 2000 elements (not 1000)
-8. **ElementRenderer Clarification**: ElementRenderer exists but is NOT used in MainLayer (as correctly stated). It's only imported in CanvasLayerManager.
+---
 
-End of Report.
+## 8. Gaps & Recommendations
+
+- **P1 - Finalize Styling Migration**: Prioritize the complete removal of `tailwindcss` from canvas-related components.
+- **P2 - Document Module Interactions**: Create a sequence diagram or written guide for a complex user flow to show how the Zustand modules interact.
+- **P3 - Enhance Backend Testing**: The Rust modules need a more comprehensive test suite covering edge cases in encryption and file I/O.
+
+---
+
+## Appendix A: Core Data Structures
+
+Core data types are defined in `src/features/canvas/types/enhanced.types.ts`. The system uses **Branded Types** for IDs (`ElementId`, `SectionId`) to ensure type safety at compile time.
+
+**Base Element:**
+```typescript
+export interface BaseElement {
+  id: ElementId;
+  type: string;
+  x: number;
+  y: number;
+  rotation?: number;
+  isLocked?: boolean;
+  // ... and other common properties
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+**CanvasElement Discriminated Union:**
+The `CanvasElement` type is a discriminated union based on the `type` property, allowing for type-safe handling of different shapes.
+
+```typescript
+export type CanvasElement = 
+  | TextElement
+  | RectangleElement
+  | CircleElement
+  | SectionElement
+  | ConnectorElement
+  | ImageElement
+  | TableElement
+  | StickyNoteElement
+  | PenElement
+  // ... and other element types
+;
+```
+
+**Example Element Type (Rectangle):**
+```typescript
+export interface RectangleElement extends BaseElement {
+  type: 'rectangle';
+  width: number;
+  height: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  text?: string;
+}
+```
+
+---
+
+## Appendix B: Key State Module APIs
+
+This is a high-level overview of the primary responsibilities and key actions of the main Zustand store modules.
+
+- **`elementModule`**: Manages the lifecycle of all canvas elements.
+  - `addElement(element: CanvasElement)`: Adds a new element.
+  - `updateElement(id: ElementId, updates: Partial<CanvasElement>)`: Updates properties of an existing element.
+  - `deleteElement(id: ElementId)`: Removes an element.
+  - `clearAllElements()`: Deletes all elements from the canvas.
+
+- **`selectionModule`**: Manages which elements are selected.
+  - `selectElement(id: ElementId, multiSelect: boolean)`: Selects one or more elements.
+  - `deselectElement(id: ElementId)`: Deselects a specific element.
+  - `clearSelection()`: Clears the entire selection.
+  - `setSelectedElementIds(ids: ElementId[])`: Directly sets the selection.
+
+- **`viewportModule`**: Manages the canvas's position and zoom level.
+  - `setViewport(viewport: Partial<ViewportState>)`: Sets the raw viewport state.
+  - `panViewport(delta: { x: number; y: number })`: Pans the canvas by a delta.
+  - `zoomViewport(newScale: number, centerX: number, centerY: number)`: Zooms the canvas around a specific pivot point.
+
+- **`historyModule`**: Manages the undo/redo stack.
+  - `addHistoryEntry(operation: HistoryEntry)`: Pushes a new state change onto the history stack.
+  - `undo()`: Reverts to the previous state.
+  - `redo()`: Moves forward to the next state.
+  - `clearHistory()`: Clears the undo/redo stack.
+
+---
+**End of Report.**

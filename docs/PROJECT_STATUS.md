@@ -1,6 +1,7 @@
+
 # LibreOllama Project Status
 
-**Last Updated**: August 6, 2025  
+**Last Updated**: August 28, 2025
 **Purpose**: Consolidated project status and implementation guide
 
 ## 🎨 Design System Migration (Asana)
@@ -53,13 +54,6 @@
 - ✅ Response caching for improved performance
 - ✅ Model-specific prompt optimization
 
-**Technical Implementation**:
-- `TextSelectionDetector` component for cross-module text selection
-- `AIWritingToolsMenu` with positioning logic to prevent screen cutoff
-- `AIOutputModalPro` with native event listeners for reliable closing
-- Direct LLM API calls instead of chat conversation system
-- Zustand store integration for settings persistence
-
 **Architecture**:
 - Components in `src/components/ai/`
 - LLM providers in `src/services/llm/`
@@ -67,25 +61,35 @@
 - BlockNote integration in `src/features/notes/components/BlockNotePopover.tsx`
 
 ### 🎯 Canvas System
-**Status**: ✅ **PRODUCTION-READY** - Fully functional with comprehensive testing
+**Status**: ✅ **PRODUCTION-READY** - Core functionality is stable, with a clear plan for next-level performance enhancements.
 
 **What's Working**:
-- ✅ React Konva integration with modular store architecture
-- ✅ 15+ element types with discriminated union typing
-- ✅ Core tools: Text, Sticky Notes, Sections, Connectors, Pen tool, Shapes (Rectangle, Circle, Triangle)
-- ✅ Advanced tools: Table creation, Image upload, Drawing tools (pen, pencil, eraser, highlighter)
-- ✅ Smart connector system with FigJam-like behavior and auto-update
-- ✅ Section tool with auto-capture functionality
-- ✅ Selection and transformation system with custom transformer
-- ✅ 50-state undo/redo functionality
-- ✅ Layer management system (Background, Main, Connector, UI layers)
-- ✅ Performance optimizations (viewport culling, memory management, shape caching)
-- ✅ Comprehensive test coverage (37 shape tests passing)
+- ✅ **Modern Architecture**: A modular system built on React, Konva, and a highly optimized Zustand store.
+- ✅ **Rich Feature Set**: 15+ element types, advanced drawing tools (pen, highlighter, eraser), smart connectors, sections, and image support.
+- ✅ **Performant Rendering Pipeline**: A consolidated layer system (`Background`, `Main`, `Overlay`) plus a dedicated, GPU-accelerated `FastLayer` for images.
+- ✅ **Advanced Optimizations**: Viewport culling via a `useSpatialIndex` QuadTree, a `KonvaNodePool` for reusing objects, and low-level performance settings are all implemented.
+- ✅ **Robust State Management**: A modular 8-module Zustand store with `immer` provides predictable and performant state handling.
+- ✅ **Reliable Persistence**: Autosaving to the local filesystem via Tauri, with AES-256-GCM encryption.
+- ✅ **Comprehensive Testing**: Strong test coverage for canvas components and state logic.
+- ✅ **Migration Progress**: Phase 1 completed with NonReactCanvasStage implementation and imperative drawing pipeline.
 
-**Architecture**: 
-- Unified store pattern with Zustand + Immer
-- Centralized event handling via UnifiedEventHandler
-- Component-based layer system (Background, Main, Connector, UI)
+**Architecture Summary**:
+- The architecture is defined by a `CanvasStage` that manages a `CanvasLayerManager`.
+- The manager performs spatial culling and distributes visible elements to the appropriate layer (`MainLayer`, `FastLayer`, `OverlayLayer`).
+- State is centralized in an 8-module `unifiedCanvasStore`.
+- **Current Migration**: Following the KONVA_BASED_CANVAS.md blueprint to migrate from react-konva to direct Konva usage.
+- **Status**: Phase 1 (Fresh Core) completed, Phase 2 (State Bridge) in progress.
+
+**Future Performance Enhancements (Based on Performance Plan)**:
+- A forward-looking performance plan is in place to further optimize the canvas.
+- Key initiatives include implementing **batch rendering** for shapes, using **custom Tauri protocols** to accelerate saving/loading large canvases, and tuning the **spatial index with adaptive thresholds**.
+- **Migration Blueprint**: Following the comprehensive KONVA_BASED_CANVAS.md plan for systematic migration to direct Konva usage.
+
+**Related Documentation**:
+- **Migration Blueprint**: `docs/KONVA_BASED_CANVAS.md` - Complete migration plan
+- **Current Status**: `docs/CANVAS_MIGRATION_STATUS.md` - Real-time progress tracking
+- **Migration Plan**: `docs/CANVAS_MIGRATION_PLAN.md` - Implementation phases
+- **Drawing Pipeline**: `docs/CANVAS_DRAWING_PIPELINE_STATUS.md` - Current implementation details
 
 ### 📧 Gmail Integration
 **Status**: Functional backend with frontend integration
@@ -285,124 +289,56 @@
 
 **Architecture**: Section-based settings with form controls and validation ready
 
-## Development Guidelines
-
-### AI Writing Tools Development
-- Use `TextSelectionDetector` for cross-module text selection
-- Direct LLM API calls via provider services
-- Maintain modal state to prevent unmounting
-- Use native event listeners for portal components
-- Clean system prompts to avoid LLM preamble
-
-### Canvas Development
-- Use unified store pattern (`unifiedCanvasStore.ts`)
-- Follow React Konva best practices
-- Test using store-first approach, not UI rendering
-- Use branded types for IDs and type safety
-
-### Gmail Integration
-- Backend services handle all API interactions
-- Frontend uses Tauri commands for Gmail operations
-- OAuth handled securely in backend only
-- Use OS keyring for token storage
-
-### Calendar/Tasks Development
-- Real Google API integration available
-- Mock services for development/testing
-- Store-based state management
-- Multi-account support built-in
-
 ## Production Readiness Assessment
 
 ### What's Production-Ready
 - ✅ **AI Writing Tools** - fully integrated with sophisticated output modal
-- ✅ Canvas core functionality (with noted limitations)
+- ✅ **Canvas System** - core functionality is stable and production-ready.
+- ✅ **Chat System** - real LLM integration with multiple providers
+- ✅ **Tasks Management System** - fully production-ready with localStorage persistence
 - ✅ Gmail backend services architecture
 - ✅ Calendar/Tasks API integration
 - ✅ Security implementation (OS keyring, OAuth)
-- ✅ **Tasks Management System** - fully production-ready with localStorage persistence
-- ✅ **Kanban/Tasks simplified store architecture** (7 passing tests, production-ready)
-- ✅ **Chat System** - real LLM integration with multiple providers
 
 ### What Needs Work
-- 🔄 Canvas tool consistency improvements
-- 🔄 Gmail frontend integration testing
-- 🔄 Backend test failures resolution
-- 🔄 Documentation cleanup and consolidation
-- 🔄 Calendar-Tasks integration (drag-and-drop time blocking)
+- 🔄 **Canvas Performance**: Execute the performance enhancement plan (batch rendering, IPC optimization).
+- 🔄 **Calendar-Tasks Integration**: Complete the missing drag-and-drop time blocking workflow.
+- 🔄 **Gmail Frontend**: Complete integration testing and fix race conditions.
+- 🔄 **Backend Stability**: Resolve the 2 failing tests and address the 49 warnings.
 
 ## Next Steps
 
-1. **Polish AI Writing Tools**:
-   - Add visual feedback/loading states during AI processing
-   - Implement more sophisticated context awareness
-   - Add workflow automation capabilities
-   - Performance optimization for AI responses
-
-2. **Calendar-Tasks Integration**: Complete the missing drag-and-drop time blocking workflow
-   - Add calendar drop zones for tasks
-   - Create "Schedule Task" modal with time selection
-   - Implement task-to-event conversion API calls
-   - Add enhanced event creation modal
-   
-3. **Fix Backend Tests**: Resolve 2 failing tests (OAuth config, Gmail scopes)
-
-4. **Gmail Frontend**: Complete integration testing and fix race conditions
-
-5. **Canvas Stability**: Address tool consistency issues
-
-6. **Mobile & Accessibility**: Add keyboard navigation, ARIA labels, and responsive improvements
+1.  **Canvas Performance**: Begin Phase 1 of the performance plan, focusing on batch rendering and Tauri IPC optimization.
+2.  **Calendar-Tasks Integration**: Complete the drag-and-drop time blocking workflow.
+3.  **Fix Backend Tests**: Resolve 2 failing tests (OAuth config, Gmail scopes).
+4.  **Polish AI Writing Tools**: Add visual feedback/loading states during AI processing.
+5.  **Gmail Frontend**: Complete integration testing and fix race conditions.
 
 ## Key Files and Locations
 
 ### AI Writing Tools
 - **Components**: `src/components/ai/`
-  - `TextSelectionDetector.tsx` - Cross-module text selection
-  - `AIWritingToolsMenu.tsx` - Context menu with AI actions
-  - `AIOutputModalPro.tsx` - Sophisticated output modal
-  - `MarkdownRenderer.tsx` - Clean markdown rendering
-- **Services**: `src/services/llm/` - LLM provider integrations
-- **Settings**: `src/app/pages/Settings.tsx` - AI Writing configuration
+- **Services**: `src/services/llm/`
+- **Settings**: `src/app/pages/Settings.tsx`
 
 ### Canvas
-- Store: `src/features/canvas/stores/unifiedCanvasStore.ts`
-- Components: `src/features/canvas/components/`
-- Tools: `src/features/canvas/tools/`
+- **Store**: `src/features/canvas/stores/unifiedCanvasStore.ts`
+- **Components**: `src/features/canvas/components/`
+- **Layers**: `src/features/canvas/layers/`
+- **Types**: `src/features/canvas/types/enhanced.types.ts`
 
 ### Gmail
-- Backend: `src-tauri/src/services/gmail/`
-- Frontend: `src/features/mail/services/`
-- Store: `src/features/mail/stores/mailStore.ts`
+- **Backend**: `src-tauri/src/services/gmail/`
+- **Frontend**: `src/features/mail/services/`
+- **Store**: `src/features/mail/stores/mailStore.ts`
 
 ### Tasks Management (Production-Ready)
-- **Main Store**: `src/stores/useKanbanStore.ts` (localStorage-based, production-ready)
-- **Main Page**: `src/app/pages/Tasks.tsx` (complete implementation)
-- **Components**: TaskCard, TaskColumn, SimpleTaskModal with professional interaction patterns
-- **Tests**: `src/stores/__tests__/useKanbanStore.test.ts` (7 passing tests)
+- **Main Store**: `src/stores/useKanbanStore.ts`
+- **Main Page**: `src/app/pages/Tasks.tsx`
 
 ### Chat System
-- **Store**: `src/features/chat/stores/chatStore.ts` (769 lines, complete implementation)
-- **Services**: `src/services/llm/` - Shared LLM providers
+- **Store**: `src/features/chat/stores/chatStore.ts`
 - **Components**: `src/features/chat/components/`
-
-## Support and Development
-
-### Common Issues
-- Canvas tools: Check unified store connections
-- Gmail: Verify OAuth environment variables
-- Calendar: Ensure Google API credentials are configured
-- AI Writing: Check LLM provider API keys and settings
-
-### Testing
-
-#### Current Test Status
-- **Backend**: 40 passing, 2 failing tests (minor OAuth config and Gmail scopes issues)
-- **Frontend**: Core features well-tested with sustainable testing approach
-- **Canvas**: ✅ **37 shape tests passing**, comprehensive test coverage with store-first approach
-- **Gmail**: Most tests passing, some race condition issues
-- **Tasks Management**: ✅ **7 passing tests** with production-ready unified store implementation
-- **AI Writing**: ✅ Integration tested across multiple modules with real LLM providers
-- **Chat System**: Complete implementation with error handling and streaming support
 
 ---
 

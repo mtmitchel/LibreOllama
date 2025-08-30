@@ -10,7 +10,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { Group, Text, Rect } from 'react-konva';
+// react-konva removed from runtime per blueprint
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -54,8 +54,8 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       type: 'sticky-note',
       x: adjustedPosition.x,
       y: adjustedPosition.y,
-      width: 180, // FigJam default size
-      height: 180,
+      width: 126, // 30% smaller default
+      height: 126,
       text: '', // Start with empty text so immediate editing begins
       backgroundColor: backgroundColor,
       textColor: '#1F2937', // Dark gray for good contrast
@@ -88,41 +88,10 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
     }, 50);
   }, [enableStickyNoteContainer]);
 
-  // Render preview with sticky note shadow (no preview text)
-  const renderPreview = useCallback((position: Vector2d, showGuide: boolean, startPos?: Vector2d, endPos?: Vector2d) => {
-    if (!showGuide) return null;
-
-    const stickyNoteSize = 180;
-    const backgroundColor = selectedStickyNoteColor || '#FFF2CC';
-    
-    // Center the preview on cursor position
-    const previewX = position.x - (stickyNoteSize / 2);
-    const previewY = position.y - (stickyNoteSize / 2);
-
-    return (
-      <Group>
-        {/* Sticky note preview */}
-        <Rect
-          x={previewX}
-          y={previewY}
-          width={stickyNoteSize}
-          height={stickyNoteSize}
-          fill={backgroundColor}
-          stroke="#DDD"
-          strokeWidth={1}
-          cornerRadius={4}
-          opacity={0.8}
-          listening={false}
-          shadowEnabled={true}
-          shadowColor="#000000"
-          shadowBlur={4}
-          shadowOpacity={0.2}
-          shadowOffsetX={2}
-          shadowOffsetY={2}
-        />
-      </Group>
-    );
-  }, [selectedStickyNoteColor]);
+  // Preview is rendered imperatively by NonReactCanvasStage; no JSX preview here
+  const renderPreview = useCallback((position: Vector2d, showGuide: boolean) => {
+    return null;
+  }, []);
 
   // Simple direct event handling to avoid the infinite loop
   React.useEffect(() => {
@@ -143,8 +112,9 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       // Add to store
       const addElement = useUnifiedCanvasStore.getState().addElement;
       addElement(stickyNote);
+      console.info('[CREATE] sticky-note', stickyNote.id);
       
-      // Switch to select tool
+      // Switch to select tool (ok to switch now; edit overlay is decoupled from tool)
       const setSelectedTool = useUnifiedCanvasStore.getState().setSelectedTool;
       setSelectedTool('select');
       
@@ -152,9 +122,12 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       const selectElement = useUnifiedCanvasStore.getState().selectElement;
       selectElement(stickyNote.id, false);
       
-      // Start text editing
+      // Start text editing (defer to end of tick so store updates settle)
       const setTextEditingElement = useUnifiedCanvasStore.getState().setTextEditingElement;
-      setTextEditingElement(stickyNote.id);
+      setTimeout(() => {
+        console.info('[EDIT] request', stickyNote.id);
+        setTextEditingElement(stickyNote.id);
+      }, 0);
     };
 
     stage.on('click', handleClick);
@@ -167,9 +140,6 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
   // Render preview
   if (!isActive) return null;
   
-  return (
-    <Group>
-      {/* Preview will be handled by the main canvas stage */}
-    </Group>
-  );
+  // No-op react-konva preview; NonReactCanvasStage renders imperatively
+  return null;
 }; 

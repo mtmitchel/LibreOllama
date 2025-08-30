@@ -1,11 +1,11 @@
-import React, { useCallback, useRef } from 'react';
-import { Line, Layer } from 'react-konva';
+import React, { useCallback, useRef, useEffect } from 'react';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useShallow } from 'zustand/react/shallow';
-import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
 import { createElementId } from '../../../types/enhanced.types';
 import { nanoid } from 'nanoid';
+import { acquireNode, releaseNode } from '../../../utils/KonvaNodePool';
+import { getContentPointer } from '../../../utils/coords';
 
 interface PenToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -16,74 +16,118 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
   // High-performance drawing refs - avoid React state updates during drawing
   const isDrawingRef = useRef(false);
   const pointsRef = useRef<number[]>([]);
+  // We no longer render a react-konva <Line>; use a Konva.Line node directly
   const previewLineRef = useRef<Konva.Line | null>(null);
   const previewLayerRef = useRef<Konva.Layer | null>(null);
+  const pooledNodeRef = useRef<Konva.Line | null>(null);
+  const lastPointRef = useRef<{x:number;y:number}|null>(null);
 
-  // Store selectors - only for final stroke storage and pen color
-  const { penColor, addElement, findStickyNoteAtPoint, addElementToStickyNote } = useUnifiedCanvasStore(
+  // Store selectors - for stroke storage, preview, and pen color
+  const { penColor, addElementDrawing, findStickyNoteAtPoint, addElementToStickyNote, startDrawing, updateDrawing, finishDrawing } = useUnifiedCanvasStore(
     useShallow((state) => ({
       penColor: state.penColor || '#000000',
-      addElement: state.addElement,
+      addElementDrawing: state.addElementDrawing,
       findStickyNoteAtPoint: state.findStickyNoteAtPoint,
-      addElementToStickyNote: state.addElementToStickyNote
+      addElementToStickyNote: state.addElementToStickyNote,
+      startDrawing: state.startDrawing,
+      updateDrawing: state.updateDrawing,
+      finishDrawing: state.finishDrawing
     }))
   );
 
-  // Handle pointer down - start drawing with high-performance refs
-  const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isActive || !stageRef.current || !previewLineRef.current || !previewLayerRef.current) return;
-    
-    // Only start drawing if clicking on the stage or background layer (not on existing elements)
-    const stage = stageRef.current;
-    const target = e.target;
-    
-    // Allow drawing on stage, background layer, or other non-element targets
-    if (target !== stage && target.getClassName() !== 'Layer') {
-      // Check if target is a shape element - if so, don't start drawing
-      if (target.getClassName() === 'Group' || target.getClassName() === 'Rect' || 
-          target.getClassName() === 'Circle' || target.getClassName() === 'Line' || 
-          target.getClassName() === 'Text') {
-        return;
-      }
+  // High-frequency input capture and interpolation
+  const addPoint = useCallback((x: number, y: number) => {
+    const last = lastPointRef.current;
+    if (!last) {
+      pointsRef.current.push(x, y);
+      lastPointRef.current = { x, y };
+      return;
     }
+    const dx = x - last.x;
+    const dy = y - last.y;
+    const dist = Math.hypot(dx, dy);
+    const step = 2; // px - tuneable for smoothness
+    
+    if (dist > step) {
+      const n = Math.floor(dist / step);
+      for (let i = 1; i <= n; i++) {
+        const nx = last.x + (dx * (i / n));
+        const ny = last.y + (dy * (i / n));
+        pointsRef.current.push(nx, ny);
+      }
+    } else {
+      pointsRef.current.push(x, y);
+    }
+    lastPointRef.current = { x, y };
+  }, []);
 
-    const pointer = stage.getPointerPosition();
+  // Handle pointer down - start drawing with interpolation
+  const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
+    if (!isActive || !stageRef.current) return;
+    
+    // PERFORMANCE: Skip expensive element checks during drawing for maximum responsiveness
+    const stage = stageRef.current;
+    const pointer = getContentPointer(stage);
     if (!pointer) return;
 
     // Initialize drawing with refs (no React state updates)
     isDrawingRef.current = true;
-    pointsRef.current = [pointer.x, pointer.y];
+    pointsRef.current = [];
+    lastPointRef.current = null;
+    
+    // Ensure pooled node exists and is added
+    if (!pooledNodeRef.current) {
+      pooledNodeRef.current = acquireNode('line') as Konva.Line;
+      previewLayerRef.current?.add(pooledNodeRef.current);
+    }
+    
+    // Signal drawing start to disable progressive rendering
+    startDrawing('pen', pointer);
+    
+    addPoint(pointer.x, pointer.y);
     
     // Set up preview line on dedicated layer
-    previewLineRef.current.points(pointsRef.current);
-    previewLineRef.current.stroke(penColor);
-    previewLayerRef.current.batchDraw();
-  }, [isActive, stageRef, penColor]);
+    if (pooledNodeRef.current) {
+      pooledNodeRef.current.points(pointsRef.current);
+      pooledNodeRef.current.stroke(penColor);
+      pooledNodeRef.current.strokeWidth(2);
+      pooledNodeRef.current.lineCap('round');
+      pooledNodeRef.current.lineJoin('round');
+      pooledNodeRef.current.tension(0);
+      pooledNodeRef.current.listening(false);
+      pooledNodeRef.current.perfectDrawEnabled(false);
+    }
+    
+    previewLayerRef.current?.batchDraw();
+  }, [isActive, stageRef, penColor, addPoint]);
 
-  // Handle pointer move - ultra-fast updates via Konva refs
+  // Handle pointer move - ultra-fast updates with interpolation
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isActive || !isDrawingRef.current || !stageRef.current || !previewLineRef.current || !previewLayerRef.current) return;
+    if (!isActive || !isDrawingRef.current || !stageRef.current || !pooledNodeRef.current) return;
 
     const stage = stageRef.current;
-    const pointer = stage.getPointerPosition();
+    const pointer = getContentPointer(stage);
     if (!pointer) return;
 
-    // Add points to ref and update Konva directly - no React re-renders
-    pointsRef.current.push(pointer.x, pointer.y);
-    previewLineRef.current.points(pointsRef.current);
+    addPoint(pointer.x, pointer.y);
     
-    // Batch draw for optimal performance
-    previewLayerRef.current.batchDraw();
-  }, [isActive, stageRef]);
+    // Update store's currentPath for MainLayer preview
+    updateDrawing(pointer);
+    
+    pooledNodeRef.current.points(pointsRef.current);
+    previewLayerRef.current?.batchDraw();
+  }, [isActive, stageRef, addPoint, updateDrawing]);
 
   // Handle pointer up - commit final stroke to store
   const handlePointerUp = useCallback(() => {
-    if (!isActive || !isDrawingRef.current || !previewLineRef.current || !previewLayerRef.current) return;
+    if (!isActive || !isDrawingRef.current) return;
 
     isDrawingRef.current = false;
     
     // Only commit to store if we have enough points for a meaningful stroke
     if (pointsRef.current.length >= 4) {
+      const commitStartTime = performance.now();
+      
       // Create pen element and add to store
       const penElement = {
         id: createElementId(nanoid()),
@@ -99,8 +143,8 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
         isHidden: false
       };
       
-      // Add to store
-      addElement(penElement);
+      // Add to store using optimized drawing path
+      addElementDrawing(penElement);
       
       // Check for sticky note integration
       const startPoint = { x: pointsRef.current[0], y: pointsRef.current[1] };
@@ -111,46 +155,103 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
       }
     }
 
-    // Clear preview line and reset
-    pointsRef.current = [];
-    previewLineRef.current.points([]);
-    previewLayerRef.current.batchDraw();
-  }, [isActive, penColor, addElement, findStickyNoteAtPoint, addElementToStickyNote]);
-
-  // Attach event listeners to stage when active
-  useToolEventHandler({
-    isActive,
-    stageRef,
-    toolName: 'PenTool',
-    handlers: {
-      onPointerDown: handlePointerDown,
-      onPointerMove: handlePointerMove,
-      onPointerUp: handlePointerUp
+    // Signal drawing end to re-enable progressive rendering
+    finishDrawing();
+    
+    // Clear preview and reset
+    if (pooledNodeRef.current) {
+      pooledNodeRef.current.points([]);
     }
-  });
+    pointsRef.current = [];
+    lastPointRef.current = null;
+    
+    previewLayerRef.current?.batchDraw();
+  }, [isActive, penColor, addElementDrawing, findStickyNoteAtPoint, addElementToStickyNote, startDrawing, updateDrawing, finishDrawing]);
 
-  // Render dedicated preview layer for high-performance drawing
+  // Store callbacks in refs to prevent stale closures
+  const handlersRef = useRef({
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp
+  });
+  
+  // Update refs when callbacks change
+  useEffect(() => {
+    handlersRef.current = {
+      handlePointerDown,
+      handlePointerMove,
+      handlePointerUp
+    };
+  }, [handlePointerDown, handlePointerMove, handlePointerUp]);
+
+  // Attach stage listeners when active - using stable wrapper functions
+  React.useEffect(() => {
+    if (!isActive || !stageRef.current) return;
+    const stage = stageRef.current;
+    
+    // Stable wrapper functions that call the current ref values
+    const onPointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => handlersRef.current.handlePointerDown(e);
+    const onPointerMove = (e: Konva.KonvaEventObject<PointerEvent>) => {
+      const t0 = performance.now();
+      handlersRef.current.handlePointerMove(e);
+      const t1 = performance.now();
+      try { (window as any).CANVAS_PERF?.recordPointer?.('pen', t1 - t0); } catch {}
+    };
+    const onPointerUp = () => handlersRef.current.handlePointerUp();
+    
+    stage.on('pointerdown', onPointerDown);
+    stage.on('pointermove', onPointerMove);
+    stage.on('pointerup', onPointerUp);
+    
+    return () => {
+      stage.off('pointerdown', onPointerDown);
+      stage.off('pointermove', onPointerMove);
+      stage.off('pointerup', onPointerUp);
+    };
+  }, [isActive]); // Only re-attach when active state changes
+
+  // Cleanup pooled node when tool becomes inactive or component unmounts
+  React.useEffect(() => {
+    if (!isActive && pooledNodeRef.current) {
+      // Release pooled node when tool becomes inactive
+      pooledNodeRef.current.remove();
+      releaseNode(pooledNodeRef.current, 'line');
+      pooledNodeRef.current = null;
+    }
+    
+    return () => {
+      // Cleanup on unmount
+      if (pooledNodeRef.current) {
+        pooledNodeRef.current.remove();
+        releaseNode(pooledNodeRef.current, 'line');
+        pooledNodeRef.current = null;
+      }
+    };
+  }, [isActive]);
+
+  // Set up the preview layer on mount – create a Konva.Line node imperatively
+  React.useEffect(() => {
+    if (!isActive || !stageRef.current) return;
+    const stage = stageRef.current;
+    const fast = stage.findOne<Konva.Layer>('.preview-fast-layer') as Konva.Layer | null;
+    const targetLayer = (fast as any) || (stage.getLayers()[0] as any) || null;
+    previewLayerRef.current = targetLayer;
+
+    if (!pooledNodeRef.current && targetLayer) {
+      pooledNodeRef.current = acquireNode('line') as Konva.Line;
+      targetLayer.add(pooledNodeRef.current);
+      targetLayer.draw();
+    }
+    return () => {
+      // cleanup handled elsewhere
+    };
+  }, [isActive, stageRef]);
+
+  // Render dedicated preview line for high-performance drawing
   if (!isActive) {
     return null;
   }
 
-  return (
-    <Layer
-      ref={previewLayerRef}
-      listening={false}
-    >
-      <Line
-        ref={previewLineRef}
-        points={[]}
-        stroke={penColor}
-        strokeWidth={2}
-        tension={0}  // No tension for accurate path following
-        lineCap="round"
-        lineJoin="round"
-        globalCompositeOperation="source-over"
-        listening={false}
-        perfectDrawEnabled={false}  // Performance optimization
-      />
-    </Layer>
-  );
-}; 
+  // No JSX: this tool draws preview via imperative Konva API only
+  return null;
+};

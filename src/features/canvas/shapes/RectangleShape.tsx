@@ -2,14 +2,15 @@
 import React, { useRef, useEffect, useCallback, useReducer, useState, useMemo } from 'react';
 import { Group, Rect, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
+import { useShapeCaching } from '../hooks/useShapeCaching';
 import { RectangleElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { measureTextDimensions } from '../utils/textEditingUtils';
+import { measureText } from '../utils/textUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 import { useDebounce } from '@/core/hooks/useDebounce';
 import { SHAPE_FITTING_DEFAULTS } from '../utils/shapeFittingUtils';
 import { useSelectionProtection } from '../contexts/CanvasEventContext';
-import { useRAFManager } from '../hooks/useRAFManager';
+import { useRafManager } from '../hooks/useRafManager';
 
 // Resize constants for consistency
 const RESIZE_CONSTANTS = {
@@ -204,7 +205,7 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   const { protectSelection } = useSelectionProtection();
   
   // Centralized RAF management
-  const rafManager = useRAFManager('RectangleShape');
+  const rafManager = useRafManager('RectangleShape');
   
   const [, forceUpdate] = useReducer(x => x + 1, 0);
   
@@ -235,6 +236,18 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     strokeWidth: 2,
     cornerRadius: 4
   }), [element.fill, element.stroke]);
+
+  // Strategic shape caching for large/complex rectangles
+  const caching = useShapeCaching({
+    element: element as unknown as CanvasElement,
+    cacheConfig: {
+      enabled: true,
+      sizeThreshold: require('../utils/performance/cacheTuning').getCacheThresholds().rect.size, // dynamic
+      complexityThreshold: 3,
+      forceCache: false,
+    },
+    dependencies: [rectStyle.fill, rectStyle.stroke, width, height]
+  });
 
   // Memoized font family (expensive function call)
   const fontFamily = useMemo(() => {
@@ -268,13 +281,10 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     updateInProgressRef.current = true;
 
     try {
-      const measuredDimensions = measureTextDimensions(
+      const measuredDimensions = measureText(
         debouncedText,
         fontSize,
         element.fontFamily || getAvailableFontFamily(),
-        width - 20,
-        true,
-        true // Force word wrapping for rectangles
       );
 const targetHeight = Math.max(RESIZE_CONSTANTS.MIN_HEIGHT, measuredDimensions.height + 40);
       const finalHeight = Math.max(height, targetHeight);
@@ -324,13 +334,10 @@ onUpdate(element.id, { height: finalHeight });
     // IMMEDIATE SHAPE UPDATE for fluid real-time feedback
     if (newText && newText.length > 5) { // Much lower trigger for immediate feedback
       try {
-        const immediateMeasuredDimensions = measureTextDimensions(
+        const immediateMeasuredDimensions = measureText(
           newText,
           fontSize,
           element.fontFamily || getAvailableFontFamily(),
-          width - 20,
-          true,
-          true // Force word wrapping for rectangles
         );
 
         const immediateTargetHeight = Math.max(RESIZE_CONSTANTS.MIN_HEIGHT, immediateMeasuredDimensions.height + 40);
@@ -381,13 +388,10 @@ isEditingRef.current = false;
           // BACKUP: Force shape update on save to ensure it fits the final text
           if (newText && newText.trim().length > 0) {
             try {
-              const finalMeasuredDimensions = measureTextDimensions(
+              const finalMeasuredDimensions = measureText(
                 newText.trim(),
                 fontSize,
                 element.fontFamily || getAvailableFontFamily(),
-                width - 20,
-                true,
-                true // Force word wrapping for rectangles
               );
               
               const finalTargetHeight = Math.max(RESIZE_CONSTANTS.MIN_HEIGHT, finalMeasuredDimensions.height + 40);
@@ -503,11 +507,26 @@ editorRef.current.cleanup();
         tabIndex={isSelected ? 0 : -1}
       >
         <Rect
-          ref={rectRef}
+          ref={(node) => {
+            rectRef.current = node as any;
+            // Attach to caching hook
+            if (node) {
+              caching.nodeRef.current = node as any;
+              // Apply/refresh caching when node mounts
+              if (caching.shouldCache) {
+                // Defer to next tick to ensure attributes are applied
+                setTimeout(() => caching.applyCaching(), 0);
+              }
+            }
+          }}
           width={width}
           height={height}
           {...rectStyle}
-          onTransformEnd={handleTransformEnd}
+          onTransformEnd={(e) => {
+            handleTransformEnd(e);
+            // Invalidate cache after transform
+            setTimeout(() => caching.refreshCache(), 0);
+          }}
         />
         {!isCurrentlyEditing && (
           <Text

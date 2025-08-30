@@ -2,7 +2,7 @@
  * CanvasEventContext - Context-based communication system for canvas events
  * 
  * Replaces global window usage with proper React context-based communication
- * between UnifiedEventHandler and components that need to interact with it.
+ * between the canvas event system and components that need to interact with it.
  */
 
 import React, { createContext, useContext, useCallback, useRef, ReactNode } from 'react';

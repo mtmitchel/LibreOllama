@@ -13,7 +13,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+
 import { useShallow } from 'zustand/react/shallow';
 import { createMindmapStructure } from '../../../utils/mindmapUtils';
 
@@ -139,18 +139,7 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
   }, [isActive, editingTextId]);
 
   // Use shared event handler with namespaced events
-  useToolEventHandler({
-    isActive,
-    stageRef,
-    toolName: 'mindmapTool',
-    handlers: {
-      onPointerMove: handlePointerMove,
-      onPointerDown: handlePointerDown,
-      onPointerLeave: handlePointerLeave,
-      onPointerEnter: handlePointerEnter,
-      useNamespacedEvents: true
-    }
-  });
+  
 
   // Cursor management is handled by CanvasStage's centralized cursor system
 

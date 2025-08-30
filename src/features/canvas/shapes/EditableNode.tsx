@@ -15,7 +15,7 @@ interface EditableNodeProps {
   element: CanvasElement;
   isSelected: boolean;
   selectedTool: string;
-  // REMOVED: event handlers - handled by UnifiedEventHandler at stage level
+  // REMOVED: event handlers - handled by CanvasEventManager at stage level
   onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
   onStartTextEdit: (elementId: string) => void;
 }
@@ -56,14 +56,14 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
     );
   }, [selectedTool, element.type]);
 
-  // ARCHITECTURAL FIX: Remove event handlers - UnifiedEventHandler handles all interactions
+  // ARCHITECTURAL FIX: Remove event handlers - CanvasEventManager handles all interactions
   const commonProps = React.useMemo(() => {
     const baseProps: any = {
       id: element.id,
       x: element.x,
       y: element.y,
       draggable: isDraggable,
-      // REMOVED: onClick, onDragEnd, onDragStart, onDragMove - handled by UnifiedEventHandler
+      // REMOVED: onClick, onDragEnd, onDragStart, onDragMove - handled by CanvasEventManager
       opacity: 1,
       stroke: isSelected ? canvasTheme.colors.primary : (element as any).stroke,
       strokeWidth: isSelected ? ((element as any).strokeWidth || 1) + 1.5 : (element as any).strokeWidth,
@@ -230,7 +230,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           element={element}
           isSelected={isSelected}
           onSelect={() => {}} // Simplified handler
-          onUpdate={(updates) => onElementUpdate(element.id, updates)}
+          onUpdate={(id, updates) => onElementUpdate(id, updates)}
           // ARCHITECTURAL FIX: Remove drag handler to centralize in CanvasEventHandler
           // onDragEnd={(e) => onElementDragEnd(e, element.id)} // DISABLED per Friday Review
           stageRef={{ current: null }} // Will be passed from parent

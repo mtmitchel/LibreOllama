@@ -57,7 +57,7 @@ export function MailStoreProvider({ children }: MailStoreProviderProps) {
   // Show loading state while initializing
   if (!isInitialized || !isHydrated) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center">
         <div className="text-center">
           <div className="mb-4 size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="text-secondary">Loading...</p>

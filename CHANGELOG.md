@@ -2,6 +2,40 @@
 
 ## [Unreleased]
 
+### Added - Text Tool & Canvas Improvements
+- **Text Tool Implementation**: Complete FigJam-style text tool with interactive editing
+  - Crosshair cursor with "Text" preview following mouse position
+  - Click to create text element with immediate inline editing
+  - Automatic horizontal expansion as user types
+  - Blue border and blinking caret during editing
+  - Clean text display after editing complete
+  - Default font size: 24px
+- **Text Element Resize/Move Functionality**: Professional text manipulation
+  - Proportional resizing with constrained aspect ratio
+  - Font scales proportionally with box height
+  - Frame hugs text tightly with no bottom gap
+  - Draggable text elements with position persistence
+- **Canvas Renderer Protection System**: Prevented resize snap-back issues
+  - Added resizingId and resizeShadow protection flags to UI state
+  - Renderer respects protection flags during element synchronization
+  - Proper state synchronization between local transforms and store updates
+  - Coordinate transformations between world, stage, and DOM space
+
+### Fixed - Text Tool & Sticky Notes
+- **Sticky Note Editing Stability**: Resolved transformer-related crashes
+  - Added null checks for destroyed Konva nodes
+  - Fixed "Cannot read properties of undefined" errors
+  - Proper cleanup of event handlers
+- **Text Positioning Issues**: Fixed multiple coordinate and layout problems
+  - Text no longer flush against edges during editing
+  - Proper coordinate transformations for cursor ghost
+  - Textarea positioning correctly aligned with canvas
+  - Fixed duplicate event handler registrations
+- **Resize Snap-Back Issue**: Eliminated text element resize reverting
+  - Store update happens before clearing protection flags
+  - Scale properly neutralized during transform
+  - Transformer attached to correct node (group instead of frame)
+
 ### Bug Fixes - Canvas Sticky Notes
 - **Fixed Sticky Note Text Editing Issues**: Resolved critical errors when editing sticky note text
   - Added comprehensive null checks for destroyed Konva nodes to prevent "Cannot read properties of undefined" errors

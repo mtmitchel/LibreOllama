@@ -6,7 +6,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+
 import { useShallow } from 'zustand/react/shallow';
 
 interface PanToolProps {
@@ -70,17 +70,7 @@ export const PanTool: React.FC<PanToolProps> = ({ stageRef, isActive }) => {
     lastPointerPos.current = null;
   }, []);
 
-  useToolEventHandler({
-    isActive,
-    stageRef,
-    toolName: 'PanTool',
-    handlers: {
-      onPointerDown,
-      onPointerMove,
-      onPointerUp,
-      onPointerCancel: onPointerUp // Same handler for cancel as for up
-    }
-  });
+  
 
   // Reset state when tool becomes inactive
   React.useEffect(() => {

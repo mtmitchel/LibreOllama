@@ -9,7 +9,7 @@ import { Circle } from 'react-konva';
 import Konva from 'konva';
 import { useShallow } from 'zustand/react/shallow';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+
 import { EraserConfig } from '../../../types/drawing.types';
 import { ElementId } from '../../../types/enhanced.types';
 
@@ -137,16 +137,7 @@ const EraserToolComponent: React.FC<EraserToolProps> = ({
   }, []);
   
   // Event listeners with cleanup
-  useToolEventHandler({
-    isActive,
-    stageRef,
-    toolName: 'EraserTool',
-    handlers: {
-      onPointerDown: handlePointerDown,
-      onPointerMove: handlePointerMove,
-      onPointerLeave: handlePointerLeave
-    }
-  });
+  
 
   // Additional window events for reliable pointer up detection
   useEffect(() => {

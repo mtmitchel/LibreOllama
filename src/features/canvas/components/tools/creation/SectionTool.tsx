@@ -9,7 +9,7 @@ import React, { useCallback, useRef } from 'react';
 import { Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+
 import { useShallow } from 'zustand/react/shallow';
 
 interface SectionToolProps {
@@ -113,16 +113,7 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
   }, [isActive, isDrawing, sectionActions]);
 
   // Attach event listeners to stage when active
-  useToolEventHandler({
-    isActive,
-    stageRef,
-    toolName: 'SectionTool',
-    handlers: {
-      onPointerDown: handlePointerDown,
-      onPointerMove: handlePointerMove,
-      onPointerUp: handlePointerUp
-    }
-  });
+  
 
   // Render preview section (use store draft if available, fallback to local preview)
   const renderSection = draftSection || previewSection;

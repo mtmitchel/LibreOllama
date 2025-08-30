@@ -5,8 +5,7 @@
 
 // Main canvas hooks
 export * from './useTauriCanvas';
-export { useSimpleViewportCulling as useViewportCulling } from './useSimpleViewportCulling';
-export * from './useSimpleViewportCulling';
+export * from './useSpatialIndex';
 
 // Canvas-specific hooks
 export * from './useCanvasHistory';

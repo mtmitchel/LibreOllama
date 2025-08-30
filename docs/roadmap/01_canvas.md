@@ -13,15 +13,15 @@ This document provides a comprehensive overview of the Canvas feature, including
 
 ## Current Implementation
 
-The canvas is a core feature of the application, built using React Konva and a sophisticated state management system.
+The canvas is a core feature of the application. We are migrating from react-konva to a pure Konva renderer using an imperative architecture and a hybrid “Strangler” rollout.
 
 ### Frontend Architecture
 
-- **Rendering Engine:** `react-konva` & `konva` for 2D canvas rendering.
+- **Rendering Engine:** Pure `konva` for 2D canvas rendering (react-konva is being deprecated).
 - **State Management:** A unified Zustand store (`unifiedCanvasStore.ts`) manages all canvas-related state, including elements, tools, and UI properties. It uses Immer for immutable state updates.
 - **Component Structure:**
     - `CanvasContainer.tsx`: The main wrapper component.
-    - `CanvasLayerManager.tsx`: Manages the different layers (background, main, connector, UI).
+    - `NonReactCanvasStage.tsx`: Imperatively creates stage and layers (background, main, preview-fast-layer, overlay).
     - `ElementRenderer.tsx`: A key component responsible for rendering different canvas elements (shapes, text, etc.) based on their type.
     - `UnifiedEventHandler.tsx`: A centralized handler for all canvas events (mouse, keyboard, drag), which translates user interactions into store actions.
 - **Tools System:** A modular tool system is located in `src/features/canvas/tools/`. It includes base classes for creation tools (`BaseCreationTool.tsx`) and specific tools like `PenTool`, `TextTool`, and `ConnectorTool`.

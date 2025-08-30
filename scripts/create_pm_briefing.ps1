@@ -11,7 +11,7 @@ $OutputFile = Join-Path $ProjectRoot "docs/product_manager_briefing.txt"
 # Define the source files. Order matters here.
 $SourceFiles = @(
     @{
-        Path = "docs/ROADMAP.md";
+        Path = "docs/roadmap/README.md";
         Title = "High-Level Project Roadmap"
     },
     @{

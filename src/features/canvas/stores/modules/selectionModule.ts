@@ -70,6 +70,9 @@ export const createSelectionModule = (
 
       deselectElement: (id) => {
         setState((state: any) => {
+          if (!state.selectedElementIds || !(state.selectedElementIds instanceof Set)) {
+            state.selectedElementIds = new Set();
+          }
           state.selectedElementIds.delete(id);
           if (state.lastSelectedElementId === id) {
             state.lastSelectedElementId = null;
@@ -79,7 +82,8 @@ export const createSelectionModule = (
 
       clearSelection: () => {
         setState((state: any) => {
-          state.selectedElementIds.clear();
+          // Reset to a new Set to avoid calling .clear on non-Set values restored from persistence
+          state.selectedElementIds = new Set();
           state.lastSelectedElementId = null;
         });
       },

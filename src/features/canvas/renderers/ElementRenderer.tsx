@@ -94,7 +94,7 @@ const ElementRendererComponent: React.FC<ElementRendererProps> = ({
     isSelected,
     onStartTextEdit: onStartTextEdit,
     konvaProps,
-    // REMOVED: onDragEnd - handled by UnifiedEventHandler
+    // REMOVED: onDragEnd - handled by CanvasEventManager
   };
 
   const handleSelect = useCallback(() => {
@@ -153,7 +153,7 @@ const ElementRendererComponent: React.FC<ElementRendererProps> = ({
         element={element} 
         isSelected={isSelected}
         onSelect={handleSelect}
-        onUpdate={handleUpdate}
+        onUpdate={handleUpdateWithId}
         stageRef={{ current: null }}
       />
     );
@@ -168,32 +168,16 @@ export const ElementRenderer = React.memo(ElementRendererComponent, (prev, next)
     return false;
   }
 
-  // If the element's identity changes, we must re-render.
-  if (prev.element.id !== next.element.id) {
-    return false;
+  // OPTIMIZATION: Since our store ensures immutable updates (creates new object references),
+  // we can use simple reference equality for maximum performance.
+  // This avoids expensive property comparisons with large element sets (2000+).
+  if (prev.element === next.element && 
+      prev.onElementClick === next.onElementClick &&
+      prev.onElementDragEnd === next.onElementDragEnd &&
+      prev.onElementUpdate === next.onElementUpdate &&
+      prev.onStartTextEdit === next.onStartTextEdit) {
+    return true; // No re-render needed
   }
 
-  // For performance, if the updatedAt timestamp is identical, we assume no visual change.
-  // This is a safe bet as our store logic updates this on any modification.
-  if (prev.element.updatedAt === next.element.updatedAt) {
-    return true;
-  }
-
-  // As a more robust fallback, do a shallow comparison of critical visual properties.
-  const prevEl = prev.element;
-  const nextEl = next.element;
-
-  const haveVisualsChanged =
-    prevEl.x !== nextEl.x ||
-    prevEl.y !== nextEl.y ||
-    (prevEl as any).width !== (nextEl as any).width ||
-    (prevEl as any).height !== (nextEl as any).height ||
-    prevEl.rotation !== nextEl.rotation ||
-    (prevEl as any).fill !== (nextEl as any).fill ||
-    (prevEl as any).stroke !== (nextEl as any).stroke ||
-    (prevEl as any).strokeWidth !== (nextEl as any).strokeWidth ||
-    (prevEl as any).opacity !== (nextEl as any).opacity;
-
-  // If none of the critical visual properties have changed, don't re-render.
-  return !haveVisualsChanged;
+  return false; // Re-render needed
 });

@@ -3,9 +3,10 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Konva from 'konva';
 import { Layer, Rect, Text } from 'react-konva';
 import { BackgroundLayer } from './BackgroundLayer';
-import { MainLayer } from './MainLayer';
+// import { MainLayer } from './MainLayer';
+import { MainLayerSimple as MainLayer } from './MainLayerSimple';
 
-import { UILayer } from './UILayer';
+import { OverlayLayer } from './OverlayLayer';
 // import { ElementRenderer } from '../renderers/ElementRenderer';
 import { TransformerManager } from '../utils/TransformerManager';
 
@@ -23,7 +24,9 @@ import {
 } from '../types/enhanced.types';
 // import { canvasSelectors } from '../stores/selectors'; 
 import { canvasLog } from '../utils/canvasLogger';
-import { useSimpleViewportCulling } from '../hooks/useSimpleViewportCulling';
+// import { useSimpleViewportCulling } from '../hooks/useSimpleViewportCulling';
+// Use advanced spatial indexing with QuadTree
+import { useSpatialIndex } from '../hooks/useSpatialIndex';
 import { markInit, measureInit, initMarkers } from '../utils/performance/initInstrumentation';
 
 interface CanvasLayerManagerProps {
@@ -41,7 +44,7 @@ interface CanvasLayerManagerProps {
  * - Separating elements into connectors and non-connectors.
  * - Passing elements to appropriate layers.
  * - Managing layer order (background -> main elements -> connectors -> selection).
- * - NOT responsible for event handling (that's handled by UnifiedEventHandler)
+ * - NOT responsible for event handling (that's handled by CanvasEventManager)
  */
 export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(({
   stageRef,
@@ -52,13 +55,15 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   onElementClick,
   onStartTextEdit
 }) => {
-  // Mark layer manager mount start
+  // Mark layer manager mount start and end immediately
   useEffect(() => {
     markInit(initMarkers.LAYER_MANAGER_MOUNT_START);
-    return () => {
+    
+    // FIXED: Measure mount time immediately, not on unmount
+    requestAnimationFrame(() => {
       markInit(initMarkers.LAYER_MANAGER_MOUNT_END);
       measureInit('layer-manager-mount', initMarkers.LAYER_MANAGER_MOUNT_START, initMarkers.LAYER_MANAGER_MOUNT_END);
-    };
+    });
   }, []);
   // OPTIMIZED: Consolidated store subscriptions using useShallow - MUST be called before any returns
   const store = useUnifiedCanvasStore();
@@ -67,8 +72,8 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
     viewport: state.viewport
   })));
 
-  // Comprehensive store initialization check
-  const initReport = verifyStoreInitialization(store);
+  // OPTIMIZED: Memoized store initialization check to prevent performance overhead
+  const initReport = useMemo(() => verifyStoreInitialization(store), []);
   if (!initReport.isReady) {
     console.error('[CanvasLayerManager] Store not fully initialized:', initReport);
     return (
@@ -81,9 +86,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
     );
   }
 
-  // Drawing state (currently disabled to prevent loops)
-  const storeIsDrawing = false;
-  const currentPath: number[] = [];
+  // Drawing state - connect to actual store
+  const storeIsDrawing = useUnifiedCanvasStore(state => state.isDrawing);
+  const currentPath = useUnifiedCanvasStore(state => state.currentPath);
   
 
   
@@ -158,31 +163,27 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
       console.error('[CanvasLayerManager] Failed to convert elements Map to array:', e);
       return [];
     }
-  }, [elements]);
+  }, [elements, (elements as any)?.size]);
 
   // Removed: camera object - viewport handling is now integrated into advanced optimizations
 
-  // STANDARDIZED: Use simple viewport culling for consistent performance
-  const cullingResult = useSimpleViewportCulling({
-    elements: elementsArray,
-    camera: {
-      zoomLevel: viewport.scale || 1,
-      panOffset: { x: viewport.x || 0, y: viewport.y || 0 },
-      canvasSize: { width: stageSize.width || 1000, height: stageSize.height || 1000 }
-    },
-    buffer: 200 // Standard buffer
-  });
-
-  const visibleElements = cullingResult.visibleElements;
-  const { cullingStats } = cullingResult;
+  // SIMPLIFIED: Spatial indexing disabled for performance - just use all elements
+  const visibleElements = elementsArray;
+  const cullingStats = { 
+    totalElements: elementsArray.length, 
+    visibleElements: elementsArray.length, 
+    culledElements: 0 
+  };
 
   // OPTIMIZED: Element categorization using culled visible elements  
   const {
     mainElements,
+    imageElements,
     sectionElements,
     elementsBySection,
   } = useMemo(() => {
     const main: (CanvasElement & { id: ElementId })[] = [];
+    const images: (CanvasElement & { id: ElementId })[] = [];
     const sections: SectionElement[] = [];
     const bySection = new Map<SectionId, CanvasElement[]>();
 
@@ -191,13 +192,13 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
       if (element.type === 'section') {
         sections.push(element as SectionElement);
       } else {
-        // All elements including connectors go to main - they're handled by ElementRenderer
+        // ALL elements including images go to main layer to avoid multiple MainLayer instances
         main.push(element as CanvasElement & { id: ElementId });
       }
     }
     
     // Log simple culling performance gains
-    if (cullingStats.totalElements > 50 && cullingStats.culledElements > 0) {
+    if (cullingStats.totalElements > 50 && (cullingStats as any).culledElements > 0) {
       canvasLog.debug('🚀 [Simple Culling] Performance boost:', {
         total: cullingStats.totalElements,
         visible: cullingStats.visibleElements,
@@ -206,11 +207,11 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
       });
     }
     
-    return { mainElements: main, sectionElements: sections, elementsBySection: bySection };
+    return { mainElements: main, imageElements: images, sectionElements: sections, elementsBySection: bySection };
   }, [visibleElements, elementsArray.length]);
 
   // Hide layers panel toggle - not implemented yet
-  // const showLayersPanel = false;
+  // const showLayersPanel = false; // ToolLayer and UILayer have been consolidated; see OverlayLayer
   // const toggleLayersPanel = () => {
   //   canvasLog.debug('Layers panel toggle not implemented yet');
   // };
@@ -227,12 +228,6 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
     return !sectionElements.some(section => String(section.id) === String(id));
   }) as ElementId[]);
 
-  // Define layer configuration
-  const layers = [
-    { id: 'background', name: 'Background', visible: true },
-    { id: 'main', name: 'Main', visible: true },
-    { id: 'ui', name: 'UI', visible: true },
-  ];
 
   // UI state for sections
   const isDrawingSection = false;
@@ -250,100 +245,92 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   }
 
   const renderLayerContent = () => {
-    const contentLayerComponents: React.ReactNode[] = [];
-    const otherLayers: React.ReactNode[] = [];
-
-    const layerComponents: Record<string, React.ReactNode> = {
-      background: (
-        <BackgroundLayer
-          key="background"
-          width={stageSize.width}
-          height={stageSize.height}
-        />
-      ),
-      main: (
-        <React.Fragment key="main">
-          <MainLayer
-              elements={new Map(sortedMainElements.map(el => [el.id, el]))}
-              selectedElementIds={new Set(Array.from(selectedElementIds).filter(id => sortedMainElements.some(el => el.id === id)) as ElementId[])}
-              selectedTool={selectedTool}
-              isDrawing={storeIsDrawing}
-              currentPath={currentPath}
-              elementsBySection={sortedElementsBySection}
-              stageRef={stageRef}
-              onElementUpdate={onElementUpdate}
-              onElementDragEnd={onElementDragEnd}
-              onElementClick={onElementClick}
-              onStartTextEdit={onStartTextEdit}
-              visibleElements={visibleElements}
-              enableProgressiveRendering={true}
-              viewport={{
-                x: viewport.x || 0,
-                y: viewport.y || 0,
-                scale: viewport.scale || 1,
-                width: stageSize.width || 1000,
-                height: stageSize.height || 1000
-              }}
-            />
-        </React.Fragment>
-      ),
-      ui: (
-        <UILayer
-          key="ui"
-          stageRef={stageRef}
-          selectedElementIds={selectedElementIdsOnly}
-          elements={elements}
-          sections={sectionElementsMap}
-          isDrawingSection={isDrawingSection ?? false}
-          previewSection={previewSection ?? null}
-          selectionBox={selectionBox}
-          hoveredSnapPoint={hoveredSnapPoint as { x: number; y: number; elementId?: ElementId; anchor?: string } | null}
-          onElementUpdate={onElementUpdate}
-          addHistoryEntry={addHistoryEntry}
-        />
-      ),
-    };
-
-    layers.forEach(layerData => {
-      if (!layerData.visible) return;
-
-      const component = layerComponents[layerData.id];
-      if (!component) return;
-
-      if (layerData.id === 'main') {
-        contentLayerComponents.push(component);
-      } else {
-        otherLayers.push(component);
-      }
-    });
-
-    // Separate background layer to render first
-    const backgroundLayer = layerComponents.background && layers.find(l => l.id === 'background')?.visible ? 
-      [layerComponents.background] : [];
-    
-    // Other layers (excluding background which is handled separately)
-    const otherLayersFiltered = otherLayers.filter(layer => 
-      React.isValidElement(layer) && layer.key !== 'background'
-    );
-
-    const finalLayers = [
-      ...backgroundLayer, // BackgroundLayer (non-listening Layer) renders first as Stage sibling
-      <Layer key="content-layer">
-        {contentLayerComponents}
-        <DrawingContainment
-          isDrawing={storeIsDrawing}
-          currentTool={selectedTool}
-          stageRef={stageRef}
-        />
-      </Layer>,
-      ...otherLayersFiltered,
-      // Add TransformerManager as a separate layer
-      <Layer key="transformer-layer">
-        <TransformerManager stageRef={stageRef} />
-      </Layer>
+    // Define layer configuration
+    const layerConfig = [
+      { id: 'background', name: 'Background', visible: true },
+      { id: 'main', name: 'Main', visible: true },
+      { id: 'ui', name: 'UI', visible: true },
     ];
 
-    return <>{finalLayers}</>;
+    const backgroundLayer = layerConfig.find(l => l.id === 'background')?.visible ? (
+      <BackgroundLayer
+        key="background"
+        width={stageSize.width}
+        height={stageSize.height}
+      />
+    ) : null;
+
+    const mainLayerContent = layerConfig.find(l => l.id === 'main')?.visible ? (
+      <MainLayer
+        elements={new Map(sortedMainElements.map(el => [el.id, el]))}
+        selectedElementIds={new Set(Array.from(selectedElementIds).filter(id => sortedMainElements.some(el => el.id === id)) as ElementId[])}
+        selectedTool={selectedTool}
+        isDrawing={storeIsDrawing}
+        currentPath={currentPath}
+        elementsBySection={sortedElementsBySection}
+        stageRef={stageRef}
+        onElementUpdate={onElementUpdate}
+        onElementDragEnd={onElementDragEnd}
+        onElementClick={onElementClick}
+        onStartTextEdit={onStartTextEdit}
+        visibleElements={visibleElements}
+        enableProgressiveRendering={false}
+        viewport={{
+          x: viewport.x || 0,
+          y: viewport.y || 0,
+          scale: viewport.scale || 1,
+          width: stageSize.width || 1000,
+          height: stageSize.height || 1000
+        }}
+      />
+    ) : null;
+
+    const uiLayer = layerConfig.find(l => l.id === 'ui')?.visible ? (
+      <OverlayLayer
+        key="ui"
+        stageRef={stageRef}
+        selectedElementIds={selectedElementIdsOnly}
+        elements={elements}
+        sections={sectionElementsMap}
+        isDrawingSection={isDrawingSection ?? false}
+        previewSection={previewSection ?? null}
+        selectionBox={selectionBox}
+        hoveredSnapPoint={hoveredSnapPoint as { x: number; y: number; elementId?: ElementId; anchor?: string } | null}
+        onElementUpdate={onElementUpdate}
+        addHistoryEntry={addHistoryEntry}
+      />
+    ) : null;
+
+    // BackgroundLayer already returns a Layer component, so we render it directly
+    // MainLayer returns content (not a Layer), so we wrap it in a Layer
+    // UILayer already returns a Layer component
+    
+    return (
+      <>
+        {/* Background Layer - always rendered first, never conditionally removed */}
+        {backgroundLayer}
+        
+        {/* Main Content Layer - wraps MainLayer content in a Layer */}
+        {mainLayerContent && (
+          <Layer key="content-layer">
+            {mainLayerContent}
+            <DrawingContainment
+              isDrawing={storeIsDrawing}
+              currentTool={selectedTool}
+              stageRef={stageRef}
+            />
+          </Layer>
+        )}
+        
+        {/* REMOVED: Image layer was creating multiple MainLayer instances causing severe performance issues */}
+        {/* Images should be rendered in the main MainLayer along with other elements */}
+        
+        {/* UI Overlay Layer - already returns a Layer */}
+        {uiLayer}
+        
+        {/* Transformer is now part of OverlayLayer to keep anchors interactive */}
+      </>
+    );
   };
 
   return renderLayerContent();

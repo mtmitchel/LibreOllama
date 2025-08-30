@@ -22,9 +22,6 @@ import {
   Image as ImageIcon,
   ZoomIn,
   ZoomOut,
-  Save,
-  FolderOpen,
-  FileText,
   X
 } from 'lucide-react';
 import ShapesDropdown from './ShapesDropdown';
@@ -32,8 +29,6 @@ import ConnectorDropdown from './ConnectorDropdown';
 import { Button } from '../../../components/ui';
 import { ColorSwatch } from '../../../components/ui/ColorSwatch';
 import { resolveCSSVariable } from '../utils/colorUtils';
-import { useTauriCanvas } from '../hooks/useTauriCanvas';
-import { CanvasLibrary } from '../components/CanvasLibrary';
 
 const basicTools = [
   { id: 'select', name: 'Select', icon: MousePointer2 },
@@ -67,16 +62,9 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   onRedo
 }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showFileManager, setShowFileManager] = useState(false);
-  const [canvasFiles, setCanvasFiles] = useState<string[]>([]);
-  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  const [saveFileName, setSaveFileName] = useState('');
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [showCanvasLibrary, setShowCanvasLibrary] = useState(false);
   const [focusedToolIndex, setFocusedToolIndex] = useState(0);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const { saveToFile, loadFromFile, listCanvasFiles, deleteCanvasFile } = useTauriCanvas();
   
   // Direct store access without useShallow to test
   const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
@@ -117,8 +105,6 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     ...drawingTools,
     { id: 'undo', name: 'Undo', icon: Undo2 },
     { id: 'redo', name: 'Redo', icon: Redo2 },
-    { id: 'save', name: 'Save', icon: Save },
-    { id: 'load', name: 'Load', icon: FolderOpen },
   ], []);
 
   // Handler functions (moved before handleKeyDown to avoid TDZ)
@@ -158,14 +144,6 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     }
   };
 
-  // Canvas persistence handlers
-  const handleSaveCanvas = () => {
-    setShowSaveDialog(true);
-  };
-
-  const handleLoadCanvas = () => {
-    setShowCanvasLibrary(true);
-  };
 
   // Keyboard navigation handler
   const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
@@ -180,12 +158,10 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
       if (tool) {
         if (tool.id === 'undo') onUndo();
         else if (tool.id === 'redo') onRedo();
-        else if (tool.id === 'save') handleSaveCanvas();
-        else if (tool.id === 'load') handleLoadCanvas();
         else handleToolClick(tool.id);
       }
     }
-  }, [focusedToolIndex, allTools, onUndo, onRedo, handleSaveCanvas, handleLoadCanvas, handleToolClick]);
+  }, [focusedToolIndex, allTools, onUndo, onRedo, handleToolClick]);
 
   // Focus management
   const toolbarRef = React.useRef<HTMLDivElement>(null);
@@ -279,44 +255,6 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
 
-  const handleSaveConfirm = async () => {
-    if (!saveFileName.trim()) return;
-    
-    try {
-      const filename = saveFileName.endsWith('.canvas') || saveFileName.endsWith('.json') 
-        ? saveFileName 
-        : `${saveFileName}.canvas`;
-      
-      await saveToFile(filename);
-      setShowSaveDialog(false);
-      setSaveFileName('');
-      console.log('Canvas saved successfully');
-    } catch (error) {
-      console.error('Failed to save canvas:', error);
-    }
-  };
-
-  const handleLoadFile = async (filename: string) => {
-    try {
-      await loadFromFile(filename);
-      setShowFileManager(false);
-      console.log('Canvas loaded successfully');
-    } catch (error) {
-      console.error('Failed to load canvas:', error);
-    }
-  };
-
-  const handleDeleteFile = async (filename: string) => {
-    try {
-      await deleteCanvasFile(filename);
-      // Refresh the file list
-      const files = await listCanvasFiles();
-      setCanvasFiles(files);
-      console.log('Canvas file deleted successfully');
-    } catch (error) {
-      console.error('Failed to delete canvas file:', error);
-    }
-  };
 
   const handleColorChange = (color: string) => {
     // Resolve CSS variable to actual color value
@@ -428,7 +366,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 variant={isActive ? "primary" : "ghost"}
                 size="icon"
                 onClick={() => handleToolClick(tool.id)}
-                className="size-9"
+                className={`size-9 ${isActive ? 'ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-primary shadow-lg' : ''}`}
                 title={tool.name}
                 aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
                 tabIndex={isFocused ? 0 : -1}
@@ -454,7 +392,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                   variant={isActive ? "primary" : "ghost"}
                   size="icon"
                   onClick={() => handleToolClick(tool.id)}
-                  className="size-9 relative"
+                  className={`size-9 relative ${isActive ? 'ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-primary shadow-lg' : ''}`}
                   title={tool.name}
                   aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
                   tabIndex={isFocused ? 0 : -1}
@@ -529,7 +467,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 variant={isActive ? "primary" : "ghost"}
                 size="icon"
                 onClick={() => handleToolClick(tool.id)}
-                className="size-9"
+                className={`size-9 ${isActive ? 'ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-primary shadow-lg' : ''}`}
                 title={tool.name}
                 aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
                 tabIndex={isFocused ? 0 : -1}
@@ -545,36 +483,6 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
         {/* Connection Tools */}
         <div className="flex items-center gap-1">
           <ConnectorDropdown onToolSelect={handleToolClick} />
-        </div>
-
-        {/* File Operations */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSaveCanvas}
-            title="Save Canvas"
-            aria-label="Save Canvas"
-            className="size-9"
-            tabIndex={focusedToolIndex === allTools.findIndex(t => t.id === 'save') ? 0 : -1}
-            data-tool-index={allTools.findIndex(t => t.id === 'save')}
-          >
-            <Save size={16} />
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLoadCanvas}
-            disabled={isLoadingFiles}
-            title="Load Canvas"
-            aria-label="Load Canvas"
-            className="size-9"
-            tabIndex={focusedToolIndex === allTools.findIndex(t => t.id === 'load') ? 0 : -1}
-            data-tool-index={allTools.findIndex(t => t.id === 'load')}
-          >
-            <FolderOpen size={16} />
-          </Button>
         </div>
 
         {/* Action Tools & Zoom - Combined right cluster */}
@@ -702,120 +610,6 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
         onChange={handleFileInput}
         style={{ display: 'none' }}
         aria-label="Canvas image upload"
-      />
-      
-      {/* Save Dialog */}
-      {showSaveDialog && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-bg-elevated border-border-default rounded-xl border p-6 shadow-2xl min-w-[400px]">
-            <h3 className="text-lg font-semibold mb-4">Save Canvas</h3>
-            <div className="mb-4">
-              <label htmlFor="save-filename" className="block text-sm font-medium mb-2">
-                File Name
-              </label>
-              <input
-                id="save-filename"
-                type="text"
-                value={saveFileName}
-                onChange={(e) => setSaveFileName(e.target.value)}
-                className="w-full px-3 py-2 border border-border-default rounded-lg bg-bg-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
-                placeholder="Enter filename..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSaveConfirm();
-                  } else if (e.key === 'Escape') {
-                    setShowSaveDialog(false);
-                    setSaveFileName('');
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowSaveDialog(false);
-                  setSaveFileName('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleSaveConfirm}
-                disabled={!saveFileName.trim()}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* File Manager Dialog */}
-      {showFileManager && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-bg-elevated border-border-default rounded-xl border p-6 shadow-2xl min-w-[500px] max-h-[70vh]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Load Canvas</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowFileManager(false)}
-                className="size-8"
-              >
-                <X size={16} />
-              </Button>
-            </div>
-            
-            <div className="max-h-[400px] overflow-y-auto">
-              {canvasFiles.length === 0 ? (
-                <div className="text-center py-8 text-muted">
-                  <FileText size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>No saved canvas files found</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {canvasFiles.map((filename) => (
-                    <div
-                      key={filename}
-                      className="flex items-center justify-between p-3 border border-border-default rounded-lg hover:bg-bg-hover transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText size={20} />
-                        <span className="font-medium">{filename}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleLoadFile(filename)}
-                        >
-                          Load
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteFile(filename)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Canvas Library Modal */}
-      <CanvasLibrary 
-        isOpen={showCanvasLibrary} 
-        onClose={() => setShowCanvasLibrary(false)} 
       />
     </div>
   );

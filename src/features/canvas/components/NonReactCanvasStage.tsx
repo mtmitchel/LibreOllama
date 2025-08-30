@@ -119,6 +119,9 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     const overlay = stage.findOne<Konva.Layer>('.overlay-layer');
     if (!mainLayer || !overlay) return;
 
+    // Expose store to window for renderer access
+    (window as any).__UNIFIED_CANVAS_STORE__ = useUnifiedCanvasStore;
+    
     const renderer: InstanceType<typeof CanvasRendererV2> = (window as any).__CANVAS_RENDERER_V2__ ||= new CanvasRendererV2();
     renderer.init(stage, { background: stage.findOne<Konva.Layer>('.background-layer')!, main: mainLayer, preview: (preview as any) || mainLayer, overlay }, {
       onUpdateElement: (id, updates) => useUnifiedCanvasStore.getState().updateElement(id as any, updates)
@@ -140,15 +143,500 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     renderer.syncSelection(ids as any);
   }, [lastSelectedElementId, selectionSize]);
 
+  // Pure Konva Text Tool Implementation - Watch for selectedTool changes
+  const currentSelectedTool = useUnifiedCanvasStore(state => state.selectedTool);
+  
+  useEffect(() => {
+    const stage = stageRef.current;
+    console.log('[TEXT-DEBUG] Text tool effect running, stage exists:', !!stage, 'selectedTool:', currentSelectedTool);
+    if (!stage) return;
+    if (!currentSelectedTool) return; // Don't initialize if tool is undefined
+    
+    // Ensure container is positioned
+    const container = stage.container();
+    if (container) {
+      container.style.position = 'relative';
+    }
+    
+    const overlayLayer = stage.findOne<Konva.Layer>('.overlay-layer');
+    const mainLayer = stage.findOne<Konva.Layer>('.main-layer');
+    console.log('[TEXT-DEBUG] Layers found - overlay:', !!overlayLayer, 'main:', !!mainLayer);
+    if (!overlayLayer || !mainLayer) {
+      console.error('[TEXT-DEBUG] Missing required layers, cannot initialize text tool');
+      return;
+    }
+    
+    let tool: 'select' | 'text' = 'select';
+    let cursorGhost: Konva.Group | null = null;
+    let textarea: HTMLTextAreaElement | null = null;
+    
+    // Coordinate transformation helpers (using stage transform since no viewport group)
+    
+    // Stage px → World units
+    function stageToWorld(pt: { x: number; y: number }) {
+      const inv = stage.getAbsoluteTransform().copy().invert();
+      return inv.point(pt);
+    }
+    
+    // World units → Stage px
+    function worldToStage(pt: { x: number; y: number }) {
+      const tr = stage.getAbsoluteTransform();
+      return tr.point(pt);
+    }
+    
+    // World rect → DOM CSS pixels (relative to page)
+    function worldRectToDOM(x: number, y: number, w: number, h: number) {
+      const topLeft = worldToStage({ x, y });
+      const rect = stage.container().getBoundingClientRect();
+      const scale = stage.scaleX(); // Assuming uniform scale
+      return {
+        left: rect.left + topLeft.x,
+        top: rect.top + topLeft.y,
+        width: w * scale,
+        height: h * scale,
+      };
+    }
+    
+    // Get current scale
+    function viewportScale() {
+      const s = stage.getAbsoluteScale();
+      return { x: s.x, y: s.y };
+    }
+    
+    const PADDING = 8;
+    const BASE_FONT = 24;  // Changed to 24 as requested
+    const MIN_W = 120;
+    const DESCENDER_GUARD = 0.15;
+    
+    function useTextTool() {
+      tool = 'text';
+      stage.container().style.cursor = 'crosshair';
+      overlayLayer.moveToTop();
+      
+      // Cursor "Text" ghost that follows the mouse
+      cursorGhost?.destroy();
+      cursorGhost = new Konva.Group({ listening: false });
+      const ghostText = new Konva.Text({ 
+        text: 'Text', 
+        fontSize: 24, 
+        fill: '#2B2B2B', 
+        x: 0, y: 0 
+      });
+      cursorGhost.add(ghostText);
+      overlayLayer.add(cursorGhost);
+      overlayLayer.batchDraw();
+      
+      stage.on('mousemove.text', (e) => {
+        const p = stage.getPointerPosition();
+        if (!p) return;
+        // Convert stage coordinates to world coordinates for proper positioning
+        const worldPos = stageToWorld(p);
+        cursorGhost?.position({ x: worldPos.x + 12, y: worldPos.y + 12 });
+        overlayLayer.batchDraw();
+      });
+      
+      // click to create
+      stage.on('mousedown.text', handleTextMouseDown);
+      console.info('[TEXT] tool active');
+    }
+    
+    function leaveTextTool() {
+      tool = 'select';
+      stage.container().style.cursor = 'default';
+      stage.off('.text');
+      cursorGhost?.destroy();
+      cursorGhost = null;
+      overlayLayer.batchDraw();
+    }
+    
+    function handleTextMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
+      console.log('[TEXT-DEBUG] MouseDown - tool:', tool, 'target:', e.target.getClassName());
+      if (tool !== 'text') return;
+      // Check if clicked on stage or any layer (not on an existing element)
+      const isEmptyClick = e.target === stage || e.target.getClassName() === 'Layer';
+      if (!isEmptyClick) return;
+      
+      const p = stage.getPointerPosition(); 
+      if (!p) return;
+      
+      const world = stageToWorld(p);
+      
+      // 1) Create text element in store
+      const textElement = {
+        id: nanoid() as ElementId,
+        type: 'text' as const,
+        x: world.x,
+        y: world.y,
+        width: 60,  // Small initial width that will expand
+        height: BASE_FONT,  // Exact font height - no padding
+        text: '',
+        fontSize: BASE_FONT,
+        fontFamily: 'Inter, system-ui, Arial',
+        fill: '#111827',
+        fontStyle: 'normal',
+        textAlign: 'left',
+        isLocked: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isHidden: false
+      };
+      
+      // Add to store
+      useUnifiedCanvasStore.getState().addElement(textElement);
+      
+      // Switch back to select tool immediately after creating text element
+      useUnifiedCanvasStore.getState().setSelectedTool('select');
+      leaveTextTool();
+      
+      // Wait for renderer to create the node, then start editing
+      requestAnimationFrame(() => {
+        const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
+        if (!renderer) return;
+        
+        const node = (renderer as any).nodeMap.get(textElement.id) as Konva.Group | undefined;
+        if (!node) {
+          console.warn('[TEXT] Node not yet created by renderer');
+          return;
+        }
+        
+        const ktext = node.findOne<Konva.Text>('.text');
+        const frame = node.findOne<Konva.Rect>('.hit-area');
+        if (!ktext || !frame) {
+          console.warn('[TEXT] Text or frame not found in group');
+          return;
+        }
+        
+        startTextEdit({ group: node, ktext, frame, world, elementId: textElement.id });
+      });
+    }
+    
+    function startTextEdit({ group, ktext, frame, world, elementId }: any) {
+      stage.draggable(false); // freeze panning during edit
+      
+      textarea?.remove();
+      textarea = document.createElement('textarea');
+      const el = textarea;
+      
+      // Style: content-box so scrollHeight ignores padding (critical)
+      Object.assign(el.style, {
+        position: 'fixed',  // Fixed positioning relative to viewport for proper placement
+        boxSizing: 'border-box',  // Include border in dimensions
+        border: '1px solid #3B82F6',
+        borderRadius: '4px',
+        outline: 'none',
+        resize: 'none',
+        overflow: 'hidden',
+        background: 'rgba(255,255,255,0.95)',
+        whiteSpace: 'nowrap',  // No line wrapping - expand horizontally
+        wordBreak: 'keep-all',  // Prevent word breaking
+        fontFamily: ktext.fontFamily() || 'Inter, system-ui, Arial',
+        color: '#111827',
+        zIndex: '9999',
+      } as CSSStyleDeclaration);
+      
+      // Font scaled by viewport scale - no padding
+      const sc = viewportScale();
+      el.style.fontSize = `${ktext.fontSize() * sc.y}px`;
+      el.style.lineHeight = '1';  // Normal line height to show full text
+      el.style.padding = '0 1px';  // Absolute minimum: 1px horizontal only
+      
+      // prevent stage from stealing focus
+      ['pointerdown','mousedown','touchstart','wheel'].forEach(ev =>
+        el.addEventListener(ev, e => e.stopPropagation(), { capture: true, passive: false })
+      );
+      
+      // Append to document.body since we're using fixed positioning
+      document.body.appendChild(el);
+      
+      // Convert the element's actual world rect to DOM px
+      // Use the group's actual position, not the click position
+      const worldX = group.x();
+      const worldY = group.y();
+      const worldW = frame.width();
+      const worldH = frame.height();
+      const dom = worldRectToDOM(worldX, worldY, worldW, worldH);
+      
+      el.style.left = `${dom.left}px`;
+      el.style.top = `${dom.top}px`;
+      el.style.width = `${dom.width}px`;  // Set initial width to match frame
+      el.style.minWidth = `${dom.width}px`;  // Minimum width
+      // Set initial height to match what liveGrow will set
+      el.style.height = `${ktext.fontSize() * sc.y + 2}px`;  // Same as in liveGrow
+      
+      el.value = '';
+      el.focus();
+      setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0);
+      
+      // Hide Konva text during edit
+      ktext.visible(false);
+      mainLayer.batchDraw();
+      
+      el.addEventListener('input', () => liveGrow(el, { group, ktext, frame, elementId }));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { 
+          e.preventDefault(); 
+          finalizeText(el, { group, ktext, frame, elementId }, 'commit'); 
+        }
+        if (e.key === 'Escape') { 
+          e.preventDefault(); 
+          finalizeText(el, { group, ktext, frame, elementId }, 'cancel'); 
+        }
+      });
+      el.addEventListener('blur', () => finalizeText(el, { group, ktext, frame, elementId }, 'commit'));
+      
+      console.info('[TEXT] textarea mounted');
+    }
+    
+    function liveGrow(el: HTMLTextAreaElement, note: { group: Konva.Group; ktext: Konva.Text; frame: Konva.Rect; elementId: string }) {
+      const { group, ktext, frame, elementId } = note;
+      
+      // mirror for measurement
+      ktext.text(el.value || ' ');  // Use space for empty to maintain height
+      
+      const sc = viewportScale();
+      
+      // Check if text width exceeds current frame width
+      const textMetrics = ktext.getTextWidth();
+      const currentWidth = frame.width();
+      
+      // Only expand if text is approaching the edge (within 5px buffer)
+      if (textMetrics > currentWidth - 5) {
+        // Expand to fit text plus small buffer
+        const neededWidth = textMetrics + 10;  // Just enough space for text plus small buffer
+        
+        // Update frame width (but don't constrain text width)
+        frame.width(neededWidth);
+        
+        // Update textarea width to match
+        const domWidth = neededWidth * sc.x;
+        el.style.width = `${domWidth}px`;
+        
+        mainLayer.batchDraw();
+        
+        // Update store
+        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
+          width: neededWidth,
+          text: el.value 
+        });
+      } else {
+        // Just update text in store without changing dimensions
+        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
+          text: el.value 
+        });
+      }
+      
+      // Don't set ktext.width() - let it render naturally without clipping
+      ktext.width(undefined);  // Remove width constraint so text isn't clipped
+      
+      // Keep text position consistent
+      ktext.position({ x: 0.5, y: 0 });  // Almost no padding
+      
+      // Set exact height to font size - accounting for border-box
+      el.style.height = `${ktext.fontSize() * sc.y + 2}px`;  // Font size + 2px for borders (1px top + 1px bottom)
+    }
+    
+    function finalizeText(el: HTMLTextAreaElement, note: { group: Konva.Group; ktext: Konva.Text; frame: Konva.Rect; elementId: string }, mode: 'commit'|'cancel') {
+      const { group, ktext, frame, elementId } = note;
+      
+      if (mode === 'commit' && el.value.trim().length) {
+        // show Konva text
+        ktext.visible(true);
+        ktext.text(el.value);
+        ktext.width(undefined); // Remove width constraint to measure natural size
+        
+        // Measure actual text bounds to make frame hug text perfectly
+        const textBounds = ktext.getClientRect({ skipStroke: true, skipShadow: true });
+        const textWidth = textBounds.width + 4; // Small horizontal padding
+        const textHeight = ktext.fontSize() * 1.0; // Exact font height - no bottom space
+        
+        // Update frame to perfectly hug the text with no bottom gap
+        frame.width(textWidth);
+        frame.height(textHeight);
+        
+        // Position text at top of frame
+        ktext.position({ x: 2, y: 0 });
+        
+        // Update store with final text and dimensions that hug the text
+        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
+          text: el.value,
+          width: textWidth,
+          height: textHeight
+        });
+        
+        mainLayer.batchDraw();
+        
+        // Select the element to show resize handles
+        useUnifiedCanvasStore.getState().clearSelection();
+        useUnifiedCanvasStore.getState().selectElement(elementId as ElementId, false);
+        
+        // Attach transformer to the GROUP and set up proper resize handling
+        const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
+        const transformer = (window as any).__CANVAS_TRANSFORMER__ as Konva.Transformer;
+        if (renderer && transformer && group && frame) {
+          console.log('[RESIZE] Setting up transformer for text element', elementId);
+          
+          // Clear any existing event handlers first
+          group.off('transformstart');
+          group.off('transform');
+          group.off('transformend');
+          group.off('dragend');
+          
+          // Make the group draggable
+          group.draggable(true);
+          
+          // Attach transformer to the GROUP (not frame) - transformer needs the whole group
+          transformer.nodes([group]);
+          transformer.visible(true);
+          transformer.keepRatio(true);
+          transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right']);
+          
+          const MIN_W = 120;
+          const MIN_H = 20;
+          
+          // TRANSFORMSTART - Enter protected state
+          group.on('transformstart', () => {
+            console.log('[RESIZE] Transform start - setting protection flags', elementId);
+            useUnifiedCanvasStore.getState().setResizingId(elementId as ElementId);
+            useUnifiedCanvasStore.getState().setResizeShadow({
+              id: elementId as ElementId,
+              width: frame.width(),
+              height: frame.height()
+            });
+          });
+          
+          // TRANSFORM - Convert scale to size without changing store yet
+          group.on('transform', () => {
+            const scaleX = group.scaleX();
+            const scaleY = group.scaleY();
+            
+            // For proportional resize, use the same scale for both dimensions
+            // This is enforced by keepRatio(true) on the transformer
+            const w = Math.max(MIN_W, frame.width() * scaleX);
+            
+            // Font size scales with height to maintain text proportions
+            const newFontSize = Math.max(12, ktext.fontSize() * scaleY);
+            
+            // Height should match font size exactly - no bottom space
+            const h = newFontSize;
+            
+            // Neutralize scale -> commit to frame and group
+            frame.width(w);
+            frame.height(h);
+            group.scale({ x: 1, y: 1 });
+            
+            // Update text to match new dimensions
+            ktext.fontSize(newFontSize);
+            ktext.width(w - 4); // Set width for text wrapping with small padding
+            ktext.position({ x: 2, y: 0 }); // Keep text at top of frame
+            
+            // Live preview via shadow so renderer can't overwrite
+            useUnifiedCanvasStore.getState().setResizeShadow({
+              id: elementId as ElementId,
+              width: w,
+              height: h
+            });
+            
+            transformer.forceUpdate();
+            overlayLayer.batchDraw();
+            mainLayer.batchDraw();
+          });
+          
+          // TRANSFORMEND - Commit to store FIRST, then clear flags
+          group.on('transformend', () => {
+            const newW = Math.max(MIN_W, frame.width());
+            const newH = Math.max(MIN_H, frame.height());
+            const newFontSize = ktext.fontSize();
+            
+            console.log('[RESIZE] Transform end - committing to store', elementId, { newW, newH, newFontSize });
+            
+            // 1) Commit to store (single source of truth)
+            useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
+              width: newW,
+              height: newH,
+              fontSize: newFontSize
+            });
+            
+            // 2) Keep nodes aligned locally (prevents flicker)
+            frame.width(newW);
+            frame.height(newH);
+            ktext.width(newW - 4);
+            ktext.position({ x: 2, y: 0 }); // Keep text at top with no bottom gap
+            
+            // 3) Clear protection flags AFTER commit
+            console.log('[RESIZE] Clearing protection flags');
+            useUnifiedCanvasStore.getState().setResizingId(null);
+            useUnifiedCanvasStore.getState().setResizeShadow(null);
+            
+            transformer.forceUpdate();
+            mainLayer.batchDraw();
+          });
+          
+          // Handle position changes when dragging the group
+          group.on('dragend', () => {
+            useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
+              x: group.x(),
+              y: group.y()
+            });
+          });
+          
+          overlayLayer.batchDraw();
+        }
+      } else {
+        // cancel or empty: delete the element
+        useUnifiedCanvasStore.getState().deleteElement(elementId as ElementId);
+      }
+      
+      // Safely remove textarea if it still exists
+      if (el && el.parentNode) {
+        el.remove();
+      }
+      textarea = null;
+      
+      stage.draggable(true);
+      leaveTextTool();
+      
+      // Switch back to select tool
+      useUnifiedCanvasStore.getState().setSelectedTool('select');
+      
+      console.info('[TEXT] finalized', mode);
+    }
+    
+    // Initialize based on current tool
+    if (currentSelectedTool === 'text') {
+      useTextTool();
+    }
+    
+    return () => {
+      leaveTextTool();
+      textarea?.remove();
+    };
+  }, [currentSelectedTool]); // Re-run when selectedTool changes
+
   // Optional: click-hit selection wiring (imperative) and double-click to edit
   useEffect(() => {
     const stage = stageRef.current; if (!stage) return;
 
     const onMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
       const target = e.target as Konva.Node;
-      // If clicked on empty stage, clear selection
-      if (target === stage) {
+      const currentTool = useUnifiedCanvasStore.getState().selectedTool;
+      
+      // Text tool is handled in its own effect above
+      if (currentTool === 'text') return;
+      
+      // If clicked on empty stage or layer with select tool, clear selection
+      if ((target === stage || target.getClassName() === 'Layer') && currentTool === 'select') {
         useUnifiedCanvasStore.getState().clearSelection();
+        
+        // Hide the transformer
+        const transformer = (window as any).__CANVAS_TRANSFORMER__ as Konva.Transformer;
+        if (transformer) {
+          transformer.nodes([]);
+          transformer.visible(false);
+          const overlayLayer = stage.findOne<Konva.Layer>('.overlay-layer');
+          if (overlayLayer) {
+            overlayLayer.batchDraw();
+          }
+        }
         return;
       }
       // Ascend to the nearest Group with an id
@@ -219,6 +707,127 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         return;
       }
       console.info('[EDIT] node ready', textEditingElementId);
+
+      // Handle text element editing
+      if (el.type === 'text') {
+        const textNode = node.findOne<Konva.Text>('.text');
+        if (!textNode) {
+          console.warn('[EDIT] Text node not found in group');
+          return;
+        }
+        
+        const layer = node.getLayer();
+        if (!layer) return;
+        
+        const textarea = document.createElement('textarea');
+        const container = containerRef.current!;
+        
+        const { x: vx, y: vy, scale } = viewportState;
+        
+        // Style textarea for text editing
+        Object.assign(textarea.style, {
+          position: 'absolute',
+          boxSizing: 'border-box',
+          border: '2px solid #3B82F6',
+          borderRadius: '4px',
+          outline: 'none',
+          resize: 'none',
+          overflow: 'hidden',
+          background: 'rgba(255, 255, 255, 0.95)',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          fontFamily: textNode.fontFamily() || 'Inter, system-ui, Arial',
+          fontSize: `${(textNode.fontSize() || 16) * scale}px`,
+          lineHeight: String(textNode.lineHeight() || 1.2),
+          padding: '4px 8px',
+          color: textNode.fill() || '#000',
+          zIndex: '1000',
+          minWidth: '120px',
+          minHeight: '32px'
+        } as CSSStyleDeclaration as any);
+        
+        // Position textarea
+        textarea.style.left = `${vx + el.x * scale}px`;
+        textarea.style.top = `${vy + el.y * scale}px`;
+        textarea.style.width = `${(el.width || 120) * scale}px`;
+        
+        textarea.setAttribute('data-element-id', String(textEditingElementId));
+        textarea.setAttribute('data-role', 'canvas-text-editor');
+        textarea.value = textNode.text() || '';
+        
+        container.appendChild(textarea);
+        
+        // Hide Konva text during edit
+        textNode.visible(false);
+        layer.batchDraw();
+        
+        // Focus textarea
+        requestAnimationFrame(() => {
+          textarea.focus();
+          textarea.select();
+        });
+        
+        // Handle input
+        const onInput = () => {
+          const newText = textarea.value;
+          textNode.text(newText);
+          
+          // Measure text and update width if needed
+          const measuredWidth = Math.ceil(textNode.width());
+          const newWidth = Math.max(120, measuredWidth + 16);
+          
+          if (newWidth !== el.width) {
+            useUnifiedCanvasStore.getState().updateElement(el.id, { 
+              width: newWidth,
+              text: newText 
+            });
+            textarea.style.width = `${newWidth * scale}px`;
+          }
+        };
+        
+        // Handle exit
+        const onExitEdit = () => {
+          const finalText = textarea.value.trim();
+          
+          if (finalText) {
+            useUnifiedCanvasStore.getState().updateElement(el.id, { 
+              text: finalText 
+            });
+          } else {
+            // Delete empty text element
+            useUnifiedCanvasStore.getState().deleteElement(el.id);
+          }
+          
+          textNode.visible(true);
+          layer.batchDraw();
+          try { container.removeChild(textarea); } catch {}
+          setTextEditingElement(null);
+        };
+        
+        // Event listeners
+        textarea.addEventListener('input', onInput);
+        textarea.addEventListener('blur', onExitEdit);
+        textarea.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            onExitEdit();
+          } else if (e.key === 'Escape') {
+            textarea.value = textNode.text() || '';
+            onExitEdit();
+          }
+        });
+        
+        // Stop propagation
+        ['pointerdown', 'mousedown', 'touchstart', 'wheel'].forEach(ev =>
+          textarea.addEventListener(ev, e => e.stopPropagation(), { capture: true, passive: false })
+        );
+        
+        cleanup = () => {
+          try { container.removeChild(textarea); } catch {}
+        };
+        
+        return;
+      }
 
       if (el.type === 'sticky-note') {
         const frame = node.findOne<Konva.Rect>('.frame');

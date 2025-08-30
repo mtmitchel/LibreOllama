@@ -33,7 +33,7 @@ const ensureEncryptionKey = async (): Promise<boolean> => {
 };
 
 export const useTauriCanvas = (options?: { autoSave?: boolean; autoSaveInterval?: number }) => {
-  const { autoSave = true, autoSaveInterval = 500 } = options || {};
+  const { autoSave = true, autoSaveInterval = 3000 } = options || {};
   
   // Use stable selectors with proper memoization
   const elements = useUnifiedCanvasStore(
@@ -93,21 +93,47 @@ export const useTauriCanvas = (options?: { autoSave?: boolean; autoSaveInterval?
         throw new Error('No data received from file');
       }
       
-      let elements;
+      let parsed: any;
       try {
-        elements = JSON.parse(data as string);
+        parsed = JSON.parse(data as string);
       } catch (parseError) {
         throw new Error('Invalid JSON data in file');
       }
-      
-      if (!elements || typeof elements !== 'object') {
-        throw new Error('Invalid canvas data format');
+
+      // Normalize various possible formats into a plain CanvasElement[]
+      const normalizeElements = (input: any): any[] => {
+        // Already an array of elements
+        if (Array.isArray(input)) return input;
+
+        // Object with elements array
+        if (input && Array.isArray(input.elements)) return input.elements;
+
+        // Persisted shape: { state: { elements: [[id, element], ...] } }
+        const entries = input?.state?.elements || input?.elements;
+        if (Array.isArray(entries) && entries.length > 0) {
+          // If it's an array of [id, element]
+          if (Array.isArray(entries[0]) && entries[0].length === 2) {
+            return entries.map((e: any) => e[1]);
+          }
+          // If it's already an array of element objects
+          if (typeof entries[0] === 'object') {
+            return entries as any[];
+          }
+        }
+
+        // Nothing matched
+        return [];
+      };
+
+      const elements = normalizeElements(parsed);
+      if (!Array.isArray(elements) || elements.length === 0) {
+        throw new Error('Invalid canvas data format: expected a non-empty elements array');
       }
       
       importElements(elements);
       
       // Update last saved state after successful load
-      lastSavedState.current = data as string;
+      lastSavedState.current = JSON.stringify(elements);
       
       console.log('Canvas loaded successfully');
       return elements;
@@ -148,7 +174,7 @@ export const useTauriCanvas = (options?: { autoSave?: boolean; autoSaveInterval?
     }
   }, []);
 
-  // Create debounced auto-save function (500ms delay as specified)
+  // Create debounced auto-save function (3s delay with meaningful-change gating)
   const debouncedAutoSave = useMemo(
     () => debounce(async () => {
       try {
@@ -161,10 +187,13 @@ export const useTauriCanvas = (options?: { autoSave?: boolean; autoSaveInterval?
         
         const currentState = JSON.stringify(elementsArray);
         
-        // Skip auto-save if nothing changed
+        // Skip auto-save if nothing changed (coarse check)
         if (currentState === lastSavedState.current) {
           return;
         }
+        
+        // Additional: consider enriching with viewport diffs in future if needed
+        // For now, the coarse JSON diff above is sufficient to gate auto-saves.
         
         // Ensure encryption key before auto-save
         await ensureEncryptionKey();

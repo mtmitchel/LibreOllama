@@ -1,3 +1,4 @@
+
 # LibreOllama: AI-Powered Productivity Suite
 
 <p align="center">
@@ -5,7 +6,7 @@
 </p>
 
 <p align="center">
-  <strong>An integrated AI-powered workspace for thinking, creating, and organizing.</strong>
+  <strong>An open-source, locally-run, privacy-first workspace for thinking, creating, and organizing.</strong>
 </p>
 
 <p align="center">
@@ -17,26 +18,29 @@
 
 ---
 
-LibreOllama is a cross-platform desktop application that brings together AI chat, visual canvas, email management, task organization, and note-taking in a single, cohesive workspace. Built with Tauri, React 19, and Rust for security, performance, and reliability.
+LibreOllama is a cross-platform desktop application that brings together AI chat, a visual canvas, email management, task organization, and note-taking in a single, cohesive workspace. Built with Tauri, React 19, and Rust for security, performance, and reliability.
 
 ## ✨ Key Features
 
 ### 🎨 **Visual Canvas** (Production Ready)
-Professional-grade infinite whiteboard with 15+ element types, smart connectors, drawing tools, and real-time collaboration features. Perfect for visual thinking, diagramming, and brainstorming.
+Professional-grade infinite whiteboard with 15+ element types, smart connectors, and advanced drawing tools. Perfect for visual thinking, diagramming, and brainstorming.
+
+### 💬 **AI Chat** (Production Ready)
+Complete chat UI with multi-provider LLM integration (OpenAI, Anthropic, Ollama, etc.), conversation management, and real-time streaming responses.
+
+### ✅ **Tasks Management** (Production Ready)
+Full-featured Kanban board with drag-and-drop, local storage persistence, and rich metadata editing.
 
 ### 📧 **Gmail Integration** (Near Complete) 
 Secure OAuth2-powered email client with full Gmail functionality: reading, composing, searching, labels, attachments, and multi-account support.
 
-### 📝 **Rich Notes** (Complete)
-Powerful note-taking with BlockNote editor, folder organization, rich text formatting, and seamless persistence.
+### 📝 **Rich Notes** (Production Ready)
+Powerful note-taking with a BlockNote-based editor, hierarchical folder organization, rich text formatting, and seamless persistence.
 
-### 📅 **Tasks & Calendar** (Functional)
-Kanban board with Google Tasks integration, drag-and-drop functionality, and calendar time-blocking with Google Calendar sync.
+### 📅 **Calendar Integration** (Functional)
+Google Calendar integration with event display and task synchronization capabilities.
 
-### 🤖 **AI Chat** (Planned)
-Multi-provider LLM integration supporting OpenAI, Anthropic, and local models with conversation management and file attachments.
-
-### 📊 **Project Management** (Planned)
+### 📁 **Projects** (In Progress)
 Comprehensive project organization with task association, progress tracking, and asset management.
 
 ## 🛠️ Technology Stack
@@ -45,9 +49,9 @@ Comprehensive project organization with task association, progress tracking, and
 - **Frontend**: [React 19](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/) - Modern, type-safe UI
 - **Canvas**: [Konva.js](https://konvajs.org/) + React-Konva - High-performance 2D graphics
 - **Backend**: [Rust](https://www.rust-lang.org/) - Secure, fast system operations
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) - Utility-first styling with design tokens
-- **State**: [Zustand](https://zustand.surge.sh/) - Simple, predictable state management
-- **Database**: SQLite with encryption - Secure local data storage
+- **Styling**: **Asana-Inspired Design System** - Migrating from Tailwind CSS to a custom, consistent design system.
+- **State**: [Zustand](https://docs.pmnd.rs/zustand/getting-started/introduction) - Simple, predictable state management
+- **Database**: SQLite - Secure local data storage
 
 ## 🚀 Quick Start
 
@@ -71,13 +75,16 @@ Comprehensive project organization with task association, progress tracking, and
 
 2. **Start development**:
    ```bash
-   npm run dev:tauri  # Full Tauri development (recommended)
-   npm run dev        # Frontend only (if needed)
+   # Run the full Tauri application (frontend + backend)
+   npm run tauri:dev
+
+   # Run the frontend only (Vite dev server)
+   npm run dev
    ```
 
 3. **Build for production**:
    ```bash
-   npm run build:tauri
+   npm run tauri:build
    ```
 
 ## 📁 Project Structure
@@ -85,37 +92,33 @@ Comprehensive project organization with task association, progress tracking, and
 ```
 libreollama/
 ├── docs/                       # 📚 Complete documentation
-│   ├── PRODUCTION_READINESS.md # 🎯 Project roadmap & status
-│   ├── DESIGN_SYSTEM.md        # 🎨 Design tokens & components
-│   ├── ARCHITECTURE.md         # 🏗️ Technical implementation
-│   ├── TESTING_STRATEGY.md     # 🧪 Testing approach
-│   └── roadmap/               # 📋 Feature specifications
+│   ├── CANVAS_ARCHITECTURE_AUDIT_UPDATED.md
+│   ├── PROJECT_STATUS.md
+│   └── ...
 ├── src/                       # ⚛️ React frontend
 │   ├── features/              # 🧩 Feature modules (canvas, mail, etc.)
 │   ├── components/            # 🔧 Shared UI components
-│   ├── app/                   # 🏠 App shell & routing
-│   └── core/                  # ⚙️ Core utilities & hooks
+│   ├── stores/                # 🏪 Zustand state management
+│   └── ...
 ├── src-tauri/                 # 🦀 Rust backend
 │   ├── src/commands/          # 📡 API commands
-│   ├── src/services/          # 🔧 Business logic
-│   └── src/database/          # 🗄️ Data persistence
-└── scripts/                   # 🛠️ Build & development tools
+│   └── src/services/          # 🔧 Business logic
+└── ...
 ```
 
 ## 📊 Development Status
 
-**Current Phase**: Phase 2 - Critical Feature Integration (70% Complete)
+**Current Phase**: Phase 2 - Critical Feature Integration (85% Complete)
 
 | Feature | Status | Completion |
-|---------|--------|------------|
-| Canvas System | ✅ Complete | 100% |
+|---|---|---|
+| Canvas System | ✅ Production Ready | 100% |
+| Chat System | ✅ Production Ready | 100% |
+| Tasks Management | ✅ Production Ready | 100% |
+| Notes System | ✅ Production Ready | 100% |
 | Gmail Integration | ✅ Near Complete | 95% |
-| Notes System | ✅ Complete | 100% |
-| Tasks Management | 🟡 Functional | 85% |
 | Calendar Integration | 🟡 Functional | 90% |
-| Navigation & UI | ✅ Complete | 95% |
-| Chat System | 🔴 Planned | 0% |
-| Projects Feature | 🔴 Planned | 0% |
+| Projects Feature | 🟡 UI Complete | 50% |
 
 ## 🧪 Testing & Quality
 
@@ -123,14 +126,10 @@ libreollama/
 # Run all tests
 npm test
 
-# Run with coverage
+# Run with coverage report
 npm run test:coverage
 
-# Run specific features
-npm test -- canvas
-npm test -- gmail
-
-# Watch mode for development
+# Run tests in watch mode
 npm run test:watch
 
 # Code quality checks
@@ -146,30 +145,16 @@ npm run type-check
 
 ## 📚 Documentation
 
-Complete documentation is available in the [`docs/`](./docs/) directory:
+Complete documentation is available in the [`docs/`](./docs/) directory, including:
 
-- **[Documentation Hub](./docs/README.md)** - Main documentation index
-- **[Production Readiness](./docs/PRODUCTION_READINESS.md)** - Complete project roadmap
-- **[Design System](./docs/DESIGN_SYSTEM.md)** - Colors, typography, components
-- **[Architecture Guide](./docs/ARCHITECTURE.md)** - Technical implementation
-- **[Testing Strategy](./docs/TESTING_STRATEGY.md)** - Testing approach & patterns
-
-### For Developers
-- **[Feature Roadmap](./docs/roadmap/)** - Detailed feature specifications
+- **`CANVAS_ARCHITECTURE_AUDIT_UPDATED.md`**: A deep dive into the canvas system's architecture.
+- **`PROJECT_STATUS.md`**: A detailed breakdown of the status of every feature.
+- **`DESIGN_SYSTEM.md`**: Guidelines for the Asana-inspired design system.
 
 ## 🤝 Contributing
 
-We welcome contributions! Please:
-
-1. Read the [Architecture Guide](./docs/ARCHITECTURE.md) for patterns and conventions
-2. Follow the [Design System](./docs/DESIGN_SYSTEM.md) for UI consistency
-3. Use the [Testing Strategy](./docs/TESTING_STRATEGY.md) for quality assurance
-4. Check the [Production Readiness Plan](./docs/PRODUCTION_READINESS.md) for priorities
+We welcome contributions! Please review the documentation in the `docs/` folder to understand the project's architecture, design, and testing patterns.
 
 ## 📄 License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-**Ready to get productive?** Start with `npm run tauri dev` and explore the integrated workspace designed for modern knowledge work.

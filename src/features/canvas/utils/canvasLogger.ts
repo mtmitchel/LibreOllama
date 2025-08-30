@@ -1,5 +1,3 @@
-import { logger, canvasLogger } from '../../../core/lib/logger'; // Import canvasLogger directly
-
 /**
  * Canvas-specific environment-aware logging utility
  * Improves production performance by disabling non-critical logging
@@ -21,32 +19,32 @@ const frameThrottle = (fn: (...args: unknown[]) => void) => {
 
 export const canvasLog = {
   // Debug logs only in development (throttled)
-  debug: isDevelopment ? frameThrottle(logger.debug.bind(logger)) : () => {},
+  debug: isDevelopment ? frameThrottle(console.debug.bind(console)) : () => {},
   
   // Info logs in development and test (throttled)
-  log: (isDevelopment || isTest) ? frameThrottle(logger.log.bind(logger)) : () => {},
+  log: (isDevelopment || isTest) ? frameThrottle(console.log.bind(console)) : () => {},
   
   // Info logs in development and test (throttled) - same as log but semantic distinction
-  info: (isDevelopment || isTest) ? frameThrottle((logger as any).info?.bind(logger) || logger.log.bind(logger)) : () => {},
+  info: (isDevelopment || isTest) ? frameThrottle(console.info.bind(console)) : () => {},
   
   // Warnings always shown but throttled in production
-  warn: logger.warn,
+  warn: console.warn.bind(console),
   
   // Errors always logged
-  error: logger.error,
+  error: console.error.bind(console),
   
   // Performance logging only in development
-  perf: isDevelopment ? logger.debug : () => {},
+  perf: isDevelopment ? console.debug.bind(console) : () => {},
   
   // Group operations only in development (using console directly since logger doesn't have group methods)
   group: isDevelopment ? console.group.bind(console) : () => {},
   groupEnd: isDevelopment ? console.groupEnd.bind(console) : () => {},
   
   // Memory logging only in development
-  memory: isDevelopment ? logger.debug : () => {},
+  memory: isDevelopment ? console.debug.bind(console) : () => {},
   
   // Table-specific logging (heavily used in TableElement)
-  table: isDevelopment ? logger.debug : () => {},
+  table: isDevelopment ? console.debug.bind(console) : () => {},
 };
 
 // Canvas-specific performance profiler
@@ -70,13 +68,13 @@ export const canvasPerf = {
   
   time: (label: string) => {
     if (isDevelopment) {
-      canvasLogger.time(label);
+      console.time(label);
     }
   },
   
   timeEnd: (label: string) => {
     if (isDevelopment) {
-      canvasLogger.timeEnd(label);
+      console.timeEnd(label);
     }
   }
 }; 

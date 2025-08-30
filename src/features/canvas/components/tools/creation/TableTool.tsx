@@ -6,7 +6,7 @@
 import React from 'react';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+
 import { useShallow } from 'zustand/react/shallow';
 import { TableElement, ElementId } from '../../../types/enhanced.types';
 import { nanoid } from 'nanoid';
@@ -116,14 +116,7 @@ export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
     }, 50);
   };
 
-  useToolEventHandler({
-    isActive,
-    stageRef,
-    toolName: 'TableTool',
-    handlers: {
-      onMouseDown: handleMouseDown
-    }
-  });
+  
 
   return null; // The tool itself doesn't render anything, it just handles events
 }; 

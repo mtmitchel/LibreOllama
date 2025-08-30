@@ -1,6 +1,12 @@
 import { UnifiedCanvasStore } from '../unifiedCanvasStore';
 import { StoreModule, StoreSet, StoreGet } from './types';
-import { logger } from '../../../../core/lib/logger';
+// Inline logger to avoid circular dependencies
+const logger = {
+  debug: (...args: any[]) => console.debug(...args),
+  info: (...args: any[]) => console.info(...args),
+  warn: (...args: any[]) => console.warn(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 import { 
   KonvaMouseEvent, 
   KonvaPointerEvent, 

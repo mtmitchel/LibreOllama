@@ -15,7 +15,7 @@ import { Group } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useShallow } from 'zustand/react/shallow';
-import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+
 import { CanvasElement } from '../../../types/enhanced.types';
 import { BaseCreationToolProps, Vector2d, CreationToolState } from './types';
 import { canvasLog } from '../../../utils/canvasLogger';
@@ -267,18 +267,7 @@ export const BaseCreationTool = <T extends CanvasElement>({
       setSelectedTool, clearSelection, selectElement, setTextEditingElement]);
 
   // Set up event listeners
-  useToolEventHandler({
-    isActive,
-    stageRef,
-    toolName: `BaseCreationTool-${type}`,
-    handlers: {
-      onPointerMove: handlePointerMove,
-      onPointerLeave: handlePointerLeave,
-      onPointerEnter: handlePointerEnter,
-      onPointerDown: handlePointerDown,
-      onPointerUp: handlePointerUp
-    }
-  });
+  
 
   // Don't render anything if not active or no position
   if (!isActive || (!state.showPlacementGuide && !state.isCreating) || (!state.cursorPosition && !state.startPosition)) {

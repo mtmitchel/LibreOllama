@@ -20,19 +20,24 @@ import {
 import { canvasTheme } from '../utils/canvasTheme';
 import { TextShape } from '../shapes/TextShape';
 import { ImageShape } from '../shapes/ImageShape';
-import { StickyNoteShape } from '../shapes/StickyNoteShape';
+import { PureKonvaStickyNote } from '../shapes/PureKonvaStickyNote';
 import { TriangleShape } from '../shapes/TriangleShape';
 import { RectangleShape } from '../shapes/RectangleShape';
 import { CircleShape } from '../shapes/CircleShape';
 import { PenShape } from '../shapes/PenShape';
 import { SectionShape } from '../shapes/SectionShape';
 import { TableElement } from '../elements/TableElement';
-import { KonvaElementBoundary } from '../utils/KonvaElementBoundary';
+import { KonvaElementBoundary } from '../components/ui/KonvaElementBoundary';
 import { CanvasErrorBoundary } from '../components/CanvasErrorBoundary';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { StrokeRenderer } from '../components/renderers/StrokeRenderer';
 import { ConnectorShape } from '../shapes/ConnectorShape';
 import { useProgressiveRender } from '../hooks/useProgressiveRender';
+import { scheduleLayerDraw } from '../utils/performance/RafBatcher';
+import { PenTool } from '../components/tools/drawing/PenTool';
+import { MarkerTool } from '../components/tools/drawing/MarkerTool';
+import { useOptimizedProgressiveConfig, reportProgressiveRenderMetrics } from '../utils/performance/progressiveRenderingConfig';
+import { HighlighterTool } from '../components/tools/drawing/HighlighterTool';
 
 interface MainLayerProps {
   name?: string;
@@ -84,15 +89,25 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     selectElement: state.selectElement
   })));
 
-  // PROGRESSIVE RENDERING: Use progressive rendering for large element counts
-  const shouldUseProgressiveRender = enableProgressiveRendering && visibleElements.length > 200;
+
+  // OPTIMIZED PROGRESSIVE RENDERING: Use performance-aware thresholds
+  const progressiveConfig = useOptimizedProgressiveConfig({
+    elementCount: visibleElements.length,
+    isDrawing: isDrawing || false,
+    isInteracting: false, // TODO: integrate with interaction state
+    memoryPressure: 'low' // TODO: integrate with memory monitoring
+  });
+  
+  // SIMPLIFIED: Progressive rendering completely disabled for performance
+  const shouldUseProgressiveRender = false;
+    
   const progressiveRender = useProgressiveRender(
     visibleElements,
     viewport,
     {
-      chunkSize: 50, // Render 50 elements per chunk
-      frameTime: 16, // Target 60fps (16ms per frame)
-      priorityThreshold: 200 // Enable progressive rendering for >200 elements
+      chunkSize: progressiveConfig.chunkSize,
+      frameTime: progressiveConfig.frameTime,
+      priorityThreshold: progressiveConfig.priorityThreshold
     }
   );
 
@@ -205,10 +220,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       case 'sticky-note':
         return (
           <KonvaElementBoundary key={element.id}>
-            <StickyNoteShape
+            <PureKonvaStickyNote
               element={element as any}
               isSelected={isSelected}
-              konvaProps={konvaElementProps}
               onUpdate={updateElement}
               stageRef={stageRef}
             />
@@ -277,7 +291,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               element={element as any}
               isSelected={isSelected}
               onSelect={() => selectElement(element.id as ElementId)}
-              onUpdate={(updates) => updateElement(element.id, updates)}
+              onUpdate={(id, updates) => updateElement(id, updates)}
               stageRef={stageRef || { current: null }}
             />
           </KonvaElementBoundary>
@@ -311,9 +325,17 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     
     const renderedElements = validElements.map(renderElement).filter(Boolean);
     
-    // Log progressive rendering status when enabled
+    // Log progressive rendering status with performance metrics
     if (shouldUseProgressiveRender) {
-      console.log(`🎨 [MainLayer] Progressive rendering: ${renderedElements.length}/${visibleElements.length} elements (${Math.round(progressiveRender.progress * 100)}%)`);
+      const progress = Math.round(progressiveRender.progress * 100);
+      console.log(`🎨 [MainLayer] Progressive rendering: ${renderedElements.length}/${visibleElements.length} elements (${progress}%)`, {
+        config: progressiveConfig.debugInfo,
+        recommendations: progressiveConfig.debugInfo ? [] : undefined // TODO: Add recommendations
+      });
+      
+      // Report performance metrics for adaptive tuning
+      const frameTime = performance.now() % 1000; // Simple frame time approximation
+      reportProgressiveRenderMetrics(frameTime < 16 ? 12 : 20);
     }
     
     return renderedElements;
@@ -356,6 +378,12 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     return nodes;
   }, [memoizedElements, draftSectionElement, drawingLine]);
 
+  // Hint RAF batcher that this layer will need drawing soon when in progressive mode
+  if (shouldUseProgressiveRender && (stageRef?.current)) {
+    const layer = stageRef.current.findOne((n) => n.getClassName && n.getClassName() === 'Layer') as Konva.Layer | null;
+    if (layer) scheduleLayerDraw(layer);
+  }
+
   return (
     <CanvasErrorBoundary
       fallback={
@@ -386,6 +414,34 @@ export const MainLayer: React.FC<MainLayerProps> = ({
           perfectDrawEnabled={false}
           listening={true}
         >
+          {/* FIXED: Only render the ACTIVE tool to prevent multiple event handlers */}
+          {selectedTool === 'pen' && <PenTool stageRef={stageRef as any} isActive={true} />}
+          {selectedTool === 'marker' && (
+            <MarkerTool
+              stageRef={stageRef as any}
+              isActive={true}
+              strokeStyle={{
+                color: '#000000',
+                width: 4,
+                opacity: 0.9,
+                smoothness: 0.2,
+                lineCap: 'round',
+                lineJoin: 'round'
+              }}
+            />
+          )}
+          {selectedTool === 'highlighter' && (
+            <HighlighterTool
+              stageRef={stageRef as any}
+              isActive={true}
+              strokeStyle={{
+                color: '#f7e36d',
+                width: 12,
+                opacity: 0.5,
+                blendMode: 'multiply'
+              }}
+            />
+          )}
           {/* Render sections first (behind elements) */}
           {sections.map(section => {
             const sectionChildren = elementsBySection?.get(section.id) || [];

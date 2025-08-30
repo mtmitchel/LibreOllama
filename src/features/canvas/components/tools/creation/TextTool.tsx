@@ -19,9 +19,9 @@ import { useShallow } from 'zustand/react/shallow';
 import { Vector2d } from '../base';
 import { nanoid } from 'nanoid';
 import { TextElement, ElementId } from '../../../types/enhanced.types';
-import { measureTextDimensions } from '../../../utils/textEditingUtils';
+import { measureText } from '../../../utils/textUtils';
 import { useCursorManager } from '../../../utils/performance/cursorManager';
-import { useSingleRAF } from '../../../hooks/useRAFManager';
+import { useSingleRAF } from '../../../hooks/useRafManager';
 
 interface TextToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -324,7 +324,7 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
 
       // Calculate new width based on text
       if (text.trim()) {
-        const dimensions = measureTextDimensions(text, 24, 'Inter', 600, false);
+        const dimensions = measureText(text, 24, 'Inter');
         setTextWidth(Math.max(120, dimensions.width + 20)); // Add padding
       } else {
         setTextWidth(120);
@@ -478,9 +478,9 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
         {caretVisible && (
           <Line
             points={[
-              currentText ? measureTextDimensions(currentText, 24, 'Inter', 600, false).width + 10 : 10,
+              currentText ? measureText(currentText, 24, 'Inter').width + 10 : 10,
               2,
-              currentText ? measureTextDimensions(currentText, 24, 'Inter', 600, false).width + 10 : 10,
+              currentText ? measureText(currentText, 24, 'Inter').width + 10 : 10,
               26
             ]}
             stroke="#3B82F6"

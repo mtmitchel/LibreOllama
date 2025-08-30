@@ -44,7 +44,7 @@ interface BatchedOperation {
   name: string;
 }
 
-export const useRAFManager = (componentName?: string) => {
+export const useRafManager = (componentName?: string) => {
   const rafMap = useRef<Map<string, RAFEntry>>(new Map());
   const batchedOperations = useRef<BatchedOperation[]>([]);
   const frameStartTime = useRef<number>(0);
@@ -313,7 +313,7 @@ export const useRAFManager = (componentName?: string) => {
  * Automatically cancels the RAF on unmount or when a new one is scheduled
  */
 export const useSingleRAF = (componentName?: string) => {
-  const rafManager = useRAFManager(componentName);
+  const rafManager = useRafManager(componentName);
   const currentRAFKey = useRef<string | null>(null);
 
   const scheduleRAF = useCallback((

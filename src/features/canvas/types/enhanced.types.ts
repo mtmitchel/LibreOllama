@@ -73,6 +73,11 @@ export interface TextElement extends BaseElement {
   fill?: string;
   width?: number;
   height?: number;
+  // Styling and layout
+  padding?: number; // default 12 (used for overlay and measurement)
+  lineHeight?: number; // default 1.4
+  align?: 'left' | 'center' | 'right'; // default 'left'
+  maxHeight?: number; // optional clamp height
 }
 
 export interface RectangleElement extends BaseElement {
@@ -227,6 +232,11 @@ export interface StickyNoteElement extends BaseElement {
   fontStyle?: string;
   textDecoration?: string;
   textAlign?: 'left' | 'center' | 'right';
+  // Styling and layout
+  padding?: number; // default 12
+  lineHeight?: number; // default 1.4
+  align?: 'left' | 'center' | 'right'; // default 'left'
+  maxHeight?: number; // optional clamp height
   richTextSegments?: RichTextSegment[];
   childElementIds?: ElementId[];
   isContainer?: boolean;

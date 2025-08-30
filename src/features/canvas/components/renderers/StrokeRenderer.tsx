@@ -79,9 +79,11 @@ function renderMarker(
     return applyPointReduction(marker.points, lod.pointReduction);
   }, [marker.points, lod.pointReduction]);
   
-  // Pre-calculate tension for performance
+  // Pre-calculate tension for performance - guard against NaN
   const tension = React.useMemo(() => {
-    return lod.styleSimplification ? 0.2 : marker.style.smoothness * 0.5;
+    if (lod.styleSimplification) return 0.2;
+    const smoothness = marker.style.smoothness;
+    return (typeof smoothness === 'number' && !isNaN(smoothness)) ? smoothness * 0.5 : 0.5;
   }, [lod.styleSimplification, marker.style.smoothness]);
   
   return (

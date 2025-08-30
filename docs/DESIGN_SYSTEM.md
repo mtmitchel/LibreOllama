@@ -238,4 +238,4 @@ Tracking for this consolidation lives in `docs/design-system/migrations/DESIGN_S
 
 ---
 
-*Note: This is the authoritative design system document. All other design-related documents have been archived to `docs/_archive/design/`.*
+*Note: This is the authoritative design system document. Migration progress and guidelines live in `docs/design-system/MIGRATION.md`. Historical design docs are archived in `docs/_archive/design-system/`.*

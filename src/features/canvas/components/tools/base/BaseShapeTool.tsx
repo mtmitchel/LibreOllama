@@ -15,7 +15,7 @@ import { Group } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useShallow } from 'zustand/react/shallow';
-import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+
 import { nanoid } from 'nanoid';
 import { CanvasElement, ElementId, SectionElement } from '../../../types/enhanced.types';
 import { BaseShapeToolProps, Vector2d, ShapeToolState } from './types';
@@ -139,16 +139,7 @@ export const BaseShapeTool = <T extends Exclude<CanvasElement, SectionElement>>(
   }, [isActive, stageRef, editingTextId, createShape, addElement, shouldStartTextEdit, setTextEditingElement, setSelectedTool, type]);
 
   // Set up event listeners
-  useToolEventHandler({
-    isActive,
-    stageRef,
-    toolName: `BaseShapeTool-${type}`,
-    handlers: {
-      onPointerMove: handlePointerMove,
-      onPointerLeave: handlePointerLeave,
-      onPointerDown: handlePointerDown
-    }
-  });
+  
 
   // Cursor management is handled by CanvasStage's centralized cursor system
 

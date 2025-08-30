@@ -1,3 +1,8 @@
+/**
+ * Simple Canvas Error Boundary
+ * Lightweight error boundary for basic Konva rendering error handling
+ * For more advanced error handling, use the comprehensive ErrorBoundary
+ */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Group, Rect, Text } from 'react-konva';
@@ -16,7 +21,7 @@ interface State {
   renderCount: number;
 }
 
-export class CanvasErrorBoundary extends Component<Props, State> {
+export class SimpleCanvasErrorBoundary extends Component<Props, State> {
   private renderTimer: NodeJS.Timeout | null = null;
   private lastErrorTime: number = 0;
 
@@ -229,4 +234,5 @@ export class CanvasErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default CanvasErrorBoundary; 
+export { SimpleCanvasErrorBoundary as CanvasErrorBoundary };
+export default SimpleCanvasErrorBoundary; 

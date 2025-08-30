@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
 import Konva from 'konva';
@@ -26,11 +27,9 @@ import { createViewportModule, ViewportState, ViewportActions } from './modules/
 import { createDrawingModule, DrawingState, DrawingActions } from './modules/drawingModule';
 import { createHistoryModule, HistoryState, HistoryActions } from './modules/historyModule';
 import { createSectionModule, SectionState, SectionActions } from './modules/sectionModule';
-import { createTableModule, TableState, TableActions } from './modules/tableModule';
-import { createStickyNoteModule, StickyNoteState, StickyNoteActions } from './modules/stickyNoteModule';
-import { createLoadingModule, LoadingState, LoadingActions } from './modules/loadingModule';
+// import { createTableModule, TableState, TableActions } from './modules/tableModule';
+// import { createStickyNoteModule, StickyNoteState, StickyNoteActions } from './modules/stickyNoteModule';
 import { createUIModule, UIState, UIActions } from './modules/uiModule';
-import { createEraserModule, EraserState, EraserActions } from './modules/eraserModule';
 import { createEventModule, EventState, EventActions } from './modules/eventModule';
 
 // Removed unused import: combinedSelectors
@@ -39,6 +38,15 @@ import { WritableDraft } from 'immer';
 
 
 enableMapSet();
+
+// helpers
+const toEntries = <K, V>(m: Map<K, V>) => Array.from(m.entries());
+const fromEntries = <K, V>(e: [K, V][]) => new Map<K, V>(e ?? []);
+
+const assertMap = (m: unknown, label = 'elements') => {
+  const ok = m instanceof Map && typeof (m as any).get === 'function';
+  if (!ok) throw new Error(`${label} is not a Map`);
+};
 
 // Legacy compatibility actions
 export interface LegacyActions {
@@ -57,14 +65,12 @@ export interface UnifiedCanvasState extends
   ElementState,
   SelectionState,
   ViewportState,
-  DrawingState,
+  DrawingState, // Now includes eraser functionality
   HistoryState,
   SectionState,
-  TableState,
-  StickyNoteState,
-  LoadingState,
-  UIState,
-  EraserState,
+  // TableState,
+  // StickyNoteState,
+  UIState, // Now includes loading functionality
   EventState {
   // No additional state needed - all state comes from modules
 }
@@ -74,14 +80,12 @@ export interface UnifiedCanvasActions extends
   ElementActions,
   SelectionActions,
   ViewportActions,
-  DrawingActions,
+  DrawingActions, // Now includes eraser functionality
   HistoryActions,
   SectionActions,
-  TableActions,
-  StickyNoteActions,
-  LoadingActions,
-  UIActions,
-  EraserActions,
+  // TableActions,
+  // StickyNoteActions,
+  UIActions, // Now includes loading functionality
   EventActions,
   LegacyActions {
   getVisibleElements: () => CanvasElement[];
@@ -103,11 +107,9 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
     drawing: createDrawingModule(set as any, get as any),
     history: createHistoryModule(set as any, get as any),
     section: createSectionModule(set as any, get as any),
-    table: createTableModule(set as any, get as any),
-    stickyNote: createStickyNoteModule(set as any, get as any),
-    loading: createLoadingModule(set as any, get as any),
+    // table: createTableModule(set as any, get as any),
+    // stickyNote: createStickyNoteModule(set as any, get as any),
     ui: createUIModule(set as any, get as any),
-    eraser: createEraserModule(set as any, get as any),
     event: createEventModule(set as any, get as any),
   };
 
@@ -125,23 +127,15 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
     ...modules.history.actions,
     ...modules.section.state,
     ...modules.section.actions,
-    ...modules.table.state,
-    ...modules.table.actions,
-    ...modules.stickyNote.state,
-    ...modules.stickyNote.actions,
-    ...modules.loading.state,
-    ...modules.loading.actions,
     ...modules.ui.state,
     ...modules.ui.actions,
-    ...modules.eraser.state,
-    ...modules.eraser.actions,
     ...modules.event.state,
     ...modules.event.actions,
 
     getVisibleElements: () => {
       // Use standardized simple viewport culling - no duplicate logic
       const { elements, viewport } = get();
-      console.warn('[UnifiedCanvasStore] getVisibleElements is deprecated. Use useSimpleViewportCulling hook instead.');
+      console.warn('[UnifiedCanvasStore] getVisibleElements is deprecated. Use useSpatialIndex() hook instead.');
       return Array.from(elements.values());
     },
 
@@ -184,8 +178,49 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
 
 // Create the unified canvas store
 export const useUnifiedCanvasStore = create<UnifiedCanvasStore>()(
-  subscribeWithSelector(
-    immer(createCanvasStoreSlice)
+  persist(
+    subscribeWithSelector(
+      immer(createCanvasStoreSlice)
+    ),
+    {
+      name: 'libreollama-canvas',
+      version: 2,
+      partialize: (s) => ({
+        elements: toEntries(s.elements),
+        elementOrder: s.elementOrder,
+        selectedElementIds: Array.from(s.selectedElementIds),
+        lastSelectedElementId: s.lastSelectedElementId,
+        selectionMarquee: s.selectionMarquee,
+        viewport: s.viewport,
+        isDrawing: s.isDrawing,
+        currentPath: s.currentPath,
+        penColor: s.penColor,
+        penWidth: s.penWidth,
+        history: s.history,
+        historyIndex: s.historyIndex,
+        sections: toEntries(s.sections),
+        sectionElementMap: toEntries(s.sectionElementMap),
+        selectedTool: s.selectedTool,
+        selectedStickyNoteColor: s.selectedStickyNoteColor,
+      }),
+      merge: (persisted, current) => {
+        const p = persisted as any;
+        return {
+          ...current,
+          ...p,
+          elements: fromEntries(p?.elements),
+          selectedElementIds: new Set(p?.selectedElementIds),
+          sections: fromEntries(p?.sections),
+          sectionElementMap: fromEntries(p?.sectionElementMap),
+        } as UnifiedCanvasStore;
+      },
+      storage: createJSONStorage(() => localStorage),
+      onFinishHydration: (s) => {
+        if (s) {
+          assertMap((s as any).elements);
+        }
+      }
+    }
   )
 );
 

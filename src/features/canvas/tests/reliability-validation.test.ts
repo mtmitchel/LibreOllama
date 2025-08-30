@@ -29,7 +29,7 @@ describe('Canvas Reliability Systems Validation', () => {
     vi.clearAllMocks();
   });
 
-  // NOTE: EventHandlerManager tests removed - functionality now integrated into UnifiedEventHandler
+  // NOTE: EventHandlerManager tests removed - functionality now integrated into CanvasEventManager
 
   // --- DrawingStateManager Tests (from Jest file) ---
   describe('DrawingStateManager', () => {

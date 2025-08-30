@@ -5,6 +5,7 @@
 
 import { vi } from 'vitest';
 import React from 'react';
+import Konva from 'konva';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/testUtils';
 
@@ -15,7 +16,7 @@ import { RectangleShape } from '@/features/canvas/shapes/RectangleShape';
 import { CircleShape } from '@/features/canvas/shapes/CircleShape';
 import { TriangleShape } from '@/features/canvas/shapes/TriangleShape';
 import { TextShape } from '@/features/canvas/shapes/TextShape';
-import { StickyNoteShape } from '@/features/canvas/shapes/StickyNoteShape';
+import { PureKonvaStickyNote } from '@/features/canvas/shapes/PureKonvaStickyNote';
 import { PenShape } from '@/features/canvas/shapes/PenShape';
 import { ImageShape } from '@/features/canvas/shapes/ImageShape';
 
@@ -369,8 +370,14 @@ describe('Comprehensive Shape Components Test Suite', () => {
         fontSize: 14
       });
 
-      const props = getBaseShapeProps(element);
-      const { container } = renderWithKonva(<StickyNoteShape {...props} />);
+      const stageRef = React.createRef<Konva.Stage>();
+      const props = {
+        element,
+        onUpdate: vi.fn(),
+        isSelected: false,
+        stageRef,
+      };
+      const { container } = renderWithKonva(<PureKonvaStickyNote {...props} />, { stageRef });
 
       expect(container).toBeTruthy();
       expect(isStickyNoteElement(element)).toBe(true);
@@ -387,8 +394,14 @@ describe('Comprehensive Shape Components Test Suite', () => {
           height: 120
         });
 
-        const props = getBaseShapeProps(element);
-        const { container } = renderWithKonva(<StickyNoteShape {...props} />);
+        const stageRef = React.createRef<Konva.Stage>();
+        const props = {
+          element,
+          onUpdate: vi.fn(),
+          isSelected: false,
+          stageRef,
+        };
+        const { container } = renderWithKonva(<PureKonvaStickyNote {...props} />, { stageRef });
         
         expect(container).toBeTruthy();
       });
@@ -558,8 +571,14 @@ describe('Comprehensive Shape Components Test Suite', () => {
             shapeProps = { ...getBaseShapeProps(element), onSelect };
             break;
           case 'sticky-note': 
-            ShapeComponent = StickyNoteShape;
-            shapeProps = { ...getBaseShapeProps(element), onSelect };
+            ShapeComponent = PureKonvaStickyNote;
+            shapeProps = {
+              element,
+              onUpdate: vi.fn(),
+              isSelected: false,
+              stageRef: React.createRef<Konva.Stage>(),
+              onSelect,
+            };
             break;
           case 'pen': 
             ShapeComponent = PenShape;

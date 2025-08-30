@@ -3,10 +3,11 @@ import { useEffect, useRef, useCallback, memo, useMemo, type FC, type MutableRef
 import { Text, Group, Rect, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { TextElement, ElementId, CanvasElement } from '../types/enhanced.types';
+import { useShapeCaching } from '../hooks/useShapeCaching';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
-import { measureTextDimensions, CANVAS_TEXT_CONFIG } from '../utils/textEditingUtils';
+import { measureText } from '../utils/textUtils';
 import { debounce } from '../utils/debounce';
 import { calculateScreenCoordinates } from '../utils/coordinateUtils';
 // Removed devLog import - debug logging cleaned up for performance
@@ -26,12 +27,20 @@ interface TextShapeProps {
  * Using consolidated config from textEditingUtils with local overrides
  */
 const TEXT_CONFIG = {
-  ...CANVAS_TEXT_CONFIG,
+  PADDING: 8,
+  MIN_WIDTH: 80,
+  MIN_HEIGHT: 32,
+  LINE_HEIGHT: 1.25,
+  FONT_WEIGHT: '400',
+  LETTER_SPACING: 0,
   EDIT_BACKGROUND: '#ffffff',
   EDIT_BORDER: '2px solid #3b82f6',
+  CURSOR_COLOR: '#3B82F6',
+  CURSOR_WIDTH: 2,
+  FONT_COLOR: '#1F2937',
 } as const;
 
-// Remove duplicate function - now using consolidated measureTextDimensions from textEditingUtils
+// Remove duplicate function - now using consolidated measureText from textUtils
 
 /**
  * Auto-hug utility: Ensures text element always tightly fits its content
@@ -44,13 +53,11 @@ const autoHugTextContent = (
   if (!element.text || element.text.trim().length === 0) return;
   
   const currentFontSize = element.fontSize || 16;
-  const huggedDimensions = measureTextDimensions(
-    element.text,
-    currentFontSize,
-    fontFamily,
-    600,
-    true // Enforce minimums for final auto-hug
-  );
+  const textDimensions = measureText(element.text || 'A', element.fontSize || 16, fontFamily);
+  const huggedDimensions = {
+    width: textDimensions.width + TEXT_CONFIG.PADDING * 2,
+    height: textDimensions.height + TEXT_CONFIG.PADDING * 2,
+  };
   
   // Only update if dimensions actually changed to prevent unnecessary re-renders
   const needsUpdate = 
@@ -71,46 +78,59 @@ const autoHugTextContent = (
  * Create positioned DOM textarea for editing
  */
 const createTextEditor = (
-  position: { left: number; top: number; width: number; height: number },
+  position: { left: number; top: number; width: number; height: number; fontSize?: number },
   initialText: string,
   fontSize: number,
   fontFamily: string,
   backgroundColor: string | undefined,
   textColor: string,
+  baseFontSize: number,
+  getPosition: () => { left: number; top: number; width: number; height: number; fontSize?: number } | null,
   onSave: (text: string) => void,
   onCancel: () => void,
   onRealtimeUpdate?: (text: string, dimensions: { width: number; height: number }) => void
 ) => {
   const textarea = document.createElement('textarea');
   
-  // Style to be completely invisible - user sees the canvas text box instead
+  const scale = position.fontSize ? position.fontSize / baseFontSize : 1;
+
+  // Style the textarea to match Konva text metrics precisely
   Object.assign(textarea.style, {
     position: 'fixed',
     left: `${position.left}px`,
     top: `${position.top}px`,
     width: `${position.width}px`,
     height: `${position.height}px`,
-    fontSize: `${fontSize}px`,
+    fontSize: `${(position.fontSize || fontSize)}px`,
     fontFamily: fontFamily,
-    fontWeight: TEXT_CONFIG.FONT_WEIGHT,
-    lineHeight: TEXT_CONFIG.LINE_HEIGHT.toString(),
-    color: 'transparent', // Make text invisible - user sees canvas version
+    fontWeight: String(TEXT_CONFIG.FONT_WEIGHT),
+    lineHeight: String(TEXT_CONFIG.LINE_HEIGHT), // unitless multiplier
+    color: 'transparent', // Keep text invisible; caret still visible
     background: 'transparent',
-    border: 'none',
+    border: '0',
     borderRadius: '0',
-    padding: `${TEXT_CONFIG.PADDING / 2}px`,
+    padding: `${(TEXT_CONFIG.PADDING / 2) * scale}px`,
     resize: 'none',
     outline: 'none',
     zIndex: '10000',
     overflow: 'hidden',
     whiteSpace: 'pre-wrap',
-    wordWrap: 'break-word',
-    boxSizing: 'border-box',
+    wordBreak: 'break-word',
+    boxSizing: 'content-box', // critical: scrollHeight excludes padding
     textAlign: 'left',
     verticalAlign: 'top',
-    caretColor: '#3B82F6', // Show blue cursor
-    // Invisible textarea - user interacts with canvas visually
-    opacity: 0.01, // Almost invisible but still functional
+    letterSpacing: `${0}px`,
+    caretColor: '#3B82F6',
+    opacity: '0.01',
+  } as CSSStyleDeclaration);
+
+  // Prevent the stage from stealing focus or events while editing
+  ;['pointerdown','mousedown','touchstart','wheel'].forEach((ev) => {
+    textarea.addEventListener(ev, (e) => {
+      e.stopImmediatePropagation?.();
+      e.stopPropagation();
+      // Do not preventDefault for keyboard text input
+    }, { capture: true, passive: false } as any);
   });
 
   // Set value and placeholder
@@ -140,21 +160,50 @@ const createTextEditor = (
   }) as any, 150); // 150ms debounce - smooth typing without performance loss
 
   const handleInput = () => {
-    // Auto-expand text box as user types (FigJam behavior)
     const currentText = textarea.value;
-    // Always measure with actual text or minimum placeholder size
-    const textToMeasure = currentText.trim().length > 0 ? currentText : 'Add text';
-    // Use enforceMinimums: false for real-time updates to get true text dimensions
-    const newDimensions = measureTextDimensions(textToMeasure, fontSize, fontFamily, 600, false);
-    
-    // Real-time text measurement for auto-expand
-    
-    // Update textarea size IMMEDIATELY for responsive UX
-    textarea.style.width = `${newDimensions.width}px`;
-    textarea.style.height = `${newDimensions.height}px`;
-    
-    // Update canvas element with DEBOUNCING to reduce performance impact
+
+    // When typing, keep measurement width matched to the frame width
+    const pos = getPosition();
+    if (pos) {
+      textarea.style.left = `${pos.left}px`;
+      textarea.style.top = `${pos.top}px`;
+      textarea.style.width = `${pos.width}px`;
+      if (pos.fontSize) textarea.style.fontSize = `${pos.fontSize}px`;
+    }
+
+    // Let the browser compute the height, then read scrollHeight
+    textarea.style.height = 'auto';
+
+    const DESCENDER_GUARD = 0.15; // ~15% of font size prevents caret clipping
+    const effectiveFontPx = parseFloat(textarea.style.fontSize || String(fontSize));
+    const guardPx = effectiveFontPx * DESCENDER_GUARD;
+    const domH = textarea.scrollHeight + guardPx;
+    textarea.style.height = `${domH}px`;
+
+    // Convert DOM size back to canvas units using scale from getPosition
+    const scale = (pos && pos.fontSize) ? (pos.fontSize / baseFontSize) : 1;
+    const canvasH = domH / scale;
+    const canvasW = pos ? pos.width / scale : parseFloat(textarea.style.width);
+    const newDimensions = { width: canvasW, height: canvasH } as { width: number; height: number };
+
     debouncedStoreUpdate(currentText, newDimensions);
+  };
+
+  const commitWithMeasuredSize = () => {
+    const text = textarea.value;
+    try {
+      const pos = getPosition();
+      const scale = (pos && pos.fontSize) ? (pos.fontSize / baseFontSize) : 1;
+      textarea.style.height = 'auto';
+      const DESCENDER_GUARD = 0.15;
+      const effectiveFontPx = parseFloat(textarea.style.fontSize || String(fontSize));
+      const domH = textarea.scrollHeight + effectiveFontPx * DESCENDER_GUARD;
+      const canvasH = domH / scale;
+      const canvasW = pos ? pos.width / scale : parseFloat(textarea.style.width) / scale;
+      if (onRealtimeUpdate) onRealtimeUpdate(text, { width: canvasW, height: canvasH });
+    } catch {}
+    cleanup();
+    onSave(text);
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -164,28 +213,41 @@ const createTextEditor = (
       onCancel();
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const text = textarea.value;
-      cleanup();
-      onSave(text);
+      commitWithMeasuredSize();
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      const text = textarea.value;
-      cleanup();
-      onSave(text);
+      commitWithMeasuredSize();
     }
     // Allow Enter with Shift for new lines
   };
 
+
   const handleBlur = () => {
     const text = textarea.value;
+    // Finalize height using Konva metrics and snap to DPR to avoid jump
+    try {
+      const dpr = window.devicePixelRatio || 1;
+      const pos = getPosition();
+      const scale = (pos && pos.fontSize) ? (pos.fontSize / baseFontSize) : 1;
+      textarea.style.height = 'auto';
+      const DESCENDER_GUARD = 0.15;
+      const effectiveFontPx = parseFloat(textarea.style.fontSize || String(fontSize));
+      const domH = textarea.scrollHeight + effectiveFontPx * DESCENDER_GUARD;
+      const canvasH = domH / scale;
+      const snappedH = Math.round(canvasH * dpr) / dpr;
+      debouncedStoreUpdate(text, { width: pos ? pos.width / scale : 0, height: snappedH });
+    } catch {}
     cleanup();
     onSave(text);
   };
+
+  let rafId: number | null = null;
 
   const cleanup = () => {
     textarea.removeEventListener('input', handleInput);
     textarea.removeEventListener('keydown', handleKeyDown);
     textarea.removeEventListener('blur', handleBlur);
+    if (rafId) cancelAnimationFrame(rafId);
     if (document.body.contains(textarea)) {
       document.body.removeChild(textarea);
     }
@@ -194,6 +256,22 @@ const createTextEditor = (
   textarea.addEventListener('input', handleInput);
   textarea.addEventListener('keydown', handleKeyDown);
   textarea.addEventListener('blur', handleBlur);
+
+  // Keep placement in sync with viewport pan/zoom
+  const place = () => {
+    const pos = getPosition();
+    if (!pos) return;
+    textarea.style.left = `${pos.left}px`;
+    textarea.style.top = `${pos.top}px`;
+    textarea.style.width = `${pos.width}px`;
+    if (pos.fontSize) textarea.style.fontSize = `${pos.fontSize}px`;
+  };
+
+  const raf = () => {
+    place();
+    rafId = requestAnimationFrame(raf);
+  };
+  rafId = requestAnimationFrame(raf);
 
   return cleanup;
 };
@@ -288,7 +366,7 @@ export const TextShape: FC<TextShapeProps> = memo(({
 
   // Calculate dimensions based on actual content or placeholder
   const measuredDimensions = useMemo(() => {
-    const dimensions = measureTextDimensions(displayText, finalFontSize, fontFamily, 600, true);
+    const dimensions = measureText(displayText, finalFontSize, fontFamily);
     return dimensions;
   }, [displayText, finalFontSize, fontFamily]);
 
@@ -381,6 +459,8 @@ setTextEditingElement(null); // Clear the editing state
           element.fontFamily || getAvailableFontFamily(),
           undefined, // TextElement doesn't have backgroundColor
           textColor,
+          element.fontSize || 16,
+          () => calculateTextareaPosition(),
           (newText: string) => {
             
             const finalText = newText.trim();
@@ -405,12 +485,10 @@ setTextEditingElement(null); // Clear the editing state
             // Then auto-hug and select in sequence using RAF for better performance
             requestAnimationFrame(() => {
               // Use the same approach as real-time updates - don't enforce minimums for final sizing
-              const finalDimensions = measureTextDimensions(
+              const finalDimensions = measureText(
                 finalText,
                 element.fontSize || 16,
                 element.fontFamily || getAvailableFontFamily(),
-                600,
-                false // Don't enforce minimums - keep true text dimensions
               );
               
               
@@ -481,7 +559,9 @@ setTextEditingElement(null); // Clear the editing state
 
   // Handle double-click to start editing
   const handleDoubleClick = useCallback(() => {
-    
+    // Aggressively clear cache before editing to avoid stale visuals
+    try { textCaching.clearCaching(); } catch {}
+
     // If already editing, don't start another editor
     if (cleanupEditorRef.current) {
       return;
@@ -513,6 +593,8 @@ return;
       element.fontFamily || getAvailableFontFamily(),
       undefined, // TextElement doesn't have backgroundColor
       textColor,
+      element.fontSize || 16,
+      () => calculateTextareaPosition(),
       (newText: string) => {
         
         const finalText = newText.trim();
@@ -537,12 +619,10 @@ return;
         // Then auto-hug and select in sequence using RAF for better performance
         requestAnimationFrame(() => {
           // Use the same approach as real-time updates - don't enforce minimums for final sizing
-          const finalDimensions = measureTextDimensions(
+          const finalDimensions = measureText(
             finalText,
             element.fontSize || 16,
             element.fontFamily || getAvailableFontFamily(),
-            600,
-            false // Don't enforce minimums - keep true text dimensions
           );
           
           
@@ -607,6 +687,18 @@ return;
   }, [element, onUpdate, calculateTextareaPosition, setTextEditingElement, textColor]);
 
   // Handle drag
+  // Strategic shape caching for static text
+  const textCaching = useShapeCaching({
+    element: element as unknown as CanvasElement,
+    cacheConfig: {
+      enabled: true,
+      sizeThreshold: require('../utils/performance/cacheTuning').getCacheThresholds().text.size,
+      complexityThreshold: 3,
+      forceCache: false
+    },
+    dependencies: [element.text, element.width, element.height, element.fontSize, element.fontFamily, element.fill]
+  });
+
   const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     // Don't handle drag events while editing
     if (cleanupEditorRef.current) {
@@ -702,12 +794,10 @@ return;
     textNode.scaleY(1);
     
     // Calculate final dimensions based on new font size and auto-hug
-    const finalDimensions = measureTextDimensions(
+    const finalDimensions = measureText(
       element.text || 'Text',
       newFontSize,
       element.fontFamily || getAvailableFontFamily(),
-      600,
-      false // Don't enforce minimums for text scaling
     );
     
     
@@ -764,7 +854,15 @@ return;
         
         {/* Main text */}
         <Text
-          ref={textNodeRef}
+          ref={(node) => {
+            textNodeRef.current = node as any;
+            if (node) {
+              textCaching.nodeRef.current = node as any;
+              if (textCaching.shouldCache && !cleanupEditorRef.current) {
+                setTimeout(() => textCaching.applyCaching(), 0);
+              }
+            }
+          }}
           id={`${element.id}-text`}
           x={TEXT_CONFIG.PADDING / 2}
           y={TEXT_CONFIG.PADDING / 2}
@@ -780,13 +878,16 @@ return;
           wrap='word'
           lineHeight={TEXT_CONFIG.LINE_HEIGHT}
           letterSpacing={TEXT_CONFIG.LETTER_SPACING}
-          listening={true} // Enable listening to help with click detection
+          listening={true}
           opacity={displayOpacity}
           draggable={false}
           onClick={(e) => {
             // Handle text node click events
           }}
-          onTransformEnd={handleTransformEnd}
+          onTransformEnd={(e) => {
+            handleTransformEnd(e);
+            setTimeout(() => textCaching.refreshCache(), 0);
+          }}
         />
       </Group>
       
