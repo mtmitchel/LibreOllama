@@ -31,6 +31,7 @@ import { createSectionModule, SectionState, SectionActions } from './modules/sec
 // import { createStickyNoteModule, StickyNoteState, StickyNoteActions } from './modules/stickyNoteModule';
 import { createUIModule, UIState, UIActions } from './modules/uiModule';
 import { createEventModule, EventState, EventActions } from './modules/eventModule';
+import { createEdgeModule, EdgeState, EdgeActions } from './modules/edgeModule';
 
 // Removed unused import: combinedSelectors
 import { StoreApi } from 'zustand';
@@ -71,7 +72,8 @@ export interface UnifiedCanvasState extends
   // TableState,
   // StickyNoteState,
   UIState, // Now includes loading functionality
-  EventState {
+  EventState,
+  EdgeState {
   // No additional state needed - all state comes from modules
 }
 
@@ -87,6 +89,7 @@ export interface UnifiedCanvasActions extends
   // StickyNoteActions,
   UIActions, // Now includes loading functionality
   EventActions,
+  EdgeActions,
   LegacyActions {
   getVisibleElements: () => CanvasElement[];
 }
@@ -111,6 +114,7 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
     // stickyNote: createStickyNoteModule(set as any, get as any),
     ui: createUIModule(set as any, get as any),
     event: createEventModule(set as any, get as any),
+    edge: createEdgeModule(set as any, get as any),
   };
 
   return {
@@ -131,6 +135,8 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
     ...modules.ui.actions,
     ...modules.event.state,
     ...modules.event.actions,
+    ...modules.edge.state,
+    ...modules.edge.actions,
 
     getVisibleElements: () => {
       // Use standardized simple viewport culling - no duplicate logic
@@ -202,6 +208,8 @@ export const useUnifiedCanvasStore = create<UnifiedCanvasStore>()(
         sectionElementMap: toEntries(s.sectionElementMap),
         selectedTool: s.selectedTool,
         selectedStickyNoteColor: s.selectedStickyNoteColor,
+        // Edge state (draft is transient, not persisted)
+        edges: toEntries(s.edges),
       }),
       merge: (persisted, current) => {
         const p = persisted as any;
@@ -212,6 +220,7 @@ export const useUnifiedCanvasStore = create<UnifiedCanvasStore>()(
           selectedElementIds: new Set(p?.selectedElementIds),
           sections: fromEntries(p?.sections),
           sectionElementMap: fromEntries(p?.sectionElementMap),
+          edges: fromEntries(p?.edges),
         } as UnifiedCanvasStore;
       },
       storage: createJSONStorage(() => localStorage),
