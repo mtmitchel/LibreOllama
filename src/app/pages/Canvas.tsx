@@ -17,6 +17,18 @@ import { Page, PageCard } from '../../components/ui/design-system/Page';
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [isCanvasSidebarOpen, setCanvasSidebarOpen] = useState(true);
   const [canvasStageRef, setCanvasStageRef] = useState<React.RefObject<Konva.Stage | null> | undefined>(undefined);
+  
+  // Force canvas resize when sidebar toggles
+  useEffect(() => {
+    // Dispatch resize event after a small delay to allow CSS transitions
+    const timers = [
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 50),
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 150),
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 300)
+    ];
+    
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [isCanvasSidebarOpen]);
 
   const handleStageReady = (stageRef: React.RefObject<Konva.Stage | null>) => {
     setCanvasStageRef(stageRef);

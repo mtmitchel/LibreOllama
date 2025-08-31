@@ -1,6 +1,13 @@
 // src/features/canvas/types/canvas-elements.ts
-export type ElementId = string & { readonly __elementId: unique symbol };
-export type PortId    = string & { readonly __portId: unique symbol };
+// Import the ElementId from enhanced.types to maintain consistency
+import { ElementId } from './enhanced.types';
+
+// Use the same branding approach for PortId
+type Brand<K, T> = K & { __brand: T };
+export type PortId = Brand<string, 'PortId'>;
+
+// Helper function to create PortId safely
+export const createPortId = (id: string): PortId => id as PortId;
 
 export type PortKind =
   | 'N'|'S'|'E'|'W'

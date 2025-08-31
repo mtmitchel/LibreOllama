@@ -18,6 +18,46 @@ interface NonReactCanvasStageProps {
   selectedTool?: string;
 }
 
+// Helper function to create dot grid pattern (FigJam style)
+const createDotGridHelper = (viewportWidth: number, viewportHeight: number) => {
+  const dotRadius = 1; // Visible dots like FigJam
+  const dotSpacing = 20; // Standard grid spacing
+  const dotColor = 'rgba(0, 0, 0, 0.2)'; // More visible dots (20% opacity)
+  
+  // Calculate grid area (larger than viewport for panning)
+  const gridPadding = 500;
+  const gridArea = {
+    startX: -gridPadding,
+    startY: -gridPadding,
+    endX: viewportWidth + gridPadding,
+    endY: viewportHeight + gridPadding
+  };
+  
+  // Create a group for all dots
+  const dotsGroup = new Konva.Group({
+    listening: false,
+    name: 'dot-grid'
+  });
+  
+  // Generate dots in a grid pattern
+  for (let x = gridArea.startX; x <= gridArea.endX; x += dotSpacing) {
+    for (let y = gridArea.startY; y <= gridArea.endY; y += dotSpacing) {
+      const dot = new Konva.Circle({
+        x: x,
+        y: y,
+        radius: dotRadius,
+        fill: dotColor,
+        listening: false,
+        perfectDrawEnabled: false,
+        transformsEnabled: 'position' // Optimize for performance
+      });
+      dotsGroup.add(dot);
+    }
+  }
+  
+  return dotsGroup;
+};
+
 // Minimal imperative renderer for drawing tools and persisted strokes
 export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageRef: externalStageRef, selectedTool: selectedToolProp }) => {
   const internalStageRef = useRef<Konva.Stage | null>(null);
@@ -40,17 +80,38 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     if (stageRef.current) return;
 
     const container = containerRef.current;
+    // TEST 5: Ensure integer CSS sizing
+    const width = Math.floor(container.clientWidth);
+    const height = Math.floor(container.clientHeight);
+    container.style.width = `${width}px`;
+    container.style.height = `${height}px`;
+    container.style.transform = ''; // No CSS transforms
+    
     const stage = new Konva.Stage({
       container,
-      width: container.clientWidth,
-      height: container.clientHeight,
+      width: width,
+      height: height,
       listening: true,
     });
 
-    // Background layer (simple solid bg for now)
+    // Background layer with FigJam-style dot grid
     const backgroundLayer = new Konva.Layer({ listening: false, name: 'background-layer' });
-    const bg = new Konva.Rect({ x: -20000, y: -20000, width: 40000, height: 40000, fill: '#fafafa', listening: false, perfectDrawEnabled: false });
+    
+    // Solid background (FigJam uses a light gray)
+    const bg = new Konva.Rect({ 
+      x: -20000, 
+      y: -20000, 
+      width: 40000, 
+      height: 40000, 
+      fill: '#f5f5f5', // FigJam-style light gray
+      listening: false, 
+      perfectDrawEnabled: false 
+    });
     backgroundLayer.add(bg);
+    
+    // Add dot grid to background
+    const dotsGroup = createDotGridHelper(width, height);
+    backgroundLayer.add(dotsGroup);
 
     // Main content layer (persisted elements)
     const mainLayer = new Konva.Layer({ listening: true, name: 'main-layer' });
@@ -87,18 +148,38 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     };
     stage.on('wheel', (evt) => onWheel(evt.evt));
 
-    // Resize observer
-    const resizeObserver = new ResizeObserver(() => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      stage.size({ width: w, height: h });
-      setViewport({ width: w, height: h });
-      stage.batchDraw();
+    // Resize observer with debouncing for performance
+    let resizeTimeout: NodeJS.Timeout;
+    const resizeObserver = new ResizeObserver((entries) => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        for (const entry of entries) {
+          if (entry.target === container) {
+            // Use contentRect for more accurate dimensions
+            const w = Math.floor(entry.contentRect.width);
+            const h = Math.floor(entry.contentRect.height);
+            
+            // Skip if dimensions haven't actually changed
+            const currentSize = stage.size();
+            if (currentSize.width === w && currentSize.height === h) {
+              return;
+            }
+            
+            console.log('[ResizeObserver] Container resized:', { from: currentSize, to: { width: w, height: h } });
+            container.style.width = `${w}px`;
+            container.style.height = `${h}px`;
+            stage.size({ width: w, height: h });
+            setViewport({ width: w, height: h });
+            stage.batchDraw();
+          }
+        }
+      }, 16); // Debounce at ~60fps
     });
     resizeObserver.observe(container);
 
     return () => {
       performanceLogger.stopFrameLoop();
+      clearTimeout(resizeTimeout);
       try { resizeObserver.disconnect(); } catch {}
       try { 
         // Clean up renderer before destroying stage
@@ -291,7 +372,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       
       // 1) Create text element in store
       const textElement = {
-        id: nanoid() as ElementId,
+        id: createElementId(nanoid()),
         type: 'text' as const,
         x: world.x,
         y: world.y,
@@ -302,7 +383,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         fontFamily: 'Inter, system-ui, Arial',
         fill: '#111827',
         fontStyle: 'normal',
-        textAlign: 'left',
+        textAlign: 'left' as const,
         isLocked: false,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -1369,8 +1450,94 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
 
   // Mount tool components that attach listeners imperatively and draw to Layer
+  // Force a resize check on every render and when window resizes
+  React.useLayoutEffect(() => {
+    const checkAndResize = () => {
+      if (!stageRef.current || !containerRef.current) return;
+      
+      const container = containerRef.current;
+      
+      // Force the container to recalculate its dimensions
+      container.style.width = '';
+      container.style.height = '';
+      container.offsetHeight; // Force reflow
+      
+      const rect = container.getBoundingClientRect();
+      const w = Math.floor(rect.width);
+      const h = Math.floor(rect.height);
+      
+      // Skip if dimensions are invalid
+      if (w <= 0 || h <= 0) return;
+      
+      // Log parent dimensions too
+      const parent = container.parentElement;
+      const parentRect = parent?.getBoundingClientRect();
+      
+      console.log('[NonReactCanvasStage] Resize check:', { 
+        container: {
+          width: rect.width, 
+          height: rect.height,
+          clientWidth: container.clientWidth,
+          clientHeight: container.clientHeight
+        },
+        parent: parent ? {
+          width: parentRect?.width,
+          height: parentRect?.height
+        } : 'no parent',
+        stage: stageRef.current ? stageRef.current.size() : 'no stage'
+      });
+      
+      // Only update if size actually changed
+      const currentSize = stageRef.current.size();
+      if (currentSize.width !== w || currentSize.height !== h) {
+        console.log('[NonReactCanvasStage] Resizing stage:', { from: currentSize, to: { width: w, height: h } });
+        stageRef.current.size({ width: w, height: h });
+        setViewport({ width: w, height: h });
+        
+        // Force all layers to redraw
+        stageRef.current.getLayers().forEach(layer => {
+          layer.batchDraw();
+        });
+        
+        // Update background dots if needed
+        const backgroundLayer = stageRef.current.findOne('.background-layer');
+        if (backgroundLayer) {
+          const dotsGroup = backgroundLayer.findOne('.dot-grid');
+          if (dotsGroup) {
+            dotsGroup.destroy();
+            // Recreate dots for new size
+            const newDotsGroup = createDotGridHelper(w, h);
+            backgroundLayer.add(newDotsGroup);
+            backgroundLayer.batchDraw();
+          }
+        }
+      }
+    };
+    
+    // Check immediately
+    checkAndResize();
+    
+    // Also check on window resize
+    window.addEventListener('resize', checkAndResize);
+    
+    // Use a small delay to ensure DOM has updated after sidebar toggle
+    const timeoutId = setTimeout(checkAndResize, 100);
+    
+    return () => {
+      window.removeEventListener('resize', checkAndResize);
+      clearTimeout(timeoutId);
+    };
+  });
+
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div 
+      ref={containerRef} 
+      style={{ 
+        width: '100%', 
+        height: '100%', 
+        position: 'relative',
+        display: 'block'
+      }}>
       {(stageRef && (selectedTool === 'pen' || selectedTool === 'pan')) && (
         <PenTool stageRef={stageRef} isActive={true} />
       )}

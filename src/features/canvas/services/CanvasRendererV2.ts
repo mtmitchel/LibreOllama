@@ -81,22 +81,23 @@ export class CanvasRendererV2 {
     const group = new Konva.Group({ id, listening: true, draggable });
     const hitArea = new Konva.Rect({
       x: 0, y: 0, width, height,
-      fill: 'rgba(0,0,0,0.001)', // participate in hit graph
+      fill: 'rgba(0,0,0,0)', // fully transparent with 0 alpha
+      stroke: undefined, // explicitly no stroke
+      strokeWidth: 0,
       listening: true,
       hitStrokeWidth: 0,
-      name: 'hit-area'
+      name: 'hit-area',
+      opacity: 0 // ensure it's completely invisible
     });
     group.add(hitArea);
     return group;
   }
 
   private ensureHitAreaSize(group: Konva.Group, width: number, height: number) {
-    console.log(`[HIT-AREA DEBUG] Ensuring hit area size: ${width}x${height}`);
     
     // First, clean up any duplicate hit-areas (there should only be one)
     const allHitAreas = group.find('.hit-area');
     if (allHitAreas.length > 1) {
-      console.log(`[HIT-AREA DEBUG] WARNING: Found ${allHitAreas.length} hit-areas, removing duplicates`);
       for (let i = 1; i < allHitAreas.length; i++) {
         allHitAreas[i].destroy();
       }
@@ -106,25 +107,29 @@ export class CanvasRendererV2 {
     const hit = group.findOne((node) => node.name() === 'hit-area') as Konva.Rect | undefined;
     
     if (hit) {
-      console.log(`[HIT-AREA DEBUG] Found existing hit-area, current size: ${hit.width()}x${hit.height()}`);
       // Ensure hit area is positioned at origin and sized correctly
       hit.position({ x: 0, y: 0 });
       hit.width(width);
       hit.height(height);
-      console.log(`[HIT-AREA DEBUG] Updated hit-area to: ${hit.width()}x${hit.height()}`);
+      hit.fill('rgba(0,0,0,0)'); // ensure fill is transparent
+      hit.stroke(undefined); // ensure no stroke
+      hit.strokeWidth(0);
+      hit.opacity(0); // ensure completely invisible
       // Move hit area to back so it doesn't cover visual elements
       hit.moveToBottom();
     } else {
-      console.log(`[HIT-AREA DEBUG] Creating new hit-area`);
       const newHit = new Konva.Rect({ 
         x: 0, 
         y: 0, 
         width, 
         height, 
-        fill: 'rgba(0,0,0,0.001)', 
+        fill: 'rgba(0,0,0,0)', // fully transparent with 0 alpha
+        stroke: undefined, // explicitly no stroke
+        strokeWidth: 0,
         listening: true, 
         hitStrokeWidth: 0, 
-        name: 'hit-area' 
+        name: 'hit-area',
+        opacity: 0 // ensure it's completely invisible
       });
       group.add(newHit);
       newHit.moveToBottom();
@@ -143,8 +148,8 @@ export class CanvasRendererV2 {
     const rect = new Konva.Rect({
       x: 0, y: 0, width: w, height: h,
       fill: el.fill || '#ffffff',
-      stroke: el.stroke || '#111827',
-      strokeWidth: el.strokeWidth ?? 1,
+      stroke: el.stroke || 'transparent',
+      strokeWidth: el.strokeWidth ?? 0,
       cornerRadius: (el as any).cornerRadius ?? 0,
       listening: false,
       perfectDrawEnabled: false,
@@ -209,7 +214,8 @@ export class CanvasRendererV2 {
 
     const group = this.createGroupWithHitArea(id, w, h);
     group.name('text');
-    group.position({ x: el.x || 0, y: el.y || 0 });
+    // TEST 4: Snap to integer positions
+    group.position({ x: Math.round(el.x || 0), y: Math.round(el.y || 0) });
 
     const text = new Konva.Text({
       x: 0, y: 0,
@@ -220,7 +226,11 @@ export class CanvasRendererV2 {
       width: w,
       height: h,
       listening: false,
-      name: 'text'
+      name: 'text',
+      stroke: undefined,
+      strokeWidth: 0,
+      perfectDrawEnabled: false,
+      visible: !!(el.text && el.text.trim())
     });
     (text as any).wrap('word');
     (text as any).align((el as any).align || 'left');
@@ -242,8 +252,8 @@ export class CanvasRendererV2 {
       rect.width(w);
       rect.height(h);
       rect.fill(el.fill || '#ffffff');
-      rect.stroke(el.stroke || '#111827');
-      rect.strokeWidth(el.strokeWidth ?? 1);
+      rect.stroke(el.stroke || 'transparent');
+      rect.strokeWidth(el.strokeWidth ?? 0);
       rect.cornerRadius((el as any).cornerRadius ?? 0);
     }
 
@@ -316,7 +326,8 @@ export class CanvasRendererV2 {
     // Use the standard group creation utility to ensure a reliable hit area.
     const group = this.createGroupWithHitArea(id, w, h, true);
     group.name('sticky-note');
-    group.position({ x: el.x || 0, y: el.y || 0 });
+    // TEST 4: Snap to integer positions
+    group.position({ x: Math.round(el.x || 0), y: Math.round(el.y || 0) });
     // Optional: Try to set group size (no-op on standard Groups, kept for compatibility)
     // Real bounds come from frame dimensions + ensureHitAreaSize via createGroupWithHitArea
     try { (group as any).width?.(w); (group as any).height?.(h); } catch {}
@@ -327,15 +338,18 @@ export class CanvasRendererV2 {
     const bg = new Konva.Rect({
       x: 0, y: 0, width: w, height: h,
       fill: el.backgroundColor || el.fill || '#fef08a', // sticky note yellow
-      stroke: (el as any).stroke || 'rgba(0,0,0,0.1)',
-      strokeWidth: 1,
+      stroke: (el as any).stroke || 'transparent',
+      strokeWidth: 0,
       cornerRadius: 4,
-      shadowColor: 'black',
-      shadowBlur: 4,
-      shadowOffset: { x: 2, y: 2 },
-      shadowOpacity: 0.1,
+      shadowColor: 'transparent',
+      shadowBlur: 0,
+      shadowOffset: { x: 0, y: 0 },
+      shadowOpacity: 0,
       listening: false, // Visuals should not be interactive; the hit area handles it.
-      name: 'frame'
+      name: 'frame',
+      // TEST 4: Disable subpixel rendering
+      perfectDrawEnabled: false,
+      strokeScaleEnabled: false
     });
     group.add(bg);
 
@@ -350,7 +364,9 @@ export class CanvasRendererV2 {
       fontFamily: el.fontFamily || 'Inter, system-ui, sans-serif',
       fill: el.textColor || '#451a03', // dark brown for contrast
       listening: false,
-      name: 'text'
+      name: 'text',
+      // TEST 4: Disable subpixel rendering
+      perfectDrawEnabled: false
     });
     (text as any).wrap('word');
     (text as any).align('left');
@@ -386,8 +402,8 @@ export class CanvasRendererV2 {
         bg.strokeWidth((el as any).style.stroke.width);
         (bg as any).strokeScaleEnabled(false);
       } else {
-        bg.stroke((el as any).stroke || 'rgba(0,0,0,0.1)');
-        bg.strokeWidth(1);
+        bg.stroke((el as any).stroke || 'transparent');
+        bg.strokeWidth(0);
         (bg as any).strokeScaleEnabled(false);
       }
       try { (bg as any).shadowForHitEnabled?.(false); } catch {}
@@ -843,11 +859,11 @@ export class CanvasRendererV2 {
     const fs = Math.max(1, (el as any).fontSize || 14) * stageScale;
     const ls = (el as any).letterSpacing ?? 0;
 
-    // Visual style (feel free to theme)
+    // TEST 3: Start with invisible textarea and hidden caret
     Object.assign(ta.style, {
       position: 'fixed', // Use fixed positioning relative to the viewport
-      left: `${contentLeft}px`,
-      top: `${contentTop}px`,
+      left: '-9999px',  // Start off-screen
+      top: '-9999px',   // Start off-screen
       width: `${contentWidth}px`,
       height: `${contentHeight}px`,
       fontSize: `${fs}px`,
@@ -855,7 +871,7 @@ export class CanvasRendererV2 {
       lineHeight: String(lh),
       letterSpacing: `${ls}px`,
       color: el.type === 'sticky-note' ? (el.textColor || '#451a03') : (el.textColor || '#111827'),
-      background: 'transparent',          // let sticky’s fill show through
+      background: 'transparent',          // let sticky's fill show through
       border: 'none',                     // no extra border; selection shown via Konva overlay
       padding: '0',
       margin: '0',
@@ -870,10 +886,20 @@ export class CanvasRendererV2 {
       transform: this.rotateTextareaWhileEditing ? `rotate(${absRot}deg)` : 'none',
       // Keep it above everything in the overlay
       zIndex: '1000',
+      opacity: '0',           // Start invisible
+      caretColor: 'transparent' // Hide caret initially
     });
 
     // Insert into document to avoid overlay root intercepting outside clicks
     document.body.appendChild(ta);
+    
+    // Position and show textarea after one frame
+    requestAnimationFrame(() => {
+      ta.style.left = `${contentLeft}px`;
+      ta.style.top = `${contentTop}px`;
+      ta.style.opacity = '1';
+      ta.style.caretColor = ''; // Restore caret color
+    });
     console.info('[RendererV2] textarea appended to body and focusing');
     this.currentEditor = ta as any; // track for later cleanup
     ta.focus();
@@ -1098,10 +1124,6 @@ export class CanvasRendererV2 {
       const id = String(el.id);
       alive.add(id);
 
-      // Log the position of the element as it's being synced
-      if (el.type === 'sticky-note') {
-          console.log(`[DEBUG] Syncing element ${id} to store position:`, { x: el.x, y: el.y });
-      }
 
       if ((el as any).points && Array.isArray((el as any).points) && ((el as any).type === 'pen' || (el as any).type === 'marker' || (el as any).type === 'highlighter')) {
         // Stroke-like types
@@ -1159,8 +1181,14 @@ export class CanvasRendererV2 {
           this.updateText(node as Konva.Group, el as any);
         } else {
           const group = this.createText(el as any);
+          // TEST 1: Hide overlay layer for one frame during creation
+          this.layers.overlay.visible(false);
           main.add(group);
           this.nodeMap.set(id, group);
+          requestAnimationFrame(() => {
+            this.layers.overlay.visible(true);
+            this.layers.overlay.batchDraw();
+          });
         }
         return;
       }
@@ -1175,8 +1203,14 @@ export class CanvasRendererV2 {
           }
         } else {
           const group = this.createStickyNote(el);
+          // TEST 1: Hide overlay layer for one frame during creation
+          this.layers.overlay.visible(false);
           main.add(group);
           this.nodeMap.set(id, group);
+          requestAnimationFrame(() => {
+            this.layers.overlay.visible(true);
+            this.layers.overlay.batchDraw();
+          });
 
           // Auto-open editor for newly created sticky notes
           if ((el as any).newlyCreated) {
@@ -1383,8 +1417,21 @@ export class CanvasRendererV2 {
     // Handle standard elements with transformer
     if (nodes.length > 0) {
       console.log(`[DEBUG] ==> Attaching transformer to ${nodes.length} nodes.`);
+      // TEST 2: Disable transformer visuals during attach
+      this.transformer.borderEnabled(false);
+      this.transformer.enabledAnchors([]);
+      this.transformer.anchorSize(0);
       this.transformer.nodes(nodes);
-      this.transformer.visible(true);
+      this.transformer.visible(false); // Start invisible
+      
+      // Re-enable visuals after first RAF once element is settled
+      requestAnimationFrame(() => {
+        this.transformer.visible(true);
+        this.transformer.borderEnabled(true);
+        this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','top-center','bottom-center','middle-left','middle-right']);
+        this.transformer.anchorSize(8);
+        this.layers.overlay.batchDraw();
+      });
 
       // Configure transformer padding from stroke width (keeps frame visually flush)
       try {

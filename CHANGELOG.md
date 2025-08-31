@@ -1,5 +1,63 @@
 # Changelog
 
+## 2025-08-31 — Canvas improvements and fixes
+
+### Canvas Auto-Resize on Sidebar Toggle
+**Problem:** Canvas didn't automatically resize when the sidebar was toggled open/closed, leaving unused space.
+
+**Root Cause:** Container element wasn't properly recalculating its dimensions after parent layout changes. The ResizeObserver was detecting container changes but the container itself wasn't expanding to fill available space.
+
+**Fix Implemented:**
+- Added forced dimension recalculation in `useLayoutEffect` that clears inline styles and forces reflow
+- Enhanced ResizeObserver with debouncing and more accurate `contentRect` measurements
+- Added multiple resize event dispatches after sidebar toggle to catch CSS transitions
+- Container now properly expands/contracts when sidebar toggles
+
+**Technical Details:**
+- Using `useLayoutEffect` for synchronous DOM measurements before paint
+- Added window resize listener for better responsiveness
+- Debounced resize checks at 60fps to prevent performance issues
+- Logs detailed resize information for debugging
+
+### FigJam-Style Canvas Background
+**Enhancement:** Implemented a professional FigJam-style dot grid background for better visual organization.
+
+**Features:**
+- Light gray background (#f5f5f5) matching FigJam's aesthetic
+- Dot grid pattern with 1px dots at 20px spacing
+- Dots use 20% opacity black for subtle visibility
+- Grid extends beyond viewport for consistent panning experience
+- Optimized with `transformsEnabled: 'position'` for performance
+
+### Canvas Element Visual Fixes
+**Problem:** Default strokes and shadows on elements causing unwanted visual artifacts.
+
+**Fixes:**
+- Removed default strokes from sticky notes (was `rgba(0,0,0,0.1)`)
+- Removed default strokes from rectangles (was `#111827`)
+- Eliminated shadow effects from sticky notes
+- Added explicit stroke properties to text elements
+- Fixed hit-area transparency issues
+
+### Test System Improvements
+- Fixed ElementId type conflicts between different type definition files
+- Unified to consistent `__brand` approach across all files
+- Created new test suite for CanvasRendererV2
+- Archived 3 outdated react-konva tests
+- Achieved 84% test pass rate (294 passed / 57 failed)
+
+### Investigation: Mystery Pixel Artifact
+**Issue:** Single pixel appearing when adding canvas elements.
+
+**Investigation Performed:**
+1. Eliminated hit-area visibility issues
+2. Removed all default element strokes
+3. Disabled shadow effects
+4. Removed debug console logging
+5. Added text element stroke controls
+
+**Status:** Postponed for future investigation - likely timing-related in rendering pipeline
+
 ## 2025-08-31 — Critical sticky note resize bug fix
 
 ### Problem

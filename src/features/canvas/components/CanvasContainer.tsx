@@ -41,6 +41,7 @@ const CanvasContainerComponent: React.FC<CanvasContainerProps> = ({ onStageReady
   // CRITICAL: Use stable references to prevent remounting
   const stableStageRef = useRef<Konva.Stage | null>(null);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [resizeKey, setResizeKey] = React.useState(0);
 
   // Install rollback helpers and notify parent when stage is ready
   React.useEffect(() => {
@@ -69,6 +70,12 @@ const CanvasContainerComponent: React.FC<CanvasContainerProps> = ({ onStageReady
 
   const handleToggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+    // Force resize check after sidebar toggle
+    setTimeout(() => {
+      setResizeKey(prev => prev + 1);
+      // Also dispatch a resize event to trigger ResizeObserver
+      window.dispatchEvent(new Event('resize'));
+    }, 50);
   };
 
   return (
