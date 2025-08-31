@@ -45,6 +45,9 @@ export const createSelectionModule = (
     
     actions: {
       selectElement: (id, multiSelect = false) => {
+        // Clear edge draft on selection change to prevent stale overlay geometry
+        try { (getState() as any).cancelEdgeDraft?.(); } catch {}
+
         setState((state: any) => {
           // Defensive check - ensure selectedElementIds Set exists
           if (!state.selectedElementIds || !(state.selectedElementIds instanceof Set)) {

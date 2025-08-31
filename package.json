@@ -25,6 +25,7 @@
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "lint:design-system": "eslint . --ext ts,tsx --config .eslintrc.design-system.json",
     "type-check": "tsc --noEmit",
+    "typecheck:migration": "tsc -p tsconfig.edge-migration.json --noEmit",
     "prepare": "husky"
   },
   "dependencies": {

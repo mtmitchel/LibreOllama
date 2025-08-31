@@ -12,9 +12,13 @@ describe('Connector System Integration', () => {
   beforeEach(() => {
     // Reset store state
     const store = useUnifiedCanvasStore.getState();
-    store.clearElements();
+    store.clearAllElements();
     store.clearSelection();
     store.setSelectedTool('select');
+    // Clear any edge drafts
+    if (store.cancelEdgeDraft) {
+      store.cancelEdgeDraft();
+    }
   });
 
   it('should support connector tool selection from toolbar', () => {
@@ -207,6 +211,139 @@ describe('Connector System Integration', () => {
     const draft = result.current.draft;
     expect(draft?.snapTarget?.elementId).toBe('target');
     expect(draft?.snapTarget?.portKind).toBe('W');
+  });
+
+  describe('Edge Pipeline - Store-First Architecture', () => {
+    it('should maintain consistent geometry: store → renderer → overlay', async () => {
+      const { result } = renderHook(() => useUnifiedCanvasStore());
+      
+      // Step 1: Create two elements to connect
+      act(() => {
+        result.current.addElement({
+          id: 'elem1' as ElementId,
+          type: 'rectangle',
+          x: 100,
+          y: 100,
+          width: 100,
+          height: 100,
+          rotation: 0
+        });
+        
+        result.current.addElement({
+          id: 'elem2' as ElementId,
+          type: 'rectangle',
+          x: 300,
+          y: 100,
+          width: 100,
+          height: 100,
+          rotation: 0
+        });
+      });
+      
+      // Step 2: Create edge via draft system
+      let edgeId: ElementId | null = null;
+      act(() => {
+        result.current.startEdgeDraft({
+          elementId: 'elem1' as ElementId,
+          portKind: 'CENTER'
+        });
+        
+        result.current.updateEdgeDraftSnap({
+          elementId: 'elem2' as ElementId,
+          portKind: 'CENTER'
+        });
+        
+        edgeId = result.current.commitEdgeDraftTo({
+          elementId: 'elem2' as ElementId,
+          portKind: 'CENTER'
+        });
+        
+        // Compute geometry
+        result.current.computeAndCommitDirtyEdges();
+      });
+      
+      expect(edgeId).toBeTruthy();
+      
+      // Step 3: Get edge from store
+      const edge1 = result.current.edges.get(edgeId!);
+      expect(edge1).toBeTruthy();
+      expect(edge1?.points).toBeTruthy();
+      expect(edge1?.points.length).toBeGreaterThan(0);
+      const initialPoints = [...edge1!.points];
+      
+      // Step 4: Move connected element
+      act(() => {
+        result.current.updateElement('elem1' as ElementId, {
+          x: 150,
+          y: 150
+        });
+      });
+      
+      // Wait for RAF batching
+      await new Promise(resolve => setTimeout(resolve, 20));
+      
+      // Step 5: Verify edge was reflowed
+      const edge2 = result.current.edges.get(edgeId!);
+      expect(edge2?.points).toBeTruthy();
+      expect(edge2?.points).not.toEqual(initialPoints);
+      
+      // Step 6: Select edge
+      act(() => {
+        result.current.selectElement(edgeId!, false);
+      });
+      
+      expect(result.current.selectedElements.has(edgeId!)).toBe(true);
+      
+      // Step 7: Deselect and reselect
+      act(() => {
+        result.current.clearSelection();
+      });
+      
+      expect(result.current.selectedElements.size).toBe(0);
+      
+      act(() => {
+        result.current.selectElement(edgeId!, false);
+      });
+      
+      // Step 8: Verify geometry consistency after reselection
+      const edge3 = result.current.edges.get(edgeId!);
+      expect(edge3?.points).toEqual(edge2?.points);
+      
+      // The overlay should use the same points (this would be tested in renderer)
+      // Here we just verify store consistency
+      expect(edge3?.source.elementId).toBe('elem1');
+      expect(edge3?.target.elementId).toBe('elem2');
+    });
+    
+    it('should handle edge draft cancellation properly', () => {
+      const { result } = renderHook(() => useUnifiedCanvasStore());
+      
+      // Start a draft
+      act(() => {
+        result.current.addElement({
+          id: 'source' as ElementId,
+          type: 'rectangle',
+          x: 100,
+          y: 100,
+          width: 100,
+          height: 100
+        });
+        
+        result.current.startEdgeDraft({
+          elementId: 'source' as ElementId,
+          portKind: 'CENTER'
+        });
+      });
+      
+      expect(result.current.draft).toBeTruthy();
+      
+      // Cancel the draft
+      act(() => {
+        result.current.cancelEdgeDraft();
+      });
+      
+      expect(result.current.draft).toBeNull();
+    });
   });
 
   it('should route edges correctly using routing utility', () => {

@@ -15,6 +15,13 @@ export interface EdgeDraft {
     elementId: ElementId;
     portKind: PortKind;
   };
+  // Current pointer position for drawing preview
+  pointer?: { x: number; y: number };
+  // Current snap target for visual feedback
+  snapTarget?: {
+    elementId: ElementId;
+    portKind: PortKind;
+  };
 }
 
 /**
@@ -35,6 +42,8 @@ export interface EdgeState {
  * Edge module actions
  */
 export interface EdgeActions {
+  // Compute and persist geometry for dirty edges (RAF-batched by caller)
+  computeAndCommitDirtyEdges: () => void;
   // Edge CRUD
   addEdge: (partial: Omit<EdgeElement, 'points' | 'x' | 'y' | 'width' | 'height'>) => ElementId;
   updateEdge: (id: ElementId, updates: Partial<EdgeElement>) => void;
@@ -80,6 +89,49 @@ export const createEdgeModule = (
     },
 
     actions: {
+      computeAndCommitDirtyEdges: () => {
+        const state = getState() as any;
+        const elems: Map<ElementId, any> = state.elements;
+        const edges: Map<ElementId, EdgeElement> = state.edges;
+        if (!edges || edges.size === 0) return;
+
+        const updates: Array<{ id: ElementId; updates: Partial<EdgeElement> }> = [];
+        const toAABB = (pts: number[]) => {
+          let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+          for (let i=0;i<pts.length;i+=2){const x=pts[i],y=pts[i+1]; if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;}
+          return { x:minX, y:minY, width:Math.max(1,maxX-minX), height:Math.max(1,maxY-minY) };
+        };
+        edges.forEach((edge, id) => {
+          if (!state.dirtyEdges?.has(id)) return;
+          const src = elems.get(edge.source.elementId);
+          const tgt = elems.get(edge.target.elementId);
+          if (!src || !tgt) return;
+
+          // Compute geometry in world coords using routing utils
+          try {
+            const { updateEdgeGeometry } = require('../../utils/routing') as typeof import('../../utils/routing');
+            const geom = updateEdgeGeometry(edge as any, src as any, tgt as any);
+            if (geom?.points && Array.isArray(geom.points)) {
+              const aabb = toAABB(geom.points);
+              try {
+                const { createSpatialIndex } = require('../../utils/spatial-index');
+                // In this store context, we cannot access the renderer's instance; callers should also update the index.
+                // We include this for future plumbing; no-op here as we don't hold a global index.
+              } catch {}
+
+              updates.push({ id, updates: { ...geom, points: [...geom.points] } as any });
+            }
+          } catch (e) {
+            console.warn('[edgeModule] routing/updateEdgeGeometry failed', e);
+          }
+        });
+
+        if (updates.length) {
+          // Commit immutably so subscribers fire
+          state.batchUpdate(updates, { skipHistory: true, skipValidation: true });
+          state.clearDirtyEdges();
+        }
+      },
       addEdge: (partial) => {
         const id = `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` as ElementId;
         
@@ -177,6 +229,7 @@ export const createEdgeModule = (
         setState((state: any) => {
           if (state.draft) {
             state.draft.toWorld = world;
+            state.draft.pointer = world; // Keep both for compatibility during migration
           }
         });
       },
@@ -185,6 +238,7 @@ export const createEdgeModule = (
         setState((state: any) => {
           if (state.draft) {
             state.draft.snap = snap;
+            state.draft.snapTarget = snap; // Keep both for compatibility during migration
           }
         });
       },
@@ -194,19 +248,46 @@ export const createEdgeModule = (
         if (!state.draft) return null;
 
         const finalTarget = target || state.draft.snap;
+        
+        // For free-floating edges without a target, use the current pointer position
+        if (!finalTarget && state.draft.toWorld) {
+          // Create a free-floating edge using world position
+          const edgeId = getState().addEdge({
+            type: 'edge',
+            source: state.draft.from,
+            target: {
+              elementId: '' as ElementId,  // No target element
+              portKind: 'CENTER'
+            },
+            routing: 'straight',
+            stroke: '#374151',
+            strokeWidth: 2,
+            selectable: true,
+            // Store the end position in points directly
+            points: [
+              0, 0,  // Will be calculated by routing
+              state.draft.toWorld.x - 100, state.draft.toWorld.y - 100  // Temporary points
+            ]
+          });
+          
+          // Clear draft
+          setState((state: any) => { state.draft = null; });
+          return edgeId;
+        }
+        
         if (!finalTarget) {
-          // Cancel if no valid target
+          // Cancel if no valid target and no world position
           setState((state: any) => { state.draft = null; });
           return null;
         }
 
-        // Create the edge
+        // Create connected edge
         const edgeId = getState().addEdge({
           type: 'edge',
           source: state.draft.from,
           target: finalTarget,
           routing: 'straight',
-          stroke: '#000000',
+          stroke: '#10b981',  // Green for connected
           strokeWidth: 2,
           selectable: true,
         });

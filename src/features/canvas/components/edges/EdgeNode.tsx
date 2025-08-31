@@ -1,73 +1,77 @@
-// src/features/canvas/components/edges/EdgeNode.tsx
-import React, { useMemo } from 'react';
-import { Line, Arrow, Group } from 'react-konva';
-import { EdgeElement, ElementId } from '../../types/canvas-elements';
+/**
+ * EdgeNode - Main layer connector rendering with proper hit detection
+ * Part of the multi-layer blueprint: Main layer handles the selectable edge line
+ */
+
+import React from 'react';
+import { Line, Arrow } from 'react-konva';
+import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
+import { ConnectorElement } from '../../types/enhanced.types';
 
 interface EdgeNodeProps {
-  edge: EdgeElement;
-  isSelected?: boolean;
-  onSelect?: (edgeId: ElementId) => void;
+  edge: ConnectorElement;
+  isSelected: boolean;
 }
 
-/**
- * EdgeNode - Permanent edge rendering in Main layer
- * Supports hit-testing, selection, and various marker types
- */
-export const EdgeNode: React.FC<EdgeNodeProps> = React.memo(({ 
-  edge, 
-  isSelected = false, 
-  onSelect 
-}) => {
-  // Calculate if this edge should have arrow markers
-  const hasArrowEnd = useMemo(() => {
-    return edge.markerEnd === 'arrow';
-  }, [edge.markerEnd]);
+export const EdgeNode: React.FC<EdgeNodeProps> = React.memo(({ edge, isSelected }) => {
+  const selectElement = useUnifiedCanvasStore(state => state.selectElement);
+  
+  // Calculate points for rendering
+  const points = React.useMemo(() => {
+    return [edge.startPoint.x, edge.startPoint.y, edge.endPoint.x, edge.endPoint.y];
+  }, [edge.startPoint, edge.endPoint]);
 
-  const hasArrowStart = useMemo(() => {
-    return edge.markerStart === 'arrow';
-  }, [edge.markerStart]);
-
-  // Handle edge selection
-  const handleClick = React.useCallback((e: any) => {
-    e.cancelBubble = true;
-    if (onSelect) {
-      onSelect(edge.id);
+  const handleMouseEnter = React.useCallback((e: any) => {
+    const stage = e.target.getStage();
+    if (stage?.container()) {
+      stage.container().style.cursor = 'pointer';
     }
-  }, [edge.id, onSelect]);
+  }, []);
 
-  // Common line properties
-  const lineProps = useMemo(() => ({
-    points: edge.points,
-    stroke: edge.stroke,
-    strokeWidth: edge.strokeWidth,
+  const handleMouseLeave = React.useCallback((e: any) => {
+    const stage = e.target.getStage();
+    if (stage?.container()) {
+      stage.container().style.cursor = '';
+    }
+  }, []);
+
+  const handleMouseDown = React.useCallback((e: any) => {
+    e.cancelBubble = true; // Prevent falling through to Stage click-clear
+    selectElement(edge.id, false); // Select this edge (BLUEPRINT: STORE-FIRST)
+  }, [edge.id, selectElement]);
+
+  // Common props for both Line and Arrow
+  const commonProps = {
+    points,
+    stroke: edge.stroke || '#374151',
+    strokeWidth: edge.strokeWidth || 2,
+    hitStrokeWidth: Math.max(20, (edge.strokeWidth || 2) * 3), // Wider hit area
     lineCap: 'round' as const,
     lineJoin: 'round' as const,
-    listening: edge.selectable !== false,
-    onClick: handleClick,
-    perfectDrawEnabled: false,
-    // Selection highlighting
-    shadowEnabled: isSelected,
-    shadowColor: '#3B82F6',
-    shadowBlur: isSelected ? 4 : 0,
-    shadowOffsetX: 0,
-    shadowOffsetY: 0,
-  }), [edge.points, edge.stroke, edge.strokeWidth, edge.selectable, isSelected, handleClick]);
+    listening: true,
+    strokeScaleEnabled: false, // Consistent feel on zoom
+    perfectDrawEnabled: false, // Performance
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+    onMouseDown: handleMouseDown,
+    draggable: false // Port-attached (BLUEPRINT: PORT-BASED LOGIC)
+  };
 
-  // Render as Arrow if it has arrow markers, otherwise as Line
-  if (hasArrowEnd || hasArrowStart) {
+  // Render as Arrow for arrow connectors
+  if (edge.subType === 'arrow') {
     return (
       <Arrow
-        {...lineProps}
-        fill={edge.stroke}
-        pointerLength={8}
+        {...commonProps}
+        fill={edge.stroke || '#374151'}
+        pointerLength={12}
         pointerWidth={8}
-        pointerAtBeginning={hasArrowStart}
-        pointerAtEnding={hasArrowEnd}
+        pointerAtEnding={true}
       />
     );
   }
 
-  return <Line {...lineProps} />;
+  // Render as Line for line connectors
+  return <Line {...commonProps} />;
 });
 
 EdgeNode.displayName = 'EdgeNode';

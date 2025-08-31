@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "src/features/canvas/components/edges/**",
+    "src/features/canvas/tests/**"
+  ]
+}

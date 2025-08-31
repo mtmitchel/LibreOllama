@@ -7,7 +7,7 @@ import { MarkerTool } from './tools/drawing/MarkerTool';
 import { HighlighterTool } from './tools/drawing/HighlighterTool';
 import { StickyNoteTool } from './tools/creation/StickyNoteTool';
 import { ConnectorTool } from './tools/creation/ConnectorTool';
-import { ElementId, CanvasElement, createElementId } from '../types/enhanced.types';
+import { ElementId, CanvasElement, createElementId, ConnectorElement } from '../types/enhanced.types';
 import { performanceLogger } from '../utils/performance/PerformanceLogger';
 import { CanvasRendererV2 } from '../services/CanvasRendererV2';
 import { getContentPointer } from '../utils/coords';
@@ -54,11 +54,12 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
     // Main content layer (persisted elements)
     const mainLayer = new Konva.Layer({ listening: true, name: 'main-layer' });
+    // Note: hitGraphEnabled is deprecated, listening: true handles hit detection
 
     // Preview fast layer for live drawing
-    const previewLayer = new Konva.Layer({ listening: false, name: 'preview-fast-layer' });
+    const previewLayer = new Konva.Layer({ listening: true, name: 'preview-fast-layer' });
 
-    // Overlay layer (reserved)
+    // Overlay layer (transformer needs to be interactive)
     const overlayLayer = new Konva.Layer({ listening: true, name: 'overlay-layer' });
 
     stage.add(backgroundLayer);
@@ -99,7 +100,14 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     return () => {
       performanceLogger.stopFrameLoop();
       try { resizeObserver.disconnect(); } catch {}
-      try { stage.destroy(); } catch {}
+      try { 
+        // Clean up renderer before destroying stage
+        const renderer = (window as any).__CANVAS_RENDERER_V2__;
+        if (renderer) {
+          delete (window as any).__CANVAS_RENDERER_V2__;
+        }
+        stage.destroy(); 
+      } catch {}
       stageRef.current = null;
     };
   }, [stageRef, setViewport, zoomViewport]);
@@ -113,23 +121,41 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     try { (window as any).CANVAS_PERF?.incBatchDraw?.('stage'); } catch {}
   }, [viewport.scale, viewport.x, viewport.y]);
 
-  // Imperative render via CanvasRendererV2
+  // Initialize renderer once when stage is ready
   useEffect(() => {
     const stage = stageRef.current; if (!stage) return;
     const mainLayer = stage.findOne<Konva.Layer>('.main-layer');
     const preview = stage.findOne<Konva.Layer>('.preview-fast-layer') as Konva.Layer | null;
     const overlay = stage.findOne<Konva.Layer>('.overlay-layer');
-    if (!mainLayer || !overlay) return;
+    const background = stage.findOne<Konva.Layer>('.background-layer');
+    if (!mainLayer || !overlay || !background) return;
 
     // Expose store to window for renderer access
     (window as any).__UNIFIED_CANVAS_STORE__ = useUnifiedCanvasStore;
     
-    const renderer: InstanceType<typeof CanvasRendererV2> = (window as any).__CANVAS_RENDERER_V2__ ||= new CanvasRendererV2();
-    renderer.init(stage, { background: stage.findOne<Konva.Layer>('.background-layer')!, main: mainLayer, preview: (preview as any) || mainLayer, overlay }, {
-      onUpdateElement: (id, updates) => useUnifiedCanvasStore.getState().updateElement(id as any, updates)
-    });
-    renderer.syncElements(elements as any);
-  }, [elements]);
+    // Only create and initialize renderer if it doesn't exist
+    if (!(window as any).__CANVAS_RENDERER_V2__) {
+      const renderer = new CanvasRendererV2();
+      (window as any).__CANVAS_RENDERER_V2__ = renderer;
+      renderer.init(stage, { background, main: mainLayer, preview: (preview as any) || mainLayer, overlay }, {
+        onUpdateElement: (id, updates) => useUnifiedCanvasStore.getState().updateElement(id as any, updates)
+      });
+    }
+  }, [stageRef.current]); // Only depend on stage existence
+
+  // Sync elements to renderer when they change
+  useEffect(() => {
+    const stage = stageRef.current; if (!stage) return;
+    const renderer: InstanceType<typeof CanvasRendererV2> | undefined = (window as any).__CANVAS_RENDERER_V2__;
+    if (!renderer) return;
+    
+    // Render from a unified list containing elements and edges
+    const combined: any[] = [
+      ...Array.from((useUnifiedCanvasStore.getState().elements as any).values()),
+      ...Array.from((useUnifiedCanvasStore.getState().edges as any).values()),
+    ];
+    renderer.syncElements(combined);
+  }, [elements, useUnifiedCanvasStore(s => s.edges), useUnifiedCanvasStore(s => s.selectedElementIds)]);
 
   // Wire selection state to Konva.Transformer
   const [lastSelectedElementId, selectionSize] = useUnifiedCanvasStore(
@@ -626,7 +652,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       if (currentTool === 'text') return;
       
       // If clicked on empty stage or layer with select tool, clear selection
-      if ((target === stage || target.getClassName() === 'Layer') && currentTool === 'select') {
+      // BUT only if the event wasn't cancelled by a child element (e.cancelBubble = true)
+      if ((target === stage || target.getClassName() === 'Layer') && currentTool === 'select' && !e.cancelBubble) {
         useUnifiedCanvasStore.getState().clearSelection();
         
         // Hide the transformer
@@ -661,36 +688,51 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
     stage.on('mousedown.select', onMouseDown);
 
-    // Double click to edit: ascend to group id and set text editing if supported
-    const onDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-      const target = e.target as Konva.Node;
-      const group = target.findAncestor((node: Konva.Node) => {
-        return node.getClassName() === 'Group' && !!(node as Konva.Group).id();
-      }, true) as Konva.Group | null;
-      const id = group?.id?.() || (target as any).id?.();
-      if (!id) return;
-      const el = useUnifiedCanvasStore.getState().elements.get(id as any);
-      if (!el) return;
-      if (el.type === 'text' || el.type === 'sticky-note' || el.type === 'rectangle' || el.type === 'circle' || el.type === 'triangle') {
-        useUnifiedCanvasStore.getState().setTextEditingElement(id as any);
-      }
-    };
-    stage.on('dblclick.inlineEdit', onDblClick);
+    // Remove any legacy inline edit handlers - renderer handles all events now
+    stage.off('.inlineEdit');
 
     return () => {
       try { stage.off('mousedown.select', onMouseDown); } catch {}
-      try { stage.off('dblclick.inlineEdit', onDblClick); } catch {}
+      stage.off('.inlineEdit'); // Clean up on unmount
     };
   }, [stageRef]);
 
-  // Text edit overlay for non-React path
+  // Text edit overlay for non-React path - DISABLED: Renderer handles all text editing
+  // Bridge: when store requests edit, delegate to RendererV2.openTextareaEditor
   const textEditingElementId = useUnifiedCanvasStore(s => s.textEditingElementId);
   const setTextEditingElement = useUnifiedCanvasStore(s => s.setTextEditingElement);
   const viewportState = useUnifiedCanvasStore(s => s.viewport);
 
+  // Minimal bridge: if store sets textEditingElementId, ask renderer to open editor
   useEffect(() => {
     const stage = stageRef.current; if (!stage) return;
     if (!textEditingElementId) return;
+    const renderer = (window as any).__CANVAS_RENDERER_V2__ as any;
+    if (!renderer) return;
+    let cancelled = false;
+    let tries = 0;
+    const attempt = () => {
+      if (cancelled) return;
+      const node = renderer?.nodeMap?.get?.(textEditingElementId) as Konva.Node | undefined;
+      if (node) {
+        try {
+          renderer.openTextareaEditor?.(textEditingElementId, node);
+        } catch (e) {
+          console.warn('[NonReactCanvasStage] Failed to open editor via renderer:', e);
+        }
+      } else if (tries < 8) {
+        tries++;
+        requestAnimationFrame(attempt);
+      }
+    };
+    attempt();
+    return () => { cancelled = true; };
+  }, [textEditingElementId, stageRef]);
+
+  // Legacy heavy overlay path below remains disabled; kept for reference
+  useEffect(() => {
+    // DISABLED: All text editing is now handled by CanvasRendererV2
+    return;
 
     const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
     if (!renderer) return;
@@ -888,9 +930,10 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         }
         
         // Only attach transformer if it exists and is valid
+        // IMPORTANT: Attach to the group (node), not the frame, to keep hit-area and children aligned
         if (transformer && transformer.nodes) {
           try {
-            transformer.nodes([frame]);
+            transformer.nodes([node]);
           } catch (e) {
             console.warn('[EDIT] Could not attach transformer:', e);
             // Continue without transformer - editing can still work
@@ -1102,8 +1145,19 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         const textarea = document.createElement('textarea');
 
         const { scale, x: vx, y: vy } = viewportState;
-        const width = (el.width || 180) * scale;
-        const minHeight = Math.max(24, (el.height || 24) * scale);
+        // Helper to get element dimensions safely
+        const getElDimensions = () => {
+          if ('width' in el && typeof el.width === 'number') {
+            return { width: el.width, height: ('height' in el && typeof el.height === 'number') ? el.height : 24 };
+          }
+          if (el.type === 'circle' && 'radius' in el && typeof el.radius === 'number') {
+            return { width: el.radius * 2, height: el.radius * 2 };
+          }
+          return { width: 180, height: 24 };
+        };
+        const dims = getElDimensions();
+        const width = dims.width * scale;
+        const minHeight = Math.max(24, dims.height * scale);
 
         Object.assign(textarea.style, {
             position: 'absolute',
@@ -1196,20 +1250,31 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
       // Get source port world position
       const sourcePort = { nx: 0, ny: 0 }; // Default to center for now
+      // Helper to get element dimensions safely
+      const getElWidth = (el: any) => {
+        if ('width' in el && typeof el.width === 'number') return el.width;
+        if (el.type === 'circle' && 'radius' in el && typeof el.radius === 'number') return el.radius * 2;
+        return 100;
+      };
+      const getElHeight = (el: any) => {
+        if ('height' in el && typeof el.height === 'number') return el.height;
+        if (el.type === 'circle' && 'radius' in el && typeof el.radius === 'number') return el.radius * 2;
+        return 100;
+      };
       const sourceWorldPos = {
-        x: sourceElement.x + sourceElement.width * (sourcePort.nx + 0.5),
-        y: sourceElement.y + sourceElement.height * (sourcePort.ny + 0.5)
+        x: sourceElement.x + getElWidth(sourceElement) * (sourcePort.nx + 0.5),
+        y: sourceElement.y + getElHeight(sourceElement) * (sourcePort.ny + 0.5)
       };
 
       // Target position - either snapped port or pointer position
-      let targetPos = draft.pointer;
+      let targetPos = draft.pointer || { x: sourceWorldPos.x, y: sourceWorldPos.y };
       if (draft.snapTarget) {
         const targetElement = elements.get(draft.snapTarget.elementId);
         if (targetElement) {
           const targetPort = { nx: 0, ny: 0 }; // Default to center for now
           targetPos = {
-            x: targetElement.x + targetElement.width * (targetPort.nx + 0.5),
-            y: targetElement.y + targetElement.height * (targetPort.ny + 0.5)
+            x: targetElement.x + getElWidth(targetElement) * (targetPort.nx + 0.5),
+            y: targetElement.y + getElHeight(targetElement) * (targetPort.ny + 0.5)
           };
         }
       }
@@ -1301,6 +1366,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     })();
     return () => { cancelled = true; };
   }, [stageRef]);
+
 
   // Mount tool components that attach listeners imperatively and draw to Layer
   return (

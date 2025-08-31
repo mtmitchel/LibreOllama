@@ -54,8 +54,9 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       type: 'sticky-note',
       x: adjustedPosition.x,
       y: adjustedPosition.y,
-      width: 126, // 30% smaller default
-      height: 126,
+      width: 200,
+      height: 150,
+      padding: 12,
       text: '', // Start with empty text so immediate editing begins
       backgroundColor: backgroundColor,
       textColor: '#1F2937', // Dark gray for good contrast
@@ -67,13 +68,14 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       createdAt: Date.now(),
       updatedAt: Date.now(),
       isHidden: false,
+      newlyCreated: true, // Signal the renderer to auto-open the editor
       // Container functionality - automatically enabled for new sticky notes
       isContainer: true,
       childElementIds: [],
       allowedChildTypes: ['pen', 'marker', 'highlighter', 'text', 'connector', 'image', 'table'],
       clipChildren: true,
       maxChildElements: 20
-    };
+    } as StickyNoteElement;
   }, [selectedStickyNoteColor]);
 
   // Custom creation handler for container setup

@@ -86,6 +86,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const canRedo = useUnifiedCanvasStore(state => state.canRedo);
   const viewport = useUnifiedCanvasStore(state => state.viewport);
   const setViewport = useUnifiedCanvasStore(state => state.setViewport);
+  const clearCanvas = useUnifiedCanvasStore(state => state.clearCanvas);
 
   // STABLE: Use useMemo to prevent recalculation on every render with null safety
   const selectedElementId = React.useMemo(() => {
@@ -221,13 +222,24 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     }
   };
 
-  // Add keyboard shortcut support for delete
+  const handleClearCanvas = () => {
+    if (confirm('Are you sure you want to clear the entire canvas? This cannot be undone.')) {
+      clearCanvas();
+    }
+  };
+
+  // Add keyboard shortcut support for delete and clear
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Delete key for selected elements
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementId) {
         e.preventDefault();
         handleDeleteSelected();
+      }
+      // Ctrl/Cmd + Shift + Delete to clear canvas
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Delete') {
+        e.preventDefault();
+        handleClearCanvas();
       }
     };
 
@@ -527,6 +539,17 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
               <Trash2 size={16} />
             </Button>
           )}
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClearCanvas}
+            title="Clear Canvas (Ctrl/Cmd+Shift+Delete)"
+            aria-label="Clear Canvas"
+            className="size-9"
+          >
+            <X size={16} />
+          </Button>
           
           <div className="bg-border-subtle mx-1 h-5 w-px" />
           

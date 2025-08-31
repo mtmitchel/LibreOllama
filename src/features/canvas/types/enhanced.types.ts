@@ -221,6 +221,9 @@ export interface TableCell {
 }
 
 export interface StickyNoteElement extends BaseElement {
+  // Inline-editing flags used by the imperative renderer
+  isEditing?: boolean;
+  newlyCreated?: boolean;
   type: 'sticky-note';
   text?: string;
   width: number;

@@ -89,6 +89,23 @@ export const createElementModule = (
   // Cast the set and get functions to work with any state for flexibility
   const setState = set as any;
   const getState = get as any;
+  
+  // RAF batching for edge reflow
+  let rafEdgeReflow = 0;
+  const scheduleEdgeReflow = () => {
+    if (rafEdgeReflow) return;
+    rafEdgeReflow = requestAnimationFrame(() => {
+      rafEdgeReflow = 0;
+      try {
+        const computeEdges = (getState() as any).computeAndCommitDirtyEdges;
+        if (computeEdges && typeof computeEdges === 'function') {
+          computeEdges();
+        }
+      } catch (e) {
+        console.warn('[elementModule] Failed to compute dirty edges:', e);
+      }
+    });
+  };
   // Type guards for elements with dimensions
   const hasRadius = (el: CanvasElement): el is CircleElement => 
     el.type === 'circle' && 'radius' in el;
@@ -210,6 +227,23 @@ export const createElementModule = (
             // Update the Map and replace reference to trigger subscribers/re-render
             state.elements.set(id, updatedElement);
             state.elements = new Map(state.elements);
+            
+            // If position/size changed, trigger edge reflow
+            if (updates.x !== undefined || updates.y !== undefined || 
+                updates.width !== undefined || updates.height !== undefined ||
+                updates.rotation !== undefined) {
+              // Mark connected edges as dirty for reflow
+              try {
+                const reflowEdges = (getState() as any).reflowEdgesForElement;
+                if (reflowEdges && typeof reflowEdges === 'function') {
+                  reflowEdges(id);
+                  // Schedule RAF to recompute dirty edges
+                  scheduleEdgeReflow();
+                }
+              } catch (e) {
+                console.warn('[elementModule] Failed to reflow edges:', e);
+              }
+            }
 
             // If it's a section, update its children
             if (updatedElement.type === 'section') {
@@ -295,9 +329,17 @@ export const createElementModule = (
             // Clear RAF ID
             (state as any).rafId = null;
             
+            const movedElements: ElementId[] = [];
             updates.forEach(({ id, updates: elementUpdates }) => {
               const element = state.elements.get(id);
               if (element) {
+                // Track if this element moved/resized
+                if (elementUpdates.x !== undefined || elementUpdates.y !== undefined ||
+                    elementUpdates.width !== undefined || elementUpdates.height !== undefined ||
+                    elementUpdates.rotation !== undefined) {
+                  movedElements.push(id as ElementId);
+                }
+                
                 if (skipValidation) {
                   // Fast path: direct assignment for performance
                   Object.assign(element, elementUpdates);
@@ -329,6 +371,19 @@ export const createElementModule = (
               }
             }
           });
+            
+            // Trigger edge reflow for all moved elements
+            if (movedElements.length > 0) {
+              try {
+                const reflowEdges = (getState() as any).reflowEdgesForElement;
+                if (reflowEdges && typeof reflowEdges === 'function') {
+                  movedElements.forEach(elementId => reflowEdges(elementId));
+                  scheduleEdgeReflow();
+                }
+              } catch (e) {
+                console.warn('[elementModule] Failed to reflow edges in batch:', e);
+              }
+            }
           });
           
           if (!skipHistory) {

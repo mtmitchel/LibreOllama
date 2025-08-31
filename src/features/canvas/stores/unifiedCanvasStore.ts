@@ -73,8 +73,25 @@ export interface UnifiedCanvasState extends
   // StickyNoteState,
   UIState, // Now includes loading functionality
   EventState,
-  EdgeState {
+  EdgeState,
+  ConnectorDragState {
   // No additional state needed - all state comes from modules
+}
+
+// Connector drag state (for endpoint editing)
+export interface ConnectorDragState {
+  connectorId: ElementId | null;
+  draggedEndpoint: 'start' | 'end' | null;
+  isDragging: boolean;
+  snapTarget: { elementId: ElementId; point: { x: number; y: number } } | null;
+}
+
+// Connector drag actions
+export interface ConnectorDragActions {
+  beginEndpointDrag: (connectorId: ElementId, endpoint: 'start' | 'end') => void;
+  updateEndpointDrag: (worldPos: { x: number; y: number }) => void;
+  commitEndpointDrag: () => void;
+  cancelEndpointDrag: () => void;
 }
 
 // Combined actions interface
@@ -90,7 +107,8 @@ export interface UnifiedCanvasActions extends
   UIActions, // Now includes loading functionality
   EventActions,
   EdgeActions,
-  LegacyActions {
+  LegacyActions,
+  ConnectorDragActions {
   getVisibleElements: () => CanvasElement[];
 }
 
@@ -137,6 +155,83 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
     ...modules.event.actions,
     ...modules.edge.state,
     ...modules.edge.actions,
+
+    // Connector drag state
+    connectorId: null,
+    draggedEndpoint: null,
+    isDragging: false,
+    snapTarget: null,
+
+    // Connector drag actions
+    beginEndpointDrag: (connectorId: ElementId, endpoint: 'start' | 'end') => {
+      set((state) => {
+        state.connectorId = connectorId;
+        state.draggedEndpoint = endpoint;
+        state.isDragging = true;
+        state.snapTarget = null;
+      });
+    },
+
+    updateEndpointDrag: (worldPos: { x: number; y: number }) => {
+      set((state) => {
+        const { connectorId, draggedEndpoint } = state;
+        if (!connectorId || !draggedEndpoint) return;
+
+        const connector = state.elements.get(connectorId);
+        if (!connector || connector.type !== 'connector') return;
+
+        // TODO: Add port snapping logic here using QuadTree
+        // For now, just update the endpoint directly
+        if (draggedEndpoint === 'start') {
+          (connector as any).startPoint = worldPos;
+        } else {
+          (connector as any).endPoint = worldPos;
+        }
+
+        // Update connector bounds
+        const newBounds = {
+          x: Math.min((connector as any).startPoint.x, (connector as any).endPoint.x),
+          y: Math.min((connector as any).startPoint.y, (connector as any).endPoint.y),
+          width: Math.abs((connector as any).endPoint.x - (connector as any).startPoint.x),
+          height: Math.abs((connector as any).endPoint.y - (connector as any).startPoint.y)
+        };
+
+        Object.assign(connector, newBounds, { updatedAt: Date.now() });
+      });
+    },
+
+    commitEndpointDrag: () => {
+      const { connectorId, elements, updateElement } = get();
+      if (connectorId) {
+        const connector = elements.get(connectorId);
+        if (connector && connector.type === 'connector') {
+          const sp = { ...(connector as any).startPoint };
+          const ep = { ...(connector as any).endPoint };
+          const points = [sp.x, sp.y, ep.x, ep.y];
+          const x = Math.min(sp.x, ep.x);
+          const y = Math.min(sp.y, ep.y);
+          const width = Math.abs(ep.x - sp.x);
+          const height = Math.abs(ep.y - sp.y);
+          // Commit immutably so subscribers fire
+          updateElement(connectorId, { startPoint: sp, endPoint: ep, points: [...points], x, y, width, height }, { skipHistory: true });
+        }
+      }
+      set((state) => {
+        state.connectorId = null;
+        state.draggedEndpoint = null;
+        state.isDragging = false;
+        state.snapTarget = null;
+      });
+    },
+
+    cancelEndpointDrag: () => {
+      set((state) => {
+        state.connectorId = null;
+        state.draggedEndpoint = null;
+        state.isDragging = false;
+        state.snapTarget = null;
+      });
+    },
 
     getVisibleElements: () => {
       // Use standardized simple viewport culling - no duplicate logic
