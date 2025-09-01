@@ -1,0 +1,290 @@
+=============================================================================
+TEXT RESIZE IMPLEMENTATION REPORT
+=============================================================================
+Date: 2025-08-31
+Status: IMPLEMENTED - Blueprint-aligned solution for crisp text font scaling
+
+OVERVIEW:
+This implementation provides real-time font scaling for text elements during 
+resize operations. It converts Konva's scale transforms into direct fontSize 
+changes to maintain crisp text rendering and persists the changes to the store.
+
+BEHAVIOR:
+- Corner handles: Font scales by geometric mean of scaleX & scaleY
+- Vertical edges: Font scales by scaleY (height maps to font height)
+- Horizontal edges: Font size unchanged (width-only resize)
+- Live updates during drag with crisp rendering
+- Final fontSize committed to store on mouse release
+
+=============================================================================
+IMPLEMENTATION FILES
+=============================================================================
+
+FILE: C:\Projects\LibreOllama\src\features\canvas\services\CanvasRendererV2.ts
+
+/**
+ * Attach text resize handlers - EXACT implementation from user's blueprint
+ */
+private attachTextResizeHandlers(groupNode: Konva.Group, textNode: Konva.Text, transformer: Konva.Transformer, elId: string) {
+  // Cache the baseline on start
+  let base = {
+    fontSize: textNode.fontSize(),
+    width: textNode.width(),
+    height: textNode.height(),
+  };
+
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  const MIN_FONT = 8;
+  const MAX_FONT = 512;
+
+  const applyLiveFontFromScale = () => {
+    const sx = textNode.scaleX();
+    const sy = textNode.scaleY();
+
+    // Which handle is active?
+    const activeName = (transformer as any)._movingAnchorName as string | undefined;
+
+    // Decide the scale factor used for font size
+    let scaleForFont = 1;
+    if (!activeName) {
+      // fallback: use geometric mean
+      scaleForFont = Math.sqrt(Math.max(sx, 0.0001) * Math.max(sy, 0.0001));
+    } else if (/(top|bottom)/.test(activeName) && /(left|right)/.test(activeName)) {
+      // Corner handle → geometric mean
+      scaleForFont = Math.sqrt(Math.max(sx, 0.0001) * Math.max(sy, 0.0001));
+    } else if (/(top|bottom)/.test(activeName)) {
+      // Vertical edge → use sy
+      scaleForFont = Math.max(sy, 0.0001);
+    } else {
+      // Horizontal edge → keep font the same (no change)
+      scaleForFont = 1;
+    }
+
+    const newFont = clamp(base.fontSize * scaleForFont, MIN_FONT, MAX_FONT);
+
+    // IMPORTANT: make text crisp while dragging:
+    // 1) apply fontSize directly
+    // 2) reset scale to 1 so Konva doesn't blur glyphs
+    textNode.fontSize(newFont);
+    textNode.scale({ x: 1, y: 1 });
+
+    // Optional: keep the node's width change from the transformer (horizontal resize)
+    // Konva has already applied width via scale; convert to real width:
+    const newWidth = base.width * sx;
+    textNode.width(newWidth);
+
+    textNode.getLayer()?.batchDraw();
+  };
+
+  const onTransformStart = () => {
+    base = {
+      fontSize: textNode.fontSize(),
+      width: textNode.width(),
+      height: textNode.height(),
+    };
+  };
+
+  const onTransform = () => {
+    applyLiveFontFromScale();
+  };
+
+  const onTransformEnd = () => {
+    // Persist final values to store
+    const finalFont = textNode.fontSize();
+    const finalWidth = textNode.width();
+
+    // Normalize node (no scale left behind)
+    textNode.scale({ x: 1, y: 1 });
+
+    const useUnifiedCanvasStore = (window as any).__UNIFIED_CANVAS_STORE__;
+    useUnifiedCanvasStore.getState().updateElement(elId as any, {
+      fontSize: finalFont,
+      width: finalWidth,
+    });
+  };
+
+  textNode.off('transformstart.textscale transform.textscale transformend.textscale');
+  textNode.on('transformstart.textscale', onTransformStart);
+  textNode.on('transform.textscale', onTransform);
+  textNode.on('transformend.textscale', onTransformEnd);
+}
+
+INTEGRATION IN syncSelection METHOD:
+/** Attach Transformer to current selection */
+syncSelection(selectedIds: Set<ElementId>) {
+
+  if (!this.layers || !this.transformer) return;
+  
+  console.log(`[DEBUG] Syncing selection for IDs:`, Array.from(selectedIds));
+
+  const nodes: Konva.Node[] = [];
+  const connectorIds: string[] = [];
+  
+  // ALWAYS clear ALL existing connector overlay UI first
+  this.clearConnectorOverlay();
+  
+  selectedIds.forEach((sid) => {
+    const node = this.nodeMap.get(String(sid));
+    if (node) {
+      // Handle connectors specially with EdgeHandles logic
+      if ((node.getClassName() === 'Line' || node.getClassName() === 'Arrow') && node.id()) {
+        connectorIds.push(String(sid));
+        return; // Don't add to transformer
+      }
+      
+      // Attach transformer to the main group for all elements.
+      nodes.push(node);
+    }
+  });
+  
+  // Handle standard elements with transformer
+  if (nodes.length > 0) {
+    console.log(`[DEBUG] ==> Attaching transformer to ${nodes.length} nodes.`);
+    // TEST 2: Disable transformer visuals during attach
+    this.transformer.borderEnabled(false);
+    this.transformer.enabledAnchors([]);
+    this.transformer.anchorSize(0);
+    this.transformer.nodes(nodes);
+    this.transformer.visible(false); // Start invisible
+    
+    // Re-enable visuals after first RAF once element is settled
+    requestAnimationFrame(() => {
+      this.transformer.visible(true);
+      this.transformer.borderEnabled(true);
+      this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','top-center','bottom-center','middle-left','middle-right']);
+      this.transformer.anchorSize(8);
+      
+      // Apply text resize handlers to text elements - attach transformer to TEXT NODE directly
+      const textNodes: Konva.Text[] = [];
+      nodes.forEach(node => {
+        if (node.name() === 'sticky-note' || node.name() === 'text') {
+          const group = node as Konva.Group;
+          const textNode = group.findOne<Konva.Text>('.text');
+          if (textNode && group.id()) {
+            textNodes.push(textNode);
+            this.attachTextResizeHandlers(group, textNode, this.transformer, group.id());
+          }
+        }
+      });
+      
+      // If we have text nodes, attach transformer to them instead of groups
+      if (textNodes.length > 0) {
+        this.transformer.nodes(textNodes);
+      }
+      
+      this.layers.overlay.batchDraw();
+    });
+    
+    // ... rest of method continues with transformer padding config etc ...
+  }
+}
+
+=============================================================================
+TECHNICAL DETAILS
+=============================================================================
+
+KEY COMPONENTS:
+1. Event Handlers: transformstart.textscale, transform.textscale, transformend.textscale
+2. Scale Detection: Gets scaleX/scaleY directly from textNode (not group)
+3. Handle Detection: Uses transformer._movingAnchorName to determine active handle
+4. Font Scaling Logic:
+   - Corners: sqrt(sx * sy) - geometric mean for natural scaling
+   - Vertical edges: sy - maps height changes to font size
+   - Horizontal edges: 1 - no font change, width-only resize
+5. Crisp Rendering: Applies fontSize directly, resets scale to 1
+6. Store Persistence: Updates fontSize and width on transformend
+
+FONT SIZE LIMITS:
+- Minimum: 8px
+- Maximum: 512px
+- Clamped using: Math.max(MIN_FONT, Math.min(MAX_FONT, calculatedSize))
+
+EVENT FLOW:
+1. onTransformStart: Cache baseline fontSize, width, height
+2. onTransform: Calculate scale factor based on handle, apply fontSize, reset scale
+3. onTransformEnd: Persist final fontSize and width to store
+
+TRANSFORMER ATTACHMENT:
+- For text elements: Transformer attached to TEXT NODE directly (not group)
+- For other elements: Transformer attached to group/node as normal
+- Text resize handlers only attached to text/sticky-note elements
+
+STORE INTEGRATION:
+- Uses window.__UNIFIED_CANVAS_STORE__ to avoid circular imports
+- Updates fontSize and width properties on element
+- Supports both text and sticky-note element types
+
+=============================================================================
+ARCHITECTURE DECISIONS
+=============================================================================
+
+1. DIRECT TEXT NODE MANIPULATION:
+   - Transformer attached to Konva.Text node instead of group
+   - Allows direct access to textNode.scaleX/scaleY values
+   - Enables precise font scaling calculations
+
+2. EVENT NAMESPACING:
+   - Uses .textscale suffix for clean event management
+   - Prevents conflicts with other transform handlers
+   - Easy cleanup with single off() call
+
+3. REAL-TIME FONT UPDATES:
+   - fontSize applied immediately during transform
+   - Scale reset to 1 prevents blurry rendering
+   - Live preview with crisp text display
+
+4. BASELINE CACHING:
+   - Captures initial state on transformstart
+   - Prevents drift from repeated calculations
+   - Ensures consistent scaling behavior
+
+5. HANDLE-SPECIFIC SCALING:
+   - Corner handles: Natural geometric mean scaling
+   - Vertical handles: Height-based font scaling
+   - Horizontal handles: Width-only, font unchanged
+
+=============================================================================
+INTEGRATION POINTS
+=============================================================================
+
+RENDERER INTEGRATION:
+- attachTextResizeHandlers() method in CanvasRendererV2 class
+- Called from syncSelection() when text elements selected
+- Handles both 'text' and 'sticky-note' element types
+
+STORE INTEGRATION:
+- Updates element properties: fontSize, width
+- Uses existing updateElement() store method
+- Maintains consistency with element state
+
+UI MODULE SUPPORT:
+- ResizeShadow type supports fontSize property
+- Protection flags prevent conflicts during resize
+- Supports element loading states during operations
+
+=============================================================================
+USAGE
+=============================================================================
+
+AUTOMATIC ACTIVATION:
+- Select any text element (text or sticky-note)
+- Resize handles appear on text bounds
+- Drag corner handles for proportional font scaling
+- Drag vertical edges for height-based font scaling  
+- Drag horizontal edges for width-only resize
+- Font changes persist after mouse release
+
+SUPPORTED ELEMENTS:
+- Text elements (type: 'text')
+- Sticky note elements (type: 'sticky-note')
+- Any group containing Konva.Text with class '.text'
+
+=============================================================================
+STATUS: COMPLETE
+=============================================================================
+
+This implementation follows the exact blueprint specification provided and 
+delivers crisp, real-time font scaling with proper persistence to the store.
+The solution avoids blurry scale transforms by converting scale values into 
+direct fontSize changes and maintains clean event handling with namespaced 
+event listeners.

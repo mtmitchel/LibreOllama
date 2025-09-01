@@ -1,5 +1,123 @@
 # Changelog
 
+## 2025-09-01 — Text Tool: React Image Editor Parity + Legacy Canvas Archival
+
+### Summary
+- Achieved 1:1 resize behavior for plain text with the Transformer, matching the literal React Image Editor (RIE) implementation: smooth preview while dragging, precise commit on mouse-up, no snap‑back, no letter clipping, and no trailing whitespace.
+- Archived the entire legacy react‑konva rendering path into `src/__archive__/2025-09-01-canvas-react-konva/` to eliminate duplicate code paths and reduce maintenance risk.
+
+### Text Resize Behavior (RIE Parity)
+The new flow mirrors RIE’s semantics for text nodes:
+
+- Transformer configuration
+  - For text, `keepRatio: true` (corner drag scales uniformly). Rotation remains enabled.
+  - Eight anchors enabled (top/bottom/left/right + corners).
+
+- Preview (while dragging)
+  - No mid-gesture mutations to the Konva.Text node. The preview is the visual scale applied by the transformer only, which eliminates “jump” when releasing the mouse.
+
+- Commit (on `transformend`)
+  - Read the applied scale factors once: `sX = node.scaleX()`, `sY = node.scaleY()`.
+  - Reset the group scale to `{ x:1, y:1 }` to normalize geometry (prevents future drift).
+  - Compute the new geometry from base values:
+    - `width = previous width × sX` (absolute, min 20px)
+    - `fontSize = previous fontSize × sY` (min 8, max 512)
+    - `height ≈ previous height × sY` (temporary, see next)
+  - Apply to Konva.Text:
+    - Set `fontSize` and `width` (text anchored at `{ x:0, y:0 }` inside the group)
+    - Set a temporary `height` (only for measurement parity)
+  - Measure the final content height precisely with `getClientRect({ skipTransform:true })` and commit that as the element’s `height` (prevents letter descenders from being clipped and avoids bottom gaps).
+  - Update the group’s hit-area via `ensureHitAreaSize(group, width, measuredHeight)` so the selection frame hugs content exactly.
+  - Persist `{ width, height, fontSize, x, y, scaleX:1, scaleY:1 }` to the store.
+
+- Synchronization (render path)
+  - `updateText()` sets `text.width(el.width)` and `text.height(el.height)` (per RIE) and relies on measured bounds for hit testing, ensuring the frame and content remain aligned.
+
+### Why This Fixes Previous Issues
+- Snap-back after releasing mouse: Gone. We no longer mutate during drag; commit converts scale → geometry once, matching the scaled preview.
+- Extra space after the last letter: Eliminated by setting width from geometry and using measured height (no hard-coded height guess, no over-guarding).
+- Font not scaling: Solved by scaling `fontSize` with `sY`. The preview and commit now look identical for corner resizes at normal zoom.
+
+### Technical Details
+- Code: `src/features/canvas/services/CanvasRendererV2.ts`
+  - Transformer per‑text config with `keepRatio(true)` and all anchors.
+  - Removed transform-time (per-frame) text mutations; conversion now happens only in the `transformend` handler.
+  - Commit pipeline:
+    - Read `sX/sY` → reset scale → set `fontSize`, `width`, provisional `height` → measure → update hit‑area → persist.
+  - `updateText()` sets both width and height to the element’s values to maintain RIE parity during render.
+
+### QA / Validation Checklist
+- Single-line text at 100% zoom, bottom-right drag: font increases with the box; no snap-back on release; frame hugs text; no clipping.
+- Left/right edge drags: width adjusts as expected; font remains consistent if dragging only horizontally (keepRatio influences corners).
+- Multi-line text: height commits via measured bounds; no descender clipping; selection frame matches content.
+- Rotation: resizing still works; commit unaffected by rotation; selection frame stays aligned.
+
+### Known Limitations / Trade-offs
+- `keepRatio(true)` for text matches common UX, but can be toggled to `false` if independent axis scaling is preferred.
+- The final height uses measured bounds; depending on the font and renderer, sub-pixel differences may appear under extreme zoom factors.
+
+### Legacy Cleanup (React‑Konva)
+Archived the old react‑konva canvas path to `src/__archive__/2025-09-01-canvas-react-konva/`:
+- Stage/Layers/UI: `components/CanvasStage.tsx`, `layers/*`, `components/ui/{CustomTransformer,KonvaElementBoundary,SectionPreview,SelectionBox,SnapLines,SnapPointIndicator,TextEditOverlay}.tsx`, `components/MinimalCanvas.tsx`, `components/CanvasErrorBoundary.tsx` (backups included)
+- Renderers/Shapes: `renderers/ElementRenderer.tsx`, `shapes/*`, `components/renderers/StrokeRenderer.tsx`, `elements/TableElement.tsx`
+- Edges: `components/edges/*`
+- Tools (legacy react‑konva previews): `components/tools/{base,core,creation}/*` (marker/highlighter/pen remain active, Konva-only)
+- Tests depending on react‑konva moved under the same archive path
+
+No runtime behavior depends on the archived code; TypeScript excludes `src/__archive__/**`, so builds/tests are unaffected.
+
+### Sticky Notes: Frame/Text Alignment + Font Lock‑Step Scaling
+
+#### Summary
+- Sticky notes now resize with perfectly aligned inner text and frame. The font scales in lock‑step with the transformer preview, and padding is preserved. Commit-time updates eliminate snap‑back, drift, and clipping.
+
+#### Behavior (Resize Semantics)
+- Selection rules for a single sticky note
+  - `keepRatio: true` for a natural, uniform corner scaling experience.
+  - Eight anchors enabled: top/bottom/left/right + corners. Rotation enabled.
+
+- Preview (while dragging)
+  - No mid‑drag mutations. Preview uses the transformer’s scale only (consistent and smooth).
+
+- Commit (on `transformend`)
+  - Read transformer scale once: `sX = group.scaleX()`, `sY = group.scaleY()`.
+  - Normalize scale to `{ x:1, y:1 }` to avoid future drift.
+  - Frame geometry
+    - `frame.width = baseWidth × sX`
+    - `frame.height = baseHeight × sY`
+  - Inner text geometry & font
+    - Padding = element padding (default 12; respects custom style.padding if present)
+    - `text.fontSize = baseFont × sY` (font scales with height/preview)
+    - `text.width = frame.width − 2 × padding`
+    - `text.height = frame.height − 2 × padding`
+    - `text.position = { x: padding, y: padding }`
+  - Hit‑area
+    - Updated via `ensureHitAreaSize(group, frame.width, frame.height)` so selection frame hugs the sticky note exactly.
+  - Persisted state
+    - `{ width, height, fontSize, x, y, scaleX: 1, scaleY: 1 }` stored immutably.
+
+#### Why This Fixes It
+- The preview and commit remain visually identical: both the frame and the font scale together. No post‑release jump.
+- Padding is reapplied consistently, so the text remains properly inset within the frame on every resize.
+- The hit‑area (selection bounds) matches the visual frame, eliminating drift between handles and element.
+
+#### Technical Details
+- File: `src/features/canvas/services/CanvasRendererV2.ts`
+  - Added sticky note–specific branch in `transformend` before the generic handler:
+    - Reads `sX/sY`, resets scale, updates frame width/height, scales inner text font, reapplies padding box, updates hit‑area, persists geometry.
+  - Selection config in `syncSelection`: for a single sticky note, set `keepRatio(true)`, eight anchors, rotation enabled.
+
+#### QA / Validation Checklist
+- Corner resize at 100% zoom: frame and text scale in unison, padding preserved, no clipping or drift.
+- Edge resize: independent axis changes respected for height/width (note `keepRatio(true)` applies to corners, not edges).
+- Multi‑line content: wrapping remains correct (text box = frame minus padding); no descender clipping; selection frame aligned.
+- Rotation: resize continues to work; commit unaffected by rotation; selection frame stays aligned.
+
+#### Limitations / Notes
+- With very small sizes, aggressive wrapping and minimum font clamping can make content feel dense; `min fontSize = 8` applies.
+- `keepRatio(true)` for sticky notes can be toggled off if you prefer unconstrained corner scaling; behavior remains consistent either way.
+
+
 ## 2025-08-31 — Canvas improvements and fixes
 
 ### Canvas Auto-Resize on Sidebar Toggle

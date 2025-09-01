@@ -22,6 +22,9 @@ export class CanvasRendererV2 {
   private layers: RendererLayers | null = null;
   private nodeMap = new Map<string, Konva.Node>();
   private transformer: Konva.Transformer | null = null;
+  // Track anchor + pre-rects for precise commit positioning
+  private lastActiveAnchorName: string = '';
+  private preTransformRects: Map<string, { left: number; right: number; top: number; bottom: number }> = new Map();
   
   // RAF batching system for efficient drawing
   private raf = 0;
@@ -81,13 +84,14 @@ export class CanvasRendererV2 {
     const group = new Konva.Group({ id, listening: true, draggable });
     const hitArea = new Konva.Rect({
       x: 0, y: 0, width, height,
-      fill: 'rgba(0,0,0,0)', // fully transparent with 0 alpha
-      stroke: undefined, // explicitly no stroke
+      // Important: tiny alpha so it participates in hit graph (opacity must remain > 0)
+      fill: 'rgba(0,0,0,0.001)',
+      stroke: undefined,
       strokeWidth: 0,
       listening: true,
       hitStrokeWidth: 0,
       name: 'hit-area',
-      opacity: 0 // ensure it's completely invisible
+      opacity: 1
     });
     group.add(hitArea);
     return group;
@@ -111,10 +115,11 @@ export class CanvasRendererV2 {
       hit.position({ x: 0, y: 0 });
       hit.width(width);
       hit.height(height);
-      hit.fill('rgba(0,0,0,0)'); // ensure fill is transparent
+      // keep tiny alpha so Konva hit graph detects it
+      hit.fill('rgba(0,0,0,0.001)');
       hit.stroke(undefined); // ensure no stroke
       hit.strokeWidth(0);
-      hit.opacity(0); // ensure completely invisible
+      hit.opacity(1);
       // Move hit area to back so it doesn't cover visual elements
       hit.moveToBottom();
     } else {
@@ -123,13 +128,13 @@ export class CanvasRendererV2 {
         y: 0, 
         width, 
         height, 
-        fill: 'rgba(0,0,0,0)', // fully transparent with 0 alpha
+        fill: 'rgba(0,0,0,0.001)', // tiny alpha for hit detection
         stroke: undefined, // explicitly no stroke
         strokeWidth: 0,
         listening: true, 
         hitStrokeWidth: 0, 
         name: 'hit-area',
-        opacity: 0 // ensure it's completely invisible
+        opacity: 1
       });
       group.add(newHit);
       newHit.moveToBottom();
@@ -310,6 +315,7 @@ export class CanvasRendererV2 {
       text.fontFamily(el.fontFamily || 'Inter, system-ui, sans-serif');
       text.fill(el.textColor || '#111827');
       text.width(w);
+      // React Image Editor behavior: set height from element and let measured rect drive true bounds
       text.height(h);
       (text as any).wrap('word');
       (text as any).align((el as any).align || 'left');
@@ -498,6 +504,7 @@ export class CanvasRendererV2 {
     // Initialize transformer
     this.transformer = new Konva.Transformer({
       enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+      // Default: no aspect lock; per-type rules applied in syncSelection
       keepRatio: false,
       rotateEnabled: true,
       borderEnabled: true,
@@ -526,6 +533,22 @@ export class CanvasRendererV2 {
     try { this.transformer.moveToTop(); } catch {}
 
 
+    // Capture anchor and pre-rects at transform start for precise commit positioning
+    this.transformer.on('transformstart.renderer', () => {
+      try {
+        const active = (this.transformer?.getActiveAnchor?.()?.getName?.() as string) || ((this.transformer as any)?._movingAnchorName as string) || '';
+        this.lastActiveAnchorName = active;
+      } catch {
+        this.lastActiveAnchorName = '';
+      }
+      this.preTransformRects.clear();
+      const nodes = this.transformer?.nodes() || [];
+      nodes.forEach((node) => {
+        const r = (node as any).getClientRect?.({ skipTransform: false, skipStroke: true, skipShadow: true }) || { x: node.x(), y: node.y(), width: (node as any).width?.() || 0, height: (node as any).height?.() || 0 };
+        this.preTransformRects.set(node.id?.() || '', { left: r.x, right: r.x + r.width, top: r.y, bottom: r.y + r.height });
+      });
+    });
+
     // Commit on transform end: convert scale -> size, normalize nodes, update store
     // Transform normalization: convert scale -> size, reset scale to 1, update store, re-layout immediately
     this.transformer.on('transformend.renderer', () => {
@@ -534,11 +557,126 @@ export class CanvasRendererV2 {
         const id = node.id?.();
         if (!id) return;
 
+        // If a specialized resize handler (e.g., text) already committed
+        // its own normalization and store update, skip the generic path.
+        if ((node as any).getAttr && (node as any).getAttr('__skipGenericResize')) {
+          try { (node as any).setAttr('__skipGenericResize', undefined); } catch {}
+          return; // Skip all generic processing for this element
+        }
+
         // 1) Read scale applied by the transformer
         const sX = node.scaleX() || 1;
         const sY = node.scaleY() || 1;
-        
+
         console.log(`[RESIZE DEBUG] Node ${id} - Scale: ${sX}x${sY}`);
+
+        // Text-specific handling (aligned with react-image-editor):
+        // convert scale -> width/height on text and reset scale to 1
+        try {
+          const group = node as Konva.Group;
+          if (group.name() === 'text') {
+            const textNode =
+              group.findOne<Konva.Text>('Text.text') ||
+              group.findOne<Konva.Text>('Text') ||
+              group.findOne<Konva.Text>('.text');
+            if (textNode) {
+              // Scale width and font to match visual preview, then normalize scale.
+              const MIN_W = 20;
+              const MIN_H = 10;
+              const baseW = (typeof (textNode as any).width === 'function') ? (textNode as any).width() : ((textNode as any).attrs?.width || 0);
+              const baseH = (typeof (textNode as any).height === 'function') ? (textNode as any).height() : ((textNode as any).attrs?.height || 0);
+              const baseFont = (textNode as any).fontSize ? (textNode as any).fontSize() : 14;
+
+              const targetW = Math.max(MIN_W, Math.abs((baseW || 0) * sX));
+              const targetFont = Math.max(8, Math.min(512, Math.abs(baseFont * sY)));
+
+              // Reset group scale; apply font + width
+              (node as any).scale({ x: 1, y: 1 });
+              if ((textNode as any).x && textNode.x() !== 0) textNode.x(0);
+              if ((textNode as any).y && textNode.y() !== 0) textNode.y(0);
+              if ((textNode as any).fontSize) (textNode as any).fontSize(targetFont);
+              (textNode as any).width(targetW);
+              if (typeof (textNode as any).height === 'function') (textNode as any).height(Math.max(MIN_H, Math.abs((baseH || 0) * sY)));
+
+              // Measure actual height without transform
+              try { (textNode as any)._clearCache?.(); } catch {}
+              const rect2 = (textNode as any).getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
+              const finalH = Math.max(MIN_H, rect2 && typeof rect2.height === 'number' ? rect2.height : (baseH || MIN_H));
+
+              // Ensure hit area matches
+              this.ensureHitAreaSize(group, targetW, finalH);
+
+              // Persist
+              this.updateElementCallback?.(id, {
+                width: targetW,
+                height: finalH,
+                fontSize: targetFont,
+                x: group.x(),
+                y: group.y(),
+                scaleX: 1,
+                scaleY: 1,
+              });
+
+              return; // Skip generic processing
+            }
+          }
+        } catch {}
+
+        // Sticky note-specific handling: scale frame + scale inner text font in lock-step
+        try {
+          const group = node as Konva.Group;
+          if (group.name() === 'sticky-note') {
+            const frame = group.findOne<Konva.Rect>('.frame');
+            const textNode = group.findOne<Konva.Text>('.text');
+            if (frame && textNode) {
+              const MIN_W = 60;
+              const MIN_H = 40;
+              const baseW = frame.width();
+              const baseH = frame.height();
+              const baseFont = textNode.fontSize() || 14;
+
+              const targetW = Math.max(MIN_W, Math.abs(baseW * sX));
+              const targetH = Math.max(MIN_H, Math.abs(baseH * sY));
+              const targetFont = Math.max(8, Math.min(512, Math.abs(baseFont * sY)));
+
+              // Normalize scale then apply geometry
+              (group as any).scale({ x: 1, y: 1 });
+              frame.position({ x: 0, y: 0 });
+              frame.width(targetW);
+              frame.height(targetH);
+
+              // Respect padding from store (default 12)
+              let pad = 12;
+              try {
+                const store = (window as any).__UNIFIED_CANVAS_STORE__;
+                const el = store?.getState()?.elements?.get(id);
+                if (el && typeof el.padding === 'number') pad = el.padding;
+                if (el?.style?.padding != null) pad = el.style.padding;
+              } catch {}
+
+              textNode.position({ x: pad, y: pad });
+              textNode.width(Math.max(1, targetW - pad * 2));
+              textNode.height(Math.max(1, targetH - pad * 2));
+              textNode.fontSize(targetFont);
+
+              // Hit-area must match new frame
+              this.ensureHitAreaSize(group, targetW, targetH);
+
+              // Persist to store
+              this.updateElementCallback?.(id, {
+                width: targetW,
+                height: targetH,
+                fontSize: targetFont,
+                x: group.x(),
+                y: group.y(),
+                scaleX: 1,
+                scaleY: 1,
+              });
+
+              return; // Skip generic path
+            }
+          }
+        } catch {}
 
         // 2) Measure the node WITHOUT its transform to avoid double scaling
         //    (Konva will include scale in getClientRect() unless skipTransform:true)
@@ -595,17 +733,28 @@ export class CanvasRendererV2 {
             if (el?.style?.padding != null) pad = el.style.padding;
           } catch {}
           text.position({ x: pad, y: pad });
-          (text as any).width(Math.max(1, nextW - 2 * pad));
-          (text as any).height(Math.max(1, nextH - 2 * pad));
+          
+          // CRITICAL: Check if this is a text element that handles its own resize
+          // Only force width/height for non-text elements (sticky notes, etc.)
+          const isTextElement = group.name() === 'text';
+          if (!isTextElement) {
+            // Only sticky notes and other non-text elements get forced dimensions
+            (text as any).width(Math.max(1, nextW - 2 * pad));
+            (text as any).height(Math.max(1, nextH - 2 * pad));
+          }
+          // Text elements keep their fontSize-calculated dimensions
         }
 
-        // Hit area MUST match the new logical size - this is critical
-        try { 
-          this.ensureHitAreaSize(group, nextW, nextH); 
-          // Force the group's cached bounds to update
-          group.clearCache();
-          (group as any)._clearSelfAndDescendantCache?.('bounds');
-        } catch {}
+        // Hit area MUST match the new logical size - but NOT for text elements (they handle their own)
+        const isTextElement = group.name() === 'text';
+        if (!isTextElement) {
+          try { 
+            this.ensureHitAreaSize(group, nextW, nextH); 
+            // Force the group's cached bounds to update
+            group.clearCache();
+            (group as any)._clearSelfAndDescendantCache?.('bounds');
+          } catch {}
+        }
 
         // 4) Commit to store immutably (store is the single source of truth)
         this.updateElementCallback?.(id, {
@@ -628,6 +777,9 @@ export class CanvasRendererV2 {
       // Schedule redraws
       this.scheduleDraw('main');
       this.scheduleDraw('overlay');
+      // Clear pre-transform cache after commit
+      this.preTransformRects.clear();
+      this.lastActiveAnchorName = '';
     });
     
     // Create singleton overlay group for connector UI (hidden by default)
@@ -879,8 +1031,8 @@ export class CanvasRendererV2 {
       outline: 'none',
       resize: 'none',
       overflow: 'hidden',
-      whiteSpace: 'pre-wrap',
-      wordBreak: 'break-word',
+      whiteSpace: isSticky ? 'pre-wrap' : 'pre',
+      wordBreak: isSticky ? 'break-word' : 'normal',
       transformOrigin: '0 0',
       // Rotation: opt-in (off by default for better caret behavior)
       transform: this.rotateTextareaWhileEditing ? `rotate(${absRot}deg)` : 'none',
@@ -905,31 +1057,42 @@ export class CanvasRendererV2 {
     ta.focus();
     ta.select();
 
-    // --- Live autosize (height) & live element height updates ---
-    // We’ll measure with the textarea’s scrollHeight (fast + good enough for sticky notes).
-    const measure = () => {
+    // Hide transformer while editing
+    const prevTransformerVisible = this.transformer?.visible() ?? true;
+    try { this.transformer?.visible(false); this.scheduleDraw('overlay'); } catch {}
+
+    // For plain text, hide the Konva text node while editing (match react-image-editor)
+    let prevTextVisible: boolean | undefined;
+    if (!isSticky) {
+      try {
+        const group = node as Konva.Group;
+        const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
+        if (textNode) {
+          prevTextVisible = textNode.visible();
+          textNode.visible(false);
+          this.scheduleDraw('main');
+        }
+      } catch {}
+    }
+
+    // Measurement logic
+    const measureSticky = () => {
       // Grow textarea height to content (within a reasonable max, e.g., 2x initial)
       const minHpx = contentHeight; // px
       ta.style.height = 'auto';
       const scrollHpx = Math.ceil(ta.scrollHeight);
-      // Add a small descender guard to prevent caret clipping (px)
       const guardPx = Math.max(1, Math.round(((el as any).fontSize || 14) * 0.15 * stageScale));
       const nextHpx = Math.max(minHpx, scrollHpx + guardPx);
       ta.style.height = `${nextHpx}px`;
 
-      // Convert DOM px to canvas world units
-      const finalElementHeightWorld = isSticky ? (nextHpx + padPx * 2) / stageScale : nextHpx / stageScale;
+      const finalElementHeightWorld = (nextHpx + padPx * 2) / stageScale;
 
-      // Immediate Konva update for perfect lockstep (no visual lag)
       try {
         const group = node as Konva.Group;
         const frame = group.findOne<Konva.Rect>('.frame') || group.findOne<Konva.Rect>('.bg');
         const textNode = group.findOne<Konva.Text>('.text') || group.findOne<Konva.Text>('.label') || group.findOne<Konva.Text>('Text');
-        if (frame) {
-          frame.height(finalElementHeightWorld);
-        }
-        if (textNode && isSticky) {
-          // Mirror textarea content and metrics to Konva text for perfect wrap measurement
+        if (frame) frame.height(finalElementHeightWorld);
+        if (textNode) {
           try {
             const padW = padWorld;
             textNode.text(ta.value);
@@ -945,18 +1108,71 @@ export class CanvasRendererV2 {
         this.scheduleDraw('overlay');
       } catch {}
 
-      // Tell the store so Konva sticky grows too (renderer will sync quickly as well)
       this.updateElementCallback?.(elId, { height: finalElementHeightWorld });
     };
-    // Measure immediately on input for lockstep visual parity
-    ta.addEventListener('input', measure);
+
+    // React Image Editor-style width calc for plain text
+    const computePlainWidthPx = (value: string) => {
+      const lines = value.split('\n');
+      const longest = lines.sort((a, b) => b.length - a.length)[0] || '';
+      const chars = longest.split('');
+      let acc = 0;
+      for (const ch of chars) {
+        const code = ch.charCodeAt(0);
+        // ASCII printable range 32..126 uses 3/5 width of font size
+        acc += (code >= 32 && code <= 126) ? (fs * 3) / 5 : fs;
+      }
+      return acc;
+    };
+
+    const measurePlain = () => {
+      // Update width based on content
+      const wpx = computePlainWidthPx(ta.value);
+      ta.style.width = `${Math.max(1, Math.ceil(wpx))}px`;
+      // Height uses number of lines * fontSize * 1.2 (RIE)
+      const lines = ta.value.split('\n').length;
+      const nextHpx = Math.max(1, Math.ceil(lines * ((el as any).fontSize || 14) * 1.2 * stageScale));
+      ta.style.height = `${nextHpx + 3}px`;
+
+      // Update Konva text live for feedback
+      try {
+        const group = node as Konva.Group;
+        const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
+        if (textNode) {
+          textNode.text(ta.value);
+          const worldW = Math.max(1, Math.ceil(wpx) / stageScale);
+          (textNode as any).width(worldW);
+          this.ensureHitAreaSize(group, worldW, Math.max(10, nextHpx / stageScale));
+          this.scheduleDraw('main');
+          this.transformer?.forceUpdate?.();
+          this.scheduleDraw('overlay');
+        }
+      } catch {}
+    };
+
+    // Bind input handler by type
+    if (isSticky) {
+      ta.addEventListener('input', measureSticky);
+    } else {
+      ta.addEventListener('input', measurePlain);
+    }
 
     // --- Commit / Cancel ---
     const commit = () => {
       cleanup();
       const nextText = ta.value;
       // Persist text + exit editing
-      this.updateElementCallback?.(elId, { text: nextText, isEditing: false });
+      if (isSticky) {
+        this.updateElementCallback?.(elId, { text: nextText, isEditing: false });
+      } else {
+        // Plain text: set width/height based on textarea bounds and reset any scale
+        const rect = ta.getBoundingClientRect();
+        const stageScale = this.stage?.getAbsoluteScale?.().x || 1;
+        const nextW = Math.max(20, Math.round(rect.width / stageScale));
+        const lines = nextText.split('\n').length;
+        const nextH = Math.max(10, Math.round(lines * ((el as any).fontSize || 14) * 1.2));
+        this.updateElementCallback?.(elId, { text: nextText, width: nextW, height: nextH, isEditing: false });
+      }
     };
     const cancel = () => {
       cleanup();
@@ -1006,8 +1222,12 @@ export class CanvasRendererV2 {
     };
     document.addEventListener('mousedown', onDocMouseDown, true);
 
-    // Initial measure so height matches current content
-    measure();
+    // Initial measure so editor matches current content
+    if (isSticky) {
+      measureSticky();
+    } else {
+      measurePlain();
+    }
 
     // Store selection state (optional visual tweak)
     this.updateElementCallback?.(elId, { isEditing: true });
@@ -1019,9 +1239,9 @@ export class CanvasRendererV2 {
       const absScale = this.stage!.getAbsoluteScale?.();
       const stageScale = absScale && typeof absScale.x === 'number' ? absScale.x : 1;
       const padPx = padWorld * stageScale;
-      const l = containerRect.left + rect.x + padPx;
-      const t = containerRect.top + rect.y + padPx;
-      const w = Math.max(4, rect.width - padPx * 2);
+      const l = containerRect.left + rect.x + (isSticky ? padPx : 0);
+      const t = containerRect.top + rect.y + (isSticky ? padPx : 0);
+      const w = isSticky ? Math.max(4, rect.width - padPx * 2) : Math.max(4, rect.width);
       // Height is controlled by autosize; don’t override here
       if (this.rotateTextareaWhileEditing) {
         const r = (node as any).getAbsoluteRotation?.() ?? 0;
@@ -1030,7 +1250,7 @@ export class CanvasRendererV2 {
       ta.style.left = `${l}px`;
       ta.style.top = `${t}px`;
       ta.style.width = `${w}px`;
-      measure();
+      if (isSticky) measureSticky(); else measurePlain();
     };
 
     // Subscribe to stage changes (zoom/pan)
@@ -1044,7 +1264,7 @@ export class CanvasRendererV2 {
     const cleanup = () => {
       console.info('[RendererV2] cleanup editor');
       ta.removeEventListener('keydown', onKeyDown);
-      ta.removeEventListener('input', measure);
+      if (isSticky) ta.removeEventListener('input', measureSticky); else ta.removeEventListener('input', measurePlain);
       ta.removeEventListener('blur', onBlur);
       this.stage.container().removeEventListener('wheel', onWheel);
 
@@ -1053,6 +1273,18 @@ export class CanvasRendererV2 {
 
       ta.remove();
       if (this.currentEditor === ta) this.currentEditor = undefined;
+      try { this.transformer?.visible(prevTransformerVisible); this.scheduleDraw('overlay'); } catch {}
+      // Restore text node visibility for plain text
+      if (!isSticky) {
+        try {
+          const group = node as Konva.Group;
+          const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
+          if (textNode && prevTextVisible !== undefined) {
+            textNode.visible(prevTextVisible);
+            this.scheduleDraw('main');
+          }
+        } catch {}
+      }
     };
 
     // Expose a closers so other flows (e.g., ESC from renderer-level, switching tools) can close it
@@ -1428,8 +1660,57 @@ export class CanvasRendererV2 {
       requestAnimationFrame(() => {
         this.transformer.visible(true);
         this.transformer.borderEnabled(true);
-        this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','top-center','bottom-center','middle-left','middle-right']);
+
+        // If selection is a single text element, constrain proportions (keep ratio) and use corner anchors only
+        const single = nodes.length === 1 ? nodes[0] : null;
+        const isSingleText = !!single && single.name() === 'text';
+        const isSingleSticky = !!single && single.name() === 'sticky-note';
+        if (isSingleText) {
+          // Text: enable edges + corners; keep ratio to match preview; allow rotation
+          this.transformer.keepRatio(true);
+          this.transformer.rotateEnabled(true);
+          this.transformer.enabledAnchors([
+            'top-left','top-center','top-right',
+            'middle-left','middle-right',
+            'bottom-left','bottom-center','bottom-right',
+          ]);
+          
+          // Add boundBoxFunc to prevent tiny sizes and correct x when clamping left-edge resizes
+          this.transformer.boundBoxFunc((oldBox, newBox) => {
+            const minWidth = 20;
+            const minHeight = 10;
+
+            const activeName = (this.transformer.getActiveAnchor?.()?.getName?.() as string) || ((this.transformer as any)._movingAnchorName as string) || '';
+
+            let w = Math.max(minWidth, Math.abs(newBox.width));
+            const h = Math.max(minHeight, Math.abs(newBox.height));
+
+            // If clamping width while dragging from the left, shift x so right edge stays fixed
+            let x = newBox.x;
+            if (w !== newBox.width && activeName.includes('left')) {
+              x += newBox.width - w;
+            }
+
+            return { ...newBox, x, width: w, height: h };
+          });
+        } else if (isSingleSticky) {
+          // Sticky note: uniform scaling on corners feels natural; allow rotation; 8 anchors
+          this.transformer.keepRatio(true);
+          this.transformer.rotateEnabled(true);
+          this.transformer.enabledAnchors([
+            'top-left','top-center','top-right',
+            'middle-left','middle-right',
+            'bottom-left','bottom-center','bottom-right',
+          ]);
+        } else {
+          this.transformer.keepRatio(false);
+          this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','top-center','bottom-center','middle-left','middle-right']);
+        }
         this.transformer.anchorSize(8);
+
+        // No per-frame text handlers: allow natural Konva scaling during drag
+        // Commit at transformend (special-cased) to convert scale -> width/height
+
         this.layers.overlay.batchDraw();
       });
 
@@ -1676,6 +1957,205 @@ export class CanvasRendererV2 {
     });
     
     return handle;
+  }
+
+  /**
+   * Attach text resize handlers with proper scale handling and handle detection
+   */
+  private attachTextResizeHandlers(groupNode: Konva.Group, textNode: Konva.Text, transformer: Konva.Transformer, elId: string) {
+    // Baseline captured at gesture start
+    let base = {
+      fontSize: textNode.fontSize(),
+      width: Math.max(1, textNode.width() || 1),
+      height: Math.max(1, textNode.height() || 1),
+      x: groupNode.x(),
+    };
+
+    // Track active anchor for edge correction
+    let activeAnchorName: string = '';
+    const DESCENDER_GUARD = 0.12; // small guard to prevent clipping
+    let hitRect: Konva.Rect | null = null;
+    let visualsFrozen = false;
+
+    const onTransformStart = () => {
+      // Capture clean baseline values
+      base = {
+        fontSize: textNode.fontSize(),
+        width: Math.max(1, textNode.width() || 1),
+        height: Math.max(1, textNode.height() || 1),
+        x: groupNode.x(),
+      };
+
+      // Determine which anchor is active (fallback to internal for tests)
+      try {
+        activeAnchorName = (transformer.getActiveAnchor()?.getName?.() as string) || ((transformer as any)._movingAnchorName as string) || '';
+      } catch {
+        activeAnchorName = ((transformer as any)._movingAnchorName as string) || '';
+      }
+
+      // Cache the invisible hit-area rect only; we treat it as the outer frame
+      hitRect = groupNode.findOne<Konva.Rect>('Rect.hit-area') || null;
+
+      // Freeze transformer border to reduce flicker (keep anchors visible)
+      try {
+        transformer.borderEnabled(false);
+        visualsFrozen = true;
+      } catch {}
+
+      // Set skip flag for generic handler
+      try { groupNode.setAttr('__skipGenericResize', true); } catch {}
+    };
+
+    // Pre-cache rectangles for maximum performance
+    let cachedRects: Konva.Rect[] = [];
+    let lastScale = { x: 1, y: 1 };
+
+    const onTransform = () => {
+      // Read scale values (fastest possible)
+      const sx = groupNode.scaleX();
+      const sy = groupNode.scaleY();
+
+      // Bail early if no meaningful change (reduce flickering)
+      if (!sx || !sy || (sx === 1 && sy === 1)) return;
+      if (Math.abs(sx - lastScale.x) < 0.01 && Math.abs(sy - lastScale.y) < 0.01) return;
+
+      lastScale.x = sx;
+      lastScale.y = sy;
+
+      // Determine active anchor in case it changed mid-gesture
+      let anchor = activeAnchorName;
+      try {
+        anchor = (transformer.getActiveAnchor?.()?.getName?.() as string) || anchor;
+      } catch {}
+
+      // Compute new width/font based on anchor semantics
+      // Anchor-aware resize
+      const clampWidth = (v: number) => (v < 20 ? 20 : v);
+      const clampFont = (v: number) => (v < 8 ? 8 : v > 512 ? 512 : v);
+
+      let nextFont = base.fontSize;
+      let nextWidth = base.width;
+
+      const isH = anchor.includes('left') || anchor.includes('right');
+      const isV = anchor.includes('top') || anchor.includes('bottom');
+
+      if (isH && !isV) {
+        // Horizontal edge: width only
+        nextWidth = clampWidth(base.width * sx);
+        nextFont = base.fontSize;
+      } else if (isV && !isH) {
+        // Vertical edge: font only
+        nextFont = clampFont(base.fontSize * sy);
+        nextWidth = base.width;
+      } else {
+        // Corner: scale font proportionally, width by sx
+        const s = Math.sqrt(sx * sy);
+        nextFont = clampFont(base.fontSize * s);
+        nextWidth = clampWidth(base.width * sx);
+      }
+
+      // Apply to text node (minimal calls)
+      if (textNode.fontSize() !== nextFont) textNode.fontSize(nextFont);
+      if (textNode.width() !== nextWidth) textNode.width(nextWidth);
+      // Force text at (0,0) inside group to avoid padding-induced misalignment
+      if (textNode.x() !== 0) textNode.x(0);
+      if (textNode.y() !== 0) textNode.y(0);
+
+      // Keep the opposite edge stable when dragging from left anchors
+      if (anchor.includes('left')) {
+        const dx = base.width - nextWidth;
+        groupNode.x(base.x + dx);
+      }
+
+      // Measure actual rendered height to avoid trailing whitespace
+      let renderedTextH = nextFont * 1.2; // fallback
+      try {
+        textNode._clearCache?.();
+        const rect = textNode.getClientRect({ skipTransform: true });
+        if (rect && rect.height) {
+          renderedTextH = Math.ceil(rect.height + nextFont * DESCENDER_GUARD);
+        }
+      } catch {}
+      // Do NOT update frame/hit rect during live drag to avoid flicker.
+      // Only preview via layer redraw; commit at transformend.
+
+      // Reset scale (single call)
+      groupNode.scale({ x: 1, y: 1 });
+
+      // Schedule draws via renderer's scheduler to coalesce frames
+      try {
+        this.scheduleDraw('main');
+        this.scheduleDraw('overlay');
+      } catch {
+        requestAnimationFrame(() => { try { groupNode.getLayer()?.batchDraw?.(); } catch {} });
+      }
+    };
+
+    const onTransformEnd = () => {
+      // Get final values; measure height to avoid whitespace
+      const finalFrameWidth = Math.max(1, textNode.width() || 1);
+      const finalFont = textNode.fontSize();
+      let finalHeight = Math.ceil(finalFont * 1.2);
+      try {
+        textNode._clearCache?.();
+        const rect = textNode.getClientRect({ skipTransform: true });
+        if (rect && rect.height) finalHeight = Math.ceil(rect.height + finalFont * DESCENDER_GUARD);
+      } catch {}
+      const finalFrameHeight = Math.max(1, finalHeight);
+
+      // Update hit-area only (outer frame proxy)
+      if (!hitRect) {
+        hitRect = groupNode.findOne<Konva.Rect>('Rect.hit-area') || null;
+      }
+      if (hitRect) {
+        hitRect.width(finalFrameWidth);
+        hitRect.height(finalFrameHeight);
+        hitRect.x(0);
+        hitRect.y(0);
+      }
+
+      // Ensure hit area matches (fallback)
+      try { this.ensureHitAreaSize(groupNode, finalFrameWidth, finalFrameHeight); } catch {}
+
+      // Single transformer update (no immediate batchDraw to reduce flickering)
+      transformer.forceUpdate();
+
+      // Delayed draw to let transformer settle
+      requestAnimationFrame(() => {
+        groupNode.getStage()?.batchDraw();
+      });
+
+      // Persist final values (async to avoid blocking)
+      setTimeout(() => {
+        try {
+          const store = (window as any).__UNIFIED_CANVAS_STORE__;
+          const attrs = {
+            fontSize: finalFont,
+            width: finalFrameWidth,
+            height: finalFrameHeight,
+            x: groupNode.x(),
+            scaleX: 1,
+            scaleY: 1,
+          };
+          if (store?.getState?.().commitTextResize) {
+            store.getState().commitTextResize(elId as any, attrs);
+          } else if (store?.getState?.().updateElement) {
+            store.getState().updateElement(elId as any, attrs);
+          }
+        } catch {}
+      }, 0);
+
+      // Restore transformer border
+      if (visualsFrozen) {
+        try { transformer.borderEnabled(true); } catch {}
+      }
+    };
+
+    // Clear and attach handlers
+    groupNode.off('.textscale');
+    groupNode.on('transformstart.textscale', onTransformStart);
+    groupNode.on('transform.textscale', onTransform);
+    groupNode.on('transformend.textscale', onTransformEnd);
   }
 }
 

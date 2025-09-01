@@ -77,6 +77,19 @@ export interface ElementActions {
   // Grouping operations for individual elements (moved from unified store)
   isElementInGroup: (elementId: ElementId) => GroupId | null; // Changed return type
   setElementGroup: (elementId: ElementId, groupId: GroupId | null) => void;
+
+  // FigJam-style Text Resize / Mode actions
+  setTextMode: (id: ElementId, mode: 'autoWidth' | 'autoHeight' | 'fixed') => void;
+  resizeTextLive: (
+    id: ElementId,
+    size: { fontSize?: number; width?: number; height?: number },
+    options?: { skipHistory?: boolean }
+  ) => void;
+  commitTextResize: (
+    id: ElementId,
+    size: { fontSize: number; width: number; height: number },
+    options?: { skipHistory?: boolean }
+  ) => void;
 }
 
 /**
@@ -756,6 +769,50 @@ export const createElementModule = (
           }
         });
         getState().addToHistory('resizeTableCell');
+      },
+
+      // --- FigJam-style Text Resize / Mode actions ---
+      setTextMode: (id, mode) => {
+        setState((state: any) => {
+          const el = state.elements.get(id);
+          if (!el) return;
+          if (el.type !== 'text' && el.type !== 'sticky-note') return;
+          state.elements.set(id, { ...el, mode, updatedAt: Date.now() });
+        });
+        getState().addToHistory('setTextMode');
+      },
+
+      resizeTextLive: (id, size, options = {}) => {
+        const { skipHistory = true } = options;
+        setState((state: any) => {
+          const el = state.elements.get(id);
+          if (!el) return;
+          if (el.type !== 'text' && el.type !== 'sticky-note') return;
+          const next: any = { ...el };
+          if (typeof size.fontSize === 'number') next.fontSize = size.fontSize;
+          if (typeof size.width === 'number') next.width = Math.max(1, size.width);
+          if (typeof size.height === 'number') next.height = Math.max(1, size.height);
+          next.updatedAt = Date.now();
+          state.elements.set(id, next);
+        });
+        if (!skipHistory) getState().addToHistory('resizeTextLive');
+      },
+
+      commitTextResize: (id, size, options = {}) => {
+        const { skipHistory = false } = options;
+        setState((state: any) => {
+          const el = state.elements.get(id);
+          if (!el) return;
+          if (el.type !== 'text' && el.type !== 'sticky-note') return;
+          state.elements.set(id, {
+            ...el,
+            fontSize: size.fontSize,
+            width: Math.max(1, size.width),
+            height: Math.max(1, size.height),
+            updatedAt: Date.now(),
+          });
+        });
+        if (!skipHistory) getState().addToHistory('commitTextResize');
       },
 
       exportElements: () => {

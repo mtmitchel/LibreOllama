@@ -544,7 +544,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       el.style.height = `${ktext.fontSize() * sc.y + 2}px`;  // Font size + 2px for borders (1px top + 1px bottom)
     }
     
-    function finalizeText(el: HTMLTextAreaElement, note: { group: Konva.Group; ktext: Konva.Text; frame: Konva.Rect; elementId: string }, mode: 'commit'|'cancel') {
+        function finalizeText(el: HTMLTextAreaElement, note: { group: Konva.Group; ktext: Konva.Text; frame: Konva.Rect; elementId: string }, mode: 'commit'|'cancel') {
       const { group, ktext, frame, elementId } = note;
       
       if (mode === 'commit' && el.value.trim().length) {
@@ -554,16 +554,17 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         ktext.width(undefined); // Remove width constraint to measure natural size
         
         // Measure actual text bounds to make frame hug text perfectly
-        const textBounds = ktext.getClientRect({ skipStroke: true, skipShadow: true });
-        const textWidth = textBounds.width + 4; // Small horizontal padding
-        const textHeight = ktext.fontSize() * 1.0; // Exact font height - no bottom space
+        ktext._clearCache();
+        const metrics = ktext.measureSize(ktext.text());
+        const textWidth = Math.ceil(metrics.width) + 8; // More horizontal padding
+        const textHeight = Math.ceil(metrics.height * 1.2); // Increased vertical padding to prevent clipping
         
         // Update frame to perfectly hug the text with no bottom gap
         frame.width(textWidth);
         frame.height(textHeight);
         
-        // Position text at top of frame
-        ktext.position({ x: 2, y: 0 });
+        // Position text with small padding to prevent clipping
+        ktext.position({ x: 4, y: 2 });
         
         // Update store with final text and dimensions that hug the text
         useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
@@ -584,110 +585,30 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         if (renderer && transformer && group && frame) {
           console.log('[RESIZE] Setting up transformer for text element', elementId);
           
-          // Clear any existing event handlers first
-          group.off('transformstart');
-          group.off('transform');
-          group.off('transformend');
-          group.off('dragend');
-          
           // Make the group draggable
           group.draggable(true);
           
-          // Attach transformer to the GROUP (not frame) - transformer needs the whole group
+          // Attach transformer to the GROUP
           transformer.nodes([group]);
           transformer.visible(true);
-          transformer.keepRatio(true);
-          transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right']);
+          transformer.keepRatio(false); // keepRatio is false to allow separate vertical/horizontal scaling
+          transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','middle-left','middle-right','top-center','bottom-center']);
+          transformer.anchorSize(8);
+          transformer.borderStroke('#3B82F6');
+          transformer.borderStrokeWidth(1);
           
-          const MIN_W = 120;
-          const MIN_H = 20;
-          
-          // TRANSFORMSTART - Enter protected state
-          group.on('transformstart', () => {
-            console.log('[RESIZE] Transform start - setting protection flags', elementId);
-            useUnifiedCanvasStore.getState().setResizingId(elementId as ElementId);
-            useUnifiedCanvasStore.getState().setResizeShadow({
-              id: elementId as ElementId,
-              width: frame.width(),
-              height: frame.height()
-            });
-          });
-          
-          // TRANSFORM - Convert scale to size without changing store yet
-          group.on('transform', () => {
-            const scaleX = group.scaleX();
-            const scaleY = group.scaleY();
-            
-            // For proportional resize, use the same scale for both dimensions
-            // This is enforced by keepRatio(true) on the transformer
-            const w = Math.max(MIN_W, frame.width() * scaleX);
-            
-            // Font size scales with height to maintain text proportions
-            const newFontSize = Math.max(12, ktext.fontSize() * scaleY);
-            
-            // Height should match font size exactly - no bottom space
-            const h = newFontSize;
-            
-            // Neutralize scale -> commit to frame and group
-            frame.width(w);
-            frame.height(h);
-            group.scale({ x: 1, y: 1 });
-            
-            // Update text to match new dimensions
-            ktext.fontSize(newFontSize);
-            ktext.width(w - 4); // Set width for text wrapping with small padding
-            ktext.position({ x: 2, y: 0 }); // Keep text at top of frame
-            
-            // Live preview via shadow so renderer can't overwrite
-            useUnifiedCanvasStore.getState().setResizeShadow({
-              id: elementId as ElementId,
-              width: w,
-              height: h
-            });
-            
-            transformer.forceUpdate();
-            overlayLayer.batchDraw();
-            mainLayer.batchDraw();
-          });
-          
-          // TRANSFORMEND - Commit to store FIRST, then clear flags
-          group.on('transformend', () => {
-            const newW = Math.max(MIN_W, frame.width());
-            const newH = Math.max(MIN_H, frame.height());
-            const newFontSize = ktext.fontSize();
-            
-            console.log('[RESIZE] Transform end - committing to store', elementId, { newW, newH, newFontSize });
-            
-            // 1) Commit to store (single source of truth)
-            useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
-              width: newW,
-              height: newH,
-              fontSize: newFontSize
-            });
-            
-            // 2) Keep nodes aligned locally (prevents flicker)
-            frame.width(newW);
-            frame.height(newH);
-            ktext.width(newW - 4);
-            ktext.position({ x: 2, y: 0 }); // Keep text at top with no bottom gap
-            
-            // 3) Clear protection flags AFTER commit
-            console.log('[RESIZE] Clearing protection flags');
-            useUnifiedCanvasStore.getState().setResizingId(null);
-            useUnifiedCanvasStore.getState().setResizeShadow(null);
-            
-            transformer.forceUpdate();
-            mainLayer.batchDraw();
-          });
-          
-          // Handle position changes when dragging the group
+          // Delegate resize behavior to CanvasRendererV2 to avoid duplicate handlers
+          try {
+            renderer.syncSelection(new Set([elementId] as any));
+          } catch {}
+
           group.on('dragend', () => {
             useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
               x: group.x(),
-              y: group.y()
+              y: group.y(),
             });
           });
-          
+
           overlayLayer.batchDraw();
         }
       } else {
@@ -711,6 +632,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     }
     
     // Initialize based on current tool
+    // Note: Text CREATION is handled here, text EDITING is handled by CanvasRendererV2
     if (currentSelectedTool === 'text') {
       useTextTool();
     }

@@ -73,6 +73,8 @@ export interface TextElement extends BaseElement {
   fill?: string;
   width?: number;
   height?: number;
+  // FigJam-style text sizing mode
+  mode?: 'autoWidth' | 'autoHeight' | 'fixed';
   // Styling and layout
   padding?: number; // default 12 (used for overlay and measurement)
   lineHeight?: number; // default 1.4
@@ -235,6 +237,8 @@ export interface StickyNoteElement extends BaseElement {
   fontStyle?: string;
   textDecoration?: string;
   textAlign?: 'left' | 'center' | 'right';
+  // FigJam-style text sizing mode for sticky notes too (optional)
+  mode?: 'autoWidth' | 'autoHeight' | 'fixed';
   // Styling and layout
   padding?: number; // default 12
   lineHeight?: number; // default 1.4
