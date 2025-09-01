@@ -18,44 +18,43 @@ interface NonReactCanvasStageProps {
   selectedTool?: string;
 }
 
-// Helper function to create dot grid pattern (FigJam style)
-const createDotGridHelper = (viewportWidth: number, viewportHeight: number) => {
-  const dotRadius = 1; // Visible dots like FigJam
-  const dotSpacing = 20; // Standard grid spacing
-  const dotColor = 'rgba(0, 0, 0, 0.2)'; // More visible dots (20% opacity)
-  
-  // Calculate grid area (larger than viewport for panning)
-  const gridPadding = 500;
-  const gridArea = {
-    startX: -gridPadding,
-    startY: -gridPadding,
-    endX: viewportWidth + gridPadding,
-    endY: viewportHeight + gridPadding
-  };
-  
-  // Create a group for all dots
-  const dotsGroup = new Konva.Group({
-    listening: false,
-    name: 'dot-grid'
-  });
-  
-  // Generate dots in a grid pattern
-  for (let x = gridArea.startX; x <= gridArea.endX; x += dotSpacing) {
-    for (let y = gridArea.startY; y <= gridArea.endY; y += dotSpacing) {
-      const dot = new Konva.Circle({
-        x: x,
-        y: y,
-        radius: dotRadius,
-        fill: dotColor,
-        listening: false,
-        perfectDrawEnabled: false,
-        transformsEnabled: 'position' // Optimize for performance
-      });
-      dotsGroup.add(dot);
-    }
+// Helper to create an efficient tiled dot-grid background (FigJam style)
+const createDotGridHelper = (_viewportWidth: number, _viewportHeight: number) => {
+  const dotRadius = 1;
+  const dotSpacing = 20;
+  const dotColor = 'rgba(0, 0, 0, 0.2)';
+
+  // Build a tiny tile canvas and use it as a pattern
+  const tile = document.createElement('canvas');
+  tile.width = dotSpacing;
+  tile.height = dotSpacing;
+  const ctx = tile.getContext('2d');
+  if (ctx) {
+    ctx.clearRect(0, 0, tile.width, tile.height);
+    ctx.fillStyle = dotColor;
+    ctx.beginPath();
+    ctx.arc(tile.width / 2, tile.height / 2, dotRadius, 0, Math.PI * 2);
+    ctx.fill();
   }
-  
-  return dotsGroup;
+
+  const patternRect = new Konva.Rect({
+    x: -20000,
+    y: -20000,
+    width: 40000,
+    height: 40000,
+    listening: false,
+    perfectDrawEnabled: false,
+    name: 'dot-grid',
+  });
+  // Use Konva pattern fill API
+  try {
+    (patternRect as any).fillPatternImage(tile);
+    (patternRect as any).fillPatternRepeat('repeat');
+    (patternRect as any).fillPatternOffset({ x: 0, y: 0 });
+    (patternRect as any).fillPriority('pattern');
+  } catch {}
+
+  return patternRect;
 };
 
 // Minimal imperative renderer for drawing tools and persisted strokes
@@ -70,6 +69,9 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
   const zoomViewport = useUnifiedCanvasStore(s => s.zoomViewport);
   const setViewport = useUnifiedCanvasStore(s => s.setViewport);
   const selectedStickyNoteColor = useUnifiedCanvasStore(s => s.selectedStickyNoteColor);
+  const addElement = useUnifiedCanvasStore(s => s.addElement);
+  const setSelectedTool = useUnifiedCanvasStore(s => s.setSelectedTool);
+  const selectElement = useUnifiedCanvasStore(s => s.selectElement);
   const draft = useUnifiedCanvasStore(s => s.draft);
 
   // Create stage and layers imperatively
@@ -129,6 +131,11 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     stage.add(overlayLayer);
 
     stageRef.current = stage;
+
+    // Initialize viewport size (do not offset position to avoid misalignment)
+    try {
+      setViewport({ width, height });
+    } catch {}
 
     // Mark init end and start a frame loop for FPS
     performanceLogger.initEnd();
@@ -221,6 +228,14 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       renderer.init(stage, { background, main: mainLayer, preview: (preview as any) || mainLayer, overlay }, {
         onUpdateElement: (id, updates) => useUnifiedCanvasStore.getState().updateElement(id as any, updates)
       });
+      
+      // Expose renderer methods to the unified store for table operations
+      const store = useUnifiedCanvasStore.getState();
+      if (store && typeof store === 'object') {
+        (store as any).refreshTransformer = (elementId?: string) => {
+          renderer.refreshTransformer(elementId);
+        };
+      }
     }
   }, [stageRef.current]); // Only depend on stage existence
 
@@ -1451,6 +1466,56 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     };
   });
 
+  // Lightweight Table creation tool (click to place)
+  useEffect(() => {
+    const stage = stageRef.current; if (!stage) return;
+    if (selectedTool !== 'table') return;
+
+    const onClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const ptr = stage.getPointerPosition();
+      if (!ptr) return;
+      // Convert to world coords
+      const world = stage.getAbsoluteTransform().copy().invert().point(ptr);
+
+      const rows = 3, cols = 3;
+      const cellW = 120, cellH = 36;
+      const width = cols * cellW;
+      const height = rows * cellH;
+
+      const tableEl = {
+        id: (nanoid() as any),
+        type: 'table' as const,
+        x: Math.round(world.x - width / 2),
+        y: Math.round(world.y - height / 2),
+        width,
+        height,
+        rows,
+        cols,
+        cellWidth: cellW,
+        cellHeight: cellH,
+        fontSize: 13,
+        fontFamily: 'Inter, system-ui, sans-serif',
+        borderColor: '#d1d5db',
+        borderWidth: 1,
+        cellPadding: 8,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isLocked: false,
+        isHidden: false,
+      } as any;
+
+      addElement(tableEl);
+      setSelectedTool('select');
+      // select new table
+      setTimeout(() => selectElement(tableEl.id as any, false), 0);
+    };
+
+    stage.on('click.table-create', onClick);
+    return () => {
+      stage.off('click.table-create', onClick as any);
+    };
+  }, [selectedTool, stageRef]);
+
   return (
     <div 
       ref={containerRef} 
@@ -1486,6 +1551,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       {stageRef && selectedTool === 'connector-arrow' && (
         <ConnectorTool stageRef={stageRef} isActive={true} connectorType="arrow" />
       )}
+      {/* Table creation is handled imperatively via stage click when tool is active */}
     </div>
   );
 };

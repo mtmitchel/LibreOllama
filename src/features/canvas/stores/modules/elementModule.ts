@@ -687,6 +687,19 @@ export const createElementModule = (
               (table as any).enhancedTableData.cells.splice(insertIndex, 0, newRow);
             }
             (table as any).updatedAt = Date.now();
+            // Force subscriber updates by replacing Map reference
+            state.elements = new Map(state.elements);
+            // Trigger transformer refresh for real-time resize frame adjustment
+            setTimeout(() => {
+              try {
+                const refreshTransformer = (getState() as any).refreshTransformer;
+                if (refreshTransformer && typeof refreshTransformer === 'function') {
+                  refreshTransformer(tableId);
+                }
+              } catch (e) {
+                console.warn('[elementModule] Failed to refresh transformer:', e);
+              }
+            }, 16); // Next animation frame
           }
         });
         getState().addToHistory('addTableRow');
@@ -703,6 +716,18 @@ export const createElementModule = (
               (table as any).enhancedTableData.cells.splice(rowIndex, 1);
             }
             (table as any).updatedAt = Date.now();
+            state.elements = new Map(state.elements);
+            // Trigger transformer refresh for real-time resize frame adjustment
+            setTimeout(() => {
+              try {
+                const refreshTransformer = (getState() as any).refreshTransformer;
+                if (refreshTransformer && typeof refreshTransformer === 'function') {
+                  refreshTransformer(tableId);
+                }
+              } catch (e) {
+                console.warn('[elementModule] Failed to refresh transformer:', e);
+              }
+            }, 16); // Next animation frame
           }
         });
         getState().addToHistory('removeTableRow');
@@ -728,6 +753,18 @@ export const createElementModule = (
               });
             }
             (table as any).updatedAt = Date.now();
+            state.elements = new Map(state.elements);
+            // Trigger transformer refresh for real-time resize frame adjustment
+            setTimeout(() => {
+              try {
+                const refreshTransformer = (getState() as any).refreshTransformer;
+                if (refreshTransformer && typeof refreshTransformer === 'function') {
+                  refreshTransformer(tableId);
+                }
+              } catch (e) {
+                console.warn('[elementModule] Failed to refresh transformer:', e);
+              }
+            }, 16); // Next animation frame
           }
         });
         getState().addToHistory('addTableColumn');
@@ -746,6 +783,18 @@ export const createElementModule = (
               });
             }
             (table as any).updatedAt = Date.now();
+            state.elements = new Map(state.elements);
+            // Trigger transformer refresh for real-time resize frame adjustment
+            setTimeout(() => {
+              try {
+                const refreshTransformer = (getState() as any).refreshTransformer;
+                if (refreshTransformer && typeof refreshTransformer === 'function') {
+                  refreshTransformer(tableId);
+                }
+              } catch (e) {
+                console.warn('[elementModule] Failed to refresh transformer:', e);
+              }
+            }, 16); // Next animation frame
           }
         });
         getState().addToHistory('removeTableColumn');
@@ -766,6 +815,7 @@ export const createElementModule = (
               (table as any).height += ((table as any).enhancedTableData.rows[rowIndex].height - oldHeight);
             }
             (table as any).updatedAt = Date.now();
+            state.elements = new Map(state.elements);
           }
         });
         getState().addToHistory('resizeTableCell');

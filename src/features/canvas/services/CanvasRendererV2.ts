@@ -22,6 +22,19 @@ export class CanvasRendererV2 {
   private layers: RendererLayers | null = null;
   private nodeMap = new Map<string, Konva.Node>();
   private transformer: Konva.Transformer | null = null;
+  private contextMenuEl: HTMLDivElement | null = null;
+  // Table interaction overlay state (add/delete row/column controls)
+  private tableOverlay: {
+    tableId: string;
+    group: Konva.Group;
+    handles: {
+      addCol?: Konva.Group;
+      addRow?: Konva.Group;
+      delCol?: Konva.Group;
+      delRow?: Konva.Group;
+      hitTargets: Konva.Shape[];
+    };
+  } | null = null;
   // Track anchor + pre-rects for precise commit positioning
   private lastActiveAnchorName: string = '';
   private preTransformRects: Map<string, { left: number; right: number; top: number; bottom: number }> = new Map();
@@ -323,6 +336,409 @@ export class CanvasRendererV2 {
     }
   }
 
+  // --- Table overlay helpers ---
+  private ensureTableOverlay(): { overlayGroup: Konva.Group; handles: NonNullable<CanvasRendererV2['tableOverlay']>['handles'] } | null {
+    if (!this.layers?.overlay) return null;
+    // Reuse existing overlay group if present
+    let overlayGroup = this.layers.overlay.findOne<Konva.Group>('.table-overlay');
+    if (!overlayGroup) {
+      overlayGroup = new Konva.Group({ name: 'table-overlay', listening: true });
+      this.layers.overlay.add(overlayGroup);
+    }
+    // Handles container (we recreate lightweight shapes on demand)
+    const handles = { hitTargets: [] as Konva.Shape[] } as any;
+    return { overlayGroup, handles };
+  }
+
+  private clearTableOverlay() {
+    if (!this.layers?.overlay) return;
+    const overlayGroup = this.layers.overlay.findOne<Konva.Group>('.table-overlay');
+    if (overlayGroup) {
+      try { overlayGroup.destroyChildren(); } catch {}
+      this.layers.overlay.batchDraw();
+    }
+    this.tableOverlay = null;
+  }
+
+  private drawPlusHandle(parent: Konva.Group, center: { x: number; y: number }, onClick: () => void): Konva.Group {
+    const g = new Konva.Group({ x: center.x, y: center.y, listening: true });
+    // Larger invisible hit target for easier clicking
+    const hit = new Konva.Rect({ x: -12, y: -12, width: 24, height: 24, fill: 'rgba(0,0,0,0.001)', listening: true, name: 'hit' });
+    const circle = new Konva.Circle({ x: 0, y: 0, radius: 8, fill: '#ffffff', stroke: '#3b82f6', strokeWidth: 1, listening: false });
+    const v = new Konva.Line({ points: [0, -5, 0, 5], stroke: '#2563eb', strokeWidth: 2, listening: false });
+    const h = new Konva.Line({ points: [-5, 0, 5, 0], stroke: '#2563eb', strokeWidth: 2, listening: false });
+    g.add(hit, circle, v, h);
+    g.on('mousedown', (e) => { e.cancelBubble = true; onClick(); });
+    parent.add(g);
+    return g;
+  }
+
+  private drawDeleteHandle(parent: Konva.Group, center: { x: number; y: number }, onClick: () => void): Konva.Group {
+    const g = new Konva.Group({ x: center.x, y: center.y, listening: true });
+    const hit = new Konva.Rect({ x: -12, y: -12, width: 24, height: 24, fill: 'rgba(0,0,0,0.001)', listening: true, name: 'hit' });
+    const circle = new Konva.Circle({ x: 0, y: 0, radius: 8, fill: '#ffffff', stroke: '#ef4444', strokeWidth: 1, listening: false });
+    const d1 = new Konva.Line({ points: [-4, -4, 4, 4], stroke: '#b91c1c', strokeWidth: 2, listening: false });
+    const d2 = new Konva.Line({ points: [-4, 4, 4, -4], stroke: '#b91c1c', strokeWidth: 2, listening: false });
+    g.add(hit, circle, d1, d2);
+    g.on('mousedown', (e) => { e.cancelBubble = true; onClick(); });
+    parent.add(g);
+    return g;
+  }
+
+  private updateTableOverlayForPointer(tableGroup: Konva.Group, tableEl: any) {
+    if (!this.stage || !this.layers?.overlay) return;
+    const pointer = this.stage.getPointerPosition();
+    if (!pointer) { this.clearTableOverlay(); return; }
+
+    const tInv = tableGroup.getAbsoluteTransform().copy().invert();
+    const local = tInv.point(pointer);
+
+    const rows = Math.max(1, tableEl.rows || (tableEl.enhancedTableData?.rows?.length || 1));
+    const cols = Math.max(1, tableEl.cols || (tableEl.enhancedTableData?.columns?.length || 1));
+    const w = Math.max(1, tableEl.width || 1);
+    const h = Math.max(1, tableEl.height || 1);
+    const cellW = Math.max(1, Math.floor(w / cols));
+    const cellH = Math.max(1, Math.floor(h / rows));
+
+    // Only show overlay when hovering near or over the table bounds
+    const margin = 16; // allow some slack outside bounds
+    if (local.x < -margin || local.y < -margin || local.x > w + margin || local.y > h + margin) {
+      this.clearTableOverlay();
+      return;
+    }
+
+    // Prepare overlay group/handles
+    const ensured = this.ensureTableOverlay();
+    if (!ensured) return;
+    const { overlayGroup } = ensured;
+    try { overlayGroup.destroyChildren(); } catch {}
+
+    const store = (window as any).__UNIFIED_CANVAS_STORE__;
+    const addCol = (index: number) => store?.getState()?.addTableColumn?.(tableEl.id, index);
+    const addRow = (index: number) => store?.getState()?.addTableRow?.(tableEl.id, index);
+    const delCol = (index: number) => store?.getState()?.removeTableColumn?.(tableEl.id, index);
+    const delRow = (index: number) => store?.getState()?.removeTableRow?.(tableEl.id, index);
+
+    // Determine nearest vertical border for add column
+    const threshold = 6;
+    const rawColIndex = local.x / cellW;
+    const nearestBorderCol = Math.round(rawColIndex);
+    const borderX = Math.max(0, Math.min(cols, nearestBorderCol)) * cellW;
+    const distToBorderX = Math.abs(local.x - borderX);
+
+    // Determine nearest horizontal border for add row
+    const rawRowIndex = local.y / cellH;
+    const nearestBorderRow = Math.round(rawRowIndex);
+    const borderY = Math.max(0, Math.min(rows, nearestBorderRow)) * cellH;
+    const distToBorderY = Math.abs(local.y - borderY);
+
+    // Compute positions in overlay layer's local space (avoid double stage transform)
+    const toOverlay = (pt: { x: number; y: number }) => {
+      const abs = tableGroup.getAbsoluteTransform().point(pt);
+      const invOverlay = (this.layers!.overlay as Konva.Layer).getAbsoluteTransform().copy().invert();
+      return invOverlay.point(abs);
+    };
+
+    // Add Column: show when close to vertical border (including edges)
+    if (distToBorderX <= threshold || local.x < threshold || local.x > w - threshold) {
+      const insertIndex = Math.max(0, Math.min(cols, nearestBorderCol));
+      const pos = toOverlay({ x: borderX, y: -10 });
+      this.drawPlusHandle(overlayGroup, pos, () => addCol(insertIndex));
+    }
+
+    // Add Row: show when close to horizontal border (including edges)
+    if (distToBorderY <= threshold || local.y < threshold || local.y > h - threshold) {
+      const insertIndex = Math.max(0, Math.min(rows, nearestBorderRow));
+      const pos = toOverlay({ x: -10, y: borderY });
+      this.drawPlusHandle(overlayGroup, pos, () => addRow(insertIndex));
+    }
+
+    // Delete Column: when hovering inside a column
+    if (local.x >= 0 && local.x <= w && local.y >= -margin && local.y <= h + margin) {
+      const colIndex = Math.max(0, Math.min(cols - 1, Math.floor(local.x / cellW)));
+      const colCenterX = colIndex * cellW + cellW / 2;
+      const pos = toOverlay({ x: colCenterX, y: -24 });
+      this.drawDeleteHandle(overlayGroup, pos, () => delCol(colIndex));
+    }
+
+    // Delete Row: when hovering inside a row
+    if (local.y >= 0 && local.y <= h && local.x >= -margin && local.x <= w + margin) {
+      const rowIndex = Math.max(0, Math.min(rows - 1, Math.floor(local.y / cellH)));
+      const rowCenterY = rowIndex * cellH + cellH / 2;
+      const pos = toOverlay({ x: -24, y: rowCenterY });
+      this.drawDeleteHandle(overlayGroup, pos, () => delRow(rowIndex));
+    }
+
+    this.layers.overlay.batchDraw();
+  }
+
+  private closeContextMenu() {
+    if (this.contextMenuEl) {
+      try { document.body.removeChild(this.contextMenuEl); } catch {}
+      this.contextMenuEl = null;
+    }
+    // Remove global listeners
+    const off = (window as any).__CANVAS_CTXMENU_OFF__ as (() => void) | undefined;
+    if (off) {
+      try { off(); } catch {}
+      (window as any).__CANVAS_CTXMENU_OFF__ = undefined;
+    }
+  }
+
+  private showTableContextMenu(tableGroup: Konva.Group, tableEl: any, evt: Konva.KonvaEventObject<PointerEvent | MouseEvent>) {
+    evt.evt.preventDefault();
+    this.closeContextMenu();
+    if (!this.stage) return;
+
+    const store = (window as any).__UNIFIED_CANVAS_STORE__;
+    const rows = Math.max(1, tableEl.rows || (tableEl.enhancedTableData?.rows?.length || 1));
+    const cols = Math.max(1, tableEl.cols || (tableEl.enhancedTableData?.columns?.length || 1));
+    const w = Math.max(1, tableEl.width || 1);
+    const h = Math.max(1, tableEl.height || 1);
+    const cellW = Math.max(1, Math.floor(w / cols));
+    const cellH = Math.max(1, Math.floor(h / rows));
+
+    const pointer = this.stage.getPointerPosition();
+    if (!pointer) return;
+    const local = tableGroup.getAbsoluteTransform().copy().invert().point(pointer);
+    const colIndex = Math.max(0, Math.min(cols - 1, Math.floor(local.x / cellW)));
+    const rowIndex = Math.max(0, Math.min(rows - 1, Math.floor(local.y / cellH)));
+
+    const rect = this.stage.container().getBoundingClientRect();
+    const clientLeft = rect.left + pointer.x;
+    const clientTop = rect.top + pointer.y;
+
+    const menu = document.createElement('div');
+    this.contextMenuEl = menu;
+    Object.assign(menu.style, {
+      position: 'fixed',
+      left: `${clientLeft}px`,
+      top: `${clientTop}px`,
+      background: '#ffffff',
+      border: '1px solid #e5e7eb',
+      borderRadius: '6px',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+      padding: '6px',
+      zIndex: '10000',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      fontSize: '13px',
+      color: '#111827',
+      userSelect: 'none',
+    } as CSSStyleDeclaration);
+
+    const mk = (label: string, action: () => void) => {
+      const item = document.createElement('div');
+      item.textContent = label;
+      Object.assign(item.style, {
+        padding: '6px 10px',
+        borderRadius: '4px',
+        cursor: 'pointer',
+      } as CSSStyleDeclaration);
+      item.onmouseenter = () => { item.style.background = '#f3f4f6'; };
+      item.onmouseleave = () => { item.style.background = 'transparent'; };
+      item.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); };
+      item.onclick = () => { action(); this.closeContextMenu(); };
+      menu.appendChild(item);
+      return item;
+    };
+
+    // Actions
+    const addCol = (index: number) => store?.getState()?.addTableColumn?.(tableEl.id, index);
+    const addRow = (index: number) => store?.getState()?.addTableRow?.(tableEl.id, index);
+    const delCol = (index: number) => store?.getState()?.removeTableColumn?.(tableEl.id, index);
+    const delRow = (index: number) => store?.getState()?.removeTableRow?.(tableEl.id, index);
+
+    mk('Add column left', () => addCol(colIndex));
+    mk('Add column right', () => addCol(colIndex + 1));
+    mk('Add row above', () => addRow(rowIndex));
+    mk('Add row below', () => addRow(rowIndex + 1));
+    mk('Delete column', () => delCol(colIndex));
+    mk('Delete row', () => delRow(rowIndex));
+
+    document.body.appendChild(menu);
+
+    const onOutside = (e: MouseEvent | PointerEvent | KeyboardEvent) => {
+      // Close on any click outside or Escape
+      if ((e as KeyboardEvent).key === 'Escape') { this.closeContextMenu(); return; }
+      if (e instanceof KeyboardEvent) return;
+      const t = e.target as Node | null;
+      if (!t || (this.contextMenuEl && !this.contextMenuEl.contains(t))) {
+        this.closeContextMenu();
+      }
+    };
+    window.addEventListener('mousedown', onOutside, true);
+    window.addEventListener('pointerdown', onOutside, true);
+    window.addEventListener('keydown', onOutside, true);
+    (window as any).__CANVAS_CTXMENU_OFF__ = () => {
+      window.removeEventListener('mousedown', onOutside, true);
+      window.removeEventListener('pointerdown', onOutside, true);
+      window.removeEventListener('keydown', onOutside, true);
+    };
+  }
+
+  // Table (imperative Konva rendering)
+  private createTable(el: any): Konva.Group {
+    const id = String(el.id);
+    const rows = Math.max(1, el.rows || (el.enhancedTableData?.rows?.length || 1));
+    const cols = Math.max(1, el.cols || (el.enhancedTableData?.columns?.length || 1));
+
+    // Compute width/height
+    let w = Math.max(1, el.width || (cols * (el.cellWidth || 120)));
+    let h = Math.max(1, el.height || (rows * (el.cellHeight || 36)));
+
+    const group = this.createGroupWithHitArea(id, w, h, true);
+    group.name('table');
+    group.position({ x: el.x || 0, y: el.y || 0 });
+
+    // Frame
+    const frame = new Konva.Rect({
+      x: 0, y: 0, width: w, height: h,
+      fill: (el as any).fill || '#ffffff',
+      stroke: (el as any).borderColor || '#d1d5db',
+      strokeWidth: (el as any).borderWidth ?? 1,
+      listening: false,
+      name: 'frame',
+      perfectDrawEnabled: false,
+      strokeScaleEnabled: false,
+    });
+    group.add(frame);
+
+    // Background rows group
+    const bgrows = new Konva.Group({ name: 'bgrows', listening: false });
+    group.add(bgrows);
+
+    // Grid group (lines)
+    const grid = new Konva.Group({ name: 'grid', listening: false });
+    group.add(grid);
+
+    // Cells group (texts)
+    const cells = new Konva.Group({ name: 'cells', listening: false });
+    group.add(cells);
+
+    // Draw content
+    this.layoutTable(group, el);
+
+    // Tag metadata used by overlay logic
+    try { group.setAttr('__rows', rows); group.setAttr('__cols', cols); group.setAttr('__tableId', id); } catch {}
+
+    // Right-click context menu for table actions
+    group.on('contextmenu.table', (e) => this.showTableContextMenu(group, el, e as any));
+    group.on('mouseleave.table', () => this.clearTableOverlay());
+
+    return group;
+  }
+
+  private updateTable(group: Konva.Group, el: any) {
+    // Update frame position/size
+    const w = Math.max(1, el.width || 1);
+    const h = Math.max(1, el.height || 1);
+    group.position({ x: el.x || 0, y: el.y || 0 });
+
+    const frame = group.findOne<Konva.Rect>('.frame');
+    if (frame) {
+      frame.position({ x: 0, y: 0 });
+      frame.width(w);
+      frame.height(h);
+      frame.stroke((el as any).borderColor || '#d1d5db');
+      frame.strokeWidth((el as any).borderWidth ?? 1);
+      (frame as any).strokeScaleEnabled(false);
+    }
+
+    // Re-layout grid and cells
+    this.layoutTable(group, el);
+
+    // Update hit area
+    this.ensureHitAreaSize(group, w, h);
+    this.scheduleDraw('main');
+    // Ensure any open overlay/menu remains consistent with updated layout
+    this.clearTableOverlay();
+  }
+
+  private layoutTable(group: Konva.Group, el: any) {
+    const rows = Math.max(1, el.rows || (el.enhancedTableData?.rows?.length || 1));
+    const cols = Math.max(1, el.cols || (el.enhancedTableData?.columns?.length || 1));
+    const w = Math.max(1, el.width || 1);
+    const h = Math.max(1, el.height || 1);
+    // Align grid exactly to frame by deriving cell sizes from element size
+    const cellW = Math.max(1, Math.floor(w / cols));
+    const cellH = Math.max(1, Math.floor(h / rows));
+    const innerW = w;
+    const innerH = h;
+
+    // Adjust frame if computed inner size exceeds current size (keep simple: clamp to element size)
+    const gridGroup = group.findOne<Konva.Group>('.grid');
+    const cellsGroup = group.findOne<Konva.Group>('.cells');
+    let bgRowsGroup = group.findOne<Konva.Group>('.bgrows');
+    if (!bgRowsGroup) {
+      bgRowsGroup = new Konva.Group({ name: 'bgrows', listening: false });
+      group.add(bgRowsGroup);
+      bgRowsGroup.moveToBottom();
+    }
+    if (!gridGroup || !cellsGroup) return;
+
+    // Clear existing children
+    try { (bgRowsGroup as Konva.Group).destroyChildren(); } catch {}
+    try { gridGroup.destroyChildren(); } catch {}
+    try { cellsGroup.destroyChildren(); } catch {}
+
+    const stroke = (el as any).borderColor || '#9ca3af';
+    const strokeWidth = (el as any).borderWidth ?? 1;
+
+    // Row backgrounds (header + alternate rows)
+    const styling = (el as any).enhancedTableData?.styling || {};
+    const headerBg = styling.headerBackgroundColor || '#f3f4f6';
+    const altBg = styling.alternateRowColor || '#f9fafb';
+    for (let r = 0; r < rows; r++) {
+      const y = r * cellH;
+      const fill = r === 0 ? headerBg : (r % 2 === 1 ? altBg : 'transparent');
+      if (fill && fill !== 'transparent') {
+        (bgRowsGroup as Konva.Group).add(new Konva.Rect({ x: 0, y, width: innerW, height: cellH, fill, listening: false }));
+      }
+    }
+
+    // Draw vertical lines
+    for (let c = 1; c < cols; c++) {
+      const x = Math.round(c * cellW);
+      gridGroup.add(new Konva.Line({ points: [x, 0, x, innerH], stroke, strokeWidth, listening: false }));
+    }
+    // Draw horizontal lines
+    for (let r = 1; r < rows; r++) {
+      const y = Math.round(r * cellH);
+      gridGroup.add(new Konva.Line({ points: [0, y, innerW, y], stroke, strokeWidth, listening: false }));
+    }
+
+    // Fill cells with text (basic)
+    const pad = (el as any).cellPadding ?? 8;
+    const data = (el as any).enhancedTableData?.cells || (el as any).tableData?.cells || (el as any).tableData || [];
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const content = Array.isArray(data) && data[r] && data[r][c] ? (data[r][c].content ?? data[r][c].text ?? '') : '';
+        const tx = new Konva.Text({
+          x: c * cellW + pad,
+          y: r * cellH + pad,
+          width: Math.max(1, cellW - pad * 2),
+          height: Math.max(1, cellH - pad * 2),
+          text: String(content),
+          fontSize: (el as any).fontSize || 13,
+          fontFamily: (el as any).fontFamily || 'Inter, system-ui, sans-serif',
+          fill: (el as any).textColor || '#111827',
+          listening: false,
+          name: `cell-text-${r}-${c}`,
+          perfectDrawEnabled: false,
+        });
+        (tx as any).wrap('word');
+        (tx as any).align('left');
+        (tx as any).lineHeight(1.25);
+        cellsGroup.add(tx);
+      }
+    }
+
+    // Ensure hit area reflects current size
+    this.ensureHitAreaSize(group, Math.max(w, innerW), Math.max(h, innerH));
+    this.scheduleDraw('main');
+  }
+
   // Sticky Note
   private createStickyNote(el: any): Konva.Group {
     const id = String(el.id);
@@ -622,6 +1038,56 @@ export class CanvasRendererV2 {
           }
         } catch {}
 
+        // Table-specific handling: scale frame and re-layout grid immediately (font scales with vertical factor)
+        try {
+          const group = node as Konva.Group;
+          if (group.name() === 'table') {
+            const frame = group.findOne<Konva.Rect>('.frame');
+            if (frame) {
+              const baseW = frame.width();
+              const baseH = frame.height();
+              const targetW = Math.max(60, Math.abs(baseW * sX));
+              const targetH = Math.max(40, Math.abs(baseH * sY));
+              // Scale font like sticky notes (lock-step with vertical scale)
+              let baseFont = 13;
+              try {
+                const store = (window as any).__UNIFIED_CANVAS_STORE__;
+                const el = store?.getState()?.elements?.get(id);
+                if (el && el.fontSize) baseFont = el.fontSize;
+              } catch {}
+              const targetFont = Math.max(8, Math.min(512, Math.abs(baseFont * sY)));
+
+              // Normalize
+              (group as any).scale({ x: 1, y: 1 });
+              frame.position({ x: 0, y: 0 });
+              frame.width(targetW);
+              frame.height(targetH);
+
+              // Re-layout immediately using stored rows/cols/cells
+              try {
+                const store = (window as any).__UNIFIED_CANVAS_STORE__;
+                const el = store?.getState()?.elements?.get(id);
+                const nextEl = el ? { ...el, width: targetW, height: targetH, fontSize: targetFont } : { id, width: targetW, height: targetH, fontSize: targetFont };
+                this.layoutTable(group, nextEl);
+              } catch {}
+
+              // Update hit area and persist
+              this.ensureHitAreaSize(group, targetW, targetH);
+              this.updateElementCallback?.(id, {
+                width: targetW,
+                height: targetH,
+                fontSize: targetFont,
+                x: group.x(),
+                y: group.y(),
+                scaleX: 1,
+                scaleY: 1,
+              });
+
+              return; // Skip generic path
+            }
+          }
+        } catch {}
+
         // Sticky note-specific handling: scale frame + scale inner text font in lock-step
         try {
           const group = node as Konva.Group;
@@ -862,8 +1328,17 @@ export class CanvasRendererV2 {
         this.syncSelection(selectedIds);
       }
     });
+
+    // Drag move: update table overlay controls position for selected table
+    this.stage.on('dragmove.renderer', (e: any) => {
+      const node = this.getElementNodeFromEvent(e.target);
+      if (!node || !node.id()) return;
+      if (node.name() === 'table' && this.tableControlsTargetId === node.id()) {
+        try { this.renderTableControls(node.id()); } catch {}
+      }
+    });
     
-    // Double-click for text editing
+    // Double-click for text/cell editing
     this.stage.on('dblclick.renderer', (e: any) => {
       console.info('[RendererV2] dblclick received', { target: e.target?.name?.(), id: e.target?.id?.(), className: e.target?.getClassName?.() });
       const node = this.getElementNodeFromEvent(e.target);
@@ -873,6 +1348,34 @@ export class CanvasRendererV2 {
       if (isTextLike) {
         e.cancelBubble = true;
         this.openTextareaEditor(node.id(), node);
+        return;
+      }
+
+      // Table cell editing
+      if (node.name() === 'table') {
+        e.cancelBubble = true;
+        try {
+          const elId = node.id();
+          const store = (window as any).__UNIFIED_CANVAS_STORE__;
+          const el = store?.getState()?.elements?.get(elId);
+          if (!el) return;
+
+          const rows = Math.max(1, el.rows || (el.enhancedTableData?.rows?.length || 1));
+          const cols = Math.max(1, el.cols || (el.enhancedTableData?.columns?.length || 1));
+          const w = Math.max(1, el.width || 1);
+          const h = Math.max(1, el.height || 1);
+          const cellW = Math.max(1, Math.floor(w / cols));
+          const cellH = Math.max(1, Math.floor(h / rows));
+          const pad = el.cellPadding ?? 8;
+
+          // pointer in table local coords
+          const stagePos = this.stage!.getPointerPosition(); if (!stagePos) return;
+          const local = (node as any).getAbsoluteTransform().copy().invert().point(stagePos);
+          const c = Math.min(cols - 1, Math.max(0, Math.floor(local.x / cellW)));
+          const r = Math.min(rows - 1, Math.max(0, Math.floor(local.y / cellH)));
+
+          this.openTableCellEditor(elId, node as Konva.Group, r, c, { cellW, cellH, pad });
+        } catch {}
       }
     });
 
@@ -1040,6 +1543,13 @@ export class CanvasRendererV2 {
       zIndex: '1000',
       opacity: '0',           // Start invisible
       caretColor: 'transparent' // Hide caret initially
+    });
+
+    // Keep table controls aligned during zoom/pan via wheel
+    this.stage.on('wheel.renderer', () => {
+      if (this.tableControlsTargetId) {
+        try { this.renderTableControls(this.tableControlsTargetId); } catch {}
+      }
     });
 
     // Insert into document to avoid overlay root intercepting outside clicks
@@ -1387,6 +1897,18 @@ export class CanvasRendererV2 {
         return;
       }
 
+      if (el.type === 'table') {
+        const node = this.nodeMap.get(id) as Konva.Group | undefined;
+        if (node && node.getClassName() === 'Group' && node.name() === 'table') {
+          this.updateTable(node as Konva.Group, el as any);
+        } else {
+          const group = this.createTable(el as any);
+          this.layers!.main.add(group);
+          this.nodeMap.set(id, group);
+        }
+        return;
+      }
+
       if (el.type === 'text' || el.type === 'rich-text') {
         if ((el as any).isEditing) {
           // While editing, do not render the text on canvas to avoid duplicates
@@ -1519,11 +2041,11 @@ export class CanvasRendererV2 {
     let style = { color: '#000000', width: 2, opacity: 1, blendMode: 'source-over' } as any;
     
     if (el.type === 'pen') {
-      style = { color: (el as any).color || '#000000', width: (el as any).strokeWidth || 2, opacity: 1, blendMode: 'source-over' };
+      style = { color: (el as any).style?.color || (el as any).color || '#000000', width: (el as any).style?.width || (el as any).strokeWidth || 2, opacity: (el as any).style?.opacity ?? 1, blendMode: (el as any).style?.blendMode || 'source-over' };
     } else if (el.type === 'marker') {
-      style = { color: (el as any).color || '#ff0000', width: (el as any).strokeWidth || 8, opacity: 0.7, blendMode: 'multiply' };
+      style = { color: (el as any).style?.color || (el as any).color || '#000000', width: (el as any).style?.width || (el as any).strokeWidth || 8, opacity: (el as any).style?.opacity ?? 0.7, blendMode: (el as any).style?.blendMode || 'multiply' };
     } else if (el.type === 'highlighter') {
-      style = { color: (el as any).color || '#f7e36d', width: (el as any).strokeWidth || 12, opacity: 0.5, blendMode: 'multiply' };
+      style = { color: (el as any).style?.color || (el as any).color || '#f7e36d', width: (el as any).style?.width || (el as any).strokeWidth || 12, opacity: (el as any).style?.opacity ?? 0.5, blendMode: (el as any).style?.blendMode || 'multiply' };
     }
 
     if (line) {
@@ -1615,10 +2137,42 @@ export class CanvasRendererV2 {
 
   // Track overlay group for reuse
   private connectorOverlayGroup: Konva.Group | null = null;
+  private tableControlsGroup: Konva.Group | null = null;
+  private tableControlsTargetId: string | null = null;
   
   // Track current text editor
   private currentEditor?: HTMLTextAreaElement;
   
+  /** Refresh transformer for a specific element (used when dimensions change) */
+  refreshTransformer(elementId?: string) {
+    if (!this.transformer || !this.layers) return;
+    
+    // If a specific element was provided, check if it's selected
+    if (elementId) {
+      const selectedIds = (window as any).__UNIFIED_CANVAS_STORE__?.getState().selectedElementIds || new Set();
+      if (!selectedIds.has(elementId)) {
+        // Element is not selected, no need to refresh transformer
+        return;
+      }
+    }
+    
+    // Force transformer update to reflect new dimensions
+    try {
+      this.transformer.forceUpdate();
+      this.scheduleDraw('overlay');
+      
+      // If the transformer is attached to nodes, re-sync the selection to pick up size changes
+      const currentNodes = this.transformer.nodes();
+      if (currentNodes.length > 0) {
+        const selectedIds = (window as any).__UNIFIED_CANVAS_STORE__?.getState().selectedElementIds || new Set();
+        // Re-sync to update transformer bounds
+        setTimeout(() => this.syncSelection(selectedIds), 0);
+      }
+    } catch (e) {
+      console.warn('[CanvasRendererV2] Failed to refresh transformer:', e);
+    }
+  }
+
   /** Attach Transformer to current selection */
   syncSelection(selectedIds: Set<ElementId>) {
 
@@ -1665,6 +2219,7 @@ export class CanvasRendererV2 {
         const single = nodes.length === 1 ? nodes[0] : null;
         const isSingleText = !!single && single.name() === 'text';
         const isSingleSticky = !!single && single.name() === 'sticky-note';
+        const isSingleTable = !!single && single.name() === 'table';
         if (isSingleText) {
           // Text: enable edges + corners; keep ratio to match preview; allow rotation
           this.transformer.keepRatio(true);
@@ -1702,6 +2257,11 @@ export class CanvasRendererV2 {
             'middle-left','middle-right',
             'bottom-left','bottom-center','bottom-right',
           ]);
+        } else if (isSingleTable) {
+          // Table: lock proportions, restrict to corner anchors for clarity
+          this.transformer.keepRatio(true);
+          this.transformer.rotateEnabled(true);
+          this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right']);
         } else {
           this.transformer.keepRatio(false);
           this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','top-center','bottom-center','middle-left','middle-right']);
@@ -1712,6 +2272,14 @@ export class CanvasRendererV2 {
         // Commit at transformend (special-cased) to convert scale -> width/height
 
         this.layers.overlay.batchDraw();
+
+        // Minimalist table controls when a single table is selected
+        if (isSingleSticky || (single && single.name() === 'table')) {
+          const tableNode = single as Konva.Node;
+          try { this.renderTableControls(tableNode.id()); } catch {}
+        } else {
+          this.clearTableOverlay();
+        }
       });
 
       // Configure transformer padding from stroke width (keeps frame visually flush)
@@ -2156,6 +2724,385 @@ export class CanvasRendererV2 {
     groupNode.on('transformstart.textscale', onTransformStart);
     groupNode.on('transform.textscale', onTransform);
     groupNode.on('transformend.textscale', onTransformEnd);
+  }
+
+  // Open editor for a specific table cell (r,c)
+  private openTableCellEditor(elId: string, node: Konva.Group, row: number, col: number, dims: { cellW: number; cellH: number; pad: number }) {
+    // Close previous editor if any
+    this.closeCurrentEditor();
+    if (!this.stage) return;
+
+    const store = (window as any).__UNIFIED_CANVAS_STORE__;
+    if (!store) return;
+    const el = store.getState().elements.get(elId);
+    if (!el) return;
+
+    const containerRect = this.stage.container().getBoundingClientRect();
+    const tableRect = (node as any).getClientRect?.({ skipTransform: false }) ?? node.getClientRect();
+
+    const leftPx = containerRect.left + tableRect.x + col * dims.cellW + dims.pad;
+    const topPx  = containerRect.top + tableRect.y + row * dims.cellH + dims.pad;
+    const widthPx  = Math.max(4, dims.cellW - 2 * dims.pad);
+    const stageScale = this.stage.getAbsoluteScale?.().x || 1;
+    const fsPx = (el.fontSize || 13) * stageScale;
+    const heightPx = Math.max(4, Math.ceil(fsPx + 2));
+
+    const ta = document.createElement('textarea');
+    const currentCells = el.enhancedTableData?.cells || [];
+    let currentText = '';
+    try { currentText = currentCells[row]?.[col]?.content ?? currentCells[row]?.[col]?.text ?? ''; } catch {}
+    ta.value = currentText;
+    Object.assign(ta.style, {
+      position: 'fixed', left: `${leftPx}px`, top: `${topPx}px`,
+      width: `${widthPx}px`, height: `${heightPx}px`,
+      fontSize: `${fsPx}px`,
+      fontFamily: el.fontFamily || 'Inter, system-ui, sans-serif',
+      lineHeight: '1',
+      whiteSpace: 'pre',
+      wordBreak: 'normal',
+      color: el.textColor || '#111827',
+      background: 'rgba(255,255,255,0.98)',
+      border: '1px solid #3B82F6',
+      borderRadius: '4px',
+      outline: 'none', resize: 'none', overflow: 'hidden',
+      zIndex: '1000',
+    } as CSSStyleDeclaration);
+    document.body.appendChild(ta);
+    this.currentEditor = ta as any;
+    ta.focus();
+
+    const commit = () => {
+      const next = ta.value;
+      // Build new cells matrix with updated content
+      const rows = Math.max(1, el.rows || (el.enhancedTableData?.rows?.length || 1));
+      const cols = Math.max(1, el.cols || (el.enhancedTableData?.columns?.length || 1));
+      const cells = el.enhancedTableData?.cells || [];
+      const out: any[][] = [];
+      for (let r = 0; r < rows; r++) {
+        out[r] = [];
+        for (let c = 0; c < cols; c++) {
+          if (r === row && c === col) out[r][c] = { content: next };
+          else out[r][c] = (cells[r] && cells[r][c]) ? { ...cells[r][c] } : { content: '' };
+        }
+      }
+      this.updateElementCallback?.(elId, { enhancedTableData: { ...(el.enhancedTableData || {}), cells: out } });
+      cleanup();
+    };
+    const cancel = () => cleanup();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    };
+    ta.addEventListener('keydown', onKeyDown);
+    const onBlur = () => commit();
+    ta.addEventListener('blur', onBlur);
+
+    const cleanup = () => {
+      ta.removeEventListener('keydown', onKeyDown);
+      ta.removeEventListener('blur', onBlur);
+      ta.remove();
+      if (this.currentEditor === ta) this.currentEditor = undefined;
+    };
+  }
+
+  // Render minimalist add/remove row/col controls for table
+  private renderTableControls(elId: string) {
+    if (!this.layers?.overlay) return;
+    const node = this.nodeMap.get(elId) as Konva.Group | undefined;
+    if (!node || node.name() !== 'table') return;
+
+    // Create (or reuse) controls group
+    if (!this.tableControlsGroup) {
+      this.tableControlsGroup = new Konva.Group({ name: 'table-controls', listening: true, visible: true });
+      this.layers.overlay.add(this.tableControlsGroup);
+    } else {
+      this.tableControlsGroup.visible(true);
+      this.tableControlsGroup.destroyChildren();
+    }
+    this.tableControlsTargetId = elId;
+
+    // Position controls around the table's absolute rect
+    const rect = (node as any).getClientRect?.({ skipTransform: false }) ?? node.getClientRect();
+
+    const makeBtn = (x: number, y: number, label: string, onClick: () => void) => {
+      const g = new Konva.Group({ x, y, listening: true });
+      const bg = new Konva.Rect({ width: 18, height: 18, fill: '#111827', cornerRadius: 4, opacity: 0.85 });
+      const txt = new Konva.Text({ x: 5, y: -1, text: label, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', fill: '#ffffff', listening: false });
+      g.add(bg); g.add(txt);
+      g.on('mouseenter', () => {
+        try {
+          const stage = this.stage;
+          if (stage) {
+            const cont = stage.container();
+            if (cont) cont.style.cursor = 'pointer';
+          }
+        } catch {}
+      });
+      g.on('mouseleave', () => {
+        try {
+          const stage = this.stage;
+          if (stage) {
+            const cont = stage.container();
+            if (cont) cont.style.cursor = '';
+          }
+        } catch {}
+      });
+      g.on('click', (e) => { e.cancelBubble = true; onClick(); });
+      this.tableControlsGroup!.add(g);
+    };
+
+    // Read current element (rows/cols) from store
+    let el: any = null;
+    try { el = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId); } catch {}
+    const rows = Math.max(1, el?.rows || 1), cols = Math.max(1, el?.cols || 1);
+
+    // Divider hover zones (stage coordinates) – contextual +/× controls
+    const EDGE = 6; // px hover thickness
+    const colW = rect.width / cols;
+    const rowH = rect.height / rows;
+
+    // Handlers
+    const updateStore = (updates: any) => this.updateElementCallback?.(elId, updates);
+    const cloneCells = (cells: any[][], newRows: number, newCols: number) => {
+      const out: any[][] = [];
+      for (let r = 0; r < newRows; r++) {
+        out[r] = [];
+        for (let c = 0; c < newCols; c++) {
+          out[r][c] = (cells && cells[r] && cells[r][c]) ? { ...cells[r][c] } : { content: '' };
+        }
+      }
+      return out;
+    };
+
+    const addRow = () => {
+      const current = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
+      const newRows = (current?.rows || rows) + 1;
+      const newCols = current?.cols || cols;
+      const cells = current?.enhancedTableData?.cells || [];
+      const nextCells = cloneCells(cells, newRows, newCols);
+      updateStore({ rows: newRows, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } });
+      try { this.layoutTable(node, { ...current, rows: newRows, cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } }); } catch {}
+      this.scheduleDraw('main');
+      this.renderTableControls(elId);
+    };
+    const delRow = () => {
+      const current = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
+      const newRows = Math.max(1, (current?.rows || rows) - 1);
+      const newCols = current?.cols || cols;
+      const cells = current?.enhancedTableData?.cells || [];
+      const nextCells = cloneCells(cells, newRows, newCols);
+      updateStore({ rows: newRows, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } });
+      try { this.layoutTable(node, { ...current, rows: newRows, cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } }); } catch {}
+      this.scheduleDraw('main');
+      this.renderTableControls(elId);
+    };
+    const addCol = () => {
+      const current = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
+      const newRows = current?.rows || rows;
+      const newCols = (current?.cols || cols) + 1;
+      const cells = current?.enhancedTableData?.cells || [];
+      const nextCells = cloneCells(cells, newRows, newCols);
+      updateStore({ cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } });
+      try { this.layoutTable(node, { ...current, rows: newRows, cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } }); } catch {}
+      this.scheduleDraw('main');
+      this.renderTableControls(elId);
+    };
+    const delCol = () => {
+      const current = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
+      const newRows = current?.rows || rows;
+      const newCols = Math.max(1, (current?.cols || cols) - 1);
+      const cells = current?.enhancedTableData?.cells || [];
+      const nextCells = cloneCells(cells, newRows, newCols);
+      updateStore({ cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } });
+      try { this.layoutTable(node, { ...current, rows: newRows, cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } }); } catch {}
+      this.scheduleDraw('main');
+      this.renderTableControls(elId);
+    };
+
+    const hoverShow = (zone: Konva.Rect, label: string, x: number, y: number, onClick: () => void) => {
+      let btn: Konva.Group | null = null;
+      const onEnter = () => {
+        if (btn) return;
+        const g = new Konva.Group({ x, y, listening: true });
+        const bg = new Konva.Rect({ width: 18, height: 18, fill: '#111827', cornerRadius: 4, opacity: 0.9 });
+        const tx = new Konva.Text({ x: 5, y: -1, text: label, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', fill: '#ffffff', listening: false });
+        g.add(bg); g.add(tx);
+        // Inverse-scale so controls stay ~18px regardless of zoom
+        try {
+          const s = this.stage?.getAbsoluteScale?.().x || 1;
+          g.scale({ x: 1 / s, y: 1 / s });
+        } catch {}
+        g.on('mouseenter', () => {
+          try {
+            const stage = this.stage;
+            if (stage) {
+              const cont = stage.container();
+              if (cont) cont.style.cursor = 'pointer';
+            }
+          } catch {}
+        });
+        g.on('mouseleave', () => {
+          try {
+            const stage = this.stage;
+            if (stage) {
+              const cont = stage.container();
+              if (cont) cont.style.cursor = '';
+            }
+          } catch {}
+        });
+        g.on('click', (e) => { e.cancelBubble = true; onClick(); });
+        this.tableControlsGroup!.add(g);
+        btn = g;
+        this.layers?.overlay?.batchDraw?.();
+      };
+      const onLeave = () => {
+        if (btn) { try { btn.destroy(); } catch {} btn = null; this.layers?.overlay?.batchDraw?.(); }
+      };
+      zone.on('mouseenter', onEnter);
+      zone.on('mouseleave', onLeave);
+    };
+
+    // Helpers to update store with index-aware ops
+    const getEl = () => (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
+    const setEl = (updates: any) => this.updateElementCallback?.(elId, updates);
+    const cloneCellsAt = (cells: any[][], newRows: number, newCols: number, insertRowAt?: number, insertColAt?: number) => {
+      const out: any[][] = [];
+      for (let r = 0; r < newRows; r++) {
+        const srcR = insertRowAt !== undefined && r > insertRowAt ? r - 1 : r;
+        out[r] = [];
+        for (let c = 0; c < newCols; c++) {
+          const srcC = insertColAt !== undefined && c > insertColAt ? c - 1 : c;
+          const src = (cells && cells[srcR] && cells[srcR][srcC]) ? { ...cells[srcR][srcC] } : { content: '' };
+          out[r][c] = src;
+        }
+      }
+      return out;
+    };
+    const addColAt = (idx: number) => {
+      const current = getEl(); if (!current) return;
+      const rowsN = current.rows || rows; const colsN = (current.cols || cols) + 1;
+      const cells = current.enhancedTableData?.cells || [];
+      const nextCells: any[][] = [];
+      for (let r = 0; r < rowsN; r++) {
+        const rowArr: any[] = [];
+        for (let c = 0; c < colsN; c++) {
+          if (c === idx) rowArr[c] = { content: '' };
+          else {
+            const srcC = c > idx ? c - 1 : c;
+            rowArr[c] = (cells[r] && cells[r][srcC]) ? { ...cells[r][srcC] } : { content: '' };
+          }
+        }
+        nextCells[r] = rowArr;
+      }
+      setEl({ cols: colsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
+      this.layoutTable(node, { ...current, cols: colsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
+      this.scheduleDraw('main'); this.renderTableControls(elId);
+    };
+    const delColAt = (idx: number) => {
+      const current = getEl(); if (!current) return;
+      const rowsN = current.rows || rows; const colsN = Math.max(1, (current.cols || cols) - 1);
+      const cells = current.enhancedTableData?.cells || [];
+      const nextCells: any[][] = [];
+      for (let r = 0; r < rowsN; r++) {
+        const rowArr: any[] = [];
+        for (let c = 0; c < colsN; c++) {
+          const srcC = c >= idx ? c + 1 : c;
+          rowArr[c] = (cells[r] && cells[r][srcC]) ? { ...cells[r][srcC] } : { content: '' };
+        }
+        nextCells[r] = rowArr;
+      }
+      setEl({ cols: colsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
+      this.layoutTable(node, { ...current, cols: colsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
+      this.scheduleDraw('main'); this.renderTableControls(elId);
+    };
+    const addRowAt = (idx: number) => {
+      const current = getEl(); if (!current) return;
+      const rowsN = (current.rows || rows) + 1; const colsN = current.cols || cols;
+      const cells = current.enhancedTableData?.cells || [];
+      const nextCells: any[][] = [];
+      for (let r = 0; r < rowsN; r++) {
+        if (r === idx) nextCells[r] = Array.from({ length: colsN }, () => ({ content: '' }));
+        else {
+          const srcR = r > idx ? r - 1 : r;
+          nextCells[r] = [];
+          for (let c = 0; c < colsN; c++) {
+            nextCells[r][c] = (cells[srcR] && cells[srcR][c]) ? { ...cells[srcR][c] } : { content: '' };
+          }
+        }
+      }
+      setEl({ rows: rowsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
+      this.layoutTable(node, { ...current, rows: rowsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
+      this.scheduleDraw('main'); this.renderTableControls(elId);
+    };
+    const delRowAt = (idx: number) => {
+      const current = getEl(); if (!current) return;
+      const rowsN = Math.max(1, (current.rows || rows) - 1); const colsN = current.cols || cols;
+      const cells = current.enhancedTableData?.cells || [];
+      const nextCells: any[][] = [];
+      for (let r = 0; r < rowsN; r++) {
+        const srcR = r >= idx ? r + 1 : r;
+        nextCells[r] = [];
+        for (let c = 0; c < colsN; c++) {
+          nextCells[r][c] = (cells[srcR] && cells[srcR][c]) ? { ...cells[srcR][c] } : { content: '' };
+        }
+      }
+      setEl({ rows: rowsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
+      this.layoutTable(node, { ...current, rows: rowsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
+      this.scheduleDraw('main'); this.renderTableControls(elId);
+    };
+
+    // Column add zones between cols (including extremes 0..cols)
+    for (let c = 0; c <= cols; c++) {
+      const x = rect.x + Math.round(c * colW);
+      const zone = new Konva.Rect({ x: x - EDGE / 2, y: rect.y - EDGE, width: EDGE, height: rect.height + EDGE * 2, opacity: 0, listening: true, name: `hover-col-${c}` });
+      const btnX = x - 9; const btnY = rect.y - 22; // above top border
+      hoverShow(zone, '+', btnX, btnY, () => addColAt(c));
+      this.tableControlsGroup!.add(zone);
+    }
+
+    // Column delete zones in header row area (per column)
+    if (cols > 1) {
+      for (let c = 0; c < cols; c++) {
+        const x = rect.x + c * colW;
+        const zone = new Konva.Rect({ x, y: rect.y, width: colW, height: Math.max(20, Math.min(40, rowH)), opacity: 0, listening: true, name: `del-col-${c}` });
+        const btnX = x + colW / 2 - 6; const btnY = rect.y - 22; // centered above
+        hoverShow(zone, '×', btnX, btnY, () => delColAt(c));
+        this.tableControlsGroup!.add(zone);
+      }
+    }
+
+    // Row add zones between rows (including extremes 0..rows)
+    for (let r = 0; r <= rows; r++) {
+      const y = rect.y + Math.round(r * rowH);
+      const zone = new Konva.Rect({ x: rect.x - EDGE, y: y - EDGE / 2, width: rect.width + EDGE * 2, height: EDGE, opacity: 0, listening: true, name: `hover-row-${r}` });
+      const btnX = rect.x - 22; const btnY = y - 9; // to the left
+      hoverShow(zone, '+', btnX, btnY, () => addRowAt(r));
+      this.tableControlsGroup!.add(zone);
+    }
+
+    // Row delete zones at left gutter (per row)
+    if (rows > 1) {
+      for (let r = 0; r < rows; r++) {
+        const y = rect.y + r * rowH;
+        const zone = new Konva.Rect({ x: rect.x - Math.max(20, Math.min(40, colW / 3)), y, width: Math.max(20, Math.min(40, colW / 3)), height: rowH, opacity: 0, listening: true, name: `del-row-${r}` });
+        const btnX = rect.x - 22; const btnY = y + rowH / 2 - 9; // centered on row
+        hoverShow(zone, '×', btnX, btnY, () => delRowAt(r));
+        this.tableControlsGroup!.add(zone);
+      }
+    }
+
+    this.layers?.overlay?.batchDraw?.();
+  }
+
+  // Clear table overlay controls
+  private clearTableOverlay() {
+    if (!this.layers?.overlay) return;
+    if (this.tableControlsGroup) {
+      try { this.tableControlsGroup.destroyChildren(); this.tableControlsGroup.visible(false); } catch {}
+    }
+    this.tableControlsTargetId = null;
+    this.layers.overlay.batchDraw();
   }
 }
 
