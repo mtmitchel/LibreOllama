@@ -31,7 +31,7 @@ export function MailLayout({
         )}
 
         {/* Main Content Area */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col" data-mail-main>
           <MailErrorBoundary>
             {children}
           </MailErrorBoundary>
@@ -39,7 +39,7 @@ export function MailLayout({
 
         {/* Context Panel */}
         {showContextPanel && contextPanel && (
-          <div className="border-border-default w-80 shrink-0 border-l bg-sidebar">
+          <div className="border-border-default w-80 shrink-0 border-l bg-sidebar" data-mail-context>
             <MailErrorBoundary>
               {contextPanel}
             </MailErrorBoundary>

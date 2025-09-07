@@ -310,21 +310,18 @@ function ComposeModal({
     const margin = 24; // baseline margin inside main
     const contextGutter = 16; // extra inset to avoid the context panel gutter
     const nudge = 28; // pull left ~30px to fully clear the gutter
-    const baseRight = 56; // enforce at least 56px from viewport right edge (on-grid)
+    const desiredRight = 38; // micro-tweak: +2px left for pixel-perfect alignment
     const computeDock = () => {
       const main = document.querySelector('[data-mail-main]') as HTMLElement | null;
-      let right = margin;
       let widthPx = 600;
       if (main) {
         const rect = main.getBoundingClientRect();
-        const vw = window.innerWidth || document.documentElement.clientWidth;
-        // Distance from viewport right edge to main content right edge, plus margins, gutter buffer, and nudge
-        right = Math.max(baseRight, Math.round(vw - rect.right) + margin + contextGutter + nudge);
         // Constrain width to fit within main column
         widthPx = Math.min(600, Math.max(360, Math.floor(rect.width - (margin * 2 + contextGutter + nudge))));
       }
-      setDockRight(`${Math.max(baseRight, right)}px`);
-      setModalPosition({ right: `${Math.max(baseRight, right)}px`, bottom: `${margin}px`, transform: 'none', width: `${widthPx}px` });
+      // Force a fixed right offset to align with content column and clear gutter
+      setDockRight(`${desiredRight}px`);
+      setModalPosition({ right: `${desiredRight}px`, bottom: `${margin}px`, transform: 'none', width: `${widthPx}px` });
     };
 
     computeDock();
@@ -388,7 +385,7 @@ function ComposeModal({
 
   if (isMinimized) {
     return (
-      <div className="border-border-subtle fixed bottom-0 z-50 w-80 rounded-t-lg border bg-content shadow-lg" style={{ right: dockRight }}>
+      <div className="compose-modal--min border-border-subtle fixed bottom-0 z-50 w-80 rounded-t-lg border bg-content shadow-lg" style={{ right: dockRight }}>
         <div className="border-border-subtle flex items-center justify-between border-b p-3">
           <div className="flex flex-1 items-center gap-2">
             <Text size="sm" weight="medium" className="truncate text-primary">
@@ -427,7 +424,7 @@ function ComposeModal({
   return (
     <div className="fixed inset-0 z-[400] pointer-events-none">
       <div 
-        className="border-border-default pointer-events-auto fixed flex h-[600px] max-h-[90vh] w-[95vw] max-w-[600px] flex-col overflow-hidden rounded-lg border bg-content shadow-2xl"
+        className="compose-modal border-border-default pointer-events-auto fixed flex h-[600px] max-h-[90vh] w-[95vw] max-w-[600px] flex-col overflow-hidden rounded-lg border bg-content shadow-2xl"
         style={modalPosition}
       >
         {/* Header - Gmail-style compact */}

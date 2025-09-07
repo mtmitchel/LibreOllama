@@ -39,6 +39,21 @@
 - Files: `src/features/canvas/utils/circleAutoGrow.ts`, `src/features/canvas/services/CanvasRendererV2.ts` (call sites and logs)
 - Result: Circles now appear on click; during typing they expand smoothly without Konva `Infinity`/`NaN` warnings.
 
+### Mail: Compose Modal Docking (Gmail-style)
+
+- Placed the compose modal in the bottom-right, docked to the mail main column (not the context gutter), with responsive width constraints.
+- Iteratively tuned right offset to align flush with the scrollable content area: introduced dynamic docking and finalized a fixed right offset for pixel-perfect alignment (`~38px`).
+- Minimized compose bar uses the same right offset for consistent alignment.
+- Files: `src/features/mail/components/ComposeModal.tsx`, `src/features/mail/components/MailLayout.tsx` (markers for main/context columns)
+
+### Notes: Link Preview Close + Tauri Window Placement
+
+- Fixed close action not triggering due to global link interception; modal now marks itself to bypass global handlers and stops propagation on the close button.
+- Added Tauri capability `core:window:allow-destroy` to permit native window close. Anchored the native browser window over the main app window on the same display and focused it on open.
+- Files: 
+  - Frontend: `src/features/notes/components/LinkPreviewModal.tsx`, `src/components/providers/LinkPreviewProvider.tsx`, `src/features/notes/components/BlockNoteEditor.tsx`
+  - Backend: `src-tauri/capabilities/default.json`, `src-tauri/src/commands/browser.rs`
+
 ### QA / Validation Checklist
 - Changing a circle's radius no longer changes its `x,y` center position.
 - Text inside a circle is always perfectly centered and contained within the ellipse, even at extreme aspect ratios.
