@@ -60,8 +60,7 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
           const node = el as HTMLElement;
           if (node && node.tagName === 'A') { anchorEl = node; break; }
         }
-        const target = e.target as HTMLElement;
-        const anchor = (anchorEl as HTMLAnchorElement) || target.closest('a');
+        const anchor = (anchorEl as HTMLAnchorElement) || (e.target as HTMLElement).closest('a');
         if (!anchor) return;
         const href = anchor.getAttribute('href') || '';
         const original = anchor.getAttribute('data-original-href') || '';

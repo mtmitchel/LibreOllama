@@ -4635,8 +4635,8 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
   private tableControlsGroup: Konva.Group | null = null;
   private tableControlsTargetId: string | null = null;
   
-  // Track current text editor
-  private currentEditor?: HTMLTextAreaElement;
+  // Track current text editor (duplicate field removed; see class header for canonical definition)
+  // private currentEditor?: HTMLTextAreaElement;
   
   /** Refresh transformer for a specific element (used when dimensions change) */
   // Accessibility: Setup keyboard navigation
