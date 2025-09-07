@@ -48,6 +48,11 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
     // Global CAPTURE handler: cancel native navigation for external links
     const capturePreventNativeNavigation = (e: MouseEvent) => {
       try {
+        // Ignore clicks originating from our own link preview modal
+        const target = e.target as HTMLElement;
+        if (target && (target.closest('[data-no-preview]') || target.closest('.link-preview-modal'))) {
+          return;
+        }
         const path = (e.composedPath && e.composedPath()) || [];
         // Find the first anchor element in the composed path
         let anchorEl: HTMLElement | null = null;
@@ -113,6 +118,11 @@ export function LinkPreviewProvider({ children }: { children: React.ReactNode })
       }
       
       const target = e.target as HTMLElement;
+
+      // Ignore clicks from our own link preview modal controls
+      if (target && (target.closest('[data-no-preview]') || target.closest('.link-preview-modal'))) {
+        return;
+      }
       
       // IMPORTANT: Skip ALL events from shadow email containers
       // Prefer composedPath to detect the shadow host boundary

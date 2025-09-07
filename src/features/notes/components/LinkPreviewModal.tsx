@@ -136,7 +136,7 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div className="link-preview-modal fixed inset-0 z-[9999] flex items-center justify-center p-4" data-no-preview>
       {/* Backdrop - remove blur */}
       <div 
         className="absolute inset-0 bg-black/50"
@@ -202,7 +202,8 @@ export function LinkPreviewModal({ isOpen, onClose, url }: LinkPreviewModalProps
             <Button
               size="icon"
               variant="ghost"
-              onClick={onClose}
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+              type="button"
               className="h-8 w-8 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
               title="Close"
             >

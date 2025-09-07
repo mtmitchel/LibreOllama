@@ -258,7 +258,14 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
     try {
       await browserModalService.openModal({ url, title: 'Browser' });
     } catch (err) {
-      // Silent: fallback not desired to avoid duplicate opens
+      // Fallback to in-app preview modal when Tauri/native window is unavailable
+      try {
+        const { useLinkPreviewStore } = await import('../../../stores/linkPreviewStore');
+        useLinkPreviewStore.getState().openLinkPreview(url);
+      } catch {
+        // As a last resort, open in system browser
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     }
   }, []);
 
