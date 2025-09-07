@@ -310,6 +310,7 @@ function ComposeModal({
     const margin = 24; // baseline margin inside main
     const contextGutter = 16; // extra inset to avoid the context panel gutter
     const nudge = 28; // pull left ~30px to fully clear the gutter
+    const baseRight = 56; // enforce at least 56px from viewport right edge (on-grid)
     const computeDock = () => {
       const main = document.querySelector('[data-mail-main]') as HTMLElement | null;
       let right = margin;
@@ -318,12 +319,12 @@ function ComposeModal({
         const rect = main.getBoundingClientRect();
         const vw = window.innerWidth || document.documentElement.clientWidth;
         // Distance from viewport right edge to main content right edge, plus margins, gutter buffer, and nudge
-        right = Math.max(margin, Math.round(vw - rect.right) + margin + contextGutter + nudge);
+        right = Math.max(baseRight, Math.round(vw - rect.right) + margin + contextGutter + nudge);
         // Constrain width to fit within main column
         widthPx = Math.min(600, Math.max(360, Math.floor(rect.width - (margin * 2 + contextGutter + nudge))));
       }
-      setDockRight(`${right}px`);
-      setModalPosition({ right: `${right}px`, bottom: `${margin}px`, transform: 'none', width: `${widthPx}px` });
+      setDockRight(`${Math.max(baseRight, right)}px`);
+      setModalPosition({ right: `${Math.max(baseRight, right)}px`, bottom: `${margin}px`, transform: 'none', width: `${widthPx}px` });
     };
 
     computeDock();
