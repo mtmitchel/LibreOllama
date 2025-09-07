@@ -1,5 +1,6 @@
 // src/features/canvas/utils/routing.ts
 import { EdgeElement, EdgeRouting, NodeElement } from '../types/canvas-elements';
+import { getDefaultPortsFor } from './ports';
 import { toWorldPort } from './ports';
 
 /**
@@ -38,6 +39,17 @@ export function routeOrthogonal(start: WorldPoint, end: WorldPoint): number[] {
 }
 
 /**
+ * Gentle curved routing using a single mid control point and Line.tension
+ * Returns three points: start, mid, end.
+ */
+export function routeCurved(start: WorldPoint, end: WorldPoint): number[] {
+  // Midpoint with slight horizontal bias toward the direction of travel
+  const midX = (start.x + end.x) / 2;
+  const midY = start.y + (end.y - start.y) * 0.35;
+  return [start.x, start.y, midX, midY, end.x, end.y];
+}
+
+/**
  * Main routing function that dispatches to the appropriate routing algorithm
  * based on the edge's routing type
  */
@@ -46,26 +58,37 @@ export function routeEdge(
   sourceElement: NodeElement,
   targetElement: NodeElement
 ): number[] {
-  // Get world positions for the source and target ports
-  const sourcePort = (sourceElement.ports || []).find(p => p.kind === edge.source.portKind);
-  const targetPort = (targetElement.ports || []).find(p => p.kind === edge.target.portKind);
+  // Get ports (use defaults when none provided)
+  const srcPorts = (sourceElement as any).ports && Array.isArray((sourceElement as any).ports)
+    ? (sourceElement as any).ports
+    : getDefaultPortsFor(sourceElement);
+  const tgtPorts = (targetElement as any).ports && Array.isArray((targetElement as any).ports)
+    ? (targetElement as any).ports
+    : getDefaultPortsFor(targetElement);
+
+  // Find specific port by kind, fallback to CENTER
+  const sourcePort = srcPorts.find((p: any) => p.kind === edge.source.portKind) || srcPorts.find((p: any) => p.kind === 'CENTER');
+  const targetPort = tgtPorts.find((p: any) => p.kind === edge.target.portKind) || tgtPorts.find((p: any) => p.kind === 'CENTER');
   
   if (!sourcePort || !targetPort) {
     // Fallback: use element centers if ports not found
-    console.warn('[routing] Port not found, using element centers as fallback', {
-      sourcePort: edge.source.portKind,
-      targetPort: edge.target.portKind,
-    });
-    
     const sourceCenter = { x: sourceElement.x + sourceElement.width / 2, y: sourceElement.y + sourceElement.height / 2 };
     const targetCenter = { x: targetElement.x + targetElement.width / 2, y: targetElement.y + targetElement.height / 2 };
-    
+    // Preserve curved style for mindmap-like branches
+    if ((edge as any).curved === true) {
+      return routeCurved(sourceCenter, targetCenter);
+    }
     return routeStraight(sourceCenter, targetCenter);
   }
   
   const sourceWorld = toWorldPort(sourceElement, sourcePort);
   const targetWorld = toWorldPort(targetElement, targetPort);
   
+  // Optional curved path for mindmap-style edges
+  if ((edge as any).curved === true) {
+    return routeCurved(sourceWorld, targetWorld);
+  }
+
   // Dispatch based on routing type
   switch (edge.routing) {
     case 'straight':

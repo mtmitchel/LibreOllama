@@ -1,6 +1,7 @@
 // src/features/canvas/types/canvas-elements.ts
 // Import the ElementId from enhanced.types to maintain consistency
 import { ElementId } from './enhanced.types';
+export type { ElementId } from './enhanced.types';
 
 // Use the same branding approach for PortId
 type Brand<K, T> = K & { __brand: T };

@@ -1,6 +1,7 @@
 import Konva from 'konva';
 
 // Convert screen pointer to content coordinates accounting for stage pan/zoom
+// Standardized filename: pointer-to-content.ts (kebab-case)
 export function getContentPointer(stage: Konva.Stage | null): { x: number; y: number } | null {
   if (!stage) return null;
   const p = stage.getPointerPosition();

@@ -108,11 +108,11 @@ export const createSelectionModule = (
           }
           
           const elementSet = new Set(elementIds);
-          state.groups.setState(groupId, elementSet);
+          state.groups.set(groupId, elementSet);
           
           // Update element to group mapping
           elementIds.forEach((elementId: ElementId) => {
-            state.elementToGroupMap.setState(elementId, groupId);
+            state.elementToGroupMap.set(elementId, groupId);
             // Also update the element itself to store the groupId
             getState().setElementGroup(elementId, groupId);
           });

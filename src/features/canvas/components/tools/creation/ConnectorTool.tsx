@@ -4,7 +4,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { ElementId, ConnectorElement, CanvasElement } from '../../../types/enhanced.types';
+import { ElementId, ConnectorElement } from '../../../types/enhanced.types';
 import Konva from 'konva';
 
 interface ConnectorToolProps {
@@ -126,7 +126,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
       } catch {}
 
       setStartPoint(elementAtStart.point);
-      setStartElement(elementAtStart.elementId);
+      setStartElement(elementAtStart.elementId as ElementId);
     } else {
       // Start free-floating connector from world position
       // Create a temporary "virtual" start point
@@ -157,7 +157,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     if (elementAtEnd && elementAtEnd.elementId !== startElement) {
       try { updateEdgeDraftSnap({ elementId: elementAtEnd.elementId as any, portKind: 'CENTER' as any }); } catch {}
 
-      setSnapTarget(elementAtEnd);
+      setSnapTarget({ elementId: elementAtEnd.elementId as ElementId, point: elementAtEnd.point });
     } else {
       setSnapTarget(null);
     }

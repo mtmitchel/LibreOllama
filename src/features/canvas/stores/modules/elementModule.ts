@@ -131,8 +131,8 @@ export const createElementModule = (
     let height = 0;
     
     if (hasRadius(element)) {
-      width = element.radius * 2;
-      height = element.radius * 2;
+      width = element.radius ? element.radius * 2 : 0;
+      height = element.radius ? element.radius * 2 : 0;
     } else if (hasDimensions(element)) {
       width = element.width;
       height = element.height;
@@ -237,9 +237,44 @@ export const createElementModule = (
               }
             }
 
+            // Compute group move delta before committing
+            const movedX = updates.x !== undefined ? (updates.x - element.x) : 0;
+            const movedY = updates.y !== undefined ? (updates.y - element.y) : 0;
+
             // Update the Map and replace reference to trigger subscribers/re-render
             state.elements.set(id, updatedElement);
             state.elements = new Map(state.elements);
+
+            // If element belongs to a group, move its siblings by same delta (unison move)
+            if (updatedElement.groupId && (updates.x !== undefined || updates.y !== undefined)) {
+              const groupId = updatedElement.groupId;
+              if (movedX !== 0 || movedY !== 0) {
+                const movedSiblingIds: ElementId[] = [];
+                for (const [otherId, otherEl] of state.elements.entries()) {
+                  if (otherId === id) continue;
+                  if ((otherEl as any).groupId === groupId) {
+                    // Move sibling by same delta (do not resize)
+                    const next = { ...otherEl, x: (otherEl as any).x + movedX, y: (otherEl as any).y + movedY, updatedAt: Date.now() } as any;
+                    state.elements.set(otherId, next);
+                    movedSiblingIds.push(otherId as ElementId);
+                  }
+                }
+                // Replace Map to ensure subscribers fire
+                state.elements = new Map(state.elements);
+                // Mark edges connected to moved siblings as dirty for reflow
+                try {
+                  const reflowEdges = (getState() as any).reflowEdgesForElement;
+                  if (reflowEdges && typeof reflowEdges === 'function') {
+                    movedSiblingIds.forEach((sid) => reflowEdges(sid));
+                    scheduleEdgeReflow();
+                    // Immediate compute as a safety net
+                    try { (getState() as any).computeAndCommitDirtyEdges?.(); } catch {}
+                  }
+                } catch (e) {
+                  console.warn('[elementModule] Failed to reflow edges for group move:', e);
+                }
+              }
+            }
             
             // If position/size changed, trigger edge reflow
             if (updates.x !== undefined || updates.y !== undefined || 
@@ -252,6 +287,8 @@ export const createElementModule = (
                   reflowEdges(id);
                   // Schedule RAF to recompute dirty edges
                   scheduleEdgeReflow();
+                  // Immediate compute as a safety net
+                  try { (getState() as any).computeAndCommitDirtyEdges?.(); } catch {}
                 }
               } catch (e) {
                 console.warn('[elementModule] Failed to reflow edges:', e);
@@ -368,8 +405,8 @@ export const createElementModule = (
                     let elementHeight = 0;
                     
                     if (hasRadius(updatedElement)) {
-                      elementWidth = updatedElement.radius * 2;
-                      elementHeight = updatedElement.radius * 2;
+                      elementWidth = updatedElement.radius ? updatedElement.radius * 2 : 0;
+                      elementHeight = updatedElement.radius ? updatedElement.radius * 2 : 0;
                     } else if (hasDimensions(updatedElement)) {
                       elementWidth = updatedElement.width;
                       elementHeight = updatedElement.height;
@@ -692,7 +729,7 @@ export const createElementModule = (
             // Trigger transformer refresh for real-time resize frame adjustment
             setTimeout(() => {
               try {
-                const refreshTransformer = (getState() as any).refreshTransformer;
+                const refreshTransformer = (window as any).__REFRESH_TRANSFORMER__;
                 if (refreshTransformer && typeof refreshTransformer === 'function') {
                   refreshTransformer(tableId);
                 }
@@ -720,7 +757,7 @@ export const createElementModule = (
             // Trigger transformer refresh for real-time resize frame adjustment
             setTimeout(() => {
               try {
-                const refreshTransformer = (getState() as any).refreshTransformer;
+                const refreshTransformer = (window as any).__REFRESH_TRANSFORMER__;
                 if (refreshTransformer && typeof refreshTransformer === 'function') {
                   refreshTransformer(tableId);
                 }
@@ -757,7 +794,7 @@ export const createElementModule = (
             // Trigger transformer refresh for real-time resize frame adjustment
             setTimeout(() => {
               try {
-                const refreshTransformer = (getState() as any).refreshTransformer;
+                const refreshTransformer = (window as any).__REFRESH_TRANSFORMER__;
                 if (refreshTransformer && typeof refreshTransformer === 'function') {
                   refreshTransformer(tableId);
                 }
@@ -787,7 +824,7 @@ export const createElementModule = (
             // Trigger transformer refresh for real-time resize frame adjustment
             setTimeout(() => {
               try {
-                const refreshTransformer = (getState() as any).refreshTransformer;
+                const refreshTransformer = (window as any).__REFRESH_TRANSFORMER__;
                 if (refreshTransformer && typeof refreshTransformer === 'function') {
                   refreshTransformer(tableId);
                 }

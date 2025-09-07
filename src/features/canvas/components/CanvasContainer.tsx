@@ -24,7 +24,7 @@ import { useCanvasSizing } from '../hooks/useCanvasSizing';
 // Dev-only lazy overlay to avoid require() in ESM
 const DevPerfOverlay = process.env.NODE_ENV === 'development' ?
   // eslint-disable-next-line react/display-name
-  (React.lazy(() => import('./PerfOverlay')) as any) : null;
+  (React.lazy(() => import('./PerformanceOverlayHUD')) as any) : null;
 
 // EMERGENCY FIX: Stable canvas key prevents remounting
 const STABLE_CANVAS_KEY = 'canvas-stage-stable';

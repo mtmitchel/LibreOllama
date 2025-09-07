@@ -1,5 +1,5 @@
 /**
- * Coordinate Transformation Utilities
+ * Coordinate Transformation Utilities (standardized filename kebab-case)
  * Provides unified coordinate calculations accounting for pan/zoom/rotation
  */
 

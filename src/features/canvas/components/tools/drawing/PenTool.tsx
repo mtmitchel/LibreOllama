@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { createElementId } from '../../../types/enhanced.types';
 import { nanoid } from 'nanoid';
 import { acquireNode, releaseNode } from '../../../utils/KonvaNodePool';
-import { getContentPointer } from '../../../utils/coords';
+import { getContentPointer } from '../../../utils/pointer-to-content';
 
 interface PenToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;

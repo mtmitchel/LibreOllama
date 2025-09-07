@@ -12,7 +12,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { nanoid } from 'nanoid';
 import { createElementId } from '../../../types/enhanced.types';
 import { acquireNode, releaseNode } from '../../../utils/KonvaNodePool';
-import { getContentPointer } from '../../../utils/coords';
+import { getContentPointer } from '../../../utils/pointer-to-content';
 
 interface MarkerToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;

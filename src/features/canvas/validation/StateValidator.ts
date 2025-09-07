@@ -1,6 +1,5 @@
 /**
- * State Validation System for Canvas Store
- * 
+ * State Validation System for Canvas Store (moved to validation/)
  * Prevents corruption by validating state integrity before and after operations
  * Includes automatic recovery mechanisms and corruption detection
  */

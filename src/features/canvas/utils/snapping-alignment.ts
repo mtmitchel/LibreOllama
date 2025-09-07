@@ -47,7 +47,7 @@ function getElementBounds(element: CanvasElement): ElementBounds {
   };
 }
 
-// Basic snapping utilities
+// Basic snapping utilities (alignment-centric)
 export function calculateSnapLines(draggedElement: CanvasElement, elements: CanvasElement[]): SnapLine[] {
   const snapLines: SnapLine[] = [];
   const draggedRect = getElementBounds(draggedElement);

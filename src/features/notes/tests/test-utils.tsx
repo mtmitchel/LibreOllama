@@ -3,7 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { HeaderProvider } from '../../../app/contexts/HeaderContext';
 import { MantineProvider } from '@mantine/core';
 import { ThemeProvider } from '../../../components/ThemeProvider';
-import { ToastProvider } from '@/features/canvas/components/ui/ToastProvider.testshim';
+import { ToastProvider } from '@tests/helpers/ToastProvider.testshim';
 
 export const TestWrapper = ({ children }: { children: ReactNode }) => (
   <BrowserRouter>

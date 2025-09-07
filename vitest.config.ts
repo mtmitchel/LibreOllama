@@ -18,7 +18,12 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '**/.{idea,git,cache,output,temp}/**',
-      '**/src/__archive__/**',       // Exclude archived tests
+      '**/__archive__/**',                 // Exclude any __archive__ trees
+      '**/_archive/**',                    // Exclude any _archive trees
+      '**/_archive*/**',                   // Exclude patterns like _archive_react_konva
+      'src/**/_archive*/**',               // Extra guard inside src
+      'src/features/canvas/tests/_archive*/**',
+      'src/features/canvas/tests/_archive_react_konva/**',
     ],
     testTimeout: 20000,
     mockReset: true,
@@ -39,6 +44,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@tests': path.resolve(__dirname, './src/tests'),
     },
   },
 });

@@ -272,7 +272,17 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
       get().ungroupElements(groupId);
     },
     clearCanvas: () => {
+      // Clear nodes
       get().clearAllElements();
+      // Clear edges and edge-related state via store set
+      set((state: any) => {
+        state.edges = new Map();
+        state.dirtyEdges = new Set();
+        state.draft = null;
+        // Also clear selection to avoid stale IDs referencing deleted edges
+        state.selectedElementIds = new Set();
+        state.lastSelectedElementId = null;
+      });
     },
   };
 };

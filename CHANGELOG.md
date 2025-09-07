@@ -1,5 +1,40 @@
 # Changelog
 
+## 2025-09-02 — Circle Tool Precision and Rendering Fixes
+
+### Summary
+- Refactored the circle and text rendering pipeline to fix critical precision and alignment gaps. The circle element, its text content, and the DOM-based textarea are now pixel-aligned during creation, editing, and resizing.
+- Replaced heuristic-based text-bounds calculations with exact inscribed-rectangle mathematics to eliminate text overflow and clipping at all aspect ratios.
+- Unified the circle-related code paths into a consistent, center-origin coordinate system, removing legacy code and fixing several bugs related to positioning and type errors.
+
+### Core Fixes and Enhancements
+
+1.  **Center-Origin Coordinate System:**
+    - Refactored `createCircle` and `updateCircle` methods in `CanvasRendererV2.ts` to use a strict center-origin system. The `Konva.Group` is positioned at the element's center, and the `Konva.Ellipse` shape is always rendered at `(0,0)` within that group.
+    - This resolves the primary bug where the shape's `(x,y)` position was incorrectly tied to its radii, causing positioning errors.
+
+2.  **Exact Inscribed-Rectangle Math:**
+    - The `getEllipticalTextBounds` function was completely rewritten to use a precise mathematical formula instead of heuristics (e.g., `1.1x` multipliers).
+    - It now calculates the largest possible rectangle that can fit inside an ellipse for a given aspect ratio, ensuring the text area is always perfectly contained within the shape's bounds, minus padding and stroke.
+
+3.  **Pixel-Perfect DOM Editor Clipping:**
+    - When editing a circle's text, the `<textarea>` is now wrapped in a `<div>` which has a `clip-path: ellipse(...)` style applied.
+    - The ellipse for the `clip-path` is calculated in **screen coordinates** by decomposing the Konva node's absolute transform, ensuring the DOM clipping perfectly matches the canvas `clipFunc` at any zoom level or rotation.
+    - The editor's position and size are also derived from the same world-to-screen transform, eliminating any misalignment.
+
+4.  **Bug Fixes & Code Unification:**
+    - Fixed a `ReferenceError` in `openTextareaEditor` caused by accessing a variable before its initialization.
+    - Corrected a type error where a `Konva.Ellipse` was being created without the required `radiusX` and `radiusY` properties.
+    - Fixed typos (`newRadiusX` -> `finalRadiusX`) that were causing reference errors.
+    - Removed redundant methods (`updateCircleText`, `centerTextInCircle`, `centerTextInEllipse`) and consolidated their logic into the unified `updateCircle` function.
+
+### QA / Validation Checklist
+- Changing a circle's radius no longer changes its `x,y` center position.
+- Text inside a circle is always perfectly centered and contained within the ellipse, even at extreme aspect ratios.
+- The DOM `<textarea>` used for editing is precisely clipped to the shape's boundaries, preventing any visual overflow.
+- Zooming and panning during text editing does not cause the editor to drift or misalign.
+- All previously reported type errors and reference errors related to the circle tool have been resolved.
+
 ## 2025-09-01 — Text Tool: React Image Editor Parity + Legacy Canvas Archival
 
 ### Summary
@@ -358,6 +393,21 @@ All notable changes to the LibreOllama project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Canvas – Circle text editor alignment and stability (2025-09-02)
+- Circle text now uses a prominent inscribed square for the text area in perfect circles, improving readability and visual balance.
+- Text is left-aligned with a small left indent inside the square for clearer paragraph-style reading.
+- Text editor overlay uses content-box sizing with a one-line minimum height to prevent caret jump and ensures precise growth while typing.
+- Editor overlay for circles is positioned and sized to the inscribed square and remains aligned when:
+  - adding a circle to the canvas,
+  - double-clicking to edit,
+  - clicking away to commit,
+  - resizing with the Transformer (radii/width/height normalized),
+  - moving the element (group-based drag).
+- All circle components (shape, hit-area, text) are center-origin and maintained in unison during move/resize/edit operations.
+- Text color visibility is guaranteed with safe fallbacks (#111827 for shapes) and enforced in the editor overlay (including webkitTextFillColor) to avoid rendering issues on Chromium/Edge.
 
 ## [Unreleased] - 2025-08-28
 

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Square, 
   Circle, 
-  Triangle, 
   ChevronDown,
   Workflow
 } from 'lucide-react';
@@ -10,9 +9,7 @@ import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { Button } from '../../../components/ui';
 
 const basicShapes = [
-  { id: 'draw-rectangle', name: 'Rectangle', icon: Square },
   { id: 'draw-circle', name: 'Circle', icon: Circle },
-  { id: 'draw-triangle', name: 'Triangle', icon: Triangle },
   { id: 'mindmap', name: 'Mindmap', icon: Workflow }
 ];
 

@@ -123,3 +123,11 @@ This project takes performance seriously. The following are key strategies in us
 - **State Management**: Zustand's `subscribeWithSelector` is used to create fine-grained subscriptions to state, preventing unnecessary re-renders in components that only care about a small slice of the store.
 - **Database**: For features using the SQLite database, ensure queries are performant by using indexed columns and implementing pagination for large data sets.
 - **UI**: Use `React.memo` for components that render large lists and `useCallback` to memoize event handlers passed to them to prevent unnecessary re-renders.
+
+## 8. File Naming Conventions
+
+- Utilities: kebab-case filenames (e.g., `spatial-index.ts`, `coordinate-transform.ts`, `pointer-to-content.ts`).
+- Snap modules: `snapping.ts` for the primary API; auxiliary alignment helpers in `snapping-alignment.ts`.
+- Validation: place validation artifacts under `features/canvas/validation/` (e.g., `StateGuards.ts`, `StateValidator.ts`).
+- Overlays/Dashboards: prefer explicit names (e.g., `PerformanceDashboard.tsx` for the full panel, `PerformanceOverlayHUD.tsx` for the lightweight HUD).
+- Avoid duplicates: do not keep both camelCase and kebab-case variants in the same folder.

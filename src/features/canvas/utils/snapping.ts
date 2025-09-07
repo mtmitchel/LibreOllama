@@ -1,6 +1,7 @@
 // src/features/canvas/utils/snapping.ts
-import { SimpleQuadTree, Rectangle } from './spatialIndex';
-import { NodeElement, ElementId, PortKind } from '../types/canvas-elements';
+import { SimpleQuadTree, Rectangle } from './spatial-index';
+import { NodeElement, ElementId, PortKind, CanvasElement as NodeCanvasElement } from '../types/canvas-elements';
+import type { CanvasElement as StoreCanvasElement } from '../types/enhanced.types';
 import { findClosestPortTo, getAllPortWorldPositions } from './ports';
 
 /**
@@ -48,8 +49,19 @@ export class CanvasSnapper {
    */
   updateSpatialIndex(nodeElements: NodeElement[]): void {
     // Filter out edge elements - only index NodeElements for snapping
-    const nodes = nodeElements.filter(el => el.type !== 'edge') as NodeElement[];
-    this.quadTree.build(nodes);
+    const nodes = nodeElements.filter(el => String(el.type) !== 'edge') as NodeElement[];
+    // Convert to minimal CanvasElement shape expected by spatial index
+    const asCanvas: StoreCanvasElement[] = nodes.map((el) => ({
+      id: el.id as any,
+      type: 'text' as any,
+      x: el.x,
+      y: el.y,
+      width: (el as any).width ?? 0,
+      height: (el as any).height ?? 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }));
+    this.quadTree.build(asCanvas);
   }
 
   /**
@@ -81,7 +93,7 @@ export class CanvasSnapper {
       if (excludeElementId && element.id === excludeElementId) continue;
       
       // Only snap to node elements, not edges
-      if (element.type === 'edge') continue;
+      if (String(element.type) === 'edge') continue;
 
       const nodeElement = element as NodeElement;
 

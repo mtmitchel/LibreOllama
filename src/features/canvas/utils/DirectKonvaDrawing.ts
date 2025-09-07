@@ -9,6 +9,9 @@ import { createElementId } from '../types/enhanced.types';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { batchDrawingOperation, batchLayerRedraw } from './performance/EmergencyRafBatcher';
 
+type DrawingTool = 'pen' | 'highlighter' | 'eraser';
+function toTool(v: string): DrawingTool { return v === 'pen' || v === 'highlighter' || v === 'eraser' ? v : 'pen'; }
+
 // Global drawing state - bypasses React completely
 let directDrawingState = {
   isDrawing: false,
@@ -46,6 +49,8 @@ export const initializeDirectKonvaDrawing = (stage: Konva.Stage) => {
   }
   
   directDrawingState.fastLayer = fastLayer;
+
+  // use top-level toTool
   
   // Remove any existing drawing event listeners
   stage.off('pointerdown.direct-drawing');
@@ -84,10 +89,10 @@ const handleDirectPointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
   if (!pointer) return;
   
   // Use cached tool from global state instead of store
-  const selectedTool = directDrawingState.currentTool || 'pen';
+  const selectedTool: DrawingTool = toTool(directDrawingState.currentTool as any);
   
   // Only handle drawing tools - use cached check
-  if (!['pen', 'marker', 'highlighter'].includes(selectedTool)) {
+  if (!(selectedTool === 'pen' || selectedTool === 'highlighter')) {
     return;
   }
   
@@ -204,7 +209,13 @@ const handleDirectPointerUp = () => {
   // Commit to store only if meaningful stroke - ASYNC to avoid blocking
   if (directDrawingState.points.length >= 4) {
     const points = [...directDrawingState.points];
-    const tool = directDrawingState.currentTool;
+    const tool: DrawingTool = toTool(directDrawingState.currentTool as any);
+    if (tool === 'eraser') {
+      // Skip commit for eraser until erasing pipeline is implemented
+      directDrawingState.currentLine = null;
+      directDrawingState.points = [];
+      return;
+    }
     
     // Move store operations to next tick
     setTimeout(() => {
@@ -213,7 +224,7 @@ const handleDirectPointerUp = () => {
         
         const elementData = {
           id: createElementId(nanoid()),
-          type: tool as 'pen' | 'marker' | 'highlighter',
+          type: tool as 'pen' | 'highlighter',
           x: 0,
           y: 0,
           points: points,
@@ -229,7 +240,7 @@ const handleDirectPointerUp = () => {
         };
         
         // Add to store using optimized path
-        store.addElementDrawing?.(elementData);
+        store.addElementDrawing?.(elementData as any);
         
         // Re-enable progressive rendering
         store.finishDrawing?.();
@@ -245,30 +256,28 @@ const handleDirectPointerUp = () => {
 };
 
 // Tool configuration helpers
-const getToolColor = (tool: string): string => {
+type DrawingTool = 'pen' | 'highlighter' | 'eraser';
+const getToolColor = (tool: DrawingTool): string => {
   switch (tool) {
     case 'pen': return '#000000';
-    case 'marker': return '#000000';
     case 'highlighter': return '#f7e36d';
-    default: return '#000000';
+    case 'eraser': return '#ffffff';
   }
 };
 
-const getToolWidth = (tool: string): number => {
+const getToolWidth = (tool: DrawingTool): number => {
   switch (tool) {
     case 'pen': return 2;
-    case 'marker': return 4;
     case 'highlighter': return 12;
-    default: return 2;
+    case 'eraser': return 12;
   }
 };
 
-const getToolOpacity = (tool: string): number => {
+const getToolOpacity = (tool: DrawingTool): number => {
   switch (tool) {
     case 'pen': return 1;
-    case 'marker': return 0.9;
     case 'highlighter': return 0.5;
-    default: return 1;
+    case 'eraser': return 1;
   }
 };
 

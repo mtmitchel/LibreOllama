@@ -7,7 +7,7 @@ import { MarkerTool } from './tools/drawing/MarkerTool';
 import { HighlighterTool } from './tools/drawing/HighlighterTool';
 import { StickyNoteTool } from './tools/creation/StickyNoteTool';
 import { ConnectorTool } from './tools/creation/ConnectorTool';
-import { ElementId, CanvasElement, createElementId, ConnectorElement } from '../types/enhanced.types';
+import { ElementId, CanvasElement, createElementId, ConnectorElement, createGroupId, GroupId } from '../types/enhanced.types';
 import { performanceLogger } from '../utils/performance/PerformanceLogger';
 import { CanvasRendererV2 } from '../services/CanvasRendererV2';
 import { getContentPointer } from '../utils/coords';
@@ -62,6 +62,35 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
   const internalStageRef = useRef<Konva.Stage | null>(null);
   const stageRef = externalStageRef || internalStageRef;
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Typed layer helpers (guards) — prefer these over ad‑hoc findOne calls
+  type Layers = { stage: Konva.Stage; main: Konva.Layer; overlay: Konva.Layer; background: Konva.Layer; preview: Konva.Layer };
+  const requireLayers = (stage?: Konva.Stage | null): Layers | null => {
+    if (!stage) return null;
+    const main = stage.findOne<Konva.Layer>('.main-layer') || null;
+    const overlay = stage.findOne<Konva.Layer>('.overlay-layer') || null;
+    const background = stage.findOne<Konva.Layer>('.background-layer') || null;
+    const preview = stage.findOne<Konva.Layer>('.preview-fast-layer') || main;
+    if (!main || !overlay || !background) return null;
+    return { stage, main, overlay, background, preview: (preview as Konva.Layer) };
+  };
+
+  const batchDraw = (which: 'stage' | 'main' | 'overlay' | 'preview' = 'stage') => {
+    const L = requireLayers(stageRef.current); if (!L) return;
+    if (which === 'stage') L.stage.batchDraw();
+    if (which === 'main') L.main.batchDraw();
+    if (which === 'overlay') L.overlay.batchDraw();
+    if (which === 'preview') L.preview.batchDraw();
+  };
+
+  const findOnMain = <T extends Konva.Node = Konva.Node>(sel: string): T | null => {
+    const L = requireLayers(stageRef.current); if (!L) return null;
+    return L.main.findOne<T>(sel) ?? null;
+  };
+  const findOnOverlay = <T extends Konva.Node = Konva.Node>(sel: string): T | null => {
+    const L = requireLayers(stageRef.current); if (!L) return null;
+    return L.overlay.findOne<T>(sel) ?? null;
+  };
 
   const selectedTool = selectedToolProp || useUnifiedCanvasStore(s => s.selectedTool);
   const viewport = useUnifiedCanvasStore(s => s.viewport);
@@ -212,11 +241,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
   // Initialize renderer once when stage is ready
   useEffect(() => {
     const stage = stageRef.current; if (!stage) return;
-    const mainLayer = stage.findOne<Konva.Layer>('.main-layer');
-    const preview = stage.findOne<Konva.Layer>('.preview-fast-layer') as Konva.Layer | null;
-    const overlay = stage.findOne<Konva.Layer>('.overlay-layer');
-    const background = stage.findOne<Konva.Layer>('.background-layer');
-    if (!mainLayer || !overlay || !background) return;
+    const layers = requireLayers(stage);
+    if (!layers) return;
 
     // Expose store to window for renderer access
     (window as any).__UNIFIED_CANVAS_STORE__ = useUnifiedCanvasStore;
@@ -225,17 +251,16 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     if (!(window as any).__CANVAS_RENDERER_V2__) {
       const renderer = new CanvasRendererV2();
       (window as any).__CANVAS_RENDERER_V2__ = renderer;
-      renderer.init(stage, { background, main: mainLayer, preview: (preview as any) || mainLayer, overlay }, {
+      renderer.init(stage, { background: layers.background, main: layers.main, preview: layers.preview || layers.main, overlay: layers.overlay }, {
         onUpdateElement: (id, updates) => useUnifiedCanvasStore.getState().updateElement(id as any, updates)
       });
       
-      // Expose renderer methods to the unified store for table operations
-      const store = useUnifiedCanvasStore.getState();
-      if (store && typeof store === 'object') {
-        (store as any).refreshTransformer = (elementId?: string) => {
-          renderer.refreshTransformer(elementId);
-        };
-      }
+      // Store the refreshTransformer function globally for table operations
+      // Since Zustand stores are frozen, we can't add properties dynamically
+      // Instead, store it on the window object alongside the renderer
+      (window as any).__REFRESH_TRANSFORMER__ = (elementId?: string) => {
+        renderer.refreshTransformer(elementId);
+      };
     }
   }, [stageRef.current]); // Only depend on stage existence
 
@@ -271,9 +296,10 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
   const currentSelectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
   useEffect(() => {
-    const stage = stageRef.current;
+    const s = stageRef.current;
+    if (!s) return;
+    const stage: Konva.Stage = s;
     console.log('[TEXT-DEBUG] Text tool effect running, stage exists:', !!stage, 'selectedTool:', currentSelectedTool);
-    if (!stage) return;
     if (!currentSelectedTool) return; // Don't initialize if tool is undefined
     
     // Ensure container is positioned
@@ -282,8 +308,9 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       container.style.position = 'relative';
     }
     
-    const overlayLayer = stage.findOne<Konva.Layer>('.overlay-layer');
-    const mainLayer = stage.findOne<Konva.Layer>('.main-layer');
+    const L = requireLayers(stage);
+    const overlayLayer = L?.overlay || null;
+    const mainLayer = L?.main || null;
     console.log('[TEXT-DEBUG] Layers found - overlay:', !!overlayLayer, 'main:', !!mainLayer);
     if (!overlayLayer || !mainLayer) {
       console.error('[TEXT-DEBUG] Missing required layers, cannot initialize text tool');
@@ -335,7 +362,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     function useTextTool() {
       tool = 'text';
       stage.container().style.cursor = 'crosshair';
-      overlayLayer.moveToTop();
+      overlayLayer!.moveToTop();
       
       // Cursor "Text" ghost that follows the mouse
       cursorGhost?.destroy();
@@ -347,8 +374,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         x: 0, y: 0 
       });
       cursorGhost.add(ghostText);
-      overlayLayer.add(cursorGhost);
-      overlayLayer.batchDraw();
+      overlayLayer!.add(cursorGhost);
+      overlayLayer!.batchDraw();
       
       stage.on('mousemove.text', (e) => {
         const p = stage.getPointerPosition();
@@ -356,7 +383,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         // Convert stage coordinates to world coordinates for proper positioning
         const worldPos = stageToWorld(p);
         cursorGhost?.position({ x: worldPos.x + 12, y: worldPos.y + 12 });
-        overlayLayer.batchDraw();
+        overlayLayer!.batchDraw();
       });
       
       // click to create
@@ -370,15 +397,16 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       stage.off('.text');
       cursorGhost?.destroy();
       cursorGhost = null;
-      overlayLayer.batchDraw();
+      overlayLayer!.batchDraw();
     }
     
     function handleTextMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
       console.log('[TEXT-DEBUG] MouseDown - tool:', tool, 'target:', e.target.getClassName());
       if (tool !== 'text') return;
-      // Check if clicked on stage or any layer (not on an existing element)
-      const isEmptyClick = e.target === stage || e.target.getClassName() === 'Layer';
-      if (!isEmptyClick) return;
+      // Treat clicks not on element groups (with id) as empty clicks (incl. background rects)
+      const target = e.target as Konva.Node;
+      const elementGroup = target.findAncestor((node: Konva.Node) => node.getClassName() === 'Group' && !!(node as Konva.Group).id(), true) as Konva.Group | null;
+      if (elementGroup && elementGroup.id()) return;
       
       const p = stage.getPointerPosition(); 
       if (!p) return;
@@ -407,31 +435,26 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       
       // Add to store
       useUnifiedCanvasStore.getState().addElement(textElement);
-      
+
       // Switch back to select tool immediately after creating text element
       useUnifiedCanvasStore.getState().setSelectedTool('select');
       leaveTextTool();
-      
-      // Wait for renderer to create the node, then start editing
-      requestAnimationFrame(() => {
+
+      // Wait for renderer to create the node, then start editing (retry a few frames)
+      let tries = 0;
+      const tryOpen = () => {
         const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
-        if (!renderer) return;
-        
+        if (!renderer) { if (tries++ < 10) return requestAnimationFrame(tryOpen); else return; }
         const node = (renderer as any).nodeMap.get(textElement.id) as Konva.Group | undefined;
-        if (!node) {
-          console.warn('[TEXT] Node not yet created by renderer');
-          return;
-        }
-        
+        if (!node) { if (tries++ < 10) return requestAnimationFrame(tryOpen); else return; }
+
         const ktext = node.findOne<Konva.Text>('.text');
         const frame = node.findOne<Konva.Rect>('.hit-area');
-        if (!ktext || !frame) {
-          console.warn('[TEXT] Text or frame not found in group');
-          return;
-        }
-        
+        if (!ktext || !frame) { if (tries++ < 10) return requestAnimationFrame(tryOpen); else return; }
+
         startTextEdit({ group: node, ktext, frame, world, elementId: textElement.id });
-      });
+      };
+      requestAnimationFrame(tryOpen);
     }
     
     function startTextEdit({ group, ktext, frame, world, elementId }: any) {
@@ -451,8 +474,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         resize: 'none',
         overflow: 'hidden',
         background: 'rgba(255,255,255,0.95)',
-        whiteSpace: 'nowrap',  // No line wrapping - expand horizontally
-        wordBreak: 'keep-all',  // Prevent word breaking
+        whiteSpace: 'pre-wrap', // Wrap immediately at editor width
+        wordBreak: 'break-word', // Allow word breaking to wrap
         fontFamily: ktext.fontFamily() || 'Inter, system-ui, Arial',
         color: '#111827',
         zIndex: '9999',
@@ -493,7 +516,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       
       // Hide Konva text during edit
       ktext.visible(false);
-      mainLayer.batchDraw();
+      mainLayer?.batchDraw();
       
       el.addEventListener('input', () => liveGrow(el, { group, ktext, frame, elementId }));
       el.addEventListener('keydown', (e) => {
@@ -535,7 +558,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         const domWidth = neededWidth * sc.x;
         el.style.width = `${domWidth}px`;
         
-        mainLayer.batchDraw();
+        mainLayer?.batchDraw();
         
         // Update store
         useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
@@ -588,7 +611,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
           height: textHeight
         });
         
-        mainLayer.batchDraw();
+        mainLayer?.batchDraw();
         
         // Select the element to show resize handles
         useUnifiedCanvasStore.getState().clearSelection();
@@ -624,7 +647,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
             });
           });
 
-          overlayLayer.batchDraw();
+          overlayLayer?.batchDraw();
         }
       } else {
         // cancel or empty: delete the element
@@ -679,7 +702,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         if (transformer) {
           transformer.nodes([]);
           transformer.visible(false);
-          const overlayLayer = stage.findOne<Konva.Layer>('.overlay-layer');
+          const overlayLayer = requireLayers(stage)?.overlay || null;
           if (overlayLayer) {
             overlayLayer.batchDraw();
           }
@@ -759,7 +782,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
     const waitForNodeAndStart = () => {
       if (cancelled) return;
-      const el = useUnifiedCanvasStore.getState().elements.get(textEditingElementId);
+      const el = useUnifiedCanvasStore.getState().elements.get(textEditingElementId as any);
       if (!el) { return; }
       const node = (renderer as any).nodeMap.get(textEditingElementId) as Konva.Group | undefined;
       if (!node) {
@@ -899,7 +922,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
          
          // Find transformer more reliably - look in the overlay layer
          const stage = layer?.getStage();
-         const overlayLayer = stage?.findOne<Konva.Layer>('.overlay-layer');
+         const overlayLayer = requireLayers(stage)?.overlay || null;
          let transformer = overlayLayer?.findOne('Transformer') as Konva.Transformer;
          
          // If transformer not found in overlay, try to find it anywhere in the stage
@@ -1206,12 +1229,12 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
         const textNode = node.findOne('Text');
         if (textNode) textNode.hide();
-        stage.batchDraw();
+        stageRef.current?.batchDraw();
 
         const saveAndCleanup = () => {
             useUnifiedCanvasStore.getState().updateElement(el.id, { text: textarea.value });
             if (textNode) textNode.show();
-            stage.batchDraw();
+            stageRef.current?.batchDraw();
             try { container.removeChild(textarea); } catch {}
             setTextEditingElement(null);
         }
@@ -1249,10 +1272,10 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     const stage = stageRef.current;
     if (!stage) return;
     
-    const overlayLayer = stage.findOne<Konva.Layer>('.overlay-layer');
+    const overlayLayer = requireLayers(stage)?.overlay || null;
     if (!overlayLayer) return;
 
-    let draftLine: Konva.Line | null = overlayLayer.findOne<Konva.Line>('.draft-line');
+    let draftLine: Konva.Line | null = overlayLayer.findOne<Konva.Line>('.draft-line') || null;
     
     if (draft) {
       // Calculate draft points
@@ -1437,9 +1460,9 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         });
         
         // Update background dots if needed
-        const backgroundLayer = stageRef.current.findOne('.background-layer');
+        const backgroundLayer = stageRef.current.findOne<Konva.Layer>('.background-layer');
         if (backgroundLayer) {
-          const dotsGroup = backgroundLayer.findOne('.dot-grid');
+          const dotsGroup = backgroundLayer.findOne<Konva.Rect>('.dot-grid');
           if (dotsGroup) {
             dotsGroup.destroy();
             // Recreate dots for new size
@@ -1516,9 +1539,204 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     };
   }, [selectedTool, stageRef]);
 
+  // Basic Shapes creation (circle, triangle, mindmap)
+  useEffect(() => {
+    const stage = stageRef.current; if (!stage) return;
+    const tool = selectedTool;
+    if (!tool || (tool !== 'draw-circle' && tool !== 'draw-triangle' && tool !== 'mindmap')) return;
+
+    const onClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const ptr = stage.getPointerPosition();
+      if (!ptr) return;
+      const world = stage.getAbsoluteTransform().copy().invert().point(ptr);
+
+
+      if (tool === 'draw-circle') {
+        const radius = 65; // Increased default size by ~25%
+        const diameter = radius * 2;
+        const circleEl = {
+          id: (nanoid() as any),
+          type: 'circle' as const,
+          x: Math.round(world.x - radius),
+          y: Math.round(world.y - radius),
+          radius,
+          // width/height are helpful for transformer/spatial index; keep them in sync with radius
+          width: diameter,
+          height: diameter,
+          fill: '#ffffff',
+          stroke: '#d1d5db',
+          strokeWidth: 1,
+          text: '',
+          fontSize: 14,
+          fontFamily: 'Inter, system-ui, sans-serif',
+          textColor: '#374151',
+          padding: 16, // Consistent padding
+          newlyCreated: true,
+          isEditing: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isLocked: false,
+          isHidden: false,
+        } as any;
+        addElement(circleEl);
+        setSelectedTool('select');
+        setTimeout(() => selectElement(circleEl.id as any, false), 0);
+        return;
+      }
+
+      if (tool === 'draw-triangle') {
+        const width = 120;
+        const height = 160;
+        const triEl = {
+          id: (nanoid() as any),
+          type: 'triangle' as const,
+          x: Math.round(world.x - width / 2),
+          y: Math.round(world.y - height / 2),
+          width,
+          height,
+          fill: '#ffffff',
+          stroke: '#d1d5db',
+          strokeWidth: 1,
+          text: '',
+          fontSize: undefined,
+          fontFamily: 'Inter, system-ui, sans-serif',
+          textColor: '#111827',
+          newlyCreated: true,
+          isEditing: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isLocked: false,
+          isHidden: false,
+        } as any;
+        addElement(triEl);
+        setSelectedTool('select');
+        setTimeout(() => selectElement(triEl.id as any, false), 0);
+        return;
+      }
+
+      if (tool === 'mindmap') {
+        // Central topic (bold, larger)
+        const centerW = 280;
+        const centerH = 44;
+        const groupId = createGroupId(nanoid());
+        const centerId = nanoid() as any;
+        const center = {
+          id: centerId,
+          type: 'text' as const,
+          x: Math.round(world.x - centerW / 2),
+          y: Math.round(world.y - centerH / 2),
+          width: centerW,
+          height: centerH,
+          text: 'Any question or topic',
+          fontSize: 24,
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontStyle: 'bold',
+          textColor: '#111827',
+          groupId,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isLocked: false,
+          isHidden: false,
+        } as any;
+        addElement(center);
+
+        // Sub-topics to the right
+        const gapX = 220;
+        const gapY = 70;
+        const subW = 160;
+        const subH = 32;
+        const subs = [
+          { text: 'A concept', dy: -gapY },
+          { text: 'An idea', dy: 0 },
+          { text: 'A thought', dy: gapY },
+        ].map((s) => {
+          const id = nanoid() as any;
+          const el = {
+            id,
+            type: 'text' as const,
+            x: Math.round(world.x + gapX),
+            y: Math.round(world.y + s.dy - subH / 2),
+            width: subW,
+            height: subH,
+            text: s.text,
+            fontSize: 16,
+            fontFamily: 'Inter, system-ui, sans-serif',
+            textColor: '#374151',
+            groupId,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            isLocked: false,
+            isHidden: false,
+          } as any;
+          addElement(el);
+          return el;
+        });
+
+        // Edges from center to sub-topics with gentle curves (not grouped; they reflow with nodes)
+        const centerRight = {
+          x: center.x + centerW,
+          y: center.y + centerH / 2,
+        };
+        subs.forEach((sub) => {
+          const targetLeft = { x: sub.x, y: sub.y + subH / 2 };
+          const mid = {
+            x: (centerRight.x + targetLeft.x) / 2,
+            y: centerRight.y + (targetLeft.y - centerRight.y) * 0.35,
+          };
+
+          const edgeId = useUnifiedCanvasStore.getState().addEdge({
+            type: 'edge',
+            source: { elementId: centerId, portKind: 'E' },
+            target: { elementId: sub.id as any, portKind: 'W' },
+            routing: 'straight',
+            stroke: '#9CA3AF',
+            strokeWidth: 2,
+            selectable: true,
+          } as any);
+
+          // Immediately define a curved path and mark as curved
+          useUnifiedCanvasStore.getState().updateEdge(edgeId, {
+            points: [centerRight.x, centerRight.y, mid.x, mid.y, targetLeft.x, targetLeft.y],
+            curved: true,
+          } as any);
+        });
+
+        setSelectedTool('select');
+        setTimeout(() => selectElement(centerId as any, false), 0);
+        return;
+      }
+    };
+
+    stage.on('click.shape-create', onClick);
+    return () => {
+      stage.off('click.shape-create', onClick as any);
+    };
+  }, [selectedTool, stageRef]);
+
+  // Global Delete key handling for edges and elements
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const store = useUnifiedCanvasStore.getState();
+      const ids = Array.from(store.selectedElementIds || []);
+      if (ids.length === 0) return;
+      e.preventDefault();
+      ids.forEach((id) => {
+        if ((store as any).edges && (store as any).edges.has(id)) {
+          (store as any).removeEdge(id as any);
+        } else {
+          store.deleteElement(id as any);
+        }
+      });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div 
       ref={containerRef} 
+      className="canvas-container"
       style={{ 
         width: '100%', 
         height: '100%', 

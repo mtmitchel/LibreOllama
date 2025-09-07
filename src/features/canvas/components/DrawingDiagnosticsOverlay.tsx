@@ -4,18 +4,18 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { DrawingStats as CoreDrawingStats } from '@/features/canvas/types/drawing';
 
-interface DrawingStats {
+type OverlayStats = CoreDrawingStats & {
   pointerEventsPerSecond: number;
   pointsCapturedPerSecond: number;
   batchDrawCount: number;
   layerType: string;
   interpolatedPoints: number;
-  totalPoints: number;
   lastStrokePointCount: number;
   avgStrokeLength: number;
   strokeCommitTime: number;
-}
+};
 
 interface DrawingDiagnosticsOverlayProps {
   isVisible?: boolean;
@@ -28,16 +28,21 @@ export const DrawingDiagnosticsOverlay: React.FC<DrawingDiagnosticsOverlayProps>
   onToggle,
   position = 'bottom-left'
 }) => {
-  const [stats, setStats] = useState<DrawingStats>({
+  const [stats, setStats] = useState<OverlayStats>({
     pointerEventsPerSecond: 0,
     pointsCapturedPerSecond: 0,
     batchDrawCount: 0,
     layerType: 'Unknown',
     interpolatedPoints: 0,
-    totalPoints: 0,
+    pointsTotal: 0,
     lastStrokePointCount: 0,
     avgStrokeLength: 0,
-    strokeCommitTime: 0
+    strokeCommitTime: 0,
+    strokesTotal: 0,
+    // Progressive fields
+    progressiveRenderEnabled: false,
+    progressiveRenderFrameTime: 0,
+    progressiveRenderPressure: 'low'
   });
 
   const [isMinimized, setIsMinimized] = useState(false);
@@ -72,8 +77,8 @@ export const DrawingDiagnosticsOverlay: React.FC<DrawingDiagnosticsOverlayProps>
 
       // Get spatial index and progressive rendering metrics if available
     const spatialMetrics = (window as any).SPATIAL_INDEX_LAST || {};
-    const progressiveRenderFrameTime = (window as any).DEBUG_PROGRESSIVE_RENDER_FRAME_TIME || 0;
-    const progressiveRenderPressure = (window as any).DEBUG_PROGRESSIVE_RENDER_PRESSURE || 'low';
+    const progressiveRenderFrameTime: number = (window as any).DEBUG_PROGRESSIVE_RENDER_FRAME_TIME || 0;
+    const progressiveRenderPressure: OverlayStats['progressiveRenderPressure'] = (window as any).DEBUG_PROGRESSIVE_RENDER_PRESSURE || 'low';
 
     setStats({
       pointerEventsPerSecond,
@@ -81,13 +86,14 @@ export const DrawingDiagnosticsOverlay: React.FC<DrawingDiagnosticsOverlayProps>
       batchDrawCount: batchDrawCountRef.current,
       layerType,
       interpolatedPoints: (window as any).DEBUG_INTERPOLATED_POINTS || 0,
-      totalPoints: pointsCapturedCountRef.current,
+      pointsTotal: pointsCapturedCountRef.current,
       lastStrokePointCount: strokeHistoryRef.current[strokeHistoryRef.current.length - 1] || 0,
       avgStrokeLength,
       strokeCommitTime: (window as any).DEBUG_STROKE_COMMIT_TIME || 0,
       progressiveRenderFrameTime,
       progressiveRenderPressure,
-      progressiveRenderEnabled: false /* FastLayer removed */ && pointsCapturedPerSecond > 0
+      progressiveRenderEnabled: !!((window as any).DEBUG_PROGRESSIVE_RENDER_ENABLED) && pointsCapturedPerSecond > 0,
+      strokesTotal: strokeHistoryRef.current.length
     });
 
     // Reset counters
@@ -259,8 +265,7 @@ export const DrawingDiagnosticsOverlay: React.FC<DrawingDiagnosticsOverlayProps>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Layer Type:</span>
                 <span style={{ 
-                  color: 'Layer' ? '#22c55e' : 
-                        stats.layerType === 'Layer' ? '#f59e0b' : '#ef4444' 
+                  color: stats.layerType === 'Layer' ? '#22c55e' : '#ef4444'
                 }}>
                   {stats.layerType}
                 </span>

@@ -1,5 +1,6 @@
 // src/features/canvas/stores/modules/edgeModule.ts
 import { ElementId, EdgeElement, EdgeEndpoint, EdgeRouting, PortKind } from '../../types/canvas-elements';
+import { updateEdgeGeometry } from '../../utils/routing';
 import { StoreModule, StoreSet, StoreGet } from './types';
 
 /**
@@ -109,16 +110,9 @@ export const createEdgeModule = (
 
           // Compute geometry in world coords using routing utils
           try {
-            const { updateEdgeGeometry } = require('../../utils/routing') as typeof import('../../utils/routing');
             const geom = updateEdgeGeometry(edge as any, src as any, tgt as any);
             if (geom?.points && Array.isArray(geom.points)) {
-              const aabb = toAABB(geom.points);
-              try {
-                const { createSpatialIndex } = require('../../utils/spatial-index');
-                // In this store context, we cannot access the renderer's instance; callers should also update the index.
-                // We include this for future plumbing; no-op here as we don't hold a global index.
-              } catch {}
-
+              // Bounding box available if needed: const aabb = toAABB(geom.points);
               updates.push({ id, updates: { ...geom, points: [...geom.points] } as any });
             }
           } catch (e) {
@@ -127,9 +121,16 @@ export const createEdgeModule = (
         });
 
         if (updates.length) {
-          // Commit immutably so subscribers fire
-          state.batchUpdate(updates, { skipHistory: true, skipValidation: true });
-          state.clearDirtyEdges();
+          // Commit to edges map immutably so subscribers fire
+          setState((st: any) => {
+            const nextEdges = new Map(st.edges);
+            updates.forEach(({ id, updates: up }) => {
+              const prev = nextEdges.get(id);
+              if (prev) nextEdges.set(id, { ...prev, ...up });
+            });
+            st.edges = nextEdges;
+            st.dirtyEdges = new Set();
+          });
         }
       },
       addEdge: (partial) => {
@@ -150,7 +151,9 @@ export const createEdgeModule = (
             points: [], // will be calculated by routing
           };
           
-          state.edges.set(id, edge);
+          const next = new Map(state.edges);
+          next.set(id, edge);
+          state.edges = next;
           state.dirtyEdges.add(id);
         });
         
@@ -159,9 +162,11 @@ export const createEdgeModule = (
 
       updateEdge: (id, updates) => {
         setState((state: any) => {
-          const edge = state.edges.get(id);
-          if (edge) {
-            Object.assign(edge, updates);
+          const prev = state.edges.get(id);
+          if (prev) {
+            const next = new Map(state.edges);
+            next.set(id, { ...prev, ...updates });
+            state.edges = next;
             state.dirtyEdges.add(id);
           }
         });
@@ -169,8 +174,17 @@ export const createEdgeModule = (
 
       removeEdge: (id) => {
         setState((state: any) => {
-          state.edges.delete(id);
+          const next = new Map(state.edges);
+          next.delete(id);
+          state.edges = next;
           state.dirtyEdges.delete(id);
+          // Also remove from selection to clear overlay
+          if (state.selectedElementIds && state.selectedElementIds instanceof Set) {
+            const nextSel = new Set(state.selectedElementIds);
+            nextSel.delete(id);
+            state.selectedElementIds = nextSel;
+            state.lastSelectedElementId = nextSel.size ? Array.from(nextSel).at(-1) : null;
+          }
         });
       },
 

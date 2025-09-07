@@ -1,8 +1,8 @@
 import React from 'react';
 
-type Snapshot = ReturnType<(typeof window)['CANVAS_PERF']['snapshot']> | any;
+type Snapshot = any;
 
-export const PerfOverlay: React.FC = () => {
+export const PerformanceOverlayHUD: React.FC = () => {
   const [visible, setVisible] = React.useState(false);
   const [snap, setSnap] = React.useState<Snapshot | null>(null);
 
@@ -76,4 +76,4 @@ export const PerfOverlay: React.FC = () => {
   );
 };
 
-export default PerfOverlay;
+export default PerformanceOverlayHUD;

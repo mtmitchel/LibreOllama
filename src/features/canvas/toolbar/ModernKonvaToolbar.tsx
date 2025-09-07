@@ -218,7 +218,13 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
   const handleDeleteSelected = () => {
     if (selectedElementId) {
-      deleteElement(selectedElementId);
+      const store = useUnifiedCanvasStore.getState();
+      // If selected id is an edge, remove via edge module; otherwise delete element
+      if ((store as any).edges && (store as any).edges.has(selectedElementId)) {
+        (store as any).removeEdge(selectedElementId);
+      } else {
+        deleteElement(selectedElementId);
+      }
     }
   };
 
@@ -228,13 +234,21 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     }
   };
 
-  // Add keyboard shortcut support for delete and clear
+  // Add keyboard shortcut support for delete and clear (read selection at event time)
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Delete key for selected elements
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementId) {
+      const store = useUnifiedCanvasStore.getState();
+      const ids = Array.from(store.selectedElementIds || []);
+      // Delete key for selected
+      if ((e.key === 'Delete' || e.key === 'Backspace') && ids.length > 0) {
         e.preventDefault();
-        handleDeleteSelected();
+        ids.forEach((id) => {
+          if ((store as any).edges && (store as any).edges.has(id as any)) {
+            (store as any).removeEdge(id as any);
+          } else {
+            store.deleteElement(id as any);
+          }
+        });
       }
       // Ctrl/Cmd + Shift + Delete to clear canvas
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Delete') {
@@ -245,7 +259,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementId]);
+  }, []);
 
   const handleGroupElements = () => {
     const selectedIds = Array.from(selectedElementIds);
@@ -315,12 +329,14 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             }
           }
 
-          // Create image element in center of viewport
+          // Create image element in center of viewport (world coords)
+          const worldX = (-viewport.x + viewport.width / 2) / Math.max(0.0001, viewport.scale);
+          const worldY = (-viewport.y + viewport.height / 2) / Math.max(0.0001, viewport.scale);
           const imageElement = {
             id: (Date.now().toString() + index) as ElementId,
             type: 'image' as const,
-            x: 400 + (index * 20), // Center-ish position with offset for multiple images
-            y: 300 + (index * 20),
+            x: Math.round(worldX + (index * 20)),
+            y: Math.round(worldY + (index * 20)),
             width,
             height,
             imageUrl: event.target?.result as string,

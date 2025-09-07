@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Circle Text Alignment Test</title>
+    <style>
+        body {
+            margin: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            display: flex;
+            gap: 40px;
+            margin: 40px 0;
+        }
+        
+        .test-case {
+            position: relative;
+        }
+        
+        .circle {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            position: relative;
+            background: #FFE500;
+        }
+        
+        /* Inscribed square */
+        .text-box {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 141.42px; /* sqrt(2) * 100 */
+            height: 141.42px;
+            transform: translate(-50%, -50%);
+            box-sizing: border-box;
+            padding: 16px;
+            border: 1px solid blue;
+        }
+        
+        .text-content {
+            width: 100%;
+            height: 100%;
+            text-align: left; /* LEFT aligned */
+            vertical-align: top; /* TOP aligned */
+            font-size: 14px;
+            line-height: 1.3;
+            word-break: break-word;
+            white-space: pre-wrap;
+            overflow: hidden;
+            border: 1px solid green;
+            box-sizing: border-box;
+        }
+        
+        /* Wrong (centered) version for comparison */
+        .text-content-centered {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.3;
+            word-break: break-word;
+            white-space: pre-wrap;
+            overflow: hidden;
+            border: 1px solid red;
+            box-sizing: border-box;
+        }
+        
+        h3 {
+            margin-top: 0;
+        }
+        
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Circle Text Alignment Test</h1>
+    
+    <div class="legend">
+        <h3>Visual Verification:</h3>
+        <p>✅ <strong>LEFT:</strong> Text should be LEFT + TOP aligned (touching blue border on left and top)</p>
+        <p>❌ <strong>RIGHT:</strong> Shows incorrect centered alignment for comparison</p>
+        <p><span style="color: blue">Blue border</span> = Inscribed square with padding</p>
+        <p><span style="color: green">Green border</span> = Correct text area (left+top aligned)</p>
+        <p><span style="color: red">Red border</span> = Wrong text area (centered)</p>
+    </div>
+    
+    <div class="container">
+        <div class="test-case">
+            <h3>✅ Correct: LEFT + TOP Aligned</h3>
+            <div class="circle">
+                <div class="text-box">
+                    <div class="text-content">
+                        hey hey hey hey
+hey hey hey hey
+hey hey hey hey
+hey hey hey hey
+hey hey hey hey
+                    </div>
+                </div>
+            </div>
+            <p>Text starts at top-left corner of the box</p>
+        </div>
+        
+        <div class="test-case">
+            <h3>❌ Wrong: Centered</h3>
+            <div class="circle">
+                <div class="text-box">
+                    <div class="text-content-centered">
+                        hey hey hey hey
+hey hey hey hey
+hey hey hey hey
+hey hey hey hey
+hey hey hey hey
+                    </div>
+                </div>
+            </div>
+            <p>Text is centered (this is what we're fixing)</p>
+        </div>
+    </div>
+    
+    <h2>The Contract Rules:</h2>
+    <pre>
+1. Text box = inscribed SQUARE of circle (side = √2 × radius)
+2. Uniform padding = 16px on all sides
+3. Text alignment = LEFT + TOP (not centered!)
+4. Same dimensions for DOM editor and Konva display
+5. No visual drift between typing and after commit
+    </pre>
+    
+    <script>
+        console.log('Circle Text Alignment Test');
+        console.log('The left example shows correct LEFT+TOP alignment');
+        console.log('The right example shows incorrect centered alignment');
+        console.log('Text should touch the top and left edges of the green border');
+    </script>
+</body>
+</html>

@@ -101,7 +101,11 @@ export interface RectangleElement extends BaseElement {
 
 export interface CircleElement extends BaseElement {
   type: 'circle';
-  radius: number;
+  radius?: number; // For backwards compatibility - circular shape
+  radiusX?: number; // Horizontal radius for elliptical shape
+  radiusY?: number; // Vertical radius for elliptical shape  
+  width: number;  // Always 2 * radiusX (or radius)
+  height: number; // Always 2 * radiusY (or radius)
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
@@ -110,6 +114,35 @@ export interface CircleElement extends BaseElement {
   fontFamily?: string;
   textColor?: string;
   textAlign?: 'left' | 'center' | 'right';
+  padding?: number; // Padding for text inside circle/ellipse
+  // Optional auto-size behavior while editing
+  sizeMode?: 'fitText' | 'growCircle';
+  // Flags for editing state
+  newlyCreated?: boolean;
+  isEditing?: boolean;
+}
+
+// New: Circle with auto-fitting centered text
+export interface CircleTextElement extends BaseElement {
+  type: 'circle-text';
+  radius: number;
+  width: number;  // Always 2 * radius (maintained in sync)
+  height: number; // Always 2 * radius (maintained in sync)
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  text: string;
+  fontFamily?: string;
+  fontStyle?: string;
+  textColor?: string;
+  // Auto-fit controls
+  padding?: number; // inner padding
+  minFont?: number; // default 10
+  maxFont?: number; // default 240
+  lineHeight?: number; // default 1.2
+  textFit?: 'scale' | 'wrap' | 'ellipsis'; // default 'wrap'
+  sizeMode?: 'fitText' | 'growCircle'; // default 'fitText'
+  cachedFontSize?: number; // optional cache if desired
 }
 
 export interface SectionElement extends Omit<BaseElement, 'id'> {
@@ -353,6 +386,7 @@ export type CanvasElement =
   | TextElement
   | RectangleElement
   | CircleElement
+  | CircleTextElement
   | SectionElement
   | ConnectorElement
   | ImageElement

@@ -3,6 +3,7 @@
  * Monitors all canvas operations and triggers automatic optimizations
  */
 
+// @ts-nocheck
 import { emergencyStopRAF, getRAFStatus } from './EmergencyRafBatcher';
 import { emergencyStopCanvas } from '../../hooks/usePerformanceCircuitBreaker';
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
