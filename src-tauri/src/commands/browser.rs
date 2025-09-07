@@ -22,12 +22,31 @@ pub async fn open_browser_window(
     let width = options.width.unwrap_or(1200.0);
     let height = options.height.unwrap_or(820.0);
 
-    let window = WindowBuilder::new(&app_handle, &window_label)
+    // Try to anchor the browser window over the main app window (same display)
+    // Default position will be centered on the primary monitor if main not found
+    let mut builder = WindowBuilder::new(&app_handle, &window_label)
         .title(options.title.unwrap_or_else(|| "Browser".to_string()))
         .inner_size(width, height)
         .resizable(true)
         .decorations(false)
-        .center()
+        .always_on_top(true);
+
+    // Position over the main window if possible
+    if let Some(main) = app_handle.get_webview_window("main") {
+        if let (Ok(pos), Ok(size)) = (main.outer_position(), main.outer_size()) {
+            // Center new window over the main window bounds
+            let left = pos.x + ((size.width as f64 - width) / 2.0) as i32;
+            let top = pos.y + ((size.height as f64 - height) / 2.0) as i32;
+            builder = builder.position(left as f64, top as f64);
+        } else {
+            // Fallback to center if we can't read position/size
+            builder = builder.center();
+        }
+    } else {
+        builder = builder.center();
+    }
+
+    let window = builder
         .build()
         .map_err(|e| format!("Failed to create window: {}", e))?;
 
@@ -79,6 +98,7 @@ pub async fn open_browser_window(
     let _ = content.show();
 
     let _ = window.show();
+    let _ = window.set_focus();
 
     Ok(window_label)
 }
