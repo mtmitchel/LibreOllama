@@ -1,6 +1,6 @@
 # Changelog
 
-## 2025-09-02 — Circle Tool Precision and Rendering Fixes
+## 2025-09-02 - Circle Tool Precision and Rendering Fixes
 
 ### Summary
 - Refactored the circle and text rendering pipeline to fix critical precision and alignment gaps. The circle element, its text content, and the DOM-based textarea are now pixel-aligned during creation, editing, and resizing.
@@ -27,6 +27,17 @@
     - Corrected a type error where a `Konva.Ellipse` was being created without the required `radiusX` and `radiusY` properties.
     - Fixed typos (`newRadiusX` -> `finalRadiusX`) that were causing reference errors.
     - Removed redundant methods (`updateCircleText`, `centerTextInCircle`, `centerTextInEllipse`) and consolidated their logic into the unified `updateCircle` function.
+
+### Patch: Circle Auto-Grow Measurement (Konva getSelfRect)
+
+- Fixed a critical issue where circle auto-grow could compute `Infinity`/`NaN` radii, preventing the circle from rendering and flooding the console with Konva warnings.
+- Root cause: the measurement `Konva.Text` node was initialized with `width = Infinity` and `height = Infinity`, which tainted subsequent width/height and radius calculations.
+- Resolution:
+  - Seed measurement with `wrap('none')` and `width = 'auto'` (no explicit height), then set `.text(...)` to get natural width.
+  - Refine in a short loop using `wrap('word')`, set a finite width constraint, set `.text(...)`, and measure actual content dimensions via `getSelfRect()`.
+  - Clamp all intermediate values (`side`, `need`) and the final radius to finite, positive numbers.
+- Files: `src/features/canvas/utils/circleAutoGrow.ts`, `src/features/canvas/services/CanvasRendererV2.ts` (call sites and logs)
+- Result: Circles now appear on click; during typing they expand smoothly without Konva `Infinity`/`NaN` warnings.
 
 ### QA / Validation Checklist
 - Changing a circle's radius no longer changes its `x,y` center position.

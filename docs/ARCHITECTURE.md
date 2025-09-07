@@ -1,6 +1,6 @@
 # LibreOllama Implementation Guide & Architectural Patterns
 
-**Last Updated**: August 28, 2025
+**Last Updated**: September 2, 2025
 
 ## 1. Overview
 
@@ -38,6 +38,13 @@ The canvas is the most architecturally complex feature. Its patterns prioritize 
   - **Object Pooling**: The `KonvaNodePool` is used for drawing-heavy tools (Pen, Marker) to reuse Konva nodes and reduce garbage collection overhead.
 - **Type Safety**: The canvas uses **Branded Types** (e.g., `type ElementId = Brand<string, 'ElementId'>`) to prevent ID misuse at compile time. All canvas elements are part of a **discriminated union** (`CanvasElement`) for type-safe rendering and updates.
 - **Migration Status**: Currently in Phase 1 of the migration plan, with `NonReactCanvasStage` implemented and drawing tools using imperative FastLayer for previews.
+
+#### Text Measurement Strategy (Konva)
+
+- Never assign `Infinity` to `Konva.Text` width/height. Use `width = 'auto'` for initial, no-wrap measurement and avoid setting a height (let content determine it).
+- For wrapped measurement, set the finite width constraint and then set `.text(...)` before reading metrics. Prefer `getSelfRect()` over `getClientRect()` to read the actual content dimensions.
+- Clamp intermediate values and final computed sizes to finite, positive numbers to guard against edge cases (empty text, extreme transforms, DPI rounding).
+- Circle auto-grow uses this strategy via `requiredRadiusForText(...)` to compute the minimal radius needed to contain wrapped text at a fixed font size.
 
 > **For a complete, deep-dive analysis of the canvas system, refer to the `docs/CANVAS_ARCHITECTURE_AUDIT_UPDATED.md` document.**
 > **For the current migration blueprint and implementation plan, refer to `docs/KONVA_BASED_CANVAS.md` and `docs/CANVAS_MIGRATION_PLAN.md`.**

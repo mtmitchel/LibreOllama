@@ -130,6 +130,15 @@ Structure
 - Vertical growth on overflow: during editing, if text height exceeds the inscribed area, the renderer may expand `radiusY` (ellipse vertical growth) to avoid clipping. Horizontal radius (radiusX) remains fixed. On commit, final geometry is persisted.
 - RAF-batched redraw: draw calls coalesce via `scheduleDraw` to maintain 60fps.
 
+### Auto-grow while typing (perfect circles)
+
+- The renderer computes the minimal circle radius required to contain the current text at a fixed `fontSize` using `requiredRadiusForText(...)`.
+- Measurement sequence:
+  - Seed: `wrap('none')`, `width = 'auto'`, set text, measure natural width.
+  - Refine (few iterations): `wrap('word')`, set finite width (inscribed square side), set text, read `getSelfRect()` for content width/height.
+  - Map the required content side to circle radius: `r = (side + 2*padding)/sqrt(2) + stroke/2`.
+- All measurements are finite-guarded; no `Infinity`/`NaN` assignments are allowed.
+
 --------------------------------------------------------------------------------
 
 ## Code examples

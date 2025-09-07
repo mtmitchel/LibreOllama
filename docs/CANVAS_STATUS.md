@@ -33,6 +33,15 @@
 - 🟡 **(Minor) Layer Naming Convention**: The guide specifies a `fast` layer for images. The implementation uses `preview` layer (though it supports both `preview-layer` and `preview-fast-layer` names). This is a minor naming deviation.
 - 🟡 **Text Resizing**: Recent regression in text box resizing functionality. Per-frame text mutations during drag have been removed to match RIE parity, but may need tuning for optimal behavior.
 
+## Recent Fixes (September 2025)
+
+### Circle Auto-Grow Measurement (Fix)
+- Replaced `Infinity` sizing on the Konva Text measurement node with a safe sequence:
+  - Seed with `wrap('none')`, `width = 'auto'`, set text, measure natural width.
+  - Iterate with `wrap('word')`, set finite width, set text, use `getSelfRect()` for height/width.
+  - Clamp intermediate and final values to avoid `Infinity`/`NaN`.
+- Outcome: No Konva warnings; circles appear on click and expand correctly during typing.
+
 ## Recent Fixes (January 2025)
 
 ### Text Tool Issues Resolved
