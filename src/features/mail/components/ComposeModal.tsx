@@ -302,42 +302,39 @@ function ComposeModal({
   };
 
 
-  // Calculate position to center modal over mail main area
-  const [modalPosition, setModalPosition] = useState({ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' });
+  // Position the compose modal like Gmail: docked to bottom-right of the mail main column (left of context panel)
+  const [modalPosition, setModalPosition] = useState<{ [k: string]: string }>({ right: '24px', bottom: '24px', transform: 'none', width: '600px' });
+  const [dockRight, setDockRight] = useState<string>('24px');
   
   useLayoutEffect(() => {
-    const calculatePosition = () => {
-      const mailMainArea = document.getElementById('mail-main-area');
-      if (mailMainArea) {
-        const rect = mailMainArea.getBoundingClientRect();
-        const modalWidth = 600;
-        const modalHeight = 600;
-        
-        // Calculate center position
-        const left = rect.left + (rect.width / 2) - (modalWidth / 2);
-        const top = rect.top + (rect.height / 2) - (modalHeight / 2);
-        
-        setModalPosition({
-          left: `${Math.max(20, left)}px`,
-          top: `${Math.max(20, top)}px`,
-          transform: 'none'
-        });
+    const margin = 24; // baseline margin inside main
+    const contextGutter = 16; // extra inset to avoid the context panel gutter
+    const nudge = 28; // pull left ~30px to fully clear the gutter
+    const computeDock = () => {
+      const main = document.querySelector('[data-mail-main]') as HTMLElement | null;
+      let right = margin;
+      let widthPx = 600;
+      if (main) {
+        const rect = main.getBoundingClientRect();
+        const vw = window.innerWidth || document.documentElement.clientWidth;
+        // Distance from viewport right edge to main content right edge, plus margins, gutter buffer, and nudge
+        right = Math.max(margin, Math.round(vw - rect.right) + margin + contextGutter + nudge);
+        // Constrain width to fit within main column
+        widthPx = Math.min(600, Math.max(360, Math.floor(rect.width - (margin * 2 + contextGutter + nudge))));
       }
+      setDockRight(`${right}px`);
+      setModalPosition({ right: `${right}px`, bottom: `${margin}px`, transform: 'none', width: `${widthPx}px` });
     };
 
-    calculatePosition();
-    window.addEventListener('resize', calculatePosition);
-    
-    // Recalculate when sidebars might change
-    const observer = new MutationObserver(calculatePosition);
-    const mailArea = document.getElementById('mail-main-area');
-    if (mailArea) {
-      observer.observe(mailArea.parentElement!, { attributes: true, childList: true, subtree: true });
-    }
-    
+    computeDock();
+    window.addEventListener('resize', computeDock);
+    // Observe main column size/position changes (e.g., context panel toggles)
+    const main = document.querySelector('[data-mail-main]') as HTMLElement | null;
+    const ro = (typeof ResizeObserver !== 'undefined' && main) ? new ResizeObserver(() => computeDock()) : null;
+    if (ro && main) ro.observe(main);
     return () => {
-      window.removeEventListener('resize', calculatePosition);
-      observer.disconnect();
+      window.removeEventListener('resize', computeDock);
+      if (ro && main) ro.unobserve(main);
     };
   }, []);
 
@@ -390,7 +387,7 @@ function ComposeModal({
 
   if (isMinimized) {
     return (
-                <div className="border-border-subtle fixed bottom-0 right-4 z-50 w-80 rounded-t-lg border bg-content shadow-lg">
+      <div className="border-border-subtle fixed bottom-0 z-50 w-80 rounded-t-lg border bg-content shadow-lg" style={{ right: dockRight }}>
         <div className="border-border-subtle flex items-center justify-between border-b p-3">
           <div className="flex flex-1 items-center gap-2">
             <Text size="sm" weight="medium" className="truncate text-primary">
@@ -427,9 +424,9 @@ function ComposeModal({
   }
 
   return (
-    <div className="bg-bg-overlay fixed inset-0 z-[400]">
+    <div className="fixed inset-0 z-[400] pointer-events-none">
       <div 
-        className="border-border-default fixed flex h-[600px] max-h-[90vh] w-[600px] flex-col overflow-hidden rounded-lg border bg-content shadow-2xl"
+        className="border-border-default pointer-events-auto fixed flex h-[600px] max-h-[90vh] w-[95vw] max-w-[600px] flex-col overflow-hidden rounded-lg border bg-content shadow-2xl"
         style={modalPosition}
       >
         {/* Header - Gmail-style compact */}
