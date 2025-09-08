@@ -308,10 +308,21 @@ export class EditorOverlay {
     const pos = absTransform.point({ x: 0, y: 0 });
     const scale = group.getAbsoluteScale();
 
+    // Use center-origin only for true center-origin shapes (circles/circle-text).
+    // Sticky notes and rectangle/triangle elements should use top-left anchoring.
+    const name = typeof (group as any).name === 'function' ? (group as any).name() : '';
+    const centerOrigin = name === 'circle' || name === 'circle-text';
+
     wrapper.style.left = `${pos.x}px`;
     wrapper.style.top = `${pos.y}px`;
-    wrapper.style.transform = `translate(-50%, -50%) scale(${scale.x}, ${scale.y})`;
-    wrapper.style.transformOrigin = 'center';
+    if (centerOrigin) {
+      wrapper.style.transform = `translate(-50%, -50%) scale(${scale.x}, ${scale.y})`;
+      wrapper.style.transformOrigin = 'center';
+    } else {
+      // Top-left anchored overlay (keeps caret inside sticky/rect at top-left)
+      wrapper.style.transform = `scale(${scale.x}, ${scale.y})`;
+      wrapper.style.transformOrigin = 'top left';
+    }
   }
 
   /**
