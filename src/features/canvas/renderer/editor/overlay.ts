@@ -304,22 +304,23 @@ export class EditorOverlay {
     const stage = group.getStage();
     if (!stage) return;
 
-    const absTransform = group.getAbsoluteTransform();
-    const pos = absTransform.point({ x: 0, y: 0 });
     const scale = group.getAbsoluteScale();
-
-    // Use center-origin only for true center-origin shapes (circles/circle-text).
-    // Sticky notes and rectangle/triangle elements should use top-left anchoring.
     const name = typeof (group as any).name === 'function' ? (group as any).name() : '';
     const centerOrigin = name === 'circle' || name === 'circle-text';
 
-    wrapper.style.left = `${pos.x}px`;
-    wrapper.style.top = `${pos.y}px`;
+    // Use the group's client rect to derive top-left in stage coordinates
+    const rect = (group as any).getClientRect?.({ skipTransform: false, skipStroke: true, skipShadow: true }) || { x: 0, y: 0, width: 0, height: 0 };
+
     if (centerOrigin) {
+      const cx = rect.x + rect.width / 2;
+      const cy = rect.y + rect.height / 2;
+      wrapper.style.left = `${cx}px`;
+      wrapper.style.top = `${cy}px`;
       wrapper.style.transform = `translate(-50%, -50%) scale(${scale.x}, ${scale.y})`;
       wrapper.style.transformOrigin = 'center';
     } else {
-      // Top-left anchored overlay (keeps caret inside sticky/rect at top-left)
+      wrapper.style.left = `${rect.x}px`;
+      wrapper.style.top = `${rect.y}px`;
       wrapper.style.transform = `scale(${scale.x}, ${scale.y})`;
       wrapper.style.transformOrigin = 'top left';
     }
