@@ -237,6 +237,19 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   // Add keyboard shortcut support for delete and clear (read selection at event time)
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore when typing inside inputs/textareas/contenteditable or canvas editors
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName?.toLowerCase();
+        const isTyping =
+          tag === 'input' ||
+          tag === 'textarea' ||
+          tag === 'select' ||
+          (target as any).isContentEditable === true ||
+          target.getAttribute?.('data-role') === 'canvas-text-editor' ||
+          target.hasAttribute?.('data-text-editing');
+        if (isTyping) return;
+      }
       const store = useUnifiedCanvasStore.getState();
       const ids = Array.from(store.selectedElementIds || []);
       // Delete key for selected

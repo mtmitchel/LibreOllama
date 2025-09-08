@@ -343,6 +343,7 @@ export class NodeFactory {
    */
   private createText(element: TextElement): Konva.Group {
     const group = this.getOrCreateGroup();
+    try { group.name('text'); } catch {}
     
     const text = this.getOrCreateText();
     text.text(element.text);
@@ -351,7 +352,6 @@ export class NodeFactory {
     text.fontStyle(element.fontStyle || 'normal');
     text.fill(element.fill || '#000000');
     text.width(element.width || 200);
-    text.height(element.height);
     text.align(element.align || 'left');
     text.verticalAlign(element.verticalAlign || 'top');
     text.wrap('word');
@@ -377,7 +377,6 @@ export class NodeFactory {
       text.fontFamily(element.fontFamily || 'Inter, system-ui, sans-serif');
       text.fill(element.fill || '#000000');
       text.width(element.width || 200);
-      text.height(element.height);
     }
 
     const bounds = text.getClientRect();

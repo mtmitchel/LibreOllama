@@ -234,6 +234,7 @@ export class EditorOverlay {
     // Create contenteditable
     const editor = document.createElement('div');
     editor.className = 'canvas-text-editor circle-text';
+    editor.setAttribute('data-text-editing', 'true');
     
     // Set font properties and wrap behavior - contract handles layout and sizing
     editor.style.fontFamily = element.fontFamily || 'Inter, system-ui, sans-serif';
@@ -268,6 +269,7 @@ export class EditorOverlay {
   private createDefaultEditor(element: CanvasElement): HTMLTextAreaElement {
     const editor = document.createElement('textarea');
     editor.className = 'canvas-text-editor';
+    editor.setAttribute('data-text-editing', 'true');
     editor.style.position = 'absolute';
     editor.style.padding = '12px';
     editor.style.margin = '0';

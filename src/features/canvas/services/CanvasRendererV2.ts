@@ -1572,8 +1572,6 @@ export class CanvasRendererV2 {
       fontFamily: el.fontFamily || 'Inter, system-ui, sans-serif',
       fontStyle: (el as any).fontStyle || 'normal',
       fill: el.textColor || '#111827',
-      width: w,
-      height: h,
       listening: false,
       name: 'text',
       stroke: undefined,
@@ -1581,11 +1579,21 @@ export class CanvasRendererV2 {
       perfectDrawEnabled: false,
       visible: !!(el.text && el.text.trim())
     });
-    (text as any).wrap('word');
+    // Plain text should not wrap automatically; keep as a single line by default
+    (text as any).wrap('none');
     (text as any).align((el as any).align || 'left');
     if ((el as any).lineHeight) (text as any).lineHeight((el as any).lineHeight);
 
     group.add(text);
+    // Ensure hit-area is comfortably clickable, even for empty/short text
+    try {
+      const measuredH = Math.ceil(text.height());
+      const minClickableH = Math.max(24, Math.ceil((el.fontSize || 14) * 1.1));
+      const targetH = Math.max(minClickableH, measuredH || 0);
+      const minClickableW = Math.max(60, Math.ceil((el.fontSize || 14) * 3));
+      const targetW = Math.max(minClickableW, w || 1);
+      this.ensureHitAreaSize(group, targetW, targetH);
+    } catch {}
     return group;
   }
 
@@ -1651,10 +1659,7 @@ export class CanvasRendererV2 {
 
   private updateText(group: Konva.Group, el: any) {
     const w = Math.max(1, el.width || 1);
-    const h = Math.max(1, el.height || 1);
-    
     group.position({ x: el.x || 0, y: el.y || 0 });
-    this.ensureHitAreaSize(group, w, h);
 
     const text = group.findOne<Konva.Text>('Text.text');
     if (text) {
@@ -1663,12 +1668,33 @@ export class CanvasRendererV2 {
       text.fontFamily(el.fontFamily || 'Inter, system-ui, sans-serif');
       try { (text as any).fontStyle((el as any).fontStyle || 'normal'); } catch {}
       text.fill(el.textColor || '#111827');
-      text.width(w);
-      // React Image Editor behavior: set height from element and let measured rect drive true bounds
-      text.height(h);
-      (text as any).wrap('word');
+      // For single-line plain text, let Konva calculate natural width to avoid clipping
+      try { (text as any).width(undefined); } catch {}
+      // Keep plain text single-line by default
+      (text as any).wrap('none');
       (text as any).align((el as any).align || 'left');
       if ((el as any).lineHeight) (text as any).lineHeight((el as any).lineHeight);
+
+      // Ensure hit-area is comfortably clickable (min height & width guards) and spans the actual text width
+      try {
+        // Use Konva's text measurement for width/height
+        let measuredW = 0;
+        try { measuredW = Math.ceil((text as any).getTextWidth?.() || 0); } catch { measuredW = Math.ceil(text.width()); }
+        // Ensure on-screen width at least fits the content when no wrapping
+        try { (text as any).width(Math.max(w, measuredW)); } catch {}
+        const measuredH = Math.ceil(text.height());
+        const minClickableH = Math.max(24, Math.ceil((el.fontSize || 14) * 1.1));
+        const targetH = Math.max(minClickableH, measuredH || 0);
+        const minClickableW = Math.max(60, Math.ceil((el.fontSize || 14) * 3));
+        const targetW = Math.max(minClickableW, measuredW || w || 1);
+        this.ensureHitAreaSize(group, targetW, targetH);
+      } catch {}
+    } else {
+      // Fallback: at least ensure hit-area matches element width
+      const minClickableH = Math.max(24, Math.ceil((el.fontSize || 14) * 1.1));
+      const minClickableW = Math.max(60, Math.ceil((el.fontSize || 14) * 3));
+      const targetW = Math.max(minClickableW, w || 1);
+      this.ensureHitAreaSize(group, targetW, Math.max(minClickableH, Math.max(1, el.height || 1)));
     }
   }
 
@@ -2758,11 +2784,12 @@ export class CanvasRendererV2 {
     window.addEventListener('keyup', onKeyUp);
 
     this.stage.on('mousedown.renderer', (e: any) => {
-      // Ignore clicks on transformer and its anchors
+      // Ignore clicks on transformer anchors, but allow dragging the selected node when clicking transformer body
       const cls = e.target?.getClassName?.();
       const parentCls = e.target?.getParent?.()?.getClassName?.();
       if (cls === 'Transformer' || parentCls === 'Transformer') {
-        return; // allow transformer to handle its own interactions
+        // Let transformer/anchors handle resize/rotate. Do not force-start drag here
+        return;
       }
 
       const node = this.getElementNodeFromEvent(e.target);
@@ -2775,6 +2802,16 @@ export class CanvasRendererV2 {
         if ((window as any).__UNIFIED_CANVAS_STORE__) {
           (window as any).__UNIFIED_CANVAS_STORE__.getState().selectElement(node.id(), multi);
         }
+        // If this is a double-click on a text-like element, open the editor immediately
+        try {
+          const clickCount = (e.evt as any)?.detail;
+          const isDouble = typeof clickCount === 'number' && clickCount >= 2;
+          const isTextLike = node.name() === 'sticky-note' || node.name() === 'text' || node.name() === 'rectangle' || node.name() === 'circle' || node.name() === 'triangle' || node.name() === 'circle-text';
+          if (!multi && isDouble && isTextLike) {
+            this.openTextareaEditor(node.id(), node);
+          }
+        } catch {}
+        // Allow natural drag start via Konva's dragDistance threshold; do not force startDrag()
       } else {
         // Clicked on the background (stage or layer), handle deselection.
         console.log(`[DEBUG] ==> Deselecting all elements.`);
@@ -2901,7 +2938,17 @@ export class CanvasRendererV2 {
     // Double-click for text/cell editing
     this.stage.on('dblclick.renderer', (e: any) => {
       console.info('[RendererV2] dblclick received', { target: e.target?.name?.(), id: e.target?.id?.(), className: e.target?.getClassName?.() });
-      const node = this.getElementNodeFromEvent(e.target);
+
+      // Resolve the element node, with a fallback when the Transformer intercepts the event
+      let node = this.getElementNodeFromEvent(e.target);
+      if ((!node || !node.id()) && (e.target?.getClassName?.() === 'Transformer' || e.target?.getParent?.()?.getClassName?.() === 'Transformer')) {
+        // If transformer is clicked, prefer the single selected node (expected flow for edit-on-dblclick)
+        const selected = this.transformer?.nodes?.() || [];
+        if (selected.length === 1) {
+          node = selected[0];
+        }
+      }
+
       if (!node || !node.id()) return;
 
       const isTextLike = node.name() === 'sticky-note' || node.name() === 'text' || node.name() === 'rectangle' || node.name() === 'circle' || node.name() === 'triangle' || node.name() === 'circle-text';
@@ -3035,18 +3082,41 @@ export class CanvasRendererV2 {
     const overlayRoot = this.ensureOverlayRoot();
     if (!overlayRoot) { console.warn('[RendererV2] no overlayRoot found'); return; }
 
-    // DOM positioning math
-    // Use getClientRect for accurate bounds of the Konva node, then translate to viewport px
-    const absRect = (node as any).getClientRect?.({ skipTransform: false, skipShadow: true, skipStroke: true }) ?? node.getClientRect();
+    // Mark element as editing in the store so syncElements skips canvas text rendering
+    try {
+      if ((el as any).type === 'text' || (el as any).type === 'rich-text') {
+        this.updateElementCallback?.(elId, { isEditing: true });
+      }
+    } catch {}
 
     // Stage container offset in the page (accounts for sidebars, padding, transforms)
     const containerRect = this.stage.container().getBoundingClientRect();
 
-    // Position is relative to the viewport
-    const leftPx = containerRect.left + absRect.x;
-    const topPx  = containerRect.top + absRect.y;
-    const widthPx  = Math.max(4, absRect.width);
-    const heightPx = Math.max(4, absRect.height);
+    // DOM positioning math
+    // Prefer measuring the intrinsic text bounds from the Konva.Text node itself for consistency
+    let leftPx = 0, topPx = 0, widthPx = 0, heightPx = 0;
+    const group = node as Konva.Group;
+    const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
+    if (textNode && !(el as any).type?.includes('sticky') && !(['rectangle','circle','triangle','circle-text'].includes(String((el as any).type)))) {
+      const rect = textNode.getSelfRect();
+      const absPos = textNode.getAbsolutePosition();
+      const absScale = textNode.getAbsoluteScale();
+      const sx = typeof absScale?.x === 'number' ? absScale.x : 1;
+      const sy = typeof absScale?.y === 'number' ? absScale.y : 1;
+      const xStage = absPos.x + rect.x * sx;
+      const yStage = absPos.y + rect.y * sy;
+      leftPx = containerRect.left + xStage;
+      topPx = containerRect.top + yStage;
+      widthPx = Math.max(4, rect.width * sx);
+      heightPx = Math.max(4, rect.height * sy);
+    } else {
+      // Fallback to group rect for shapes/sticky and when text node isn't found
+      const absRect = (node as any).getClientRect?.({ skipTransform: false, skipShadow: true, skipStroke: true }) ?? node.getClientRect();
+      leftPx = containerRect.left + absRect.x;
+      topPx  = containerRect.top + absRect.y;
+      widthPx  = Math.max(4, absRect.width);
+      heightPx = Math.max(4, absRect.height);
+    }
 
     // Sticky paddings (match your visual text insets)
     // Use sticky note padding when applicable; plain text has no internal padding
@@ -3072,10 +3142,20 @@ export class CanvasRendererV2 {
 
     // Create wrapper and editor before positioning logic
     const editWrapper = document.createElement('div');
+    // Ensure wrapper participates in hit testing only while editing
+    // and cannot accidentally block the canvas after cleanup
+    editWrapper.style.pointerEvents = 'auto';
     const padDiv = document.createElement('div');
     const ta: HTMLTextAreaElement | HTMLDivElement = (isCircle
       ? (() => { const d = document.createElement('div'); d.setAttribute('contenteditable', 'true'); d.setAttribute('role','textbox'); d.setAttribute('aria-multiline','true'); return d; })()
       : document.createElement('textarea')) as any;
+    // Mark as active text editing to avoid global shortcut interference
+    (ta as HTMLElement).setAttribute('data-role', 'canvas-text-editor');
+    (ta as HTMLElement).setAttribute('data-text-editing', 'true');
+    // For plain text, force single-line behavior in the editor
+    if (!isSticky && !isShapeLike && !isCircle && !isTriangle && !isRect) {
+      try { (ta as HTMLTextAreaElement).setAttribute('wrap', 'off'); } catch {}
+    }
     
     // Attach editor to wrapper via pad container
     editWrapper.appendChild(padDiv);
@@ -3177,16 +3257,19 @@ export class CanvasRendererV2 {
     const ls = (el as any).letterSpacing ?? 0;
 
     // Apply positioning and transform styles to the wrapper
+    // For plain text, use top-left anchoring with no translate/rotate to match intrinsic content bounds
+    const isPlainText = !(isSticky || isShapeLike || isTriangle || isCircle || isRect);
     Object.assign(editWrapper.style, {
       position: 'fixed',
-      left: `${contentLeft}px`,   // Center position; translate to center
-      top: `${contentTop}px`,     // Center position; translate to center
+      left: `${contentLeft}px`,
+      top: `${contentTop}px`,
       width: `${contentWidth}px`,
       height: `${contentHeight}px`,
-      transform: this.rotateTextareaWhileEditing ? `translate(-50%, -50%) rotate(${absRot}deg)` : 'translate(-50%, -50%)',
+      transform: isPlainText ? 'none' : (this.rotateTextareaWhileEditing ? `translate(-50%, -50%) rotate(${absRot}deg)` : 'translate(-50%, -50%)'),
+      transformOrigin: isPlainText ? '0 0' : '50% 50%',
       zIndex: '2147483647',
       pointerEvents: 'auto',
-      opacity: '1',  // Make visible immediately instead of 0
+      opacity: '1',
       display: 'block',
       visibility: 'visible',
     });
@@ -3215,8 +3298,9 @@ export class CanvasRendererV2 {
       fontVariantLigatures: 'normal',
       fontFeatureSettings: '"kern" 1, "liga" 1',
       color: safeTextColor,
-      background: 'transparent',
-      border: 'none',
+      background: isPlainText ? 'white' : 'transparent',
+      border: isPlainText ? '1px solid #3B82F6' : 'none',
+      borderRadius: isPlainText ? '4px' : '0',
       padding: '0', // all padding lives on padDiv for consistent measurement
       margin: '0',
       boxSizing: 'content-box',
@@ -3482,7 +3566,8 @@ export class CanvasRendererV2 {
       // Last-line guard to prevent jumpy near-bottom clipping
       const guardPx = Math.max(4, Math.ceil(fontSize * 0.4 * stageScale));
       const minLinePx = Math.max(4, Math.ceil(fs * lh) + 2); // ensure at least one line height to prevent caret jump
-      newHeight = Math.max(contentHeight, scrollHeight + guardPx, minLinePx);
+      // Allow both growth and shrink: remove previous contentHeight clamp
+      newHeight = Math.max(scrollHeight + guardPx, minLinePx);
       
       // Only update height if it actually changed
       if (Math.abs(parseInt(currentHeight) - newHeight) > 1) {
@@ -3705,12 +3790,26 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
             this.scheduleDraw('main');
           }
         } else {
-          // Handle non-circle shapes
-          const frame = group.findOne<Konva.Rect>('.frame') || group.findOne<Konva.Rect>('.bg');
-          if (frame) {
-            frame.height(finalElementHeightWorld);
-            this.updateElementCallback?.(elId, { height: finalElementHeightWorld });
-          }
+          // Rectangle/triangle/sticky: update frame and hit-area to hug content on both growth and shrink
+          try {
+            const pad = padWorld;
+            const frame = group.findOne<Konva.Rect>('Rect.bg') || group.findOne<Konva.Rect>('Rect.frame');
+            const textNode = group.findOne<Konva.Text>('Text.label') || group.findOne<Konva.Text>('.text');
+            const baseW = Math.max(1, (frame as any)?.width?.() || (textNode as any)?.width?.() || ((el as any).width || 1));
+            if (frame && typeof (frame as any).height === 'function') {
+              frame.height(Math.max(1, finalElementHeightWorld));
+              (frame as any).y?.(0);
+            }
+            if (textNode) {
+              (textNode as any).height?.(Math.max(1, finalElementHeightWorld - pad * 2));
+              (textNode as any).y?.(pad);
+            }
+            this.ensureHitAreaSize(group, baseW, Math.max(1, finalElementHeightWorld));
+            this.updateElementCallback?.(elId, { height: Math.max(1, finalElementHeightWorld) });
+            this.scheduleDraw('main');
+            this.transformer?.forceUpdate?.();
+            this.scheduleDraw('overlay');
+          } catch {}
         }
         
         // Hit-area is managed per-shape elsewhere; avoid overriding (especially for center-origin circles)
@@ -3736,26 +3835,44 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     };
 
     const measurePlain = () => {
-      // Update width based on content
-      const wpx = computePlainWidthPx(ta.value);
-      ta.style.width = `${Math.max(1, Math.ceil(wpx))}px`;
-      // Height uses number of lines * fontSize * 1.2 (RIE)
-      const lines = ta.value.split('\n').length;
-      const nextHpx = Math.max(1, Math.ceil(lines * ((el as any).fontSize || 14) * 1.2 * stageScale));
-      ta.style.height = `${nextHpx + 3}px`;
+      // Update textarea size to fit content without wrapping
+      try { (ta as HTMLElement).style.width = 'auto'; } catch {}
+      const liveWpx = Math.max(1, Math.ceil((ta as HTMLElement).scrollWidth || 1));
+      const nextWpx = liveWpx;
+      (ta as HTMLElement).style.width = `${nextWpx}px`;
+      const fsWorld = (el as any).fontSize || 14;
+      const lh = (el as any).lineHeight || 1.2;
+      const nextHpx = Math.max(1, Math.ceil(fsWorld * lh * stageScale));
+      ta.style.height = `${nextHpx + 2}px`;
 
-      // Update Konva text live for feedback
+      // Keep the editing wrapper in sync so it also expands/contracts
+      try {
+        (editWrapper as HTMLElement).style.width = `${nextWpx}px`;
+        (editWrapper as HTMLElement).style.height = `${nextHpx + 2}px`;
+      } catch {}
+
+      // Update Konva text live for feedback without forcing a fixed width (prevents clipping)
       try {
         const group = node as Konva.Group;
         const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
         if (textNode) {
           textNode.text(ta.value);
-          const worldW = Math.max(1, Math.ceil(wpx) / stageScale);
-          (textNode as any).width(worldW);
-          this.ensureHitAreaSize(group, worldW, Math.max(10, nextHpx / stageScale));
+          try { (textNode as any).width(undefined); (textNode as any)._clearCache?.(); } catch {}
+          const measuredW = Math.max(1, Math.ceil(((textNode as any).getTextWidth?.() || nextWpx) as number));
+          const worldW = Math.max(1, measuredW / stageScale);
+          const worldH = Math.max(10, Math.ceil(fsWorld * lh));
+          this.ensureHitAreaSize(group, worldW, worldH);
           this.scheduleDraw('main');
           this.transformer?.forceUpdate?.();
           this.scheduleDraw('overlay');
+        }
+      } catch {}
+
+      // Keep store in sync during typing (no history churn): do not persist width for plain text
+      try {
+        const store = (window as any).__UNIFIED_CANVAS_STORE__;
+        if (store?.getState?.().updateElement) {
+          store.getState().updateElement(elId, { text: (ta as HTMLTextAreaElement).value }, { skipHistory: true });
         }
       } catch {}
     };
@@ -3965,13 +4082,8 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         // Circles/ellipses and other shapes: keep size fixed; commit text only
         this.updateElementCallback?.(elId, { text: nextText, isEditing: false });
       } else {
-        // Plain text: set width/height based on textarea bounds and reset any scale
-        const rect = ta.getBoundingClientRect();
-        const stageScale = this.stage?.getAbsoluteScale?.().x || 1;
-        const nextW = Math.max(20, Math.round(rect.width / stageScale));
-        const lines = String(nextText || '').split('\n').length;
-        const nextH = Math.max(10, Math.round(lines * ((el as any).fontSize || 14) * 1.2));
-        this.updateElementCallback?.(elId, { text: nextText, width: nextW, height: nextH, isEditing: false });
+        // Plain text: persist text only; renderer auto-sizes width to content to avoid clipping
+        this.updateElementCallback?.(elId, { text: nextText, isEditing: false });
       }
       // Clear editor tracking after commit
       this.currentEditingId = null;
@@ -4150,14 +4262,18 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       } catch {}
       ta.remove();
       if (this.currentEditor === ta) this.currentEditor = undefined;
-      try { this.transformer?.visible(prevTransformerVisible); this.scheduleDraw('overlay'); } catch {}
-      // Restore text node visibility for plain text
+      try { editWrapper.remove(); } catch {}
+      this.currentEditorWrapper = undefined;
+      this.currentEditorPad = undefined;
+      try { this.transformer?.visible(true); this.scheduleDraw('overlay'); } catch {}
+      // Restore text node visibility for plain text and clear fixed widths
       if (!isSticky) {
         try {
           const group = node as Konva.Group;
           const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
           if (textNode && prevTextVisible !== undefined) {
             textNode.visible(prevTextVisible);
+            try { (textNode as any).width(undefined); (textNode as any)._clearCache?.(); } catch {}
             this.scheduleDraw('main');
           }
         } catch {}
@@ -4171,6 +4287,21 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
           this.scheduleDraw('main');
         } catch {}
       }
+
+      // Ensure the edited element is selected and transformer/handles are visible again
+      try {
+        const store = (window as any).__UNIFIED_CANVAS_STORE__;
+        if (store?.getState?.().selectElement) {
+          store.getState().selectElement(elId, false);
+        }
+      } catch {}
+      try {
+        // Force transformer to re-attach/update after commit mutations
+        const selectedIds = (window as any).__UNIFIED_CANVAS_STORE__?.getState().selectedElementIds || new Set();
+        this.syncSelection(selectedIds);
+        // Also schedule a refresh on next tick to pick up any size changes persisted by commit
+        setTimeout(() => this.refreshTransformer(elId), 0);
+      } catch {}
     };
 
     // Expose a closers so other flows (e.g., ESC from renderer-level, switching tools) can close it
@@ -4180,12 +4311,13 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
   // Helper used at the top of openTextareaEditor:
   private closeCurrentEditor() {
     if (this.currentEditor) {
-      // If we’ve stored a closer, call it; else just remove the node
+      // If we've stored a closer, call it; else just remove the node
       const closer = (this as any)._closeEditor as (() => void) | undefined;
       if (closer) closer();
       else {
         this.currentEditor.remove();
         this.currentEditor = undefined;
+        try { this.currentEditorWrapper?.remove(); } catch {}
       }
       // Also clear wrapper/id tracking
       this.currentEditorWrapper = undefined;
@@ -5491,6 +5623,8 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     const heightPx = Math.max(4, dims.cellH);
 
     const ta = document.createElement('textarea');
+    ta.setAttribute('data-role', 'canvas-text-editor');
+    ta.setAttribute('data-text-editing', 'true');
     const currentCells = el.enhancedTableData?.cells || [];
     let currentText = '';
     try { currentText = currentCells[row]?.[col]?.content ?? currentCells[row]?.[col]?.text ?? ''; } catch {}

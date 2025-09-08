@@ -124,6 +124,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       height: height,
       listening: true,
     });
+    // Do not allow stage panning via drag; we pan via dedicated interactions
+    try { stage.draggable(false); } catch {}
 
     // Background layer with FigJam-style dot grid
     const backgroundLayer = new Konva.Layer({ listening: false, name: 'background-layer' });
@@ -463,6 +465,9 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       textarea?.remove();
       textarea = document.createElement('textarea');
       const el = textarea;
+      // Identify as an active canvas text editor to bypass global shortcuts
+      el.setAttribute('data-role', 'canvas-text-editor');
+      el.setAttribute('data-text-editing', 'true');
       
       // Style: content-box so scrollHeight ignores padding (critical)
       Object.assign(el.style, {
@@ -506,13 +511,17 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       el.style.left = `${dom.left}px`;
       el.style.top = `${dom.top}px`;
       el.style.width = `${dom.width}px`;  // Set initial width to match frame
-      el.style.minWidth = `${dom.width}px`;  // Minimum width
+      // Allow contraction after typing by keeping a small minimum width
+      el.style.minWidth = `8px`;
       // Set initial height to match what liveGrow will set
       el.style.height = `${ktext.fontSize() * sc.y + 2}px`;  // Same as in liveGrow
       
       el.value = '';
       el.focus();
       setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0);
+
+      // Mark element as editing to prevent renderer from drawing duplicate text
+      try { useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { isEditing: true }); } catch {}
       
       // Hide Konva text during edit
       ktext.visible(false);
@@ -520,6 +529,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       
       el.addEventListener('input', () => liveGrow(el, { group, ktext, frame, elementId }));
       el.addEventListener('keydown', (e) => {
+        e.stopPropagation();
         if (e.key === 'Enter' && !e.shiftKey) { 
           e.preventDefault(); 
           finalizeText(el, { group, ktext, frame, elementId }, 'commit'); 
@@ -542,33 +552,30 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       
       const sc = viewportScale();
       
-      // Check if text width exceeds current frame width
-      const textMetrics = ktext.getTextWidth();
-      const currentWidth = frame.width();
-      
-      // Only expand if text is approaching the edge (within 5px buffer)
-      if (textMetrics > currentWidth - 5) {
-        // Expand to fit text plus small buffer
-        const neededWidth = textMetrics + 10;  // Just enough space for text plus small buffer
-        
-        // Update frame width (but don't constrain text width)
-        frame.width(neededWidth);
-        
-        // Update textarea width to match
-        const domWidth = neededWidth * sc.x;
-        el.style.width = `${domWidth}px`;
-        
+      // Measure content width and adjust both expand and shrink in real time
+      const textWidth = Math.ceil(ktext.getTextWidth());
+      const padding = 10; // small buffer to avoid immediate edge hits
+      const minWorldWidth = Math.max(12, Math.ceil(ktext.fontSize()));
+      const neededWorldW = Math.max(minWorldWidth, textWidth + padding);
+      const currentWorldW = frame.width();
+
+      if (Math.abs(neededWorldW - currentWorldW) > 0.5) {
+        // Update frame and DOM width
+        frame.width(neededWorldW);
+        el.style.width = `${neededWorldW * sc.x}px`;
+
+        // Redraw layer for visual feedback
         mainLayer?.batchDraw();
-        
-        // Update store
-        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
-          width: neededWidth,
-          text: el.value 
+
+        // Update store width + text (skipHistory defaults to true in store)
+        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
+          width: neededWorldW,
+          text: el.value
         });
       } else {
-        // Just update text in store without changing dimensions
-        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
-          text: el.value 
+        // Keep text in sync without width change
+        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
+          text: el.value
         });
       }
       
@@ -604,11 +611,11 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         // Position text with small padding to prevent clipping
         ktext.position({ x: 4, y: 2 });
         
-        // Update store with final text and dimensions that hug the text
+        // Update store with final text and width only (height is intrinsic); clear editing flag
         useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
           text: el.value,
           width: textWidth,
-          height: textHeight
+          isEditing: false
         });
         
         mainLayer?.batchDraw();
@@ -650,7 +657,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
           overlayLayer?.batchDraw();
         }
       } else {
-        // cancel or empty: delete the element
+        // cancel or empty: delete the element (clear editing flag first just in case)
+        try { useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { isEditing: false }); } catch {}
         useUnifiedCanvasStore.getState().deleteElement(elementId as ElementId);
       }
       
@@ -660,7 +668,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       }
       textarea = null;
       
-      stage.draggable(true);
+      // Keep stage non-draggable so element drags don't pan the canvas
+      try { stage.draggable(false); } catch {}
       leaveTextTool();
       
       // Switch back to select tool
@@ -838,6 +847,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         
         textarea.setAttribute('data-element-id', String(textEditingElementId));
         textarea.setAttribute('data-role', 'canvas-text-editor');
+        // Mark as active text editing target so global shortcuts ignore it
+        textarea.setAttribute('data-text-editing', 'true');
         textarea.value = textNode.text() || '';
         
         container.appendChild(textarea);
@@ -1167,7 +1178,9 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         );
         textarea.addEventListener('input', onInput);
         textarea.addEventListener('blur', onExitEdit);
+        // Stop propagation so global key handlers (delete/backspace) don't interfere
         textarea.addEventListener('keydown', (e) => {
+            e.stopPropagation();
             if (e.key === 'Escape') {
                 onExitEdit();
             }
@@ -1717,6 +1730,20 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+
+      // Do not interfere with typing inside inputs/textareas/contenteditable or our editors
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName?.toLowerCase();
+        const isTyping =
+          tag === 'input' ||
+          tag === 'textarea' ||
+          tag === 'select' ||
+          (target as any).isContentEditable === true ||
+          target.getAttribute?.('data-role') === 'canvas-text-editor' ||
+          target.hasAttribute?.('data-text-editing');
+        if (isTyping) return;
+      }
       const store = useUnifiedCanvasStore.getState();
       const ids = Array.from(store.selectedElementIds || []);
       if (ids.length === 0) return;
