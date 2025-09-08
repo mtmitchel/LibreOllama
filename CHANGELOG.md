@@ -1,5 +1,26 @@
 # Changelog
 
+## 2025-09-08 - Sticky Note Editor Anchoring + Default Height Fix
+
+### Summary
+- Fixed two sticky note regressions: the caret blinking outside the note during editing and the note visually appearing “half-sized.”
+- Restricted the changes to the sticky note path to avoid impacting the plain text tool and other text-based shapes.
+
+### Fixes
+- Caret/overlay alignment: sticky note DOM editor overlay now uses top-left anchoring (no `translate(-50%, -50%)`). This eliminates the offset that made the caret appear outside of the note while typing.
+- Default height preservation: while editing an empty sticky note, auto-sizing will not shrink the note below its initial frame height (defaults 200×150). Sticky notes still grow as content is added.
+
+### Technical Details
+- Files: `src/features/canvas/services/CanvasRendererV2.ts`
+  - `openTextareaEditor` overlay positioning: center-anchored transform is now reserved for circles; sticky notes use top-left anchoring.
+  - `measureStickyConsistent` (editing path): clamp the computed height for sticky notes to at least the current frame height when the note is empty.
+- Unaffected: Text tool and plain `text` elements continue using their existing overlay logic and are not impacted by this change.
+
+### QA Checklist
+- Add a new sticky note and begin typing: caret blinks inside the note; overlay is aligned with the inner text region.
+- Newly created sticky note maintains its default height; it only grows as you type more lines.
+- Plain text tool behavior is unchanged.
+
 ## 2025-09-02 - Circle Tool Precision and Rendering Fixes
 
 ### Summary

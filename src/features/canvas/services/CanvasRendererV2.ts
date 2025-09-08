@@ -3257,16 +3257,24 @@ export class CanvasRendererV2 {
     const ls = (el as any).letterSpacing ?? 0;
 
     // Apply positioning and transform styles to the wrapper
-    // For plain text, use top-left anchoring with no translate/rotate to match intrinsic content bounds
+    // Anchor strategy:
+    // - Circles use center-anchored overlay (translate(-50%, -50%))
+    // - Sticky notes and other shapes use top-left anchoring (no translate)
+    // - Plain text uses top-left anchoring
     const isPlainText = !(isSticky || isShapeLike || isTriangle || isCircle || isRect);
+    const useCenterAnchoring = !!isCircle; // only circles are center-anchored
+    const transformStyle = useCenterAnchoring
+      ? (this.rotateTextareaWhileEditing ? `translate(-50%, -50%) rotate(${absRot}deg)` : 'translate(-50%, -50%)')
+      : 'none';
+    const transformOriginStyle = useCenterAnchoring ? '50% 50%' : '0 0';
     Object.assign(editWrapper.style, {
       position: 'fixed',
       left: `${contentLeft}px`,
       top: `${contentTop}px`,
       width: `${contentWidth}px`,
       height: `${contentHeight}px`,
-      transform: isPlainText ? 'none' : (this.rotateTextareaWhileEditing ? `translate(-50%, -50%) rotate(${absRot}deg)` : 'translate(-50%, -50%)'),
-      transformOrigin: isPlainText ? '0 0' : '50% 50%',
+      transform: transformStyle,
+      transformOrigin: transformOriginStyle,
       zIndex: '2147483647',
       pointerEvents: 'auto',
       opacity: '1',
@@ -3576,7 +3584,8 @@ export class CanvasRendererV2 {
         ta.style.height = currentHeight; // Restore to avoid reflow
       }
       
-      const finalElementHeightWorld = (newHeight + padPx * 2) / stageScale;
+      // Proposed height based on current content
+      let finalElementHeightWorld = (newHeight + padPx * 2) / stageScale;
       
       try {
         const group = node as Konva.Group;
@@ -3790,12 +3799,21 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
             this.scheduleDraw('main');
           }
         } else {
-          // Rectangle/triangle/sticky: update frame and hit-area to hug content on both growth and shrink
+          // Rectangle/triangle/sticky: update frame and hit-area to hug content.
+          // Sticky notes should not shrink below their initial frame height on first edit.
           try {
             const pad = padWorld;
             const frame = group.findOne<Konva.Rect>('Rect.bg') || group.findOne<Konva.Rect>('Rect.frame');
             const textNode = group.findOne<Konva.Text>('Text.label') || group.findOne<Konva.Text>('.text');
             const baseW = Math.max(1, (frame as any)?.width?.() || (textNode as any)?.width?.() || ((el as any).width || 1));
+            const baseFrameH = Math.max(1, (frame as any)?.height?.() || ((el as any).height || 1));
+            // Prevent initial empty sticky notes from collapsing below their default frame
+            if (isSticky) {
+              const hasContent = !!((el as any).text && String((el as any).text).trim().length > 0);
+              if (!hasContent) {
+                finalElementHeightWorld = Math.max(baseFrameH, finalElementHeightWorld);
+              }
+            }
             if (frame && typeof (frame as any).height === 'function') {
               frame.height(Math.max(1, finalElementHeightWorld));
               (frame as any).y?.(0);
