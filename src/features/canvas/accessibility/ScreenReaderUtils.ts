@@ -78,11 +78,15 @@ export class ScreenReaderUtils {
   private getDetailedDescription(element: CanvasElement): string {
     const parts: string[] = [];
     
-    // Dimensions
-    if (isRectangularElement(element)) {
+    // Dimensions - check specific types first, then generic rectangular check
+    if (isCircleElement(element)) {
+      if (element.radius) {
+        parts.push(`radius ${Math.round(element.radius)} pixels`);
+      } else if (element.width && element.height) {
+        parts.push(`${Math.round(element.width)} by ${Math.round(element.height)} pixels`);
+      }
+    } else if (isRectangularElement(element)) {
       parts.push(`${Math.round(element.width)} by ${Math.round(element.height)} pixels`);
-    } else if (isCircleElement(element)) {
-      parts.push(`radius ${Math.round(element.radius)} pixels`);
     }
     
     // Visual properties - handle based on element type

@@ -1,7 +1,11 @@
 /**
  * Geometry Module
  * Pure math functions for canvas geometry calculations
+ * Following the comprehensive refactoring plan for modular renderer architecture
  */
+
+// Cache for baseline offset calculations
+const baselineCache = new Map<string, number>();
 
 /**
  * Calculate the inscribed square within a circle
@@ -77,17 +81,32 @@ export function calculateHitArea(
 
 /**
  * Calculate text bounds for a circle
+ * Enhanced version with strokeWidth support for consistency with elliptical bounds
  * @param radius - Circle radius
  * @param padding - Text padding
+ * @param strokeWidth - Stroke width
  * @returns Text bounds
  */
 export function getCircleTextBounds(
   radius: number,
-  padding: number = 8
+  padding: number = 8,
+  strokeWidth: number = 0
 ): { width: number; height: number; x: number; y: number; padding: number } {
-  const inscribed = inscribedSquare(radius, padding);
+  // Ensure radius is a valid positive number
+  const safeRadius = Math.max(1, isFinite(radius) ? radius : 40);
+  
+  // Inscribed square in circle with padding and stroke consideration
+  const effectiveRadius = Math.max(1, safeRadius - strokeWidth / 2);
+  let side = (effectiveRadius * 2) / Math.sqrt(2) - padding * 2;
+  
+  // Ensure side is finite and positive
+  side = isFinite(side) && side > 0 ? side : 50;
+  
   return {
-    ...inscribed,
+    width: side,
+    height: side,
+    x: -side / 2,
+    y: -side / 2,
     padding
   };
 }
@@ -176,3 +195,152 @@ export function clamp(value: number, min: number, max: number): number {
 export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
+
+/**
+ * Calculate elliptical text bounds
+ * Core function from CanvasRendererV2 for ellipse/circle text layout
+ * @param radiusX - Ellipse X radius
+ * @param radiusY - Ellipse Y radius  
+ * @param padding - Text padding
+ * @param strokeWidth - Stroke width
+ * @returns Text bounds within ellipse
+ */
+export function getEllipticalTextBounds(
+  radiusX: number,
+  radiusY: number, 
+  padding: number = 8, 
+  strokeWidth: number = 2
+): { width: number; height: number; x: number; y: number } {
+  // Ensure radii are valid positive numbers
+  const safeRadiusX = Math.max(1, isFinite(radiusX) ? radiusX : 40);
+  const safeRadiusY = Math.max(1, isFinite(radiusY) ? radiusY : 40);
+  
+  const effectiveRadiusX = Math.max(1, safeRadiusX - strokeWidth / 2);
+  const effectiveRadiusY = Math.max(1, safeRadiusY - strokeWidth / 2);
+  
+  // Calculate inscribed rectangle dimensions
+  let width = (effectiveRadiusX * 2) / Math.sqrt(2) - padding * 2;
+  let height = (effectiveRadiusY * 2) / Math.sqrt(2) - padding * 2;
+  
+  // Ensure dimensions are finite and positive
+  width = isFinite(width) && width > 0 ? width : 50;
+  height = isFinite(height) && height > 0 ? height : 50;
+  
+  return {
+    width,
+    height,
+    x: -width / 2,
+    y: -height / 2
+  };
+}
+
+/**
+ * Calculate baseline offset in pixels for font rendering parity
+ * Cached implementation from CanvasRendererV2
+ * @param family - Font family
+ * @param sizePx - Font size in pixels
+ * @param lineHeight - Line height
+ * @returns Baseline offset in pixels
+ */
+export function getBaselineOffsetPx(family: string, sizePx: number, lineHeight: number): number {
+  const key = `${family}__${Math.round(sizePx)}__${lineHeight}`;
+  const cached = baselineCache.get(key);
+  if (cached !== undefined) return cached;
+  
+  try {
+    const span = document.createElement('span');
+    span.textContent = 'Hgjpq';
+    span.style.fontFamily = family;
+    span.style.fontSize = `${sizePx}px`;
+    span.style.lineHeight = String(lineHeight);
+    span.style.position = 'absolute';
+    span.style.visibility = 'hidden';
+    span.style.whiteSpace = 'pre';
+    document.body.appendChild(span);
+    
+    const domH = span.getBoundingClientRect().height || sizePx * lineHeight;
+    const baselinePx = Math.max(0, (domH - sizePx) / 2);
+    
+    document.body.removeChild(span);
+    baselineCache.set(key, baselinePx);
+    return baselinePx;
+  } catch (e) {
+    console.warn('Failed to calculate baseline offset, using fallback:', e);
+    const fallback = Math.max(0, sizePx * (lineHeight - 1) / 2);
+    baselineCache.set(key, fallback);
+    return fallback;
+  }
+}
+
+/**
+ * Get circle padding in pixels
+ * @param el - Element with optional paddingPx property
+ * @returns Padding in pixels (default 16)
+ */
+export function getCirclePadPx(el?: any): number {
+  // Allow explicit pixel override via element.paddingPx; otherwise default 16px
+  const px = (el && typeof el.paddingPx === 'number') ? el.paddingPx : 16;
+  return Math.max(0, px);
+}
+
+/**
+ * Manual text wrapping function as fallback for Konva's unreliable wrap
+ * @param text - Text to wrap
+ * @param maxWidth - Maximum width
+ * @param fontSize - Font size
+ * @param fontFamily - Font family
+ * @returns Array of wrapped lines
+ */
+export function wrapTextManually(text: string, maxWidth: number, fontSize: number, fontFamily: string): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  // Create temporary canvas for measurement
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return [text]; // Fallback if canvas context fails
+  
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  
+  for (const word of words) {
+    const testLine = currentLine + (currentLine ? ' ' : '') + word;
+    const metrics = ctx.measureText(testLine);
+    
+    if (metrics.width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  return lines.length > 0 ? lines : [text];
+}
+
+/**
+ * Device pixel ratio snapping utility
+ * @param value - Value to snap
+ * @param dpr - Device pixel ratio (default: window.devicePixelRatio)
+ * @returns Snapped value
+ */
+export function snapToPixel(value: number, dpr: number = window.devicePixelRatio || 1): number {
+  return Math.round(value * dpr) / dpr;
+}
+
+/**
+ * Ceiling snap to device pixel ratio
+ * @param value - Value to snap
+ * @param dpr - Device pixel ratio (default: window.devicePixelRatio)
+ * @returns Ceiling-snapped value
+ */
+export function ceilToPixel(value: number, dpr: number = window.devicePixelRatio || 1): number {
+  return Math.ceil(value * dpr) / dpr;
+}
+
+// Re-export circle auto-grow utility for complete geometric utility coverage
+export { requiredRadiusForText } from '../utils/circleAutoGrow';

@@ -43,6 +43,14 @@ export class CircleTextContract {
   }
 
   /**
+   * Get padding for a given radius (can be used for dynamic padding if needed)
+   */
+  private getPadding(radius: number): number {
+    // For now, return the base padding. Could be made dynamic based on radius
+    return this.basePadPx;
+  }
+
+  /**
    * Calculate all measurements from element and group transform
    */
   calculate(element: CircleElement, group: Konva.Group): CircleTextMeasurement {

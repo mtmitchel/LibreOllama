@@ -4116,7 +4116,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       this.currentEditorWrapper = undefined;
     };
 
-    const onKeyDown = (e: KeyboardEvent) => {
+    const onKeyDown = (e) => {
       console.info('[RendererV2] textarea keydown', e.key);
       // Enter to commit; Shift+Enter makes a newline
       if (e.key === 'Enter' && !e.shiftKey) {

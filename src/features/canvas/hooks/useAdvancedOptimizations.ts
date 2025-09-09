@@ -167,8 +167,8 @@ export function useAdvancedOptimizations(
       if (!result.isValid) {
         console.warn('🔍 Canvas state validation failed:', {
           errors: result.errors.length,
-          warnings: result.warnings.length,
-          fixed: result.fixed.length,
+          warnings: result.warnings?.length || 0,
+          fixed: Array.isArray(result.fixed) ? result.fixed.length : result.fixed || 0,
           stats: result.stats
         });
       }

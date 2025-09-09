@@ -113,6 +113,8 @@ describe('Error Boundary and Resilience Tests', () => {
         x: 50,
         y: 50,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#blue',
         stroke: '#black',
         strokeWidth: 1,
@@ -331,6 +333,8 @@ describe('Error Boundary and Resilience Tests', () => {
             x: i,
             y: i,
             radius: 5,
+            width: 10, // 2 * radius
+            height: 10, // 2 * radius
             fill: '#red',
             stroke: '#black',
             strokeWidth: 1,
@@ -438,6 +442,8 @@ describe('Error Boundary and Resilience Tests', () => {
         x: 50,
         y: 50,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#green',
         stroke: '#black',
         strokeWidth: 1,

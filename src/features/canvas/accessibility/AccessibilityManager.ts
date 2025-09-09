@@ -299,7 +299,10 @@ export class AccessibilityManager {
     if (isRectangularElement(element)) {
       sizeDesc = `, size ${Math.round(element.width)} by ${Math.round(element.height)}`;
     } else if (isCircleElement(element)) {
-      sizeDesc = `, radius ${Math.round(element.radius)}`;
+      const circleElement = element as any; // Type assertion to bypass narrowing issue
+      if (circleElement.radius) {
+        sizeDesc = `, radius ${Math.round(circleElement.radius)}`;
+      }
     }
     
     return `${baseDesc} ${position}${sizeDesc}`;

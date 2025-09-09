@@ -61,9 +61,9 @@ export class CircleTextSync {
   ): SyncResult {
     // Get world-space values
     const rWorld = element.radius;
-    const padWorld = element.padding || this.config.defaultPadding;
-    const indentWorld = this.config.defaultIndent || 0;
-    const strokeWidth = element.strokeWidth || 2;
+    const padWorld = element.padding ?? this.config.defaultPadding ?? 16;
+    const indentWorld = this.config.defaultIndent ?? 0;
+    const strokeWidth = element.strokeWidth ?? 2;
 
     // Get absolute transform and scale
     const absTransform = group.getAbsoluteTransform();
@@ -85,7 +85,7 @@ export class CircleTextSync {
     const sidePx = Math.sqrt(2) * effectiveRadius * sLim;
 
     // Convert padding to screen pixels
-    const padPx = padWorld * sLim;
+    const padPx = (padWorld ?? 16) * sLim;
     const indentPx = indentWorld * sLim;
 
     // Calculate content box in screen pixels

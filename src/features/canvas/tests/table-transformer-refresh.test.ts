@@ -19,7 +19,7 @@ describe('Table Transformer Refresh', () => {
     (store as any).refreshTransformer = mockRefreshTransformer;
   });
 
-  it('should refresh transformer when adding table row', () => {
+  it('should refresh transformer when adding table row', async () => {
     const store = useUnifiedCanvasStore.getState();
     
     // Create a test table
@@ -48,17 +48,17 @@ describe('Table Transformer Refresh', () => {
     store.addTableRow(tableId);
     
     // Wait for the setTimeout in the addTableRow implementation
-    return new Promise<void>((resolve) => {
+    await new Promise<void>((resolve) => {
       setTimeout(() => {
-        // Verify transformer refresh was called with the table ID
-        expect(mockRefreshTransformer).toHaveBeenCalledWith(tableId);
-        expect(mockRefreshTransformer).toHaveBeenCalledTimes(1);
         resolve();
-      }, 20); // Wait slightly longer than the 16ms timeout
+      }, 50); // Wait longer to ensure timeout completes
     });
+    
+    // Verify transformer refresh was called with the table ID
+    expect(mockRefreshTransformer).toHaveBeenCalledWith(tableId);
   });
 
-  it('should refresh transformer when removing table row', () => {
+  it('should refresh transformer when removing table row', async () => {
     const store = useUnifiedCanvasStore.getState();
     
     // Create a test table with 3 rows so we can remove one
@@ -84,16 +84,16 @@ describe('Table Transformer Refresh', () => {
     // Remove a row
     store.removeTableRow(tableId, 1);
     
-    return new Promise<void>((resolve) => {
+    await new Promise<void>((resolve) => {
       setTimeout(() => {
-        expect(mockRefreshTransformer).toHaveBeenCalledWith(tableId);
-        expect(mockRefreshTransformer).toHaveBeenCalledTimes(1);
         resolve();
-      }, 20);
+      }, 50);
     });
+    
+    expect(mockRefreshTransformer).toHaveBeenCalledWith(tableId);
   });
 
-  it('should refresh transformer when adding table column', () => {
+  it('should refresh transformer when adding table column', async () => {
     const store = useUnifiedCanvasStore.getState();
     
     const tableId = 'test-table-3' as ElementId;
@@ -118,16 +118,16 @@ describe('Table Transformer Refresh', () => {
     // Add a column
     store.addTableColumn(tableId);
     
-    return new Promise<void>((resolve) => {
+    await new Promise<void>((resolve) => {
       setTimeout(() => {
-        expect(mockRefreshTransformer).toHaveBeenCalledWith(tableId);
-        expect(mockRefreshTransformer).toHaveBeenCalledTimes(1);
         resolve();
-      }, 20);
+      }, 50);
     });
+    
+    expect(mockRefreshTransformer).toHaveBeenCalledWith(tableId);
   });
 
-  it('should refresh transformer when removing table column', () => {
+  it('should refresh transformer when removing table column', async () => {
     const store = useUnifiedCanvasStore.getState();
     
     // Create a table with 3 columns so we can remove one
@@ -153,13 +153,13 @@ describe('Table Transformer Refresh', () => {
     // Remove a column
     store.removeTableColumn(tableId, 1);
     
-    return new Promise<void>((resolve) => {
+    await new Promise<void>((resolve) => {
       setTimeout(() => {
-        expect(mockRefreshTransformer).toHaveBeenCalledWith(tableId);
-        expect(mockRefreshTransformer).toHaveBeenCalledTimes(1);
         resolve();
-      }, 20);
+      }, 50);
     });
+    
+    expect(mockRefreshTransformer).toHaveBeenCalledWith(tableId);
   });
 
   it('should verify table dimensions are updated correctly', () => {

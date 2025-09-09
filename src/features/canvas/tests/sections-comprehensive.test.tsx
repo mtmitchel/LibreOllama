@@ -68,6 +68,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 150,
         y: 150,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -126,6 +128,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 500, // Far outside
         y: 500,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -187,6 +191,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 150,
         y: 150,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -257,6 +263,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 120,
         y: 120,
         radius: 10,
+        width: 20, // 2 * radius
+        height: 20, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 1,
@@ -270,6 +278,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 180,
         y: 180,
         radius: 10,
+        width: 20, // 2 * radius
+        height: 20, // 2 * radius
         fill: '#00ff00',
         stroke: '#000000',
         strokeWidth: 1,
@@ -321,6 +331,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 150,
         y: 150,
         radius: 20,
+        width: 40, // 2 * radius
+        height: 40, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -405,6 +417,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 120,
         y: 120,
         radius: 15,
+        width: 30, // 2 * radius
+        height: 30, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -519,6 +533,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 150,
         y: 150,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -570,6 +586,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 120,
         y: 120,
         radius: 20,
+        width: 40, // 2 * radius
+        height: 40, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,

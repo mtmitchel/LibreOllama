@@ -368,16 +368,17 @@ export class EditorOverlay {
     editor.addEventListener('dblclick', stopPropagation);
     
     // Handle special keys
-    editor.addEventListener('keydown', (e: KeyboardEvent) => {
-      e.stopPropagation();
+    editor.addEventListener('keydown', (e) => {
+      const keyEvent = e as KeyboardEvent;
+      keyEvent.stopPropagation();
       
-      if (e.key === 'Escape') {
+      if (keyEvent.key === 'Escape') {
         editor.blur();
-      } else if (e.key === 'Enter' && e.shiftKey) {
+      } else if (keyEvent.key === 'Enter' && keyEvent.shiftKey) {
         // Allow shift+enter for new lines
-      } else if (e.key === 'Enter' && !e.shiftKey && editor instanceof HTMLTextAreaElement) {
+      } else if (keyEvent.key === 'Enter' && !keyEvent.shiftKey && editor instanceof HTMLTextAreaElement) {
         // Single enter commits for textarea
-        e.preventDefault();
+        keyEvent.preventDefault();
         editor.blur();
       }
     });

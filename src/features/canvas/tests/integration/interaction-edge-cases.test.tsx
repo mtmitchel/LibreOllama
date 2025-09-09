@@ -54,6 +54,8 @@ describe('Interaction Edge Cases', () => {
           x: 50 + i * 60,
           y: 100,
           radius: 20,
+          width: 40, // 2 * radius
+          height: 40, // 2 * radius
           groupId: childGroupId,
           parentGroupId: parentGroupId, // Nested in parent
           createdAt: Date.now(),
@@ -132,6 +134,8 @@ describe('Interaction Edge Cases', () => {
         x: 200,
         y: 50,
         radius: 40,
+        width: 80, // 2 * radius
+        height: 80, // 2 * radius
         groupId: subGroup2,
         parentGroupId: rootGroup,
         createdAt: Date.now(),

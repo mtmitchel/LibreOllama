@@ -10,7 +10,7 @@ import { ConnectorTool } from './tools/creation/ConnectorTool';
 import { ElementId, CanvasElement, createElementId, ConnectorElement, createGroupId, GroupId } from '../types/enhanced.types';
 import { performanceLogger } from '../utils/performance/PerformanceLogger';
 import { CanvasRendererV2 } from '../services/CanvasRendererV2';
-import { getContentPointer } from '../utils/coords';
+import { getContentPointer } from '../utils/pointer-to-content';
 import { nanoid } from 'nanoid';
 
 interface NonReactCanvasStageProps {

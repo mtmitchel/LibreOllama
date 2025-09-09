@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import Konva from 'konva';
-import { CanvasElement } from '../types/enhanced.types';
+import { CanvasElement, isCircleElement } from '../types/enhanced.types';
 
 /**
  * Fast MurmurHash3 implementation for cache key generation
@@ -105,8 +105,17 @@ const shouldCacheShape = (element: CanvasElement, config: CacheConfig): boolean 
   if (complexTypes.includes(element.type)) return true;
 
   // Cache large shapes (use type-safe property access)
-  const width = 'width' in element ? element.width : ('radius' in element ? element.radius * 2 : 0);
-  const height = 'height' in element ? element.height : ('radius' in element ? element.radius * 2 : 0);
+  let width = 0;
+  let height = 0;
+  
+  if (isCircleElement(element)) {
+    // CircleElement: prefer width/height, fallback to radius * 2
+    width = element.width || (element.radius ? element.radius * 2 : 0);
+    height = element.height || (element.radius ? element.radius * 2 : 0);
+  } else if ('width' in element && 'height' in element) {
+    width = element.width || 0;
+    height = element.height || 0;
+  }
   const size = (width || 0) * (height || 0);
   if (size > config.sizeThreshold) return true;
   
@@ -133,8 +142,12 @@ const shouldCacheShape = (element: CanvasElement, config: CacheConfig): boolean 
 const generateCacheKey = (element: CanvasElement, dependencies: any[] = []): string => {
   const visualProps = {
     type: element.type,
-    width: 'width' in element ? element.width : ('radius' in element ? element.radius * 2 : undefined),
-    height: 'height' in element ? element.height : ('radius' in element ? element.radius * 2 : undefined),
+    width: isCircleElement(element) 
+      ? (element.width || (element.radius ? element.radius * 2 : undefined))
+      : ('width' in element ? element.width : undefined),
+    height: isCircleElement(element)
+      ? (element.height || (element.radius ? element.radius * 2 : undefined))
+      : ('height' in element ? element.height : undefined),
     fill: 'fill' in element ? element.fill : undefined,
     stroke: 'stroke' in element ? element.stroke : undefined,
     strokeWidth: 'strokeWidth' in element ? element.strokeWidth : undefined,
@@ -221,7 +234,7 @@ export const useShapeCaching = ({
         
         console.log(`🗂️ [CACHE] Applied caching to ${element.type} element:`, {
           elementId: element.id,
-          size: `${('width' in element ? element.width : ('radius' in element ? element.radius * 2 : 0))}x${('height' in element ? element.height : ('radius' in element ? element.radius * 2 : 0))}`,
+          size: `${isCircleElement(element) ? (element.width || (element.radius ? element.radius * 2 : 0)) : ('width' in element ? element.width || 0 : 0)}x${isCircleElement(element) ? (element.height || (element.radius ? element.radius * 2 : 0)) : ('height' in element ? element.height || 0 : 0)}`,
           cacheKey: currentCacheKey.slice(0, 12) + '...',
           hashMethod: 'murmurhash3'
         });

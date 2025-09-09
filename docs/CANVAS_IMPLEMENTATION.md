@@ -1,8 +1,66 @@
-# LibreOllama Canvas Implementation Guide — Hardened & Unified Edition
+# LibreOllama Canvas Implementation Guide — Modular Architecture Edition
 
 ## Overview
 
-This document provides the complete, production-ready implementation guide for the LibreOllama canvas system. It consolidates all canvas-related implementation details into a single source of truth.
+This document provides the complete, production-ready implementation guide for the LibreOllama canvas system. The canvas now uses a **modular architecture** that breaks down the previous 6000+ line monolith into focused, testable modules.
+
+### Modular Architecture
+
+The canvas system is now split into specialized modules:
+
+- **`renderer/core.ts`** (200 lines) - Stage initialization, layer management, RAF batching
+- **`renderer/events.ts`** (290 lines) - Centralized event handling at stage level  
+- **`renderer/selection.ts`** (280 lines) - Transformer and selection management
+- **`renderer/text-editor.ts`** (380 lines) - DOM overlay text editing
+- **`renderer/drag-drop.ts`** (320 lines) - Drag operations with preview
+- **`renderer/viewport.ts`** (400 lines) - Pan/zoom with touch support
+- **`services/CanvasRenderer.ts`** (440 lines) - Lean orchestrator that coordinates all modules
+
+**Total: ~2340 lines vs previous 6000+ lines (61% reduction)**
+
+## 0) Modular Architecture Details
+
+### Core Module (`renderer/core.ts`)
+- **Responsibility**: Stage and layer lifecycle management
+- **Key Features**: RAF batching system, viewport transforms, coordinate conversion
+- **Interface**: Provides `CoreRenderer` class with init/destroy/scheduleDraw methods
+- **Performance**: One RAF per frame, one batchDraw per dirty layer
+
+### Events Module (`renderer/events.ts`) 
+- **Responsibility**: Centralized event handling per blueprint
+- **Key Features**: All events at stage level, no node-level handlers, keyboard support
+- **Interface**: Provides `EventManager` class with configurable event handlers
+- **Performance**: Efficient event delegation, proper cleanup on destroy
+
+### Selection Module (`renderer/selection.ts`)
+- **Responsibility**: Transformer and multi-selection management
+- **Key Features**: Multi-select with highlight rect, per-element resize rules, anchor tracking
+- **Interface**: Provides `SelectionManager` with sync/attach/detach methods
+- **Performance**: Reuses single transformer, efficient bounds calculations
+
+### Text Editor Module (`renderer/text-editor.ts`)
+- **Responsibility**: DOM overlay text editing for all text types
+- **Key Features**: Circle/sticky/text editing, auto-sizing, proper focus management
+- **Interface**: Provides `TextEditor` class with open/close/update methods
+- **Performance**: Efficient DOM overlay positioning, proper cleanup
+
+### Drag Drop Module (`renderer/drag-drop.ts`)
+- **Responsibility**: Single and group drag operations
+- **Key Features**: Drag preview, group drag, grid snapping, bounds constraints
+- **Interface**: Provides `DragDropManager` with start/move/end handlers
+- **Performance**: Uses drag layer for preview, batched position updates
+
+### Viewport Module (`renderer/viewport.ts`)
+- **Responsibility**: Pan, zoom, and viewport state management
+- **Key Features**: Smooth zoom, touch gestures, animation, fit-to-content
+- **Interface**: Provides `ViewportManager` with viewport state methods
+- **Performance**: Smooth animations, efficient coordinate transforms
+
+### Main Orchestrator (`services/CanvasRenderer.ts`)
+- **Responsibility**: Coordinates all modules and provides unified API
+- **Key Features**: Element lifecycle, state synchronization, spatial queries
+- **Interface**: Single public API that matches previous CanvasRendererV2
+- **Performance**: Efficient element diffing, spatial indexing with QuadTree
 
 ## 1) Goals & non-negotiables
 

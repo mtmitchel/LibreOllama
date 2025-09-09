@@ -1,0 +1,20 @@
+[33m129bc3d7[m[33m ([m[1;31morigin/feature/connectors-v1[m[33m)[m fix(canvas/text): selection + editing reliability\n\n- Single-line plain text (no wrapping)\n- Remove fixed width for plain text to avoid clipping\n- Auto-size hit-area from measured text width + minimums\n- Reliable dblclick-to-edit and no stage panning during move\n- Clean editor overlays to prevent click interception\n- Live edit: no width commit for plain text; preview uses natural width
+[33m3694d0f0[m docs(canvas): changelog and docs updates for circle auto-grow measurement fix
+[33mff7a1c9c[m fix(canvas): prevent Infinity/NaN in circle auto-grow measurement
+[33m97b9bf53[m fix(canvas): implement real-time resize frame updates for table operations
+[33mdc9e26ef[m feat(canvas): archive React Konva implementation and transition to custom renderer
+[33me3de2a2e[m feat(canvas): major improvements to canvas system
+[33m82e2a3aa[m fix(canvas): resolve critical sticky note resize alignment bug
+[33mc783b0ae[m feat(canvas): implement functional connector tool with port-based snapping
+[33m55c3c02a[m feat(canvas): implement edge rendering components for Main + Overlay layers
+[33me54532ef[m feat(canvas): add QuadTree-based snapping system for connectors
+[33m086cec9b[m feat(canvas): add focused Zustand edge slice with draft system
+[33m7fafffeb[m feat(canvas): clean up incorrect renderer code and add core connector types
+[33md418f253[m[33m ([m[1;31morigin/feature/spaces-home-personal[m[33m, [m[1;32mfeature/spaces-home-personal[m[33m)[m feat(canvas): implement text tool with resize/move functionality and fix snap-back issues
+[33m5b3cd9e1[m fix(canvas): resolve sticky note text editing issues
+[33m77cb25fd[m docs(canvas): update architecture audit with production code verification
+[33mef65adec[m feat(canvas): major performance optimizations and spatial indexing
+[33m0203e57b[m fix(canvas): resolve ElementId import and constructor issues
+[33m9cf4502b[m fix(canvas): resolve critical ESLint compilation errors
+[33m26fbd4cb[m perf(canvas): remove extensive debug logging to improve performance
+[33md6f280cd[m fix(canvas): resolve cursor misalignment and object placement issues
