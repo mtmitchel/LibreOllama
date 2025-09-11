@@ -20,7 +20,7 @@ export function worldRectToDOMLike(
 }
 
 export function computeTextLiveWorldWidth(textWidth: number, fontSize: number): number {
-  const paddingWorld = 10;
+  const paddingWorld = 2; // Minimal padding to prevent clipping
   const minWorldWidth = Math.max(12, Math.ceil(fontSize));
   return Math.max(minWorldWidth, Math.ceil(textWidth) + paddingWorld);
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, memo } from 'react';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -12,6 +12,7 @@ import { performanceLogger } from '../utils/performance/PerformanceLogger';
 import { CanvasRendererV2 } from '../services/CanvasRendererV2';
 import { getContentPointer } from '../utils/coords';
 import { nanoid } from 'nanoid';
+import { computeTextLiveWorldWidth, commitTextFit, worldRectToDOM } from '../renderer/compat/snippets';
 
 interface NonReactCanvasStageProps {
   stageRef?: React.RefObject<Konva.Stage | null>;
@@ -56,6 +57,38 @@ const createDotGridHelper = (_viewportWidth: number, _viewportHeight: number) =>
 
   return patternRect;
 };
+
+let liveGrowRafId: number | null = null;
+
+// State for the single active text editor session
+let activeTextEditState: { previousLength: number } | null = null;
+
+/**
+ * Resets a Konva.Text node to a clean state for accurate measurement,
+ * removing any lingering width/scale properties from previous transforms
+ * and clearing all internal caches.
+ */
+function resetTextNodeForEditing(textNode: Konva.Text) {
+  if (!textNode) return;
+  // 1. Clear all transform-related properties
+  textNode.setAttrs({
+    width: undefined,
+    height: undefined,
+    scaleX: 1,
+    scaleY: 1,
+  });
+  
+  // 2. Clear Konva's internal caches completely
+  try { textNode._clearCache(); } catch {}
+  
+  // 3. Additional cache clearing for persistent issues
+  if ((textNode as any)._cache) {
+    try { textNode.clearCache(); } catch {}
+  }
+  
+  // 4. Force layer redraw to commit the cache clearing
+  textNode.getLayer()?.batchDraw();
+}
 
 // Minimal imperative renderer for drawing tools and persisted strokes
 export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageRef: externalStageRef, selectedTool: selectedToolProp }) => {
@@ -460,6 +493,10 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     }
     
     function startTextEdit({ group, ktext, frame, world, elementId }: any) {
+      // CRITICAL: Reset the node to a clean state before starting the edit.
+      // This removes any explicit width/scale from previous transform operations.
+      resetTextNodeForEditing(ktext);
+
       stage.draggable(false); // freeze panning during edit
       
       textarea?.remove();
@@ -472,15 +509,15 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       // Style: content-box so scrollHeight ignores padding (critical)
       Object.assign(el.style, {
         position: 'fixed',  // Fixed positioning relative to viewport for proper placement
-        boxSizing: 'border-box',  // Include border in dimensions
-        border: '1px solid #3B82F6',
+        boxSizing: 'content-box',  // Content box so width maps 1:1 to content (no extra gap)
+        border: '0',
         borderRadius: '4px',
-        outline: 'none',
+        outline: '1px solid #3B82F6',
         resize: 'none',
         overflow: 'hidden',
         background: 'rgba(255,255,255,0.95)',
-        whiteSpace: 'pre-wrap', // Wrap immediately at editor width
-        wordBreak: 'break-word', // Allow word breaking to wrap
+        whiteSpace: 'pre', // Single-line editing; no wrapping
+        wordBreak: 'normal',
         fontFamily: ktext.fontFamily() || 'Inter, system-ui, Arial',
         color: '#111827',
         zIndex: '9999',
@@ -490,7 +527,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       const sc = viewportScale();
       el.style.fontSize = `${ktext.fontSize() * sc.y}px`;
       el.style.lineHeight = '1';  // Normal line height to show full text
-      el.style.padding = '0 1px';  // Absolute minimum: 1px horizontal only
+      el.style.padding = '0px';  // Avoid widening content area
       
       // prevent stage from stealing focus
       ['pointerdown','mousedown','touchstart','wheel'].forEach(ev =>
@@ -516,10 +553,13 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       // Set initial height to match what liveGrow will set
       el.style.height = `${ktext.fontSize() * sc.y + 2}px`;  // Same as in liveGrow
       
-      el.value = '';
+      el.value = ktext.text();
       el.focus();
       setTimeout(() => el.setSelectionRange(el.value.length, el.value.length), 0);
-
+      
+      // Initialize state for the new editing session
+      activeTextEditState = { previousLength: el.value.length };
+      
       // Mark element as editing to prevent renderer from drawing duplicate text
       try { useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { isEditing: true }); } catch {}
       
@@ -527,10 +567,13 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       ktext.visible(false);
       mainLayer?.batchDraw();
       
+      let isComposing = false;
+      el.addEventListener('compositionstart', () => { isComposing = true; });
+      el.addEventListener('compositionend', () => { isComposing = false; });
       el.addEventListener('input', () => liveGrow(el, { group, ktext, frame, elementId }));
       el.addEventListener('keydown', (e) => {
         e.stopPropagation();
-        if (e.key === 'Enter' && !e.shiftKey) { 
+        if (e.key === 'Enter' && !e.shiftKey && !isComposing) { 
           e.preventDefault(); 
           finalizeText(el, { group, ktext, frame, elementId }, 'commit'); 
         }
@@ -546,140 +589,67 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     
     function liveGrow(el: HTMLTextAreaElement, note: { group: Konva.Group; ktext: Konva.Text; frame: Konva.Rect; elementId: string }) {
       const { group, ktext, frame, elementId } = note;
-      
-      // mirror for measurement
-      ktext.text(el.value || ' ');  // Use space for empty to maintain height
-      
       const sc = viewportScale();
-      
-      // Measure content width and adjust both expand and shrink in real time
-      const textWidth = Math.ceil(ktext.getTextWidth());
-      const padding = 10; // small buffer to avoid immediate edge hits
-      const minWorldWidth = Math.max(12, Math.ceil(ktext.fontSize()));
-      const neededWorldW = Math.max(minWorldWidth, textWidth + padding);
-      const currentWorldW = frame.width();
+      const store = useUnifiedCanvasStore.getState();
 
-      if (Math.abs(neededWorldW - currentWorldW) > 0.5) {
-        // Update frame and DOM width
+      ktext.text(el.value || ' ');
+      (ktext as any).wrap?.('none');
+      (ktext as any).width?.(undefined);
+      ktext._clearCache?.();
+
+      const textWidth = Math.ceil((ktext as any).getTextWidth?.() || 0);
+      const minWorldW = Math.max(12, Math.ceil(ktext.fontSize()));
+      const padding = 10;
+      const neededWorldW = Math.max(minWorldW, textWidth + padding);
+
+      if (Math.abs(frame.width() - neededWorldW) > 0.25) {
         frame.width(neededWorldW);
         el.style.width = `${neededWorldW * sc.x}px`;
-
-        // Redraw layer for visual feedback
-        mainLayer?.batchDraw();
-
-        // Update store width + text (skipHistory defaults to true in store)
-        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
-          width: neededWorldW,
-          text: el.value
-        });
-      } else {
-        // Keep text in sync without width change
-        useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
-          text: el.value
-        });
+        group.getLayer()?.batchDraw();
       }
       
-      // Don't set ktext.width() - let it render naturally without clipping
-      ktext.width(undefined);  // Remove width constraint so text isn't clipped
-      
-      // Keep text position consistent
-      ktext.position({ x: 0.5, y: 0 });  // Almost no padding
-      
-      // Set exact height to font size - accounting for border-box
-      el.style.height = `${ktext.fontSize() * sc.y + 2}px`;  // Font size + 2px for borders (1px top + 1px bottom)
+      el.style.height = `${ktext.fontSize() * sc.y + 2}px`;
+
+      store.updateElement(elementId as ElementId, {
+        width: neededWorldW,
+        text: el.value
+      });
     }
     
-        function finalizeText(el: HTMLTextAreaElement, note: { group: Konva.Group; ktext: Konva.Text; frame: Konva.Rect; elementId: string }, mode: 'commit'|'cancel') {
+    async function finalizeText(el: HTMLTextAreaElement, note: { group: Konva.Group; ktext: Konva.Text; frame: Konva.Rect; elementId: string }, mode: 'commit'|'cancel') {
       const { group, ktext, frame, elementId } = note;
       
+      activeTextEditState = null;
+      
       if (mode === 'commit' && el.value.trim().length) {
-        // show Konva text
         ktext.visible(true);
-        ktext.text(el.value);
-        ktext.width(undefined); // Remove width constraint to measure natural size
-        
-        // Ensure natural width (no forced wrapping) and measure tight
-        try { (ktext as any).wrap?.('none'); (ktext as any).width?.(undefined); } catch {}
-        ktext._clearCache();
+        (ktext as any).wrap?.('none');
+        (ktext as any).width?.(undefined);
+        ktext._clearCache?.();
+
         const bbox = ktext.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
-        const metricW = Math.ceil(Math.max(1, (ktext as any).getTextWidth?.() || 0));
-        // Prefer text width metric to avoid right-side whitespace; fallback to bbox
-        const textWidth = Math.max(1, metricW || Math.ceil(Math.max(1, bbox.width)));
-        const textHeight = Math.ceil(Math.max(1, bbox.height));
+        const w = Math.max(1, Math.ceil((ktext as any).getTextWidth?.() || bbox.width));
+        const h = Math.max(1, Math.ceil(bbox.height));
 
-        // Update frame to exactly match drawn text bounds
-        frame.width(textWidth);
-        frame.height(textHeight);
-
-        // Offset text so its visual bbox aligns to frame origin
+        frame.width(w); 
+        frame.height(h);
         ktext.position({ x: -bbox.x, y: -bbox.y });
-
-        // Clip the group to the exact text rect so transformer hugs perfectly
-        try { (group as any).clip({ x: 0, y: 0, width: textWidth, height: textHeight }); } catch {}
+        (group as any).clip?.({ x: 0, y: 0, width: w, height: h });
         
-        // Update store with final text and width only (height is intrinsic); clear editing flag
         useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
-          text: el.value,
-          width: textWidth,
-          isEditing: false
+          text: ktext.text(), 
+          width: w, 
+          height: h,
+          isEditing: false 
         });
         
-        mainLayer?.batchDraw();
-        
-        // Select the element to show resize handles
-        useUnifiedCanvasStore.getState().clearSelection();
-        useUnifiedCanvasStore.getState().selectElement(elementId as ElementId, false);
-        
-        // Attach transformer to the GROUP and set up proper resize handling
-        const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
-        const transformer = (window as any).__CANVAS_TRANSFORMER__ as Konva.Transformer;
-        if (renderer && transformer && group && frame) {
-          console.log('[RESIZE] Setting up transformer for text element', elementId);
-          
-          // Make the group draggable
-          group.draggable(true);
-          
-          // Attach transformer to the GROUP
-          transformer.nodes([group]);
-          transformer.visible(true);
-          transformer.keepRatio(false); // keepRatio is false to allow separate vertical/horizontal scaling
-          transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','middle-left','middle-right','top-center','bottom-center']);
-          transformer.anchorSize(8);
-          transformer.borderStroke('#3B82F6');
-          transformer.borderStrokeWidth(1);
-          
-          // Delegate resize behavior to CanvasRendererV2 to avoid duplicate handlers
-          try {
-            renderer.syncSelection(new Set([elementId] as any));
-          } catch {}
-
-          group.on('dragend', () => {
-            useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
-              x: group.x(),
-              y: group.y(),
-            });
-          });
-
-          overlayLayer?.batchDraw();
-        }
-
-        // DEV: parity probe for text commit
-        try {
-          const sc = viewportScale();
-          const { captureTextCommitProbe } = require('../dev/probes');
-          captureTextCommitProbe({
-            id: elementId,
-            text: el.value,
-            metrics: { width: textWidth, height: textHeight },
-            frame: { width: textWidth, height: textHeight },
-            inset: { x: 0, y: 0 },
-            viewportScale: sc,
-          });
-        } catch {}
-      } else {
-        // cancel or empty: delete the element (clear editing flag first just in case)
-        try { useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { isEditing: false }); } catch {}
-        useUnifiedCanvasStore.getState().deleteElement(elementId as ElementId);
+        useUnifiedCanvasStore.getState().selectElement(elementId as ElementId);
+      } else if (mode === 'cancel' && !ktext.text().trim().length) {
+        // If the user cancels an empty new text box, delete it
+        useUnifiedCanvasStore.getState().deleteElements([elementId as ElementId]);
+        useUnifiedCanvasStore.getState().setSelectedTool('select');
+        leaveTextTool();
+        console.info('[TEXT] finalized', mode);
       }
       
       // Safely remove textarea if it still exists (guard against blur race)

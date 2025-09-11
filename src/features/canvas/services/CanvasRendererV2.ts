@@ -629,7 +629,6 @@ export class CanvasRendererV2 {
     this.updateCircle(group, el);
     return group;
   }
-
   // Circle-Text: centered text with auto-fit font size
   private createCircleText(el: any): Konva.Group {
     const id = String(el.id);
@@ -665,9 +664,9 @@ export class CanvasRendererV2 {
   private fitTextFontSize(textNode: Konva.Text, boxW: number, boxH: number, minFont: number, maxFont: number, mode: 'scale' | 'wrap' | 'ellipsis'): number {
     // Configure wrap per mode
     if (mode === 'scale' || mode === 'ellipsis') {
-      (textNode as any).wrap('none');
+      (textNode as any).wrap?.('none');
     } else {
-      (textNode as any).wrap('word');
+      (textNode as any).wrap?.('word');
     }
     let lo = minFont, hi = maxFont, best = minFont;
     while (lo <= hi) {
@@ -682,7 +681,6 @@ export class CanvasRendererV2 {
     // If ellipsis and it still overflows width, you may post-process string; skip for minimal patch
     return best;
   }
-
   // New: unified circle-text sync using center-origin and inscribed-square layout
   private syncCircleText(el: any, group: Konva.Group) {
     const id = String(el.id);
@@ -1062,8 +1060,6 @@ export class CanvasRendererV2 {
     // Visibility during editing
     try { textNode.visible(!el.isEditing); } catch {}
   }
-
-
   private updateCircle(group: Konva.Group, el: any) {
     const radiusX = Math.max(20, el.radiusX || el.radius || 20);
     const radiusY = Math.max(20, el.radiusY || el.radius || 20);
@@ -1469,7 +1465,6 @@ export class CanvasRendererV2 {
     }
     return group;
   }
-
   private updateTriangle(group: Konva.Group, el: any) {
     const w = Math.max(1, el.width || 1);
     const h = Math.max(1, el.height || 1);
@@ -1668,8 +1663,9 @@ export class CanvasRendererV2 {
       text.fontFamily(el.fontFamily || 'Inter, system-ui, sans-serif');
       try { (text as any).fontStyle((el as any).fontStyle || 'normal'); } catch {}
       text.fill(el.textColor || '#111827');
-      // For single-line plain text, let Konva calculate natural width to avoid clipping
-      try { (text as any).width(undefined); } catch {}
+      // For single-line plain text, width should match the committed frame width
+      // to keep the visual frame and glyphs in lockstep
+      try { (text as any).width(w); } catch {}
       // Keep plain text single-line by default
       (text as any).wrap('none');
       (text as any).align((el as any).align || 'left');
@@ -1680,13 +1676,13 @@ export class CanvasRendererV2 {
         // Use Konva's text measurement for width/height
         let measuredW = 0;
         try { measuredW = Math.ceil((text as any).getTextWidth?.() || 0); } catch { measuredW = Math.ceil(text.width()); }
-        // Ensure on-screen width at least fits the content when no wrapping
-        try { (text as any).width(Math.max(w, measuredW)); } catch {}
+        // Keep text width exactly at the committed frame width
+        try { (text as any).width(w); } catch {}
         const measuredH = Math.ceil(text.height());
         const minClickableH = Math.max(24, Math.ceil((el.fontSize || 14) * 1.1));
         const targetH = Math.max(minClickableH, measuredH || 0);
         const minClickableW = Math.max(60, Math.ceil((el.fontSize || 14) * 3));
-        const targetW = Math.max(minClickableW, measuredW || w || 1);
+        const targetW = Math.max(minClickableW, w || measuredW || 1);
         this.ensureHitAreaSize(group, targetW, targetH);
       } catch {}
     } else {
@@ -1711,8 +1707,6 @@ export class CanvasRendererV2 {
     const handles = { hitTargets: [] as Konva.Shape[] } as any;
     return { overlayGroup, handles };
   }
-
-
   // Provide plus (+) handle for add actions in table overlay
   private drawPlusHandle(parent: Konva.Group, center: { x: number; y: number }, onClick: () => void): Konva.Group {
     const g = new Konva.Group({ x: center.x, y: center.y, listening: true });
@@ -1725,9 +1719,6 @@ export class CanvasRendererV2 {
     parent.add(g);
     return g;
   }
-
-  // duplicate clearTableOverlay removed (see bottom implementation)
-
 
   private drawDeleteHandle(parent: Konva.Group, center: { x: number; y: number }, onClick: () => void): Konva.Group {
     const g = new Konva.Group({ x: center.x, y: center.y, listening: true });
@@ -1826,6 +1817,53 @@ export class CanvasRendererV2 {
     }
 
     this.layers.overlay.batchDraw();
+  }
+
+  /**
+   * Measure the minimum required width for a Konva.Text so that trailing glyphs are not clipped.
+   * Uses an offscreen clone and both canvas advance metrics and clientRect visual width.
+   */
+  private measureTextRequiredWidth(textNode: Konva.Text, guardPx: number = 12): number {
+    try {
+      const layer = textNode.getLayer();
+      const clone = textNode.clone({ visible: false, listening: false });
+      try { layer ? layer.add(clone) : textNode.getStage()?.add?.(clone as any); } catch {}
+      try { (clone as any).wrap?.('none'); (clone as any).width?.(undefined); (clone as any)._clearCache?.(); } catch {}
+
+      // Advance width via canvas 2D API
+      let advanceW = 0;
+      try {
+        const canvas = (Konva as any).Util?.createCanvasElement ? (Konva as any).Util.createCanvasElement() : document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const fs = (clone as any).fontSize?.() || 14;
+          const ff = (clone as any).fontFamily?.() || 'sans-serif';
+          const fst = (clone as any).fontStyle?.() || '';
+          ctx.font = `${fst ? fst + ' ' : ''}${fs}px ${ff}`;
+          const m = ctx.measureText(((clone as any).text?.() || '') as string);
+          advanceW = Math.ceil(m.width || 0);
+        }
+      } catch {}
+
+      // Visual width via Konva clientRect
+      let visualW = 0;
+      try {
+        const r = clone.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
+        visualW = Math.ceil(r?.width || 0);
+      } catch {}
+
+      try { clone.destroy(); } catch {}
+      const req = Math.max(advanceW, visualW);
+      return Math.max(1, Math.ceil(req + Math.max(0, guardPx)));
+    } catch {
+      // Fallback: use Konva's text width with guard
+      try {
+        const gw = Math.ceil(((textNode as any).getTextWidth?.() || 0));
+        return Math.max(1, gw + Math.max(0, guardPx));
+      } catch {
+        return 12 + Math.max(0, guardPx);
+      }
+    }
   }
 
   private closeContextMenu() {
@@ -2211,7 +2249,6 @@ export class CanvasRendererV2 {
 
     return group;
   }
-
   private updateStickyNote(group: Konva.Group, el: any) {
     const w = Math.max(1, el.width || 200);
     const h = Math.max(1, el.height || 150);
@@ -2276,7 +2313,6 @@ export class CanvasRendererV2 {
     }
     return null;
   }
-
   // Flexible init supporting (stage), (stage, callback) or (stage, layers, { onUpdateElement })
   init(
     stage: Konva.Stage,
@@ -2351,9 +2387,49 @@ export class CanvasRendererV2 {
     const MIN_W = 60;
     const MIN_H = 40;
     this.transformer.boundBoxFunc((oldBox, newBox) => {
-      const w = Math.max(newBox.width, MIN_W);
-      const h = Math.max(newBox.height, MIN_H);
-      return { ...newBox, width: w, height: h };
+      // Compute dynamic min width from dual metrics on a clone to avoid clipping
+      let dynMinW = 20;
+      try {
+        const g = single as Konva.Group;
+        const tn = g.findOne<Konva.Text>('Text.text') || g.findOne<Konva.Text>('Text') || g.findOne<Konva.Text>('.text');
+        if (tn) {
+          // Measure with generous guard
+          dynMinW = Math.max(20, this.measureTextRequiredWidth(tn, 12));
+        }
+      } catch {}
+
+      const minHeight = 10;
+      const aa = this.transformer?.getActiveAnchor?.();
+      const activeName = (aa && (typeof (aa as any).name === 'function' ? (aa as any).name() : (aa as any).getName?.())) || ((this.transformer as any)._movingAnchorName as string) || '';
+
+      // Enforce aspect ratio lock explicitly (width drives height)
+      const baseW = Math.max(1, Math.abs(oldBox.width));
+      const baseH = Math.max(1, Math.abs(oldBox.height));
+      const aspect = baseW / baseH;
+
+      // Allow downsizing: scale the dynamic min by the current gesture scale ratio
+      const scaleRatio = Math.max(0.01, Math.abs(newBox.width) / baseW);
+      const scaledMinW = Math.max(12, Math.round(dynMinW * scaleRatio));
+      let w = Math.max(scaledMinW, Math.round(Math.abs(newBox.width)));
+      let h = Math.max(minHeight, Math.round(w / (aspect || 1))); // derive height from width (tight)
+
+      // Adjust x/y to keep opposite edges fixed when clamping
+      let x = newBox.x;
+      let y = newBox.y;
+      if (w !== newBox.width && activeName?.includes?.('left')) {
+        x += newBox.width - w;
+      }
+      if (h !== newBox.height && activeName?.includes?.('top')) {
+        y += newBox.height - h;
+      }
+
+      // Snap to integers to avoid visual flashing
+      w = Math.round(w);
+      h = Math.round(h);
+      x = Math.round(x);
+      y = Math.round(y);
+
+      return { ...newBox, x, y, width: w, height: h };
     });
     // Attach transformer to OVERLAY layer and keep it on top of overlay children
     this.layers.overlay.add(this.transformer);
@@ -2850,7 +2926,6 @@ export class CanvasRendererV2 {
           }
         } catch { (this as any).groupDrag = null; }
     });
-
     // Drag end for committing position changes
     this.stage.on('dragend.renderer', (e: any) => {
       const node = this.getElementNodeFromEvent(e.target);
@@ -2985,7 +3060,6 @@ export class CanvasRendererV2 {
         } catch {}
       }
     });
-
     // Mousemove for hover effects on connectors
     this.stage.on('mousemove.renderer', (e: any) => {
       const node = this.getElementNodeFromEvent(e.target);
@@ -3013,7 +3087,6 @@ export class CanvasRendererV2 {
         this.lastHoveredNode = null;
       }
     });
-    
     // Force initial draw of all layers to ensure hit detection works
     this.layers?.background?.draw();
     this.layers?.main?.draw();
@@ -3040,9 +3113,9 @@ export class CanvasRendererV2 {
         pointerEvents: 'none', // overlay UI controls can flip this to 'auto' locally
         zIndex: '2',           // above Konva container (which defaults to zIndex: 0/1)
       });
-      // Position root relative to the container’s offset parent
+      // Position root relative to the container's offset parent
       container.parentElement?.appendChild(root);
-      // Ensure the container’s parent is positioned
+      // Ensure the container's parent is positioned
       const parent = container.parentElement as HTMLElement;
       const cs = getComputedStyle(parent);
       if (cs.position === 'static') parent.style.position = 'relative';
@@ -3490,8 +3563,7 @@ export class CanvasRendererV2 {
         (ta as HTMLTextAreaElement).setSelectionRange(len, len);
       }
     } catch {}
-    
-    // Also schedule focus attempts to ensure it works
+    // Also schedule focus attempts to ensure it works across browsers
     const tryFocus = () => {
       try {
         if (document.activeElement !== ta) {
@@ -3559,7 +3631,6 @@ export class CanvasRendererV2 {
         }
       } catch {}
     }
-
     // Enhanced measurement logic with circle-specific geometry
     const measureStickyConsistent = () => {
       // Handle circle expansion or regular shape auto-height
@@ -3572,7 +3643,7 @@ export class CanvasRendererV2 {
       ta.style.height = 'auto';
       const scrollHeight = Math.ceil(ta.scrollHeight);
       // Last-line guard to prevent jumpy near-bottom clipping
-      const guardPx = Math.max(4, Math.ceil(fontSize * 0.4 * stageScale));
+      const guardPx = Math.max(12, Math.ceil(fontSize * 0.4 * stageScale));
       const minLinePx = Math.max(4, Math.ceil(fs * lh) + 2); // ensure at least one line height to prevent caret jump
       // Allow both growth and shrink: remove previous contentHeight clamp
       newHeight = Math.max(scrollHeight + guardPx, minLinePx);
@@ -3853,45 +3924,82 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     };
 
     const measurePlain = () => {
-      // Update textarea size to fit content without wrapping
-      try { (ta as HTMLElement).style.width = 'auto'; } catch {}
-      const liveWpx = Math.max(1, Math.ceil((ta as HTMLElement).scrollWidth || 1));
-      const nextWpx = liveWpx;
-      (ta as HTMLElement).style.width = `${nextWpx}px`;
-      const fsWorld = (el as any).fontSize || 14;
-      const lh = (el as any).lineHeight || 1.2;
-      const nextHpx = Math.max(1, Math.ceil(fsWorld * lh * stageScale));
-      ta.style.height = `${nextHpx + 2}px`;
-
-      // Keep the editing wrapper in sync so it also expands/contracts
+      // Live auto-hug for plain text (create and re-edit)
       try {
-        (editWrapper as HTMLElement).style.width = `${nextWpx}px`;
-        (editWrapper as HTMLElement).style.height = `${nextHpx + 2}px`;
-      } catch {}
+        // 1) Primary DOM metric in px
+        (ta as HTMLElement).style.width = 'auto';
+        const domW1 = Math.max(1, Math.ceil((ta as HTMLElement).scrollWidth || 1));
 
-      // Update Konva text live for feedback without forcing a fixed width (prevents clipping)
-      try {
-        const group = node as Konva.Group;
-        const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
-        if (textNode) {
-          textNode.text(ta.value);
-          try { (textNode as any).width(undefined); (textNode as any)._clearCache?.(); } catch {}
-          const measuredW = Math.max(1, Math.ceil(((textNode as any).getTextWidth?.() || nextWpx) as number));
-          const worldW = Math.max(1, measuredW / stageScale);
-          const worldH = Math.max(10, Math.ceil(fsWorld * lh));
-          this.ensureHitAreaSize(group, worldW, worldH);
-          this.scheduleDraw('main');
-          this.transformer?.forceUpdate?.();
-          this.scheduleDraw('overlay');
-        }
-      } catch {}
+        // 2) Offscreen canvas backup (px)
+        let offW = domW1;
+        try {
+          const cs = window.getComputedStyle(ta as HTMLElement);
+          const ctx = document.createElement('canvas').getContext('2d');
+          if (ctx) {
+            const font = `${cs.fontSize} ${cs.fontFamily}`.trim();
+            if (font && font !== ' ') ctx.font = font;
+            offW = Math.max(offW, Math.ceil(ctx.measureText((ta as HTMLTextAreaElement).value || ' ').width));
+          }
+        } catch {}
 
-      // Keep store in sync during typing (no history churn): do not persist width for plain text
-      try {
-        const store = (window as any).__UNIFIED_CANVAS_STORE__;
-        if (store?.getState?.().updateElement) {
-          store.getState().updateElement(elId, { text: (ta as HTMLTextAreaElement).value }, { skipHistory: true });
-        }
+        const applyWidth = (targetPx: number) => {
+          // 3) Apply DOM width (px)
+          const nextWpx = Math.max(1, Math.ceil(targetPx));
+          
+          // 4) Height: single line box in px
+          const fsWorld = (el as any).fontSize || 14;
+          const lhWorld = (el as any).lineHeight || 1.2;
+          const nextHpx = Math.max(1, Math.ceil(fsWorld * lhWorld * stageScale));
+
+          // 5) Konva side: measure natural width on clean node, convert to world + padding
+          let overlayWidthPx = nextWpx;
+          try {
+            const group = node as Konva.Group;
+            const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
+            if (textNode) {
+              textNode.text((ta as HTMLTextAreaElement).value);
+              try { (textNode as any).wrap?.('none'); (textNode as any).width?.(undefined); (textNode as any)._clearCache?.(); } catch {}
+              const measuredPx = Math.max(1, Math.ceil(((textNode as any).getTextWidth?.() || nextWpx) as number));
+              const paddingWorld = 10;
+              const minWorldW = Math.max(12, Math.ceil(fsWorld));
+              const contentWorld = Math.max(1, Math.ceil(measuredPx / stageScale));
+              const worldW = Math.max(minWorldW, contentWorld + paddingWorld);
+              const worldH = Math.max(10, Math.ceil(fsWorld * lhWorld));
+
+              // Drive DOM overlay from world width to guarantee contraction
+              overlayWidthPx = Math.max(1, Math.ceil(worldW * stageScale));
+
+              this.ensureHitAreaSize(group, worldW, worldH);
+              this.scheduleDraw('main');
+              this.transformer?.forceUpdate?.();
+              this.scheduleDraw('overlay');
+
+              // Store sync
+              try {
+                const store = (window as any).__UNIFIED_CANVAS_STORE__;
+                if (store?.getState?.().updateElement) {
+                  store.getState().updateElement(elId, { width: worldW, text: (ta as HTMLTextAreaElement).value }, { skipHistory: true });
+                }
+              } catch {}
+            }
+          } catch {}
+
+          // Apply final DOM sizes last to avoid double reflow
+          (ta as HTMLElement).style.width = `${overlayWidthPx}px`;
+          try { (editWrapper as HTMLElement).style.width = `${overlayWidthPx}px`; } catch {}
+          (ta as HTMLElement).style.height = `${nextHpx + 2}px`;
+          try { (editWrapper as HTMLElement).style.height = `${nextHpx + 2}px`; } catch {}
+        };
+
+        // APPLY IMMEDIATELY for responsiveness
+        applyWidth(Math.max(offW, domW1));
+
+        // 7) Next-frame re-measure to eliminate caret overshoot on shrink
+        requestAnimationFrame(() => {
+          const domW2 = Math.max(1, Math.ceil((ta as HTMLElement).scrollWidth || 1));
+          const targetPx = Math.max(offW, Math.min(domW1, domW2));
+          applyWidth(targetPx);
+        });
       } catch {}
     };
 
@@ -3983,12 +4091,12 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
             const padPxFixed = this.getCirclePadPx(el);
             const rClipWorld = Math.max(1, r0 - strokeWidth / 2);
             const sidePx = Math.SQRT2 * rClipWorld * sLim; // outer square in px
-            const contentSidePx = Math.max(4, sidePx - 2 * padPxFixed);
+            const contentSidePx = Math.max(12, sidePx - 2 * padPxFixed);
 
             // Ghost measure with convergence and safety buffer
             const base = window.getComputedStyle(ta as HTMLElement);
             const fontPx = parseFloat(base.fontSize || '14') || 14;
-            const safetyBufferPx = Math.max(4, Math.ceil(fontPx * 0.5));
+            const safetyBufferPx = Math.max(12, Math.ceil(fontPx * 0.5));
             const measureForSide = (contentPx: number) => {
               const ghost = document.createElement('div');
               Object.assign(ghost.style, {
@@ -4089,7 +4197,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     } else {
       ta.addEventListener('input', () => { if (!composing) measurePlain(); });
     }
-
     // --- Commit / Cancel ---
     const commit = () => {
       // Use safe closer if available to avoid temporal dead zone
@@ -4237,7 +4344,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         this.scheduleDraw('overlay');
         return; // circle handled; don't touch textarea positioning directly
       }
-      // Height is controlled by autosize; don’t override here
+      // Height is controlled by autosize; don't override here
       if (this.rotateTextareaWhileEditing) {
         const r = (node as any).getAbsoluteRotation?.() ?? 0;
         ta.style.transform = `rotate(${r}deg)`;
@@ -4271,7 +4378,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       this.stage?.container()?.removeEventListener('wheel', onWheel);
 
       document.removeEventListener('mousedown', onDocMouseDown, true);
-      this.stage?.off('dragmove.editor', onDragMove as any);
+      this.stage.off('dragmove.editor', onDragMove as any);
 
       // Clear any outstanding focus retries
       try {
@@ -4343,10 +4450,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       this.currentEditingId = null;
     }
   }
-
   // (removed duplicate destroy implementation; see comprehensive destroy() later)
-  
-
   /** Create or update nodes for elements, remove stale nodes, and batch draw */
   syncElements(input: Map<ElementId, CanvasElement> | CanvasElement[] | any) {
     if (!this.layers) return;
@@ -4735,7 +4839,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       arrowNode.fill(el.stroke || '#374151'); // Ensure arrow head has fill color
     }
   }
-
   // Preview-only reflow of edges connected to these element IDs using Konva node positions
   private previewReflowEdgesForMovedNodes(movedIds: Set<string>) {
     try {
@@ -5019,7 +5122,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       console.warn('[CanvasRendererV2] Failed to refresh transformer:', e);
     }
   }
-
   /** Attach Transformer to current selection */
   syncSelection(selectedIds: Set<ElementId>) {
 
@@ -5079,36 +5181,44 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
           this.transformer.keepRatio(true);
           this.transformer.rotateEnabled(true);
           this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right']);
+          // Make anchors easier to grab for text (tight frames) and add small padding
+          this.transformer.anchorSize(12);
+          try { (this.transformer as any).padding?.(4); } catch {}
 
-          // Tighten hit-area to exact text bounds so the transformer hugs with no gaps
+          // --- New Selection Tightening Logic ---
           try {
             const g = single as Konva.Group;
             const t = g.findOne<Konva.Text>('Text.text') || g.findOne<Konva.Text>('Text') || g.findOne<Konva.Text>('.text');
             const hit = g.findOne<Konva.Rect>('.hit-area');
             if (t && hit) {
-              try { (t as any).wrap?.('none'); (t as any).width?.(undefined); (t as any)._clearCache?.(); } catch {}
+              (t as any).wrap?.('none');
+              (t as any).width?.(undefined);
+              t._clearCache?.();
+
               const bbox = t.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
-              const metricW = Math.max(1, Math.ceil(((t as any).getTextWidth?.() || 0)));
-              const w = Math.max(1, metricW); // prefer glyph advance width to eliminate trailing gap
+              const w = Math.max(1, Math.ceil((t as any).getTextWidth?.() || bbox.width));
               const h = Math.max(1, Math.ceil(bbox.height));
+
               hit.width(w); hit.height(h); hit.x(0); hit.y(0);
               t.position({ x: -bbox.x, y: -bbox.y });
-              try { (g as any).clip({ x: 0, y: 0, width: w, height: h }); } catch {}
-              try { this.transformer?.forceUpdate?.(); } catch {}
+              // Avoid clipping while resizing; clipping can cause disappearing glyphs
+              try { (g as any).clip?.(null); (g as any).clipFunc?.(null); } catch {}
+              this.transformer.forceUpdate?.();
             }
-          } catch {}
+          } catch (e) {
+            console.error('Error during text selection tightening:', e);
+          }
           
           // Add boundBoxFunc to prevent tiny sizes and correct x when clamping left-edge resizes
           this.transformer.boundBoxFunc((oldBox, newBox) => {
-            // Compute dynamic min width from the text node to avoid last-character clipping and keep tight fit
+            // Compute dynamic min width from dual metrics on a clone to avoid clipping
             let dynMinW = 20;
             try {
               const g = single as Konva.Group;
               const tn = g.findOne<Konva.Text>('Text.text') || g.findOne<Konva.Text>('Text') || g.findOne<Konva.Text>('.text');
               if (tn) {
-                try { (tn as any).width?.(undefined); (tn as any)._clearCache?.(); } catch {}
-                const tw = Math.ceil(((tn as any).getTextWidth?.() || 0));
-                dynMinW = Math.max(20, tw); // no extra padding
+                // Measure with generous guard
+                dynMinW = Math.max(20, this.measureTextRequiredWidth(tn, 12));
               }
             } catch {}
 
@@ -5121,7 +5231,10 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
             const baseH = Math.max(1, Math.abs(oldBox.height));
             const aspect = baseW / baseH;
 
-            let w = Math.max(dynMinW, Math.abs(newBox.width));
+            // Allow downsizing: scale the dynamic min by the current gesture scale ratio
+            const scaleRatio = Math.max(0.01, Math.abs(newBox.width) / baseW);
+            const scaledMinW = Math.max(12, Math.round(dynMinW * scaleRatio));
+            let w = Math.max(scaledMinW, Math.round(Math.abs(newBox.width)));
             let h = Math.max(minHeight, Math.round(w / (aspect || 1))); // derive height from width (tight)
 
             // Adjust x/y to keep opposite edges fixed when clamping
@@ -5133,6 +5246,12 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
             if (h !== newBox.height && activeName?.includes?.('top')) {
               y += newBox.height - h;
             }
+
+            // Snap to integers to avoid visual flashing
+            w = Math.round(w);
+            h = Math.round(h);
+            x = Math.round(x);
+            y = Math.round(y);
 
             return { ...newBox, x, y, width: w, height: h };
           });
@@ -5178,7 +5297,8 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
           this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','top-center','bottom-center','middle-left','middle-right']);
           try { (this.transformer as any).centeredScaling?.(false); } catch {}
         }
-        if (this.transformer) this.transformer.anchorSize(8);
+        // Default anchor size for non-text selections
+        if (this.transformer && !isSingleText) this.transformer.anchorSize(8);
 
         // No per-frame text handlers: allow natural Konva scaling during drag
         // Commit at transformend (special-cased) to convert scale -> width/height
@@ -5335,7 +5455,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       this.connectorOverlayGroup?.add(targetHandle);
     });
   }
-
   // Create draggable connector handle with proper event handling
   private createConnectorHandle(position: { x: number; y: number }, connectorId: string, endpoint: 'start' | 'end'): Konva.Circle {
     const handle = new Konva.Circle({
@@ -5480,13 +5599,19 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       hitRect = groupNode.findOne<Konva.Rect>('Rect.hit-area') || null;
 
       // Freeze transformer border to reduce flicker (keep anchors visible)
+      try { transformer.borderEnabled(false); visualsFrozen = true; } catch {}
+
+      // IMPORTANT: Avoid glyph clipping while downsizing by rendering as point-text during the gesture
       try {
-        transformer.borderEnabled(false);
-        visualsFrozen = true;
+        (textNode as any).wrap?.('none');
+        (textNode as any).width?.(undefined);
+        (textNode as any)._clearCache?.();
+        if (textNode.x() !== 0) textNode.x(0);
+        if (textNode.y() !== 0) textNode.y(0);
       } catch {}
 
-      // Set skip flag for generic handler
-      try { groupNode.setAttr('__skipGenericResize', true); } catch {}
+      // Do not clip the group during the gesture – clipping causes disappearing glyphs
+      try { (groupNode as any).clip?.(null); (groupNode as any).clipFunc?.(null); } catch {}
     };
 
     // Pre-cache rectangles for maximum performance
@@ -5494,7 +5619,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     let lastScale = { x: 1, y: 1 };
 
     const onTransform = () => {
-      // Read scale values (fastest possible)
+      // Read current transformer-applied scale (preview only)
       const sx = groupNode.scaleX();
       const sy = groupNode.scaleY();
 
@@ -5514,70 +5639,40 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         }
       } catch {}
 
-      // Compute new width/font based on anchor semantics
-      // Anchor-aware resize
+      // Compute preview frame without mutating text node (let transformer show scaled preview)
       const clampWidth = (v: number) => (v < 20 ? 20 : v);
       const clampFont = (v: number) => (v < 8 ? 8 : v > 512 ? 512 : v);
 
-      let nextFont = base.fontSize;
-      let nextWidth = base.width;
+      let prevFont = base.fontSize;
+      let prevWidth = base.width;
 
       const isH = anchor.includes('left') || anchor.includes('right');
       const isV = anchor.includes('top') || anchor.includes('bottom');
 
       if (isH && !isV) {
-        // Horizontal edge: width only
-        nextWidth = clampWidth(base.width * sx);
-        nextFont = base.fontSize;
+        prevWidth = clampWidth(base.width * sx);
+        prevFont = base.fontSize;
       } else if (isV && !isH) {
-        // Vertical edge: font only
-        nextFont = clampFont(base.fontSize * sy);
-        nextWidth = base.width;
+        prevFont = clampFont(base.fontSize * sy);
+        prevWidth = base.width;
       } else {
-        // Corner: scale font proportionally, width by sx
         const s = Math.sqrt(sx * sy);
-        nextFont = clampFont(base.fontSize * s);
-        nextWidth = clampWidth(base.width * sx);
+        prevFont = clampFont(base.fontSize * s);
+        prevWidth = clampWidth(base.width * sx);
       }
 
-      // Apply to text node (minimal calls)
-      if (textNode.fontSize() !== nextFont) textNode.fontSize(nextFont);
-      if (textNode.width() !== nextWidth) textNode.width(nextWidth);
-      // Force text at (0,0) inside group to avoid padding-induced misalignment
-      if (textNode.x() !== 0) textNode.x(0);
-      if (textNode.y() !== 0) textNode.y(0);
-
-      // Keep the opposite edge stable when dragging from left anchors
-      if (anchor.includes('left')) {
-        const dx = base.width - nextWidth;
-        groupNode.x(base.x + dx);
-      }
-
-      // Measure actual rendered height to avoid trailing whitespace
-      let renderedTextH = nextFont * 1.2; // fallback
-      try {
-        textNode._clearCache?.();
-        const rect = textNode.getClientRect({ skipTransform: true });
-        if (rect && rect.height) {
-          renderedTextH = Math.ceil(rect.height + nextFont * DESCENDER_GUARD);
-        }
-      } catch {}
-
-      // Update frame/hit rect live so transformer "hugs" the text
+      // Update only the hit-rect so the transformer "hugs" during preview
       if (!hitRect) hitRect = groupNode.findOne<Konva.Rect>('Rect.hit-area') || null;
       if (hitRect) {
-        hitRect.width(nextWidth);
-        hitRect.height(Math.max(1, renderedTextH));
+        const approxH = Math.max(1, Math.ceil(prevFont * 1.2));
+        hitRect.width(prevWidth);
+        hitRect.height(approxH);
         hitRect.x(0);
         hitRect.y(0);
       }
 
-      // Reset scale (single call)
-      groupNode.scale({ x: 1, y: 1 });
-
-      // Schedule draws via renderer's scheduler to coalesce frames
+      // Do NOT normalize scale or mutate text during drag; preview stays smooth
       try {
-        this.scheduleDraw('main');
         this.scheduleDraw('overlay');
       } catch {
         requestAnimationFrame(() => { try { groupNode.getLayer()?.batchDraw?.(); } catch {} });
@@ -5585,18 +5680,57 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     };
 
     const onTransformEnd = () => {
-      // Get final values; measure height to avoid whitespace
-      const finalFrameWidth = Math.max(1, textNode.width() || 1);
-      const finalFont = textNode.fontSize();
-      let finalHeight = Math.ceil(finalFont * 1.2);
-      try {
-        textNode._clearCache?.();
-        const rect = textNode.getClientRect({ skipTransform: true });
-        if (rect && rect.height) finalHeight = Math.ceil(rect.height + finalFont * DESCENDER_GUARD);
-      } catch {}
-      const finalFrameHeight = Math.max(1, finalHeight);
+      // Read applied scale and convert to geometry once
+      const sx = Math.abs(groupNode.scaleX() || 1);
+      const sy = Math.abs(groupNode.scaleY() || 1);
+      const clampWidth = (v: number) => (v < 20 ? 20 : v);
+      const clampFont = (v: number) => (v < 8 ? 8 : v > 512 ? 512 : v);
 
-      // Update hit-area only (outer frame proxy)
+      // keepRatio(true) ensures corner-resize; still compute generically
+      const nextWidth = clampWidth(base.width * sx);
+      const nextFont = clampFont(base.fontSize * sy);
+
+      // Normalize scale and apply final geometry to text node
+      groupNode.scale({ x: 1, y: 1 });
+      // Reset to natural measurement state
+      try { (textNode as any).wrap?.('none'); (textNode as any).width?.(undefined); } catch {}
+      textNode.fontSize(nextFont);
+      try { (textNode as any)._clearCache?.(); } catch {}
+
+      // Offscreen dual-metric measurement (advance vs visual)
+      let requiredPx = nextWidth;
+      try {
+        const clone = textNode.clone({ listening: false, visible: false });
+        (clone as any).wrap?.('none');
+        (clone as any).width?.(undefined);
+        clone.fontSize(nextFont);
+        (clone as any)._clearCache?.();
+        const ctx = document.createElement('canvas').getContext('2d');
+        let adv = 0;
+        if (ctx) {
+          ctx.font = `${nextFont}px ${textNode.fontFamily()}`;
+          adv = ctx.measureText(textNode.text() || ' ').width;
+        }
+        const vis = clone.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true }).width;
+        requiredPx = Math.max(requiredPx, Math.ceil(Math.max(adv, vis) + 12)); // generous guard
+        clone.destroy();
+      } catch {}
+
+      const appliedWidth = Math.max(nextWidth, requiredPx);
+      try { (textNode as any).width(appliedWidth); } catch {}
+
+      // Measure exact bounds from rendered glyphs and reposition to avoid overhang clipping
+      let bbox: any = { x: 0, y: 0, width: appliedWidth, height: Math.ceil(nextFont * 1.2) };
+      try { (textNode as any)._clearCache?.(); } catch {}
+      try {
+        bbox = textNode.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
+      } catch {}
+      try { textNode.position({ x: -bbox.x, y: -bbox.y }); } catch {}
+
+      const finalFrameWidth = Math.max(appliedWidth, Math.ceil(bbox.width) + 8);
+      const finalFrameHeight = Math.max(1, Math.ceil(bbox.height + nextFont * DESCENDER_GUARD));
+
+      // Update hit-area only (outer frame proxy) and ensure no group clipping
       if (!hitRect) {
         hitRect = groupNode.findOne<Konva.Rect>('Rect.hit-area') || null;
       }
@@ -5606,12 +5740,13 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         hitRect.x(0);
         hitRect.y(0);
       }
+      try { (groupNode as any).clip?.(null); (groupNode as any).clipFunc?.(null); } catch {}
 
       // Ensure hit area matches (fallback)
       try { this.ensureHitAreaSize(groupNode, finalFrameWidth, finalFrameHeight); } catch {}
 
       // Single transformer update (no immediate batchDraw to reduce flickering)
-      transformer.forceUpdate();
+      try { transformer.forceUpdate(); } catch {}
 
       // Delayed draw to let transformer settle
       requestAnimationFrame(() => {
@@ -5623,7 +5758,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         try {
           const store = (window as any).__UNIFIED_CANVAS_STORE__;
           const attrs = {
-            fontSize: finalFont,
+            fontSize: nextFont,
             width: finalFrameWidth,
             height: finalFrameHeight,
             x: groupNode.x(),
@@ -5733,7 +5868,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       if (this.currentEditor === ta) this.currentEditor = undefined;
     };
   }
-
   // Render minimalist add/remove row/col controls for table
   private renderTableControls(elId: string) {
     if (!this.layers?.overlay) return;
