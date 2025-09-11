@@ -598,18 +598,24 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         ktext.text(el.value);
         ktext.width(undefined); // Remove width constraint to measure natural size
         
-        // Measure actual text bounds to make frame hug text perfectly
+        // Ensure natural width (no forced wrapping) and measure tight
+        try { (ktext as any).wrap?.('none'); (ktext as any).width?.(undefined); } catch {}
         ktext._clearCache();
-        const metrics = ktext.measureSize(ktext.text());
-        const textWidth = Math.ceil(metrics.width) + 8; // More horizontal padding
-        const textHeight = Math.ceil(metrics.height * 1.2); // Increased vertical padding to prevent clipping
-        
-        // Update frame to perfectly hug the text with no bottom gap
+        const bbox = ktext.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
+        const metricW = Math.ceil(Math.max(1, (ktext as any).getTextWidth?.() || 0));
+        // Prefer text width metric to avoid right-side whitespace; fallback to bbox
+        const textWidth = Math.max(1, metricW || Math.ceil(Math.max(1, bbox.width)));
+        const textHeight = Math.ceil(Math.max(1, bbox.height));
+
+        // Update frame to exactly match drawn text bounds
         frame.width(textWidth);
         frame.height(textHeight);
-        
-        // Position text with small padding to prevent clipping
-        ktext.position({ x: 4, y: 2 });
+
+        // Offset text so its visual bbox aligns to frame origin
+        ktext.position({ x: -bbox.x, y: -bbox.y });
+
+        // Clip the group to the exact text rect so transformer hugs perfectly
+        try { (group as any).clip({ x: 0, y: 0, width: textWidth, height: textHeight }); } catch {}
         
         // Update store with final text and width only (height is intrinsic); clear editing flag
         useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { 
@@ -656,15 +662,33 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
           overlayLayer?.batchDraw();
         }
+
+        // DEV: parity probe for text commit
+        try {
+          const sc = viewportScale();
+          const { captureTextCommitProbe } = require('../dev/probes');
+          captureTextCommitProbe({
+            id: elementId,
+            text: el.value,
+            metrics: { width: textWidth, height: textHeight },
+            frame: { width: textWidth, height: textHeight },
+            inset: { x: 0, y: 0 },
+            viewportScale: sc,
+          });
+        } catch {}
       } else {
         // cancel or empty: delete the element (clear editing flag first just in case)
         try { useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, { isEditing: false }); } catch {}
         useUnifiedCanvasStore.getState().deleteElement(elementId as ElementId);
       }
       
-      // Safely remove textarea if it still exists
-      if (el && el.parentNode) {
-        el.remove();
+      // Safely remove textarea if it still exists (guard against blur race)
+      if (el) {
+        try {
+          if ((el as any).isConnected || el.parentNode) {
+            el.remove();
+          }
+        } catch {}
       }
       textarea = null;
       
@@ -680,11 +704,37 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     
     // Initialize based on current tool
     // Note: Text CREATION is handled here, text EDITING is handled by CanvasRendererV2
+    // Shadow modular renderer (selection only) behind flag
+    try {
+      const { readNewCanvasFlag } = require('../utils/canvasFlags');
+      if (readNewCanvasFlag?.()) {
+        const { RendererCore } = require('../renderer/modular/RendererCore');
+        const { SelectionModule } = require('../renderer/modular/modules/SelectionModule');
+        const { StoreAdapterUnified } = require('../renderer/modular/adapters/StoreAdapterUnified');
+        const { KonvaAdapterStage } = require('../renderer/modular/adapters/KonvaAdapterStage');
+        const core = new RendererCore();
+        core.register(new SelectionModule());
+        const store = new StoreAdapterUnified();
+        const layers = requireLayers(stage);
+        const konva = new KonvaAdapterStage(stage, { background: layers?.background || null, main: layers?.main || null, preview: layers?.preview || null, overlay: layers?.overlay || null });
+        core.init({ store, konva, overlay: {} });
+        const sync = () => core.sync(store.getSnapshot());
+        const unsub = store.subscribe(sync);
+        sync();
+        // Keep core around via closure; clean up on unmount
+        (stage as any).__mod_core__ = { core, unsub };
+      }
+    } catch {}
     if (currentSelectedTool === 'text') {
       useTextTool();
     }
     
     return () => {
+      // Cleanup modular shadow renderer if present
+      try {
+        const mod = (stage as any).__mod_core__;
+        if (mod) { mod.unsub?.(); mod.core?.destroy?.(); (stage as any).__mod_core__ = null; }
+      } catch {}
       leaveTextTool();
       textarea?.remove();
     };

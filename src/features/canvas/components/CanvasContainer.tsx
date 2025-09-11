@@ -17,6 +17,8 @@ import Konva from 'konva';
 import NonReactCanvasStage from './NonReactCanvasStage';
 import { readNewCanvasFlag, installRollbackShortcuts } from '../utils/canvasFlags';
 import ModernKonvaToolbar from '../toolbar/ModernKonvaToolbar';
+import { isDevHudEnabled } from '../dev/probes';
+import DevHud from '../dev/DevHud';
 import { CanvasDragDropHandler } from './ui/CanvasDragDropHandler';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { useCanvasSizing } from '../hooks/useCanvasSizing';
@@ -90,6 +92,13 @@ const CanvasContainerComponent: React.FC<CanvasContainerProps> = ({ onStageReady
                 <DevPerfOverlay />
               </div>
             </React.Suspense>
+          )}
+          {process.env.NODE_ENV === 'development' && isDevHudEnabled() && (
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+              <div style={{ pointerEvents: 'auto' }}>
+                <DevHud />
+              </div>
+            </div>
           )}
           {readNewCanvasFlag() ? (
             <NonReactCanvasStage 

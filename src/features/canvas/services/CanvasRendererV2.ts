@@ -5075,33 +5075,66 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         if (isSingleText && this.transformer) {
           // Ensure no mid-gesture text mutations: remove any legacy textscale handlers
           try { (single as Konva.Group).off('.textscale'); } catch {}
-          // Text: enable edges + corners; keep ratio to match preview; allow rotation
+          // Text: lock aspect ratio; restrict to corner anchors only
           this.transformer.keepRatio(true);
           this.transformer.rotateEnabled(true);
-          this.transformer.enabledAnchors([
-            'top-left','top-center','top-right',
-            'middle-left','middle-right',
-            'bottom-left','bottom-center','bottom-right',
-          ]);
+          this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right']);
+
+          // Tighten hit-area to exact text bounds so the transformer hugs with no gaps
+          try {
+            const g = single as Konva.Group;
+            const t = g.findOne<Konva.Text>('Text.text') || g.findOne<Konva.Text>('Text') || g.findOne<Konva.Text>('.text');
+            const hit = g.findOne<Konva.Rect>('.hit-area');
+            if (t && hit) {
+              try { (t as any).wrap?.('none'); (t as any).width?.(undefined); (t as any)._clearCache?.(); } catch {}
+              const bbox = t.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
+              const metricW = Math.max(1, Math.ceil(((t as any).getTextWidth?.() || 0)));
+              const w = Math.max(1, metricW); // prefer glyph advance width to eliminate trailing gap
+              const h = Math.max(1, Math.ceil(bbox.height));
+              hit.width(w); hit.height(h); hit.x(0); hit.y(0);
+              t.position({ x: -bbox.x, y: -bbox.y });
+              try { (g as any).clip({ x: 0, y: 0, width: w, height: h }); } catch {}
+              try { this.transformer?.forceUpdate?.(); } catch {}
+            }
+          } catch {}
           
           // Add boundBoxFunc to prevent tiny sizes and correct x when clamping left-edge resizes
           this.transformer.boundBoxFunc((oldBox, newBox) => {
-            const minWidth = 20;
-            const minHeight = 10;
+            // Compute dynamic min width from the text node to avoid last-character clipping and keep tight fit
+            let dynMinW = 20;
+            try {
+              const g = single as Konva.Group;
+              const tn = g.findOne<Konva.Text>('Text.text') || g.findOne<Konva.Text>('Text') || g.findOne<Konva.Text>('.text');
+              if (tn) {
+                try { (tn as any).width?.(undefined); (tn as any)._clearCache?.(); } catch {}
+                const tw = Math.ceil(((tn as any).getTextWidth?.() || 0));
+                dynMinW = Math.max(20, tw); // no extra padding
+              }
+            } catch {}
 
+            const minHeight = 10;
             const aa = this.transformer?.getActiveAnchor?.();
             const activeName = (aa && (typeof (aa as any).name === 'function' ? (aa as any).name() : (aa as any).getName?.())) || ((this.transformer as any)._movingAnchorName as string) || '';
 
-            let w = Math.max(minWidth, Math.abs(newBox.width));
-            const h = Math.max(minHeight, Math.abs(newBox.height));
+            // Enforce aspect ratio lock explicitly (width drives height)
+            const baseW = Math.max(1, Math.abs(oldBox.width));
+            const baseH = Math.max(1, Math.abs(oldBox.height));
+            const aspect = baseW / baseH;
 
-            // If clamping width while dragging from the left, shift x so right edge stays fixed
+            let w = Math.max(dynMinW, Math.abs(newBox.width));
+            let h = Math.max(minHeight, Math.round(w / (aspect || 1))); // derive height from width (tight)
+
+            // Adjust x/y to keep opposite edges fixed when clamping
             let x = newBox.x;
-            if (w !== newBox.width && activeName.includes('left')) {
+            let y = newBox.y;
+            if (w !== newBox.width && activeName?.includes?.('left')) {
               x += newBox.width - w;
             }
+            if (h !== newBox.height && activeName?.includes?.('top')) {
+              y += newBox.height - h;
+            }
 
-            return { ...newBox, x, width: w, height: h };
+            return { ...newBox, x, y, width: w, height: h };
           });
 
           // Do not attach per-frame text handlers; commit occurs on transformend (RIE parity)
