@@ -24,7 +24,11 @@ B. Text Editing Overlay (HTML over Konva)
    - DOM overlay positioned via world→DOM transform, scaled to viewport, clipped optionally
    - Enter commits (textarea); Shift+Enter newline; Esc blurs
    - Paste sanitization for contentEditable
-   Risk: Losing precise alignment and scaling produces cursor drift or truncated text.
+   Update (Sept 2025):
+   - Live plain‑text overlay now uses point‑text measurement during typing; DOM width is driven from world width to guarantee contraction when deleting.
+   - Transform resize commits use dual‑metric width (max of canvas advance and visual bbox) with a guard; text is repositioned by −bbox to avoid overhang clipping.
+   - Selection tightening no longer applies a clip rect (clipping moved to commit only where needed) to prevent glyph disappearance while downsizing.
+   Risk: If any module re‑introduces group clipping during selection or persists scaled textNode.width during drag, letters may clip or flash.
 
 C. Sticky Notes as Containers
 1) Container semantics (elementModule):
@@ -75,7 +79,8 @@ H. Selection/Transform/Grouping semantics
 1) Select/deselect behavior via renderer & store; multi-select with modifier keys
 2) Drag/transform end calls updateElement with new x/y/width/height; transformer scales reset to 1
 3) Group move propagates delta to sibling elements and triggers edge reflows
-   Risk: Ensure grouping deltas and reflow scheduling survive the refactor.
+   Update (Sept 2025): Text transforms convert scale→(fontSize,width) on transformend; transformer boundBoxFunc enforces a dynamic min width based on live text metrics to allow smooth downsizing without clipping.
+   Risk: Removing dynamic min width or measuring against stale caches will reintroduce stuck anchors and clipping.
 
 I. Viewport & Zoom Contracts
 1) No Konva stage dragging; pan/zoom via store (`panViewport`, `zoomViewport`), toolbar, and shortcuts

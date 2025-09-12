@@ -41,6 +41,91 @@ function liveGrow({ ktext, frame, textarea, scaleX, elementId, store }: any) {
 }
 ```
 
+### Update (Sept 2025) — Unified, Robust Text Flow
+
+The following snippets reflect the hardened behavior now in the codebase: point‑text measurement during typing and transform, dual‑metric commit, and selection tightening without clipping.
+
+```ts
+// Reset a Konva.Text to a clean, natural measurement state
+function resetTextNodeForEditing(textNode: Konva.Text) {
+  textNode.setAttrs({ width: undefined, height: undefined, scaleX: 1, scaleY: 1 });
+  try { (textNode as any)._clearCache?.(); } catch {}
+  if ((textNode as any)._cache) { try { (textNode as any).clearCache?.(); } catch {} }
+  textNode.getLayer()?.batchDraw();
+}
+
+// Live auto‑hug for plain text (create & re‑edit). Content-box textarea is assumed.
+function liveAutoHugPlain(
+  textarea: HTMLTextAreaElement,
+  group: Konva.Group,
+  textNode: Konva.Text,
+  stageScale: number,
+  fontSize: number,
+  updateStore: (widthWorld: number, text: string) => void
+) {
+  // 1) Mirror & natural measurement
+  textNode.text(textarea.value || ' ');
+  (textNode as any).wrap?.('none');
+  (textNode as any).width?.(undefined);
+  textNode._clearCache?.();
+
+  const textWidthPx = Math.ceil((textNode as any).getTextWidth?.() || textarea.scrollWidth || 1);
+  const minWorld = Math.max(12, Math.ceil(fontSize));
+  const contentWorld = Math.max(1, Math.ceil(textWidthPx / stageScale));
+  const neededWorldW = Math.max(minWorld, contentWorld + 10);
+
+  // 2) Apply DOM + Konva in lockstep
+  const neededPx = Math.ceil(neededWorldW * stageScale);
+  textarea.style.width = `${neededPx}px`;
+  const hit = group.findOne<Konva.Rect>('Rect.hit-area');
+  if (hit) { hit.width(neededWorldW); hit.height(Math.max(10, Math.ceil(fontSize * 1.2))); hit.x(0); hit.y(0); }
+  group.getLayer()?.batchDraw();
+  updateStore(neededWorldW, textarea.value);
+}
+
+// Commit fit on transformend (or text commit) with dual‑metric guard
+function commitTextWidth(
+  textNode: Konva.Text,
+  stageScale: number
+): { frameW: number; frameH: number; offset: { x: number; y: number } } {
+  (textNode as any).wrap?.('none');
+  (textNode as any).width?.(undefined);
+  textNode._clearCache?.();
+
+  // Dual‑metric: advance via canvas, visual via getClientRect
+  const ctx = document.createElement('canvas').getContext('2d');
+  let adv = 0;
+  if (ctx) { ctx.font = `${textNode.fontSize()}px ${textNode.fontFamily()}`; adv = ctx.measureText(textNode.text() || ' ').width; }
+  const vis = textNode.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true }).width;
+  const requiredPx = Math.ceil(Math.max(adv, vis) + 12);
+  (textNode as any).width(requiredPx);
+
+  // Re‑measure bbox and reposition to counter glyph overhangs
+  const bbox = textNode.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
+  textNode.position({ x: -bbox.x, y: -bbox.y });
+
+  const frameW = Math.max(requiredPx, Math.ceil(bbox.width) + 8);
+  const frameH = Math.max(1, Math.ceil(bbox.height + textNode.fontSize() * 0.12));
+  return { frameW, frameH, offset: { x: -bbox.x, y: -bbox.y } };
+}
+
+// Selection tightening (runs when attaching transformer to a single text group)
+function tightenTextSelection(group: Konva.Group, transformer: Konva.Transformer) {
+  const t = group.findOne<Konva.Text>('.text') || group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text');
+  const hit = group.findOne<Konva.Rect>('.hit-area');
+  if (!t || !hit) return;
+  (t as any).wrap?.('none'); (t as any).width?.(undefined); t._clearCache?.();
+  const bbox = t.getClientRect({ skipTransform: true, skipStroke: true, skipShadow: true });
+  const w = Math.max(1, Math.ceil((t as any).getTextWidth?.() || bbox.width));
+  const h = Math.max(1, Math.ceil(bbox.height));
+  hit.width(w); hit.height(h); hit.x(0); hit.y(0);
+  t.position({ x: -bbox.x, y: -bbox.y });
+  // Do NOT clip during selection (can hide glyphs mid‑drag)
+  try { (group as any).clip?.(null); (group as any).clipFunc?.(null); } catch {}
+  transformer.forceUpdate?.();
+}
+```
+
 ## 3) Text Commit Fit (Exact)
 ```ts
 function commitText({ ktext, frame, text, store, elementId }: any) {

@@ -19,6 +19,7 @@ import {
   ElementOrSectionId,
   GroupId,
 } from '../types/enhanced.types';
+import { PortKind } from '../types/canvas-elements';
 
 // Import all modules
 import { createElementModule, ElementState, ElementActions } from './modules/elementModule';
@@ -80,16 +81,16 @@ export interface UnifiedCanvasState extends
 
 // Connector drag state (for endpoint editing)
 export interface ConnectorDragState {
-  connectorId: ElementId | null;
+  edgeId: ElementId | null;
   draggedEndpoint: 'start' | 'end' | null;
   isDragging: boolean;
-  snapTarget: { elementId: ElementId; point: { x: number; y: number } } | null;
+  snapTarget: { elementId: ElementId; portKind: PortKind } | null;
 }
 
 // Connector drag actions
 export interface ConnectorDragActions {
-  beginEndpointDrag: (connectorId: ElementId, endpoint: 'start' | 'end') => void;
-  updateEndpointDrag: (worldPos: { x: number; y: number }) => void;
+  beginEndpointDrag: (edgeId: ElementId, endpoint: 'start' | 'end') => void;
+  updateEndpointDrag: (worldPos: { x: number; y: number }, snapTarget?: { elementId: ElementId; portKind: PortKind } | null) => void;
   commitEndpointDrag: () => void;
   cancelEndpointDrag: () => void;
 }
@@ -156,71 +157,81 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
     ...modules.edge.state,
     ...modules.edge.actions,
 
-    // Connector drag state
-    connectorId: null,
-    draggedEndpoint: null,
-    isDragging: false,
-    snapTarget: null,
+    getVisibleElements: () => {
+      const state = get();
+      const { edgeId, draggedEndpoint, snapTarget } = state;
+      if (!edgeId || !draggedEndpoint) {
+        set((s) => {
+          s.edgeId = null;
+          s.draggedEndpoint = null;
+          s.isDragging = false;
+          s.snapTarget = null;
+        });
+        return;
+      }
+      
+      const edge = state.edges?.get(edgeId);
+      if (!edge) {
+        set((s) => {
+          s.edgeId = null;
+          s.draggedEndpoint = null;
+          s.isDragging = false;
+          s.snapTarget = null;
+        });
+        return;
+      }
 
-    // Connector drag actions
-    beginEndpointDrag: (connectorId: ElementId, endpoint: 'start' | 'end') => {
-      set((state) => {
-        state.connectorId = connectorId;
-        state.draggedEndpoint = endpoint;
-        state.isDragging = true;
-        state.snapTarget = null;
-      });
-    },
-
-    updateEndpointDrag: (worldPos: { x: number; y: number }) => {
-      set((state) => {
-        const { connectorId, draggedEndpoint } = state;
-        if (!connectorId || !draggedEndpoint) return;
-
-        const connector = state.elements.get(connectorId);
-        if (!connector || connector.type !== 'connector') return;
-
-        // TODO: Add port snapping logic here using QuadTree
-        // For now, just update the endpoint directly
-        if (draggedEndpoint === 'start') {
-          (connector as any).startPoint = worldPos;
-        } else {
-          (connector as any).endPoint = worldPos;
+      // Update the endpoint in the edge
+      if (draggedEndpoint === 'start') {
+        if (snapTarget) {
+          // Update source to snap to element
+          (state as any).updateEdge?.(edgeId, {
+            source: {
+              elementId: snapTarget.elementId,
+              portKind: snapTarget.portKind
+            }
+          });
+        } else if (edge.points && edge.points.length >= 4) {
+          // Free-floating start point
+          (state as any).updateEdge?.(edgeId, {
+            source: {
+              elementId: '' as ElementId,
+              portKind: 'CENTER' as PortKind
+            },
+            points: [...edge.points]
+          });
         }
-
-        // Update connector bounds
-        const newBounds = {
-          x: Math.min((connector as any).startPoint.x, (connector as any).endPoint.x),
-          y: Math.min((connector as any).startPoint.y, (connector as any).endPoint.y),
-          width: Math.abs((connector as any).endPoint.x - (connector as any).startPoint.x),
-          height: Math.abs((connector as any).endPoint.y - (connector as any).startPoint.y)
-        };
-
-        Object.assign(connector, newBounds, { updatedAt: Date.now() });
-      });
-    },
-
-    commitEndpointDrag: () => {
-      const { connectorId, elements, updateElement } = get();
-      if (connectorId) {
-        const connector = elements.get(connectorId);
-        if (connector && connector.type === 'connector') {
-          const sp = { ...(connector as any).startPoint };
-          const ep = { ...(connector as any).endPoint };
-          const points = [sp.x, sp.y, ep.x, ep.y];
-          const x = Math.min(sp.x, ep.x);
-          const y = Math.min(sp.y, ep.y);
-          const width = Math.abs(ep.x - sp.x);
-          const height = Math.abs(ep.y - sp.y);
-          // Commit immutably so subscribers fire
-          updateElement(connectorId, { startPoint: sp, endPoint: ep, points: [...points], x, y, width, height }, { skipHistory: true });
+      } else if (draggedEndpoint === 'end') {
+        if (snapTarget) {
+          // Update target to snap to element
+          (state as any).updateEdge?.(edgeId, {
+            target: {
+              elementId: snapTarget.elementId,
+              portKind: snapTarget.portKind
+            }
+          });
+        } else if (edge.points && edge.points.length >= 4) {
+          // Free-floating end point
+          (state as any).updateEdge?.(edgeId, {
+            target: {
+              elementId: '' as ElementId,
+              portKind: 'CENTER' as PortKind
+            },
+            points: [...edge.points]
+          });
         }
       }
-      set((state) => {
-        state.connectorId = null;
-        state.draggedEndpoint = null;
-        state.isDragging = false;
-        state.snapTarget = null;
+      
+      // Mark edge as dirty for reflow
+      (state as any).markEdgesDirty?.([edgeId]);
+      (state as any).computeAndCommitDirtyEdges?.();
+      
+      // Clear drag state
+      set((s) => {
+        s.edgeId = null;
+        s.draggedEndpoint = null;
+        s.isDragging = false;
+        s.snapTarget = null;
       });
     },
 

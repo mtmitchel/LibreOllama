@@ -680,10 +680,19 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       if (readNewCanvasFlag?.()) {
         const { RendererCore } = require('../renderer/modular/RendererCore');
         const { SelectionModule } = require('../renderer/modular/modules/SelectionModule');
+        const { TextModule } = require('../renderer/modular/modules/TextModule');
+        const { ViewportModule } = require('../renderer/modular/modules/ViewportModule');
+        const { DrawingModule } = require('../renderer/modular/modules/DrawingModule');
         const { StoreAdapterUnified } = require('../renderer/modular/adapters/StoreAdapterUnified');
         const { KonvaAdapterStage } = require('../renderer/modular/adapters/KonvaAdapterStage');
+        const { ConnectorModule } = require('../renderer/modular/modules/ConnectorModule');
         const core = new RendererCore();
         core.register(new SelectionModule());
+        // Register optional modules behind flags; modules internally gate via localStorage FF_* checks
+        try { core.register(new ViewportModule()); } catch {}
+        try { core.register(new TextModule()); } catch {}
+        try { core.register(new DrawingModule()); } catch {}
+        try { core.register(new ConnectorModule()); } catch {}
         const store = new StoreAdapterUnified();
         const layers = requireLayers(stage);
         const konva = new KonvaAdapterStage(stage, { background: layers?.background || null, main: layers?.main || null, preview: layers?.preview || null, overlay: layers?.overlay || null });
@@ -694,6 +703,20 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         // Keep core around via closure; clean up on unmount
         (stage as any).__mod_core__ = { core, unsub };
       }
+      // If entering any connector tool, hide transformer and clear selection to prevent accidental resize selection
+      try {
+        if (/^connector/.test(String(currentSelectedTool))) {
+          const transformer = (window as any).__CANVAS_TRANSFORMER__ as Konva.Transformer;
+          if (transformer) {
+            transformer.nodes([]);
+            transformer.visible(false);
+            const overlayLayer = requireLayers(stage)?.overlay || null;
+            overlayLayer?.batchDraw();
+          }
+          try { useUnifiedCanvasStore.getState().clearSelection(); } catch {}
+          try { (window as any).__CANVAS_RENDERER_V2__?.renderConnectorPorts?.(); } catch {}
+        }
+      } catch {}
     } catch {}
     if (currentSelectedTool === 'text') {
       useTextTool();
@@ -720,6 +743,11 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       
       // Text tool is handled in its own effect above
       if (currentTool === 'text') return;
+      // Connector tools: prevent selection/resize so connector draft can start cleanly
+      if (String(currentTool).startsWith('connector')) {
+        e.cancelBubble = true;
+        return;
+      }
       
       // If clicked on empty stage or layer with select tool, clear selection
       // BUT only if the event wasn't cancelled by a child element (e.cancelBubble = true)
@@ -1300,7 +1328,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     // While editing, reflow the textarea position/size on viewport changes
   }, [textEditingElementId, setTextEditingElement, stageRef, viewportState]);
 
-  // DraftEdge rendering - imperative overlay for live edge preview
+  // DraftEdge rendering - imperative overlay for live edge preview (single preview, with hysteresis snapping)
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -1308,7 +1336,22 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     const overlayLayer = requireLayers(stage)?.overlay || null;
     if (!overlayLayer) return;
 
+    // If the dedicated ConnectorTool is active, it renders its own preview ('.connector-preview').
+    // To avoid double previews, disable this generic draft renderer when a connector tool is active.
+    try {
+      const tool = useUnifiedCanvasStore.getState().selectedTool;
+      if (typeof tool === 'string' && tool.startsWith('connector')) {
+        const existing = overlayLayer.findOne<Konva.Line>('.draft-line');
+        if (existing) { existing.destroy(); overlayLayer.batchDraw(); }
+        return;
+      }
+    } catch {}
+
     let draftLine: Konva.Line | null = overlayLayer.findOne<Konva.Line>('.draft-line') || null;
+    const scaleX = stage.getAbsoluteScale()?.x || 1;
+    const SNAP_THRESHOLD = 20; // world units
+    const HYSTERESIS = 6; // px window to prevent snap flicker
+    let lastSnap: { elementId: ElementId; x: number; y: number } | null = null;
     
     if (draft) {
       // Calculate draft points
@@ -1340,17 +1383,27 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         y: sourceElement.y + getElHeight(sourceElement) * (sourcePort.ny + 0.5)
       };
 
-      // Target position - either snapped port or pointer position
-      let targetPos = draft.pointer || { x: sourceWorldPos.x, y: sourceWorldPos.y };
+      // Target position - snapped (with hysteresis) or pointer
+      const pointer = draft.pointer || { x: sourceWorldPos.x, y: sourceWorldPos.y };
+      let targetPos = pointer;
       if (draft.snapTarget) {
         const targetElement = elements.get(draft.snapTarget.elementId);
         if (targetElement) {
-          const targetPort = { nx: 0, ny: 0 }; // Default to center for now
-          targetPos = {
-            x: targetElement.x + getElWidth(targetElement) * (targetPort.nx + 0.5),
-            y: targetElement.y + getElHeight(targetElement) * (targetPort.ny + 0.5)
-          };
+          const cx = targetElement.x + getElWidth(targetElement) / 2;
+          const cy = targetElement.y + getElHeight(targetElement) / 2;
+          const cand = { x: cx, y: cy };
+          const dx = cand.x - pointer.x;
+          const dy = cand.y - pointer.y;
+          const dist = Math.hypot(dx, dy);
+          const screenDist = dist * scaleX;
+          // Apply hysteresis window to reduce flicker
+          if (!lastSnap || screenDist + HYSTERESIS < Math.hypot((lastSnap.x - pointer.x) * scaleX, (lastSnap.y - pointer.y) * scaleX)) {
+            if (dist <= SNAP_THRESHOLD) lastSnap = { elementId: draft.snapTarget.elementId, x: cand.x, y: cand.y };
+          }
+          if (lastSnap) targetPos = { x: lastSnap.x, y: lastSnap.y };
         }
+      } else {
+        lastSnap = null;
       }
 
       const points = [sourceWorldPos.x, sourceWorldPos.y, targetPos.x, targetPos.y];
@@ -1590,8 +1643,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         const circleEl = {
           id: (nanoid() as any),
           type: 'circle' as const,
-          x: Math.round(world.x - radius),
-          y: Math.round(world.y - radius),
+          x: Math.round(world.x),  // Circle position is center, not top-left
+          y: Math.round(world.y),  // Circle position is center, not top-left
           radius,
           // width/height are helpful for transformer/spatial index; keep them in sync with radius
           width: diameter,

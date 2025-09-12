@@ -41,10 +41,10 @@ The canvas is the most architecturally complex feature. Its patterns prioritize 
 
 #### Text Measurement Strategy (Konva)
 
-- Never assign `Infinity` to `Konva.Text` width/height. Use `width = 'auto'` for initial, no-wrap measurement and avoid setting a height (let content determine it).
-- For wrapped measurement, set the finite width constraint and then set `.text(...)` before reading metrics. Prefer `getSelfRect()` over `getClientRect()` to read the actual content dimensions.
-- Clamp intermediate values and final computed sizes to finite, positive numbers to guard against edge cases (empty text, extreme transforms, DPI rounding).
-- Circle auto-grow uses this strategy via `requiredRadiusForText(...)` to compute the minimal radius needed to contain wrapped text at a fixed font size.
+- For typing and resizing previews, prefer point‑text measurement: `wrap('none')`, `width(undefined)`, clear caches, then read `getTextWidth()`; drive DOM editor width from world width × stage scale to guarantee contraction on deletion.
+- On commit/transformend, compute a dual‑metric width: `max(canvas measureText advance, visual getClientRect().width)` plus a guard; apply to the live node, then re‑measure bbox and reposition text by `{-bbox.x, -bbox.y}` to avoid glyph overhang clipping.
+- Clamp intermediate and final values to finite, positive numbers. Avoid group clipping during selection; if clipping is required, apply only after commit to the frame.
+- Circle auto‑grow continues to use wrapped measurement helpers for inscribed square behavior.
 
 > **For a complete, deep-dive analysis of the canvas system, refer to the `docs/CANVAS_ARCHITECTURE_AUDIT_UPDATED.md` document.**
 > **For the current migration blueprint and implementation plan, refer to `docs/KONVA_BASED_CANVAS.md` and `docs/CANVAS_MIGRATION_PLAN.md`.**

@@ -320,10 +320,12 @@ B1. Text Tool (Tool ID: 'text')
   - Font family/size copied from Konva.Text; DOM rect computed from worldRectToDOM(group x/y, frame w/h)
   - Keys: Enter=commit (unless Shift), Esc=cancel, blur=commit; input triggers liveGrow measurement
 - liveGrow behavior:
-  - Mirror content into Konva.Text; measure width; compute neededWorldW = max(minWidth, measured+padding)
-  - Update Konva frame width + overlay DOM width; batchDraw main layer; store.updateElement(id,{width,text}) with skipHistory true
+  - Mirror content into Konva.Text (point‑text: wrap none, width undefined); clear caches; measure natural width via getTextWidth()
+  - Compute neededWorldW = max(minWidth, measured + padding≈10); set overlay DOM width from world*stageScale for stable contraction
+  - Update hit‑area width/height; batchDraw; store.updateElement(id,{width,text}) with skipHistory true
 - Commit:
-  - Show Konva text; measure exact bounds; hug frame; store.updateElement(id,{text,width,isEditing:false}); selection finalized; transformer border #3B82F6
+  - Reset to point‑text; dual‑metric width = max(canvas advance, visual bbox) + guard; apply width; re‑measure bbox and reposition text by −bbox
+  - Frame.width = max(required, ceil(bbox.width)+8); Frame.height = ceil(bbox.height + fontSize*0.12); store.updateElement(...,{isEditing:false})
 - Cancel: mark non-editing then delete element
 - Manipulation: drag and transform commit updates and history; constraints apply if element resides within a section
 - Destroy: delete key or toolbar delete

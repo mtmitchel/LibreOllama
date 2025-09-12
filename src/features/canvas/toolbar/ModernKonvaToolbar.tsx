@@ -412,6 +412,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
                 tabIndex={isFocused ? 0 : -1}
                 data-tool-index={toolIndex}
+                data-tool={tool.id}
                 aria-pressed={isActive}
               >
                 <IconComponent size={16} />
@@ -438,6 +439,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                   aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
                   tabIndex={isFocused ? 0 : -1}
                   data-tool-index={toolIndex}
+                  data-tool={tool.id}
                   aria-pressed={isActive}
                 >
                   <IconComponent size={16} />
@@ -513,6 +515,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 aria-label={`${tool.name}${isActive ? ' (active)' : ''}`}
                 tabIndex={isFocused ? 0 : -1}
                 data-tool-index={toolIndex}
+                data-tool={tool.id}
                 aria-pressed={isActive}
               >
                 <IconComponent size={16} />

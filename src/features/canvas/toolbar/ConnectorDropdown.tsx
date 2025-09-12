@@ -79,6 +79,7 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
                     onClick={() => handleConnectorSelect(tool.id)}
                     className="flex size-9 items-center justify-center"
                     title={tool.name}
+                    data-tool={tool.id}
                   >
                     <IconComponent size={16} />
                   </Button>

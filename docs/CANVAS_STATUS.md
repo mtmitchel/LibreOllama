@@ -63,10 +63,10 @@
 
 ## Immediate Actions Required
 
-### Text Resizing Verification
-- [ ] Test text element resizing: corner drags should scale uniformly, edge drags should clamp width
-- [ ] Verify no mid-drag jumps during resize operations
-- [ ] Confirm frame hugs content after resize commit
+### Text Resizing Verification (Updated)
+- [ ] Corner drags scale uniformly (keepRatio=true); edge drags clamp width.
+- [ ] No mid-drag clipping: selection tightening disables clipping; text rendered as point-text during gesture.
+- [ ] On release, frame hugs content: dual-metric width with guard applied; text repositioned by −bbox overhang.
 
 ### MVP Roadmap Items
 
@@ -116,7 +116,7 @@ From Section 10 of the implementation guide:
 - ✅ Image upload positioning fixed (ACHIEVED)
 - ✅ Circle resize alignment resolved (ACHIEVED)
 - 🟡 Layer naming matches guide (minor deviation only)
-- 🟡 Text resizing behavior verified (needs testing)
+- ✅ Text resizing path hardened (gesture + commit); needs final QA across fonts/zooms
 
 ## Notes
 

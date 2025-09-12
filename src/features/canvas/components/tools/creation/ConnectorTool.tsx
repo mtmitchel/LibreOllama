@@ -5,6 +5,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { ElementId, ConnectorElement } from '../../../types/enhanced.types';
+import { PortKind } from '../../../types/canvas-elements';
 import Konva from 'konva';
 
 interface ConnectorToolProps {
@@ -29,7 +30,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   const [startElement, setStartElement] = useState<ElementId | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPoint, setCurrentPoint] = useState<{ x: number; y: number } | null>(null);
-  const [snapTarget, setSnapTarget] = useState<{ elementId: ElementId; point: { x: number; y: number } } | null>(null);
+  const [snapTarget, setSnapTarget] = useState<{ elementId: ElementId; point: { x: number; y: number }; portKind?: PortKind } | null>(null);
   
   // Removed addElement - using edge draft system instead
   const elements = useUnifiedCanvasStore(state => state.elements);
@@ -68,49 +69,68 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     };
   };
 
-  // Find element at position and return connection point
-  const findElementAtPosition = useCallback((point: { x: number; y: number }) => {
-    const SNAP_DISTANCE = 20;
-    
+  const getWorldSnapDistance = useCallback(() => {
+    const stage = stageRef.current; if (!stage) return 20;
+    const inv = stage.getAbsoluteTransform().copy().invert();
+    const a = inv.point({ x: 0, y: 0 });
+    const b = inv.point({ x: 28, y: 0 }); // 28 screen px → world units (more forgiving)
+    return Math.hypot(b.x - a.x, b.y - a.y);
+  }, [stageRef]);
+
+  // Find element at position and return closest port (N/S/E/W/CENTER) with world point
+  const findElementAtPosition = useCallback((point: { x: number; y: number }, excludeId: ElementId | null = null) => {
+    const SNAP_DISTANCE = getWorldSnapDistance();
+    let best: { elementId: string; point: { x: number; y: number }; portKind: PortKind; dist: number } | null = null;
+
     for (const element of elements.values()) {
-      // Skip drawing elements and connectors
-      if (element.type === 'pen' || element.type === 'marker' || element.type === 'highlighter' || element.type === 'connector') {
+      if (!element || element.id === excludeId) {
         continue;
       }
-      
+      if (element.type === 'pen' || element.type === 'marker' || element.type === 'highlighter' || element.type === 'connector' || (element as any).type === 'edge') {
+        continue;
+      }
+
       const dims = getElementDimensions(element);
-      const elementBounds = {
-        left: element.x,
-        right: element.x + dims.width,
-        top: element.y,
-        bottom: element.y + dims.height
-      };
-      
-      // Check if point is within snap distance of element edges
-      const snapPoints = [
-        { x: elementBounds.left, y: element.y + dims.height / 2 }, // left
-        { x: elementBounds.right, y: element.y + dims.height / 2 }, // right
-        { x: element.x + dims.width / 2, y: elementBounds.top }, // top
-        { x: element.x + dims.width / 2, y: elementBounds.bottom }, // bottom
-        { x: element.x + dims.width / 2, y: element.y + dims.height / 2 } // center
-      ];
-      
-      for (const snapPoint of snapPoints) {
-        const distance = Math.sqrt(
-          Math.pow(point.x - snapPoint.x, 2) + Math.pow(point.y - snapPoint.y, 2)
-        );
-        
-        if (distance <= SNAP_DISTANCE) {
-          return {
-            elementId: element.id,
-            point: snapPoint
-          };
+      let candidates: { p: { x: number; y: number }; kind: PortKind }[];
+
+      // Per-element coordinate system handling - simplified to 4 ports
+      if (element.type === 'circle' || element.type === 'circle-text') {
+        const cx = element.x;
+        const cy = element.y;
+        const rx = dims.width / 2;
+        const ry = dims.height / 2;
+        candidates = [
+          { p: { x: cx - rx, y: cy }, kind: 'W' },
+          { p: { x: cx + rx, y: cy }, kind: 'E' },
+          { p: { x: cx, y: cy - ry }, kind: 'N' },
+          { p: { x: cx, y: cy + ry }, kind: 'S' },
+        ];
+      } else {
+        const left = element.x;
+        const top = element.y;
+        const right = element.x + dims.width;
+        const bottom = element.y + dims.height;
+        const cx = element.x + dims.width / 2;
+        const cy = element.y + dims.height / 2;
+        candidates = [
+          { p: { x: left, y: cy }, kind: 'W' },
+          { p: { x: right, y: cy }, kind: 'E' },
+          { p: { x: cx, y: top }, kind: 'N' },
+          { p: { x: cx, y: bottom }, kind: 'S' },
+        ];
+      }
+
+      for (const c of candidates) {
+        const d = Math.hypot(point.x - c.p.x, point.y - c.p.y);
+        if (d <= SNAP_DISTANCE && (!best || d < best.dist)) {
+          best = { elementId: element.id, point: c.p, portKind: c.kind, dist: d };
         }
       }
     }
-    
-    return null;
-  }, [elements]);
+
+    if (!best) return null;
+    return { elementId: best.elementId as any, point: best.point, portKind: best.portKind };
+  }, [elements, getWorldSnapDistance]);
 
   // Handle mouse down - start connector (edge draft)
   const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -118,24 +138,34 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     
     const worldPos = getWorldPointer(e);
     const elementAtStart = findElementAtPosition(worldPos);
+    try { (e as any).evt?.preventDefault?.(); } catch {}
+    try { stageRef.current?.capturePointer?.((e as any).evt?.pointerId); } catch {}
     
     if (elementAtStart) {
-      // Start store-first draft from element
+      // Start store-first draft from element with connector type
       try {
-        startEdgeDraft({ elementId: elementAtStart.elementId as any, portKind: 'CENTER' as any });
+        startEdgeDraft(
+          { elementId: elementAtStart.elementId as any, portKind: (elementAtStart as any).portKind || ('CENTER' as any) },
+          connectorType
+        );
       } catch {}
 
       setStartPoint(elementAtStart.point);
       setStartElement(elementAtStart.elementId as ElementId);
     } else {
-      // Start free-floating connector from world position
-      // Create a temporary "virtual" start point
+      // Allow free-drawing connectors without elements
+      // Start draft from free position
       try {
-        // We need to handle free-floating connectors differently
-        // For now, just track the start point
-        setStartPoint(worldPos);
-        setStartElement(null);
+        startEdgeDraft(
+          { elementId: '' as any, portKind: 'CENTER' as any },
+          connectorType
+        );
+        // Store the initial position in the draft
+        updateEdgeDraftPointer(worldPos);
       } catch {}
+      
+      setStartPoint(worldPos);
+      setStartElement(null);
     }
     
     setCurrentPoint(worldPos);
@@ -152,12 +182,12 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     try { updateEdgeDraftPointer(worldPos); } catch {}
     setCurrentPoint(worldPos);
     
-    // Check for snap target
-    const elementAtEnd = findElementAtPosition(worldPos);
+    // Check for snap target, excluding the start element
+    const elementAtEnd = findElementAtPosition(worldPos, startElement);
     if (elementAtEnd && elementAtEnd.elementId !== startElement) {
-      try { updateEdgeDraftSnap({ elementId: elementAtEnd.elementId as any, portKind: 'CENTER' as any }); } catch {}
+      try { updateEdgeDraftSnap({ elementId: elementAtEnd.elementId as any, portKind: (elementAtEnd as any).portKind || ('CENTER' as any) }); } catch {}
 
-      setSnapTarget({ elementId: elementAtEnd.elementId as ElementId, point: elementAtEnd.point });
+      setSnapTarget({ elementId: elementAtEnd.elementId as ElementId, point: elementAtEnd.point, portKind: (elementAtEnd as any).portKind || 'CENTER' });
     } else {
       setSnapTarget(null);
     }
@@ -192,51 +222,21 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
       return;
     }
 
-    // For now, create a legacy connector element for free-floating connectors
-    // TODO: Update edge system to support free-floating edges properly
-    if (!startElement) {
-      // Create a free-floating connector using the legacy system
-      const connectorElement: ConnectorElement = {
-        id: `connector-${Date.now()}` as ElementId,
-        type: 'connector',
-        subType: connectorType === 'arrow' ? 'arrow' : 'line',
-        startElementId: undefined,
-        endElementId: endElementId ?? undefined,
-        startPoint,
-        endPoint,
-        stroke: snapTarget ? '#10b981' : '#374151',
-        strokeWidth: 2,
-        x: Math.min(startPoint.x, endPoint.x),
-        y: Math.min(startPoint.y, endPoint.y),
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        isLocked: false,
-        isHidden: false
-      };
-      
-      // We need to re-add the addElement function temporarily
-      const store = useUnifiedCanvasStore.getState();
-      if (store.addElement) {
-        store.addElement(connectorElement);
-        console.log('[ConnectorTool] Created free-floating connector:', connectorElement.id);
+    // Always try to commit the draft - works for both element-connected and free-floating edges
+    try {
+      const committedId = commitEdgeDraftTo(snapTarget ? { elementId: snapTarget.elementId as any, portKind: (snapTarget.portKind as any) || ('CENTER' as any) } : undefined);
+      if (committedId) {
+        // Force routing for the new edge and select it
+        try { computeAndCommitDirtyEdges(); } catch {}
+        try { selectElement(committedId as any, false); } catch {}
+        console.log('[ConnectorTool] Created edge:', committedId, connectorType, {
+          startElement: startElement,
+          endElement: endElementId,
+          freeFloating: !startElement || !endElementId
+        });
       }
-    } else {
-      // Commit draft to target if available (store-first approach)
-      try {
-        const committedId = commitEdgeDraftTo(snapTarget ? { elementId: snapTarget.elementId as any, portKind: 'CENTER' as any } : undefined);
-        if (committedId) {
-          // Force routing for the new edge and select it
-          try { computeAndCommitDirtyEdges(); } catch {}
-          try { selectElement(committedId as any, false); } catch {}
-          console.log('[ConnectorTool] Created edge via draft:', committedId, connectorType, {
-            startElement: startElement,
-            endElement: endElementId,
-            connected: !!(startElement && endElementId)
-          });
-        }
-      } catch (e) {
-        console.warn('[ConnectorTool] Failed to commit edge draft:', e);
-      }
+    } catch (e) {
+      console.warn('[ConnectorTool] Failed to commit edge draft:', e);
     }
     
     // Reset state
@@ -245,6 +245,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     setStartElement(null);
     setSnapTarget(null);
     setCurrentPoint(null);
+    try { stageRef.current?.releasePointerCapture?.((e as any).evt?.pointerId); } catch {}
     e.cancelBubble = true;
   }, [isActive, isDrawing, startPoint, startElement, snapTarget, getWorldPointer, connectorType, commitEdgeDraftTo, computeAndCommitDirtyEdges, selectElement]);
 
@@ -298,6 +299,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     // Draw preview line if actively drawing
     if (isDrawing && startPoint && currentPoint) {
       const endPoint = snapTarget ? snapTarget.point : currentPoint;
+      // Single preview line only
       const previewLine = new Konva.Line({
         points: [startPoint.x, startPoint.y, endPoint.x, endPoint.y],
         stroke: snapTarget ? '#10b981' : '#6b7280', // Green if snapping, gray otherwise

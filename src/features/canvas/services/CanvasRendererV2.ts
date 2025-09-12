@@ -2835,10 +2835,80 @@ export class CanvasRendererV2 {
     // Create singleton overlay group for connector UI (hidden by default)
     this.connectorOverlayGroup = new Konva.Group({
       name: 'connector-overlay-group',
-      listening: false,  // Critical: must not block events to main layer
+      listening: true,  // Must be true for handles to be draggable
       visible: false     // Hidden when no connectors selected
     });
     this.layers.overlay.add(this.connectorOverlayGroup);
+
+    // Render connector ports when connector tool active
+    (this as any).renderConnectorPorts = () => {
+      try {
+        const store = (window as any).__UNIFIED_CANVAS_STORE__;
+        const tool = store?.getState?.().selectedTool;
+        if (!(typeof tool === 'string' && tool.startsWith('connector'))) {
+          this.connectorOverlayGroup?.destroyChildren();
+          this.connectorOverlayGroup?.visible(false);
+          this.layers.overlay.batchDraw();
+          try { this.stage?.container().style.removeProperty('cursor'); } catch {}
+          return;
+        }
+        const elements: Map<string, any> = store.getState().elements;
+        if (!this.connectorOverlayGroup) return;
+        this.connectorOverlayGroup.visible(true);
+        this.connectorOverlayGroup.destroyChildren();
+        const p = this.stage?.getPointerPosition();
+        const world = p ? this.stage!.getAbsoluteTransform().copy().invert().point(p) : null;
+        let bestNode: Konva.Shape | null = null;
+        let bestDist = Infinity;
+        const addSquarePort = (x: number, y: number, id: string) => {
+          const node = new Konva.Rect({ x: x - 4, y: y - 4, width: 8, height: 8, stroke: '#6b7280', strokeWidth: 2, fill: '#ffffff', cornerRadius: 2, listening: true, name: 'connector-port' });
+          node.setAttr('elId', id);
+          this.connectorOverlayGroup!.add(node);
+          if (world) {
+            const px = x, py = y;
+            const d = Math.hypot(px - world.x, py - world.y);
+            if (d < bestDist) { bestDist = d; bestNode = node; }
+          }
+        };
+        elements.forEach((el, id) => {
+          if (!el || el.type === 'edge' || el.type === 'connector') return;
+          let left, right, top, bottom, cx, cy;
+
+          if (el.type === 'circle' || el.type === 'circle-text') {
+            cx = Number(el.x || 0);
+            cy = Number(el.y || 0);
+            const rx = Math.max(1, Number(el.radiusX ?? el.radius ?? (el.width ? el.width / 2 : 0)) || 0);
+            const ry = Math.max(1, Number(el.radiusY ?? el.radius ?? (el.height ? el.height / 2 : 0)) || 0);
+            // Only 4 cardinal ports for simplicity
+            addSquarePort(cx - rx, cy, id); // W
+            addSquarePort(cx + rx, cy, id); // E
+            addSquarePort(cx, cy - ry, id); // N
+            addSquarePort(cx, cy + ry, id); // S
+          } else {
+            const w = Math.max(1, Number(el.width || 0));
+            const h = Math.max(1, Number(el.height || 0));
+            left = Number(el.x || 0); 
+            top = Number(el.y || 0);
+            right = left + w; 
+            bottom = top + h;
+            cx = left + w / 2; 
+            cy = top + h / 2;
+            // Only 4 cardinal ports for simplicity
+            addSquarePort(left, cy, id);    // W
+            addSquarePort(right, cy, id);   // E
+            addSquarePort(cx, top, id);     // N
+            addSquarePort(cx, bottom, id);  // S
+          }
+        });
+        if (bestNode) {
+          try { (bestNode as any).stroke('#10b981'); } catch {}
+          try { this.stage?.container().style.setProperty('cursor','crosshair'); } catch {}
+        } else {
+          try { this.stage?.container().style.setProperty('cursor','crosshair'); } catch {}
+        }
+        this.layers.overlay.batchDraw();
+      } catch {}
+    };
     
     // Set up drag layer (use preview layer as drag layer per blueprint)
     this.dragLayer = this.layers.preview;
@@ -2859,7 +2929,43 @@ export class CanvasRendererV2 {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
+    // While connector tool is active, continuously suppress any stray transformer re-attachments
+    this.stage.on('mousemove.connectorGuard', () => {
+      try {
+        const tool = (window as any).__UNIFIED_CANVAS_STORE__?.getState?.().selectedTool;
+        if (typeof tool === 'string' && tool.startsWith('connector')) {
+          if (this.transformer && (this.transformer.visible() || (this.transformer.nodes()?.length || 0) > 0)) {
+            try { this.transformer.nodes([]); } catch {}
+            try { this.transformer.visible(false); } catch {}
+            try { (this.transformer as any).listening?.(false); } catch {}
+            this.layers?.overlay?.batchDraw();
+          }
+          // Continuously render ports while active
+          try { (this as any).renderConnectorPorts?.(); } catch {}
+        }
+      } catch {}
+    });
+
     this.stage.on('mousedown.renderer', (e: any) => {
+      // If clicking on an edge endpoint handle, do not change selection or bubble
+      try {
+        if (e.target?.name && e.target.name() === 'edge-handle') {
+          e.cancelBubble = true;
+          return;
+        }
+      } catch {}
+      // Suppress selection when connector tools are active; let the ConnectorTool own draft lifecycle
+      try {
+        if (e.target.name() === 'connector-port') {
+          e.cancelBubble = true;
+          return;
+        }
+        const tool = (window as any).__UNIFIED_CANVAS_STORE__?.getState?.().selectedTool;
+        if (typeof tool === 'string' && tool.startsWith('connector')) {
+          e.cancelBubble = true;
+          return;
+        }
+      } catch {}
       // Ignore clicks on transformer anchors, but allow dragging the selected node when clicking transformer body
       const cls = e.target?.getClassName?.();
       const parentCls = e.target?.getParent?.()?.getClassName?.();
@@ -2899,12 +3005,29 @@ export class CanvasRendererV2 {
 
     // Drag start: detach transformer to prevent state conflicts.
     this.stage.on('dragstart.renderer', (e: any) => {
+        // Skip edge handles - they have their own drag logic
+        if (e.target.name() === 'edge-handle') {
+            return;
+        }
+        
         const node = this.getElementNodeFromEvent(e.target);
         if (node && this.transformer) {
             console.log(`[DEBUG] Drag START on: ${node.id()}. Detaching transformer.`);
             this.transformer.nodes([]);
             this.scheduleDraw('overlay');
         }
+        // Initialize edge drag if dragging a connector
+        try {
+          if (node && node.getAttr('kind') === 'edge') {
+            const stage = this.stage; const main = this.layers?.main;
+            const pt = stage?.getPointerPosition();
+            if (stage && main && pt) {
+              const local = main.getAbsoluteTransform().copy().invert().point(pt);
+              const basePts = (node as any).points?.() as number[];
+              (this as any).edgeDrag = { id: node.id(), start: local, base: Array.isArray(basePts) ? [...basePts] : [] };
+            }
+          }
+        } catch {}
         // Initialize group-drag preview if element has a groupId
         try {
           const store = (window as any).__UNIFIED_CANVAS_STORE__;
@@ -2928,11 +3051,43 @@ export class CanvasRendererV2 {
     });
     // Drag end for committing position changes
     this.stage.on('dragend.renderer', (e: any) => {
+      // Skip edge handles - they have their own drag logic
+      if (e.target.name() === 'edge-handle') {
+        return;
+      }
+      
       const node = this.getElementNodeFromEvent(e.target);
       if (!node || !node.id()) return;
 
-      // Do not handle connector or handle drags here
-      if (node.getAttr('kind') === 'edge' || node.name() === 'edge-handle') {
+      // Handle connector drags here
+      if (node.getAttr('kind') === 'edge') {
+        try {
+          const drag = (this as any).edgeDrag as { id: string; start: { x: number; y: number }; base: number[] } | undefined;
+          const stage = this.stage; const main = this.layers?.main;
+          const pt = stage?.getPointerPosition();
+          if (drag && stage && main && pt) {
+            const cur = main.getAbsoluteTransform().copy().invert().point(pt);
+            const dx = cur.x - drag.start.x;
+            const dy = cur.y - drag.start.y;
+            const nextPts = drag.base.map((v, i) => (i % 2 === 0 ? v + dx : v + dy));
+            // Commit to the store
+            const store = (window as any).__UNIFIED_CANVAS_STORE__;
+            const api = store?.getState?.();
+            if (api?.updateEdge) {
+              api.updateEdge(node.id(), { points: nextPts });
+              api.computeAndCommitDirtyEdges?.();
+            }
+            // Ensure Konva node reflects final points immediately
+            try { (node as any).points?.(nextPts); } catch {}
+            this.scheduleDraw('main');
+          }
+        } catch {}
+        (this as any).edgeDrag = null;
+        // Re-sync selection to keep handles aligned
+        try {
+          const selectedIds = (window as any).__UNIFIED_CANVAS_STORE__.getState().selectedElementIds || new Set();
+          this.syncSelection(selectedIds);
+        } catch {}
         return;
       }
       
@@ -2970,7 +3125,16 @@ export class CanvasRendererV2 {
           if (savedGd) movedIds.push(...savedGd.members);
           if (movedIds.length === 0) movedIds.push(node.id());
           const api = store.getState();
-          movedIds.forEach((id: string) => api.reflowEdgesForElement?.(id as any));
+          // Mark all connected edges dirty and reflow immediately
+          const dirty: string[] = [];
+          movedIds.forEach((id: string) => {
+            try {
+              const connected = api.getEdgesConnectedTo?.(id) || [];
+              connected.forEach((e: any) => dirty.push(e.id));
+              api.reflowEdgesForElement?.(id);
+            } catch {}
+          });
+          if (dirty.length) api.markEdgesDirty?.(dirty);
           api.computeAndCommitDirtyEdges?.();
         }
       } catch {}
@@ -2984,8 +3148,30 @@ export class CanvasRendererV2 {
 
     // Drag move: update table overlay controls position for selected table
     this.stage.on('dragmove.renderer', (e: any) => {
+      // Skip edge handles - they have their own drag logic
+      if (e.target.name() === 'edge-handle') {
+        return;
+      }
+      
       const node = this.getElementNodeFromEvent(e.target);
       if (!node || !node.id()) return;
+      // Live preview when dragging a connector
+      try {
+        if (node.getAttr('kind') === 'edge') {
+          const drag = (this as any).edgeDrag as { id: string; start: { x: number; y: number }; base: number[] } | undefined;
+          const stage = this.stage; const main = this.layers?.main;
+          const pt = stage?.getPointerPosition();
+          if (drag && stage && main && pt) {
+            const cur = main.getAbsoluteTransform().copy().invert().point(pt);
+            const dx = cur.x - drag.start.x;
+            const dy = cur.y - drag.start.y;
+            const nextPts = drag.base.map((v, i) => (i % 2 === 0 ? v + dx : v + dy));
+            try { (node as any).points?.(nextPts); } catch {}
+            this.scheduleDraw('main');
+          }
+          return;
+        }
+      } catch {}
       if (node.name() === 'table' && this.tableControlsTargetId === node.id()) {
         try { this.renderTableControls(node.id()); } catch {}
       }
@@ -3012,6 +3198,13 @@ export class CanvasRendererV2 {
     
     // Double-click for text/cell editing
     this.stage.on('dblclick.renderer', (e: any) => {
+      // Ignore dblclicks on edge handles
+      try {
+        if (e.target?.name && e.target.name() === 'edge-handle') {
+          e.cancelBubble = true;
+          return;
+        }
+      } catch {}
       console.info('[RendererV2] dblclick received', { target: e.target?.name?.(), id: e.target?.id?.(), className: e.target?.getClassName?.() });
 
       // Resolve the element node, with a fallback when the Transformer intercepts the event
@@ -4432,7 +4625,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     // Expose a closers so other flows (e.g., ESC from renderer-level, switching tools) can close it
     (this as any)._closeEditor = cleanup;
   }
-
   // Helper used at the top of openTextareaEditor:
   private closeCurrentEditor() {
     if (this.currentEditor) {
@@ -4766,9 +4958,25 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     const points = Array.isArray(el.points) && el.points.length >= 4
       ? [...el.points]
       : (el.startPoint && el.endPoint ? [el.startPoint.x, el.startPoint.y, el.endPoint.x, el.endPoint.y] : [] as number[]);
+    
+    // Debug logging for free-form connectors
+    if (!el.source?.elementId || !el.target?.elementId) {
+      console.log('[createConnector] Free-form edge:', {
+        id: el.id,
+        points: el.points,
+        extractedPoints: points,
+        x: el.x,
+        y: el.y,
+        width: el.width,
+        height: el.height,
+        subType: el.subType
+      });
+    }
+    
     if (points.length < 4) {
       // Fallback: empty, will be updated on next sync after routing
       // Ensure minimal shape to avoid Konva errors
+      console.warn('[createConnector] Using fallback points for edge:', el.id);
       points.push(0,0,0,0);
     }
     
@@ -4789,6 +4997,9 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         pointerWidth: 10,  // Make arrow head more visible
         fill: el.stroke || '#374151', // Arrow head fill color
         listening: true,
+        draggable: true,
+        // Prevent the Konva node from actually moving; we move its points instead
+        dragBoundFunc: () => ({ x: 0, y: 0 }),
         strokeScaleEnabled: false, // Consistent feel under zoom (blueprint requirement)
         perfectDrawEnabled: false,
         id: el.id
@@ -4802,6 +5013,9 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         lineCap: 'round',
         lineJoin: 'round',
         listening: true,
+        draggable: true,
+        // Prevent the Konva node from actually moving; we move its points instead
+        dragBoundFunc: () => ({ x: 0, y: 0 }),
         strokeScaleEnabled: false, // Consistent feel under zoom (blueprint requirement)
         perfectDrawEnabled: false,
         id: el.id
@@ -5124,6 +5338,22 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
   }
   /** Attach Transformer to current selection */
   syncSelection(selectedIds: Set<ElementId>) {
+    // If connector tool is active, suppress transformer entirely
+    try {
+      const tool = (window as any).__UNIFIED_CANVAS_STORE__?.getState?.().selectedTool;
+      if (typeof tool === 'string' && tool.startsWith('connector')) {
+        if (this.transformer) {
+          try { this.transformer.nodes([]); } catch {}
+          try { this.transformer.visible(false); } catch {}
+          try { (this.transformer as any).listening?.(false); } catch {}
+        }
+        try { this.layers?.overlay?.batchDraw(); } catch {}
+        return;
+      } else {
+        // Re-enable listening when not in connector tool
+        try { (this.transformer as any).listening?.(true); } catch {}
+      }
+    } catch {}
 
     if (!this.layers || !this.transformer) return;
     
@@ -5456,7 +5686,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     });
   }
   // Create draggable connector handle with proper event handling
-  private createConnectorHandle(position: { x: number; y: number }, connectorId: string, endpoint: 'start' | 'end'): Konva.Circle {
+  private createConnectorHandle(position: { x: number; y: number }, edgeId: string, endpoint: 'start' | 'end'): Konva.Circle {
     const handle = new Konva.Circle({
       x: position.x,
       y: position.y,
@@ -5495,19 +5725,27 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       e.cancelBubble = true;
       
       // Do NOT clear overlay or destroy handles; keep this handle alive during drag
-      // Take a history snapshot
-      if ((window as any).__UNIFIED_CANVAS_STORE__) {
-        (window as any).__UNIFIED_CANVAS_STORE__.getState().saveSnapshot();
-      }
+      // Take a history snapshot, if supported by the store
+      try {
+        const store = (window as any).__UNIFIED_CANVAS_STORE__;
+        const st = store?.getState?.();
+        if (st && typeof st.saveSnapshot === 'function') {
+          st.saveSnapshot();
+        }
+      } catch {}
       
-      // Begin endpoint drag in store
-      if ((window as any).__UNIFIED_CANVAS_STORE__) {
-        (window as any).__UNIFIED_CANVAS_STORE__.getState().beginEndpointDrag(connectorId, endpoint);
-      }
+      // Store the edge ID and endpoint for this drag session
+      handle.setAttr('draggingEdgeId', edgeId);
+      handle.setAttr('draggingEndpoint', endpoint);
     });
     
     handle.on('dragmove', (e) => {
       e.cancelBubble = true;
+      
+      // Get stored edge ID and endpoint
+      const dragEdgeId = e.target.getAttr('draggingEdgeId');
+      const dragEndpoint = e.target.getAttr('draggingEndpoint');
+      if (!dragEdgeId || !dragEndpoint) return;
       
       // Get current drag position in overlay layer coordinates
       const dragPos = e.target.getAbsolutePosition();
@@ -5515,18 +5753,75 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       if (!overlay) return;
       const localPos = overlay.getAbsoluteTransform().copy().invert().point(dragPos);
       
-      // Update store with new position (preview)
+      // Check for snap targets
+      let snapTarget: { elementId: string; portKind: any } | null = null;
+      const SNAP_DISTANCE = 20; // pixels
+      const store = (window as any).__UNIFIED_CANVAS_STORE__;
+      if (store) {
+        const elements = store.getState().elements;
+        let closestDist = SNAP_DISTANCE;
+        
+        // Find closest port to snap to
+        elements.forEach((el: any, id: string) => {
+          if (!el || el.type === 'edge' || el.type === 'connector') return;
+          
+          // Calculate port positions
+          const ports: Array<{ x: number; y: number; kind: string }> = [];
+          
+          if (el.type === 'circle' || el.type === 'circle-text') {
+            const cx = el.x || 0;
+            const cy = el.y || 0;
+            const r = el.radius || (el.width ? el.width / 2 : 50);
+            ports.push(
+              { x: cx - r, y: cy, kind: 'W' },
+              { x: cx + r, y: cy, kind: 'E' },
+              { x: cx, y: cy - r, kind: 'N' },
+              { x: cx, y: cy + r, kind: 'S' }
+            );
+          } else {
+            const left = el.x || 0;
+            const top = el.y || 0;
+            const right = left + (el.width || 100);
+            const bottom = top + (el.height || 100);
+            const cx = left + (el.width || 100) / 2;
+            const cy = top + (el.height || 100) / 2;
+            ports.push(
+              { x: left, y: cy, kind: 'W' },
+              { x: right, y: cy, kind: 'E' },
+              { x: cx, y: top, kind: 'N' },
+              { x: cx, y: bottom, kind: 'S' }
+            );
+          }
+          
+          // Check distance to each port
+          for (const port of ports) {
+            const dist = Math.hypot(localPos.x - port.x, localPos.y - port.y);
+            if (dist < closestDist) {
+              closestDist = dist;
+              snapTarget = { elementId: id, portKind: port.kind };
+              // Snap handle position to port
+              localPos.x = port.x;
+              localPos.y = port.y;
+            }
+          }
+        });
+      }
+      
+      // Store snap target for commit
+      e.target.setAttr('snapTarget', snapTarget);
+      
+      // Update edge preview using the edge module
       if ((window as any).__UNIFIED_CANVAS_STORE__) {
-        (window as any).__UNIFIED_CANVAS_STORE__.getState().updateEndpointDrag(localPos);
+        (window as any).__UNIFIED_CANVAS_STORE__.getState().updateEdgeEndpointPreview?.(dragEdgeId, dragEndpoint, localPos.x, localPos.y);
       }
       
       // Preview-only visual updates
-      const connectorNode = this.nodeMap.get(connectorId) as Konva.Line | Konva.Arrow | undefined;
+      const connectorNode = this.nodeMap.get(dragEdgeId) as Konva.Line | Konva.Arrow | undefined;
       if (connectorNode) {
         const currentPoints = connectorNode.points();
         if (currentPoints.length >= 4) {
           let previewPoints: number[];
-          if (endpoint === 'start') {
+          if (dragEndpoint === 'start') {
             previewPoints = [localPos.x, localPos.y, currentPoints[2], currentPoints[3]];
           } else {
             previewPoints = [currentPoints[0], currentPoints[1], localPos.x, localPos.y];
@@ -5539,16 +5834,43 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       
       // Move the handle itself to the new position (within overlay layer)
       e.target.position(localPos);
+      
+      // Change handle color when snapping
+      if (snapTarget) {
+        e.target.fill('#10b981'); // Green when snapping
+      } else {
+        e.target.fill('#3b82f6'); // Blue when not snapping
+      }
+      
       this.scheduleDraw('overlay');
     });
     
     handle.on('dragend', (e) => {
       e.cancelBubble = true;
       
-      // Commit to store first
+      // Get stored edge ID, endpoint, and snap target
+      const dragEdgeId = e.target.getAttr('draggingEdgeId');
+      const dragEndpoint = e.target.getAttr('draggingEndpoint');
+      const snapTarget = e.target.getAttr('snapTarget');
+      
+      if (!dragEdgeId || !dragEndpoint) return;
+      
+      // Commit the edge endpoint change using the edge module
       if ((window as any).__UNIFIED_CANVAS_STORE__) {
-        (window as any).__UNIFIED_CANVAS_STORE__.getState().commitEndpointDrag();
+        const store = (window as any).__UNIFIED_CANVAS_STORE__.getState();
+        if (snapTarget) {
+          // Commit with snap
+          store.commitEdgeEndpoint?.(dragEdgeId, dragEndpoint, snapTarget);
+        } else {
+          // Commit without snap (free-floating)
+          store.commitEdgeEndpoint?.(dragEdgeId, dragEndpoint, null);
+        }
       }
+      
+      // Clear stored attributes
+      e.target.setAttr('draggingEdgeId', null);
+      e.target.setAttr('draggingEndpoint', null);
+      e.target.setAttr('snapTarget', null);
       
       // Re-sync selection overlay at the new position
       const selectedIds = (window as any).__UNIFIED_CANVAS_STORE__?.getState().selectedElementIds || new Set();

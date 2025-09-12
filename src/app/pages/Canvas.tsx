@@ -113,6 +113,7 @@ import { Page, PageCard } from '../../components/ui/design-system/Page';
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
       }}>
         
+        <div data-testid="canvas-page-link" />
         <CanvasContainer onStageReady={handleStageReady} />
       </main>
     </div>

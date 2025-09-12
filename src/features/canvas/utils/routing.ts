@@ -1,7 +1,6 @@
 // src/features/canvas/utils/routing.ts
-import { EdgeElement, EdgeRouting, NodeElement } from '../types/canvas-elements';
-import { getDefaultPortsFor } from './ports';
-import { toWorldPort } from './ports';
+import { EdgeElement, EdgeRouting, NodeElement, PortKind } from '../types/canvas-elements';
+import { getDefaultPortsFor, toWorldPort, toWorldPortByKind, getPortNormal } from './ports';
 
 /**
  * World coordinate point
@@ -24,18 +23,52 @@ export function routeStraight(start: WorldPoint, end: WorldPoint): number[] {
  * Creates a path that goes horizontally then vertically (or vice versa)
  * Returns points array in format [x1, y1, x2, y2, x3, y3]
  */
-export function routeOrthogonal(start: WorldPoint, end: WorldPoint): number[] {
-  // Simple L-routing: go horizontal first, then vertical
-  // Choose the path that minimizes total length or avoids obstacles (future enhancement)
-  
-  const dx = Math.abs(end.x - start.x);
-  const dy = Math.abs(end.y - start.y);
-  
-  // For now, always go horizontal first, then vertical
-  const midX = end.x;
-  const midY = start.y;
-  
-  return [start.x, start.y, midX, midY, end.x, end.y];
+export function routeOrthogonal(
+  start: WorldPoint & { normal?: { x: number; y: number } },
+  end: WorldPoint & { normal?: { x: number; y: number } },
+  opts?: { leave?: number; enter?: number; minSegment?: number; preferAxis?: 'x'|'y'|'auto' }
+): number[] {
+  const leave = Math.max(0, opts?.leave ?? 8);
+  const enter = Math.max(0, opts?.enter ?? 8);
+  const minSeg = Math.max(0, opts?.minSegment ?? 1);
+
+  const s0 = { x: start.x + (start.normal?.x || 0) * leave, y: start.y + (start.normal?.y || 0) * leave };
+  const e0 = { x: end.x   - (end.normal?.x   || 0) * enter, y: end.y   - (end.normal?.y   || 0) * enter };
+
+  const viaHV = [s0, { x: e0.x, y: s0.y }, e0];
+  const viaVH = [s0, { x: s0.x, y: e0.y }, e0];
+
+  const score = (pts: {x:number;y:number}[]) => {
+    let len = 0, bends = 0;
+    for (let i = 1; i < pts.length; i++) { len += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y); }
+    // one bend in both candidates; tie-breaker is length
+    return len + bends * 10;
+  };
+
+  const choice = opts?.preferAxis === 'x' ? viaHV : opts?.preferAxis === 'y' ? viaVH : (score(viaHV) <= score(viaVH) ? viaHV : viaVH);
+
+  // Collapse tiny segments
+  const out: number[] = [];
+  const pts = [ {x: start.x, y: start.y}, ...choice ];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    if (out.length >= 2) {
+      const xPrev = out[out.length - 2];
+      const yPrev = out[out.length - 1];
+      if (Math.abs(p.x - xPrev) + Math.abs(p.y - yPrev) < minSeg) continue;
+      // Merge collinear
+      if (out.length >= 4) {
+        const xPrev2 = out[out.length - 4];
+        const yPrev2 = out[out.length - 3];
+        const colX = xPrev2 === xPrev && xPrev === p.x;
+        const colY = yPrev2 === yPrev && yPrev === p.y;
+        if (colX || colY) { out[out.length - 2] = p.x; out[out.length - 1] = p.y; continue; }
+      }
+    }
+    out.push(p.x, p.y);
+  }
+  out.push(end.x, end.y);
+  return out;
 }
 
 /**
@@ -72,8 +105,21 @@ export function routeEdge(
   
   if (!sourcePort || !targetPort) {
     // Fallback: use element centers if ports not found
-    const sourceCenter = { x: sourceElement.x + sourceElement.width / 2, y: sourceElement.y + sourceElement.height / 2 };
-    const targetCenter = { x: targetElement.x + targetElement.width / 2, y: targetElement.y + targetElement.height / 2 };
+    let sourceCenter: { x: number; y: number };
+    let targetCenter: { x: number; y: number };
+    
+    // Handle circle elements where x,y is already the center
+    if ((sourceElement as any).type === 'circle' || (sourceElement as any).type === 'circle-text') {
+      sourceCenter = { x: sourceElement.x, y: sourceElement.y };
+    } else {
+      sourceCenter = { x: sourceElement.x + sourceElement.width / 2, y: sourceElement.y + sourceElement.height / 2 };
+    }
+    
+    if ((targetElement as any).type === 'circle' || (targetElement as any).type === 'circle-text') {
+      targetCenter = { x: targetElement.x, y: targetElement.y };
+    } else {
+      targetCenter = { x: targetElement.x + targetElement.width / 2, y: targetElement.y + targetElement.height / 2 };
+    }
     // Preserve curved style for mindmap-like branches
     if ((edge as any).curved === true) {
       return routeCurved(sourceCenter, targetCenter);
@@ -83,6 +129,8 @@ export function routeEdge(
   
   const sourceWorld = toWorldPort(sourceElement, sourcePort);
   const targetWorld = toWorldPort(targetElement, targetPort);
+  const sourceNormal = getPortNormal(edge.source.portKind as PortKind);
+  const targetNormal = getPortNormal(edge.target.portKind as PortKind);
   
   // Optional curved path for mindmap-style edges
   if ((edge as any).curved === true) {
@@ -94,7 +142,7 @@ export function routeEdge(
     case 'straight':
       return routeStraight(sourceWorld, targetWorld);
     case 'orthogonal':
-      return routeOrthogonal(sourceWorld, targetWorld);
+      return routeOrthogonal({ ...sourceWorld, normal: sourceNormal }, { ...targetWorld, normal: targetNormal }, { leave: 8, enter: 8, minSegment: 2, preferAxis: 'auto' });
     default:
       console.warn('[routing] Unknown routing type, defaulting to straight', edge.routing);
       return routeStraight(sourceWorld, targetWorld);
