@@ -168,7 +168,11 @@ export class ConnectorModule implements RendererModule {
   private isEnabled(): boolean {
     try {
       const v = localStorage.getItem('FF_CONNECTOR');
-      return v === '1' || v === 'true';
+      if (v === '1' || v === 'true') return true;
+      // Default ON in development to aid migration
+      // @ts-ignore
+      const mode = (import.meta as any)?.env?.MODE || (process as any)?.env?.NODE_ENV;
+      return mode === 'development';
     } catch {
       return false;
     }
