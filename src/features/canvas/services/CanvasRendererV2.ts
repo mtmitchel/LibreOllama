@@ -5385,13 +5385,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       if (node) {
         // Handle connectors specially with EdgeHandles logic
         if ((node.getClassName() === 'Line' || node.getClassName() === 'Arrow') && node.id()) {
-          // If modular connector module is enabled, skip legacy handle overlay
-          try {
-            const ff = localStorage.getItem('FF_CONNECTOR');
-            if (ff === '1' || ff === 'true') {
-              return; // Skip legacy connector handling
-            }
-          } catch {}
           connectorIds.push(String(sid));
           return; // Don't add to transformer
         }
