@@ -196,6 +196,36 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
     stageRef.current = stage;
 
+    // Unconditional modular core init in development to guarantee availability
+    try {
+      // Avoid duplicate init
+      if (process.env.NODE_ENV !== 'production' && !(stage as any).__mod_core__) {
+        const { RendererCore } = require('../renderer/modular/RendererCore');
+        const { SelectionModule } = require('../renderer/modular/modules/SelectionModule');
+        const { TextModule } = require('../renderer/modular/modules/TextModule');
+        const { ViewportModule } = require('../renderer/modular/modules/ViewportModule');
+        const { DrawingModule } = require('../renderer/modular/modules/DrawingModule');
+        const { ConnectorModule } = require('../renderer/modular/modules/ConnectorModule');
+        const { StoreAdapterUnified } = require('../renderer/modular/adapters/StoreAdapterUnified');
+        const { KonvaAdapterStage } = require('../renderer/modular/adapters/KonvaAdapterStage');
+        const store = new StoreAdapterUnified();
+        const konva = new KonvaAdapterStage(stage, { background: backgroundLayer, main: mainLayer, preview: previewLayer, overlay: overlayLayer });
+        const core = new RendererCore();
+        core.register(new SelectionModule());
+        try { core.register(new ViewportModule()); } catch {}
+        try { core.register(new TextModule()); } catch {}
+        try { core.register(new DrawingModule()); } catch {}
+        try { core.register(new ConnectorModule()); } catch {}
+        console.info('[MOD-BOOT] Forcing modular core init (dev)');
+        core.init({ store, konva, overlay: {} });
+        try { core.bindStage(stage); } catch {}
+        const sync = () => core.sync(store.getSnapshot());
+        const unsub = store.subscribe(sync);
+        sync();
+        (stage as any).__mod_core__ = { core, unsub };
+      }
+    } catch {}
+
     // Initialize viewport size (do not offset position to avoid misalignment)
     try {
       setViewport({ width, height });
@@ -677,7 +707,16 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     // Shadow modular renderer (selection only) behind flag
     try {
       const { readNewCanvasFlag } = require('../utils/canvasFlags');
-      if (readNewCanvasFlag?.()) {
+      const useNew = !!readNewCanvasFlag?.();
+      let ffSelect=false, ffText=false, ffConn=false;
+      try {
+        ffSelect = (localStorage.getItem('FF_SELECT') === '1' || localStorage.getItem('FF_SELECT') === 'true');
+        ffText = (localStorage.getItem('FF_TEXT') === '1' || localStorage.getItem('FF_TEXT') === 'true');
+        ffConn = (localStorage.getItem('FF_CONNECTOR') === '1' || localStorage.getItem('FF_CONNECTOR') === 'true');
+      } catch {}
+      const shouldInit = useNew || ffSelect || ffText || ffConn;
+      console.info('[MOD-BOOT] useNew=', useNew, 'FF_SELECT=', ffSelect, 'FF_TEXT=', ffText, 'FF_CONN=', ffConn, 'shouldInit=', shouldInit);
+      if (shouldInit) {
         const { RendererCore } = require('../renderer/modular/RendererCore');
         const { SelectionModule } = require('../renderer/modular/modules/SelectionModule');
         const { TextModule } = require('../renderer/modular/modules/TextModule');
@@ -697,6 +736,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         const layers = requireLayers(stage);
         const konva = new KonvaAdapterStage(stage, { background: layers?.background || null, main: layers?.main || null, preview: layers?.preview || null, overlay: layers?.overlay || null });
         core.init({ store, konva, overlay: {} });
+        try { core.bindStage(stage); } catch {}
         const sync = () => core.sync(store.getSnapshot());
         const unsub = store.subscribe(sync);
         sync();

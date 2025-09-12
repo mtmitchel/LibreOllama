@@ -4,9 +4,12 @@ import { RendererModule, ModuleContext, CanvasSnapshot } from '../../modular/typ
 export class SelectionModule implements RendererModule {
   private ctx!: ModuleContext;
   private transformer: Konva.Transformer | null = null;
+  private enabled = false;
 
   init(ctx: ModuleContext): void {
     this.ctx = ctx;
+    this.enabled = this.isEnabled();
+    try { console.info('[MOD-SEL] init enabled=', this.enabled); } catch {}
     const overlay = this.ctx.konva.getLayers().overlay;
     if (overlay) {
       // Lazy create transformer
@@ -46,6 +49,8 @@ export class SelectionModule implements RendererModule {
   }
 
   sync(snapshot: CanvasSnapshot): void {
+    if (!this.enabled) return;
+    try { console.info('[MOD-SEL] sync selection=', Array.from(snapshot.selection || [])); } catch {}
     if (!this.transformer) return;
     const { overlay } = this.ctx.konva.getLayers();
     if (!overlay) return;
@@ -70,6 +75,64 @@ export class SelectionModule implements RendererModule {
   destroy(): void {
     try { this.transformer?.destroy(); } catch {}
     this.transformer = null;
+  }
+
+  onEvent(evt: any, snapshot: CanvasSnapshot): boolean {
+    if (!this.enabled) return false;
+    try {
+      const e = evt?.konvaEvent;
+      const target = e?.target;
+      const stage = this.ctx.konva.getLayers().overlay?.getStage();
+      if (!stage) return false;
+      if (evt.type === 'mousedown' || evt.type === 'click') {
+        // Ignore overlay adorners
+        let id = target?.id?.();
+        const name = target?.name?.?.();
+        const cls = target?.getClassName?.();
+        if (name === 'edge-handle') return true; // let connector module handle
+        // If no id on target, attempt to resolve from parent or hit-test under pointer
+        if (!id) {
+          try { id = target?.getParent?.()?.id?.(); } catch {}
+          if (!id) {
+            const p = stage.getPointerPosition();
+            if (p) {
+              const hit = stage.getIntersection(p) as any;
+              if (hit?.id) id = hit.id();
+              // Fallback: search by proximity for edges (Line/Arrow) when hit graph misses
+              if (!id) {
+                try {
+                  const layer = this.ctx.konva.getLayers().main;
+                  const children = (layer as any)?.getChildren?.() || [];
+                  for (const n of children) {
+                    const clsName = n.getClassName?.();
+                    if ((clsName === 'Line' || clsName === 'Arrow') && typeof n.id === 'function') {
+                      const nid = n.id(); if (nid) { id = nid; break; }
+                    }
+                  }
+                } catch {}
+              }
+            }
+          }
+        }
+        const store = (window as any).__UNIFIED_CANVAS_STORE__;
+        if (id) {
+          store?.getState?.().selectElement?.(id, !!(e?.evt?.shiftKey || e?.evt?.ctrlKey || e?.evt?.metaKey));
+        } else {
+          store?.getState?.().selectElement?.(null);
+        }
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  private isEnabled(): boolean {
+    try {
+      const v = localStorage.getItem('FF_SELECT');
+      return v === '1' || v === 'true';
+    } catch {
+      return false;
+    }
   }
 }
 

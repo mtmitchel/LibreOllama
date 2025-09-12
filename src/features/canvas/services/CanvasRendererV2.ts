@@ -2947,6 +2947,13 @@ export class CanvasRendererV2 {
     });
 
     this.stage.on('mousedown.renderer', (e: any) => {
+      // If modular selection is enabled, skip legacy selection handling
+      try {
+        const ff = localStorage.getItem('FF_SELECT');
+        if (ff === '1' || ff === 'true') {
+          return;
+        }
+      } catch {}
       // If clicking on an edge endpoint handle, do not change selection or bubble
       try {
         if (e.target?.name && e.target.name() === 'edge-handle') {
@@ -3005,6 +3012,8 @@ export class CanvasRendererV2 {
 
     // Drag start: detach transformer to prevent state conflicts.
     this.stage.on('dragstart.renderer', (e: any) => {
+        // If modular selection is enabled, allow modules to handle drag routing
+        try { const ff = localStorage.getItem('FF_SELECT'); if (ff === '1' || ff === 'true') { /* no-op */ } } catch {}
         // Skip edge handles - they have their own drag logic
         if (e.target.name() === 'edge-handle') {
             return;
@@ -3055,6 +3064,8 @@ export class CanvasRendererV2 {
       if (e.target.name() === 'edge-handle') {
         return;
       }
+      // If modular selection is enabled, skip legacy selection commit logic for selection-specific flows
+      try { const ff = localStorage.getItem('FF_SELECT'); if (ff === '1' || ff === 'true') { /* continue for non-edge movement commits below */ } } catch {}
       
       const node = this.getElementNodeFromEvent(e.target);
       if (!node || !node.id()) return;
@@ -3152,6 +3163,8 @@ export class CanvasRendererV2 {
       if (e.target.name() === 'edge-handle') {
         return;
       }
+      // If modular selection is enabled, prefer module previews for selection; still run non-selection previews below
+      try { const ff = localStorage.getItem('FF_SELECT'); if (ff === '1' || ff === 'true') { /* no-op */ } } catch {}
       
       const node = this.getElementNodeFromEvent(e.target);
       if (!node || !node.id()) return;
@@ -3198,6 +3211,8 @@ export class CanvasRendererV2 {
     
     // Double-click for text/cell editing
     this.stage.on('dblclick.renderer', (e: any) => {
+      // If modular Text is enabled, skip legacy dblclick editing
+      try { const ff = localStorage.getItem('FF_TEXT'); if (ff === '1' || ff === 'true') { return; } } catch {}
       // Ignore dblclicks on edge handles
       try {
         if (e.target?.name && e.target.name() === 'edge-handle') {
@@ -5370,6 +5385,13 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       if (node) {
         // Handle connectors specially with EdgeHandles logic
         if ((node.getClassName() === 'Line' || node.getClassName() === 'Arrow') && node.id()) {
+          // If modular connector module is enabled, skip legacy handle overlay
+          try {
+            const ff = localStorage.getItem('FF_CONNECTOR');
+            if (ff === '1' || ff === 'true') {
+              return; // Skip legacy connector handling
+            }
+          } catch {}
           connectorIds.push(String(sid));
           return; // Don't add to transformer
         }
@@ -5575,6 +5597,20 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     
     console.log('[CanvasRenderer] Clearing connector overlay');
     
+    // If modular connector module is active, do not clean up external overlay nodes
+    try {
+      const ff = localStorage.getItem('FF_CONNECTOR');
+      if (ff === '1' || ff === 'true') {
+        if (this.connectorOverlayGroup) {
+          console.log('[CanvasRenderer] Hiding and clearing legacy overlay group (mod connectors active)');
+          this.connectorOverlayGroup.visible(false);
+          this.connectorOverlayGroup.destroyChildren();
+        }
+        this.layers.overlay.batchDraw();
+        return;
+      }
+    } catch {}
+
     // Keep the overlay group as singleton, just hide it and clear children
     if (this.connectorOverlayGroup) {
       console.log('[CanvasRenderer] Hiding and clearing overlay group');

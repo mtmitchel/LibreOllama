@@ -27,6 +27,7 @@ import {
 import ShapesDropdown from './ShapesDropdown';
 import ConnectorDropdown from './ConnectorDropdown';
 import { Button } from '../../../components/ui';
+import { readNewCanvasFlag, setNewCanvasFlag } from '../utils/canvasFlags';
 import { ColorSwatch } from '../../../components/ui/ColorSwatch';
 import { resolveCSSVariable } from '../utils/colorUtils';
 
@@ -232,6 +233,44 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     if (confirm('Are you sure you want to clear the entire canvas? This cannot be undone.')) {
       clearCanvas();
     }
+  };
+
+  // Dev-only: simple flag toggles for modular renderer and feature modules
+  const [devFlags, setDevFlags] = React.useState(() => ({
+    useNew: false,
+    ffSelect: false,
+    ffText: false,
+    ffConnector: false,
+  }));
+
+  React.useEffect(() => {
+    try {
+      const useNew = readNewCanvasFlag();
+      const ffSelect = localStorage.getItem('FF_SELECT') === '1' || localStorage.getItem('FF_SELECT') === 'true';
+      const ffText = localStorage.getItem('FF_TEXT') === '1' || localStorage.getItem('FF_TEXT') === 'true';
+      const ffConnector = localStorage.getItem('FF_CONNECTOR') === '1' || localStorage.getItem('FF_CONNECTOR') === 'true';
+      setDevFlags({ useNew, ffSelect, ffText, ffConnector });
+    } catch {}
+  }, []);
+
+  const toggleFlag = (key: 'useNew'|'ffSelect'|'ffText'|'ffConnector') => {
+    const next = { ...devFlags, [key]: !devFlags[key] } as typeof devFlags;
+    setDevFlags(next);
+    try {
+      if (key === 'useNew') {
+        setNewCanvasFlag(next.useNew);
+      } else if (key === 'ffSelect') {
+        localStorage.setItem('FF_SELECT', next.ffSelect ? '1' : '0');
+      } else if (key === 'ffText') {
+        localStorage.setItem('FF_TEXT', next.ffText ? '1' : '0');
+      } else if (key === 'ffConnector') {
+        localStorage.setItem('FF_CONNECTOR', next.ffConnector ? '1' : '0');
+      }
+      // Reload to re-init renderer modules
+      if (process.env.NODE_ENV === 'development') {
+        setTimeout(() => window.location.reload(), 50);
+      }
+    } catch {}
   };
 
   // Add keyboard shortcut support for delete and clear (read selection at event time)
@@ -492,6 +531,51 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             );
           })}
         </div>
+
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-border-subtle mx-1 h-5 w-px" />
+        )}
+
+        {process.env.NODE_ENV === 'development' && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant={devFlags.useNew ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFlag('useNew')}
+              title="Toggle modular renderer"
+              aria-label="Toggle modular renderer"
+            >
+              NewCanvas {devFlags.useNew ? 'ON' : 'OFF'}
+            </Button>
+            <Button
+              variant={devFlags.ffSelect ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFlag('ffSelect')}
+              title="Toggle Selection module"
+              aria-label="Toggle Selection module"
+            >
+              FF_SELECT {devFlags.ffSelect ? 'ON' : 'OFF'}
+            </Button>
+            <Button
+              variant={devFlags.ffText ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFlag('ffText')}
+              title="Toggle Text module"
+              aria-label="Toggle Text module"
+            >
+              FF_TEXT {devFlags.ffText ? 'ON' : 'OFF'}
+            </Button>
+            <Button
+              variant={devFlags.ffConnector ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFlag('ffConnector')}
+              title="Toggle Connector module"
+              aria-label="Toggle Connector module"
+            >
+              FF_CONN {devFlags.ffConnector ? 'ON' : 'OFF'}
+            </Button>
+          </div>
+        )}
 
         {/* Shapes & Drawing Tools - Combined cluster */}
         <div className="flex items-center gap-1">

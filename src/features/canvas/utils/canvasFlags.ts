@@ -16,7 +16,12 @@ export function readNewCanvasFlag(): boolean {
     if (envVal === 'true') return true;
     if (envVal === 'false') return false;
   } catch {}
-  // Safety-first default: use legacy (false)
+  // Developer-friendly default: enable new canvas in development, legacy in production
+  try {
+    // @ts-ignore
+    const mode = (import.meta as any)?.env?.MODE || (process as any)?.env?.NODE_ENV;
+    if (mode === 'development') return true;
+  } catch {}
   return false;
 }
 
