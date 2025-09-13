@@ -2,6 +2,8 @@
 import { ElementId, EdgeElement, EdgeEndpoint, EdgeRouting, PortKind } from '../../types/canvas-elements';
 import { updateEdgeGeometry } from '../../utils/routing';
 import { StoreModule, StoreSet, StoreGet } from './types';
+import { nanoid } from 'nanoid';
+import { createElementId } from '../../types/enhanced.types';
 
 /**
  * Edge draft state for interactive connector creation
@@ -134,7 +136,7 @@ export const createEdgeModule = (
         }
       },
       addEdge: (partial) => {
-        const id = `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` as ElementId;
+        const id = createElementId(nanoid());
         
         setState((state: any) => {
           // Calculate bounding box from endpoints (will be updated by routing)

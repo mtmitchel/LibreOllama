@@ -93,6 +93,38 @@ export function getCircleTextBounds(
 }
 
 /**
+ * Calculate text bounds for an ellipse
+ * @param radiusX - Ellipse X radius
+ * @param radiusY - Ellipse Y radius
+ * @param padding - Text padding
+ * @param strokeWidth - Stroke width
+ * @returns Text bounds
+ */
+export function getEllipticalTextBounds(radiusX: number, radiusY: number, padding: number = 8, strokeWidth: number = 2) {
+  // Ensure radii are valid positive numbers
+  const safeRadiusX = Math.max(1, isFinite(radiusX) ? radiusX : 40);
+  const safeRadiusY = Math.max(1, isFinite(radiusY) ? radiusY : 40);
+  
+  const effectiveRadiusX = Math.max(1, safeRadiusX - strokeWidth / 2);
+  const effectiveRadiusY = Math.max(1, safeRadiusY - strokeWidth / 2);
+  
+  // Calculate inscribed rectangle dimensions
+  let width = (effectiveRadiusX * 2) / Math.sqrt(2) - padding * 2;
+  let height = (effectiveRadiusY * 2) / Math.sqrt(2) - padding * 2;
+  
+  // Ensure dimensions are finite and positive
+  width = isFinite(width) && width > 0 ? width : 50;
+  height = isFinite(height) && height > 0 ? height : 50;
+  
+  return {
+    width,
+    height,
+    x: -width / 2,
+    y: -height / 2
+  };
+}
+
+/**
  * Check if a point is inside a circle
  * @param px - Point X
  * @param py - Point Y

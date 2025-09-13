@@ -155,7 +155,6 @@ export function getRectangleTextLayout(element: RectangleElement & { text?: stri
     fontSize: element.fontSize || 14,
     lineHeight: 1.2,
     align: 'left',
-    verticalAlign: 'top',
     padding
   };
 }

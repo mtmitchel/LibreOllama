@@ -256,7 +256,6 @@ const handleDirectPointerUp = () => {
 };
 
 // Tool configuration helpers
-type DrawingTool = 'pen' | 'highlighter' | 'eraser';
 const getToolColor = (tool: DrawingTool): string => {
   switch (tool) {
     case 'pen': return '#000000';

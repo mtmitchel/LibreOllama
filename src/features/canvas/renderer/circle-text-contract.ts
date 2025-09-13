@@ -271,7 +271,7 @@ export class CircleTextContract {
       rTargetWorld: rTarget,
       sidePx: Math.sqrt(2) * rTarget * measurement.sLim,
     };
-    const newPadPx = this.getPadding(rTarget);
+    const newPadPx = this.basePadPx;
     newMeasurement.contentWpx = newMeasurement.sidePx - 2 * newPadPx;
     newMeasurement.padPx = newPadPx;
     newMeasurement.contentHpx = newMeasurement.contentWpx; // Square

@@ -68,6 +68,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 150,
         y: 150,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -126,6 +128,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 500, // Far outside
         y: 500,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -187,6 +191,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 150,
         y: 150,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -257,6 +263,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 120,
         y: 120,
         radius: 10,
+        width: 20, // 2 * radius
+        height: 20, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 1,
@@ -278,7 +286,11 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
       };
 
       store.getState().addElement(elem1);
-      store.getState().addElement(elem2);
+      store.getState().addElement({
+        ...elem2,
+        width: elem2.radius * 2,
+        height: elem2.radius * 2,
+      });
 
       const sectionId = store.getState().createSection(100, 100, 150, 150);
 
@@ -321,6 +333,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 150,
         y: 150,
         radius: 20,
+        width: 40, // 2 * radius
+        height: 40, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -328,7 +342,11 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         updatedAt: Date.now()
       };
 
-      store.getState().addElement(element);
+      store.getState().addElement({
+        ...element,
+        width: element.radius * 2,
+        height: element.radius * 2,
+      });
       const sectionId = store.getState().createSection(100, 100, 200, 200);
 
       const initialSection = store.getState().sections.get(sectionId);
@@ -405,6 +423,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 120,
         y: 120,
         radius: 15,
+        width: 30, // 2 * radius
+        height: 30, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -519,6 +539,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 150,
         y: 150,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -570,6 +592,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 120,
         y: 120,
         radius: 20,
+        width: 40, // 2 * radius
+        height: 40, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -632,6 +656,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 120,
         y: 120,
         radius: 20,
+        width: 40, // 2 * radius
+        height: 40, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -663,6 +689,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 120,
         y: 120,
         radius: 15,
+        width: 30, // 2 * radius
+        height: 30, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 2,
@@ -676,6 +704,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
         x: 320,
         y: 320,
         radius: 15,
+        width: 30, // 2 * radius
+        height: 30, // 2 * radius
         fill: '#00ff00',
         stroke: '#000000',
         strokeWidth: 2,
@@ -724,6 +754,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
           x: 120,
           y: 120,
           radius: 20,
+          width: 40, // 2 * radius
+          height: 40, // 2 * radius
           fill: '#ff0000',
           stroke: '#000000',
           strokeWidth: 2,
@@ -790,6 +822,8 @@ describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
           x: 150,
           y: 150,
           radius: 25,
+          width: 50, // 2 * radius
+          height: 50, // 2 * radius
           fill: '#ff0000',
           stroke: '#000000',
           strokeWidth: 2,

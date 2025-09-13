@@ -79,10 +79,10 @@ export class ScreenReaderUtils {
     const parts: string[] = [];
     
     // Dimensions
-    if (isRectangularElement(element)) {
-      parts.push(`${Math.round(element.width)} by ${Math.round(element.height)} pixels`);
-    } else if (isCircleElement(element)) {
+    if (isCircleElement(element)) {
       parts.push(`radius ${Math.round(element.radius)} pixels`);
+    } else if (isRectangularElement(element)) {
+      parts.push(`${Math.round(element.width)} by ${Math.round(element.height)} pixels`);
     }
     
     // Visual properties - handle based on element type

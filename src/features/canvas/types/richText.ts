@@ -13,6 +13,8 @@
  * Standard text format interface that fixes command naming issues.
  * Uses correct property names that match the expected commands.
  */
+
+import { RichTextSegment } from './enhanced.types';
 export interface StandardTextFormat {
   /** Bold formatting */
   bold: boolean;
@@ -44,28 +46,6 @@ export interface StandardTextFormat {
  * Rich text segment interface with all required properties.
  * This extends the existing RichTextSegment with additional formatting options.
  */
-export interface RichTextSegment {
-  /** Text content of the segment */
-  text: string;
-  /** Font size in pixels */
-  fontSize?: number;
-  /** Font family name */
-  fontFamily?: string;
-  /** Font style (normal, italic) */
-  fontStyle?: string;
-  /** Font weight (normal, bold) */
-  fontWeight?: string;
-  /** Text decoration (underline, line-through, etc.) */
-  textDecoration?: string;
-  /** Text color for this segment */
-  fill?: string;
-  /** Optional URL for clickable links */
-  url?: string;
-  /** Text alignment (element-level property) */
-  textAlign?: 'left' | 'center' | 'right';
-  /** List formatting type */
-  listType?: 'none' | 'bullet' | 'numbered';
-}
 
 /**
  * Text selection range for formatting operations

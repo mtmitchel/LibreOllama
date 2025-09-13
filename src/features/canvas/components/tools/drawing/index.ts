@@ -3,7 +3,6 @@
  * Drawing tool components
  */
 
-export { EraserTool } from './EraserTool';
 export { HighlighterTool } from './HighlighterTool';
 export { MarkerTool } from './MarkerTool';
 export { PenTool } from './PenTool';

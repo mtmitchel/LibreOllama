@@ -14,7 +14,10 @@ import React, { useCallback } from 'react';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useShallow } from 'zustand/react/shallow';
-import { BaseCreationTool, Vector2d } from '../base';
+interface Vector2d {
+  x: number;
+  y: number;
+}
 import { nanoid } from 'nanoid';
 import { StickyNoteElement, ElementId } from '../../../types/enhanced.types';
 
@@ -90,10 +93,6 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
     }, 50);
   }, [enableStickyNoteContainer]);
 
-  // Preview is rendered imperatively by NonReactCanvasStage; no JSX preview here
-  const renderPreview = useCallback((position: Vector2d, showGuide: boolean) => {
-    return null;
-  }, []);
 
   // Simple direct event handling to avoid the infinite loop
   React.useEffect(() => {

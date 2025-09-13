@@ -23,7 +23,26 @@ import { logger } from '../../../core/lib/logger';
 /**
  * Get all Gmail accounts for a user
  */
+const isDev = import.meta.env.DEV;
+const MOCK_ACCOUNT = {
+  id: 'dev-gmail-account',
+  email: 'dev@example.com',
+  name: 'Dev User',
+  picture: '',
+  isActive: true
+};
+const MOCK_TOKENS = {
+  access_token: 'mock-access-token',
+  refresh_token: 'mock-refresh-token',
+  expires_in: 3600,
+  token_type: 'Bearer'
+};
+
 export async function getGmailAccounts(userId: string): Promise<any[]> {
+  if (isDev) {
+    logger.debug('[TauriService] DEV MOCK: Returning fake Gmail account');
+    return [MOCK_ACCOUNT];
+  }
   try {
     logger.debug('[TauriService] Getting Gmail accounts for user:', userId);
     const accounts = await invoke('get_gmail_accounts_secure', { userId });
@@ -44,6 +63,15 @@ export async function startGmailAuth(redirectUri?: string): Promise<{
   state?: string;
   error?: string;
 }> {
+  if (isDev) {
+    logger.debug('[TauriService] DEV MOCK: Skipping OAuth, returning success');
+    return {
+      success: true,
+      authUrl: 'mock://dev/auth/success',
+      state: 'mock-state'
+    };
+  }
+  
   try {
     logger.debug('[TauriService] Starting Gmail OAuth flow');
     
@@ -90,6 +118,19 @@ export async function completeGmailAuth(params: {
   };
   error?: string;
 }> {
+  if (isDev) {
+    logger.debug('[TauriService] DEV MOCK: Skipping OAuth completion, returning fake tokens/account');
+    return {
+      success: true,
+      account: MOCK_ACCOUNT,
+      tokens: {
+        accessToken: MOCK_TOKENS.access_token,
+        refreshToken: MOCK_TOKENS.refresh_token,
+        expiresIn: MOCK_TOKENS.expires_in
+      }
+    };
+  }
+  
   try {
     logger.debug('[TauriService] Completing Gmail OAuth flow');
     

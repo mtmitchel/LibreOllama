@@ -23,7 +23,7 @@ export class SelectionModule implements RendererModule {
       overlay.batchDraw();
       // Commit transform scale -> size on end
       try {
-        this.transformer.on('transformend.modsel', () => {
+        this.transformer!.on('transformend.modsel', () => {
           const store = (window as any).__UNIFIED_CANVAS_STORE__;
           const nodes = this.transformer?.nodes?.() || [];
           if (nodes.length !== 1) return;

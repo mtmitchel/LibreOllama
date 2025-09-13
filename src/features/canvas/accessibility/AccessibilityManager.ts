@@ -296,10 +296,10 @@ export class AccessibilityManager {
     const position = `at position ${Math.round(element.x)}, ${Math.round(element.y)}`;
     
     let sizeDesc = '';
-    if (isRectangularElement(element)) {
-      sizeDesc = `, size ${Math.round(element.width)} by ${Math.round(element.height)}`;
-    } else if (isCircleElement(element)) {
+    if (isCircleElement(element)) {
       sizeDesc = `, radius ${Math.round(element.radius)}`;
+    } else if (isRectangularElement(element)) {
+      sizeDesc = `, size ${Math.round(element.width)} by ${Math.round(element.height)}`;
     }
     
     return `${baseDesc} ${position}${sizeDesc}`;

@@ -10,7 +10,7 @@ import { ConnectorTool } from './tools/creation/ConnectorTool';
 import { ElementId, CanvasElement, createElementId, ConnectorElement, createGroupId, GroupId } from '../types/enhanced.types';
 import { performanceLogger } from '../utils/performance/PerformanceLogger';
 import { CanvasRendererV2 } from '../services/CanvasRendererV2';
-import { getContentPointer } from '../utils/coords';
+import { getContentPointer } from '../utils/pointer-to-content';
 import { nanoid } from 'nanoid';
 
 interface NonReactCanvasStageProps {
@@ -1840,11 +1840,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       {stageRef && selectedTool === 'sticky-note' && (
         <StickyNoteTool stageRef={stageRef} isActive={true} />
       )}
-      {stageRef && selectedTool === 'connector-line' && (
-        <ConnectorTool stageRef={stageRef} isActive={true} connectorType="line" />
-      )}
-      {stageRef && selectedTool === 'connector-arrow' && (
-        <ConnectorTool stageRef={stageRef} isActive={true} connectorType="arrow" />
+      {stageRef && (selectedTool === 'connector-line' || selectedTool === 'connector-arrow') && (
+        <ConnectorTool stageRef={stageRef} isActive={true} connectorType={selectedTool === 'connector-line' ? 'line' : 'arrow'} />
       )}
       {/* Table creation is handled imperatively via stage click when tool is active */}
     </div>

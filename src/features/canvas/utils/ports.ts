@@ -1,114 +1,155 @@
-// src/features/canvas/utils/ports.ts
-import { NodeElement, ElementPort, PortId, PortKind } from '../types/canvas-elements';
+import { ElementId, PortKind } from '../types/canvas-elements';
+import { CanvasElement, isCircleElement, isRectangularElement, CircleElement, RectangleElement, SectionElement, isSectionElement, isRectangleElement } from '../types/enhanced.types';
 
-/**
- * Generate default ports for a node element based on its geometry
- * Returns standard attachment points: N, S, E, W, corners, CENTER
- */
-export function getDefaultPortsFor(el: NodeElement): ElementPort[] {
-  const ports: ElementPort[] = [];
-  
-  // Standard cardinal directions (mid-edges)
-  ports.push(createPort('N', 0, -0.5));     // top middle
-  ports.push(createPort('S', 0, 0.5));      // bottom middle
-  ports.push(createPort('E', 0.5, 0));      // right middle
-  ports.push(createPort('W', -0.5, 0));     // left middle
-  
-  // Corner ports
-  ports.push(createPort('NE', 0.5, -0.5));  // top-right
-  ports.push(createPort('NW', -0.5, -0.5)); // top-left
-  ports.push(createPort('SE', 0.5, 0.5));   // bottom-right
-  ports.push(createPort('SW', -0.5, 0.5));  // bottom-left
-  
-  // Center port
-  ports.push(createPort('CENTER', 0, 0));
-  
-  return ports;
+export type { PortKind };
+import Konva from 'konva';
+
+export interface Port {
+    id: string; // Unique ID for the port
+    kind: PortKind; // Type of port (N, S, E, W, CENTER, CUSTOM)
+    elementId: ElementId; // The ID of the element this port belongs to
+    x: number; // World X coordinate of the port
+    y: number; // World Y coordinate of the port
+    nx: number; // Normalized X coordinate relative to element center (-0.5 to 0.5)
+    ny: number; // Normalized Y coordinate relative to element center (-0.5 to 0.5)
 }
 
 /**
- * Convert normalized port coordinates to world space
- * Handles element position, dimensions, and rotation
+ * Calculates the world coordinates of a port for a given element.
+ * @param element The canvas element.
+ * @param portKind The kind of port (N, S, E, W, CENTER).
+ * @returns The world coordinates {x, y} of the port, or null if no port is defined for the element type.
  */
-export function toWorldPort(el: NodeElement, port: ElementPort): { x: number; y: number } {
-  // Start with normalized coordinates in [-0.5, 0.5] range
-  // Convert to element-local coordinates
-  const localX = port.nx * el.width;
-  const localY = port.ny * el.height;
-  
-  // Apply rotation if present
-  const rotation = el.rotation || 0;
-  let worldX = localX;
-  let worldY = localY;
-  
-  if (rotation !== 0) {
-    // Convert degrees to radians
-    const rad = (rotation * Math.PI) / 180;
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-    
-    // Rotate around element center
-    worldX = localX * cos - localY * sin;
-    worldY = localX * sin + localY * cos;
-  }
-  
-  // Translate to world position (element center)
-  worldX += el.x + el.width / 2;
-  worldY += el.y + el.height / 2;
-  
-  return { x: worldX, y: worldY };
-}
+export function getPortWorldCoordinates(element: CanvasElement, portKind: PortKind, zoom: number = 1): { x: number; y: number } | null {
+    let elementWidth = 0;
+    let elementHeight = 0;
 
-/**
- * Helper to create a port with generated ID
- */
-function createPort(kind: PortKind, nx: number, ny: number): ElementPort {
-  return {
-    id: `port-${kind}-${Math.random().toString(36).substr(2, 9)}` as PortId,
-    kind,
-    nx,
-    ny,
-  };
-}
-
-/**
- * Find the closest port on an element to a world point
- * Returns the port and distance, or null if element has no ports
- */
-export function findClosestPortTo(
-  el: NodeElement, 
-  worldPoint: { x: number; y: number }
-): { port: ElementPort; distance: number } | null {
-  const ports = el.ports || getDefaultPortsFor(el);
-  
-  if (ports.length === 0) return null;
-  
-  let closestPort = ports[0];
-  let closestDistance = Infinity;
-  
-  for (const port of ports) {
-    const portWorld = toWorldPort(el, port);
-    const dx = portWorld.x - worldPoint.x;
-    const dy = portWorld.y - worldPoint.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closestPort = port;
+    if (isCircleElement(element)) {
+        elementWidth = element.radius * 2;
+        elementHeight = element.radius * 2;
+    } else if (isRectangleElement(element)) {
+        elementWidth = (element as RectangleElement).width;
+        elementHeight = (element as RectangleElement).height;
+    } else {
+        // Elements without explicit width/height or radius don't have standard ports
+        return null;
     }
-  }
-  
-  return { port: closestPort, distance: closestDistance };
+
+    const centerX = element.x + elementWidth / 2;
+    const centerY = element.y + elementHeight / 2;
+
+    // Adjust for zoom if necessary, though port positions are typically in world coordinates
+    // and visual indicators might scale with zoom. The coordinates themselves remain world.
+    // This 'zoom' parameter is more for visual adjustments of the indicator, not the port itself.
+
+    switch (portKind) {
+        case 'CENTER':
+            return { x: centerX, y: centerY };
+        case 'N':
+            return { x: centerX, y: element.y };
+        case 'S':
+            return { x: centerX, y: element.y + elementHeight };
+        case 'E':
+            return { x: element.x + elementWidth, y: centerY };
+        case 'W':
+            return { x: element.x, y: centerY };
+        // Add other cardinal directions or custom ports if needed
+        default:
+            return null;
+    }
 }
 
 /**
- * Get all world positions of ports for an element
- * Useful for rendering port indicators
+ * Generates a list of standard ports for a given element.
+ * @param element The canvas element.
+ * @returns An array of Port objects.
  */
-export function getAllPortWorldPositions(el: NodeElement): Array<{ port: ElementPort; world: { x: number; y: number } }> {
-  const ports = el.ports || getDefaultPortsFor(el);
-  return ports.map(port => ({
-    port,
-    world: toWorldPort(el, port)
-  }));
+export function generateElementPorts(element: CanvasElement): Port[] {
+    const ports: Port[] = [];
+    let elementWidth = 0;
+    let elementHeight = 0;
+
+    // Exclude SectionElements from having ports
+    if (isSectionElement(element)) {
+        return [];
+    }
+
+    // Determine dimensions based on element type
+    if (isCircleElement(element)) {
+        elementWidth = element.radius * 2;
+        elementHeight = element.radius * 2;
+    } else if (isRectangleElement(element)) {
+        elementWidth = (element as RectangleElement).width;
+        elementHeight = (element as RectangleElement).height;
+    } else {
+        // Only rectangular and circular elements have predefined ports for now
+        return [];
+    }
+
+    const centerX = element.x + elementWidth / 2;
+    const centerY = element.y + elementHeight / 2;
+
+    const addPort = (kind: PortKind, x: number, y: number, nx: number, ny: number) => {
+        ports.push({
+            id: `${element.id}-${kind}`,
+            kind,
+            elementId: element.id,
+            x, y, nx, ny
+        });
+    };
+
+    // Center port
+    addPort('CENTER', centerX, centerY, 0, 0);
+
+    // Cardinal ports
+    if (isRectangularElement(element) || isCircleElement(element)) { // Both types have N,S,E,W
+        addPort('N', centerX, element.y, 0, -0.5);
+        addPort('S', centerX, element.y + elementHeight, 0, 0.5);
+        addPort('E', element.x + elementWidth, centerY, 0.5, 0);
+        addPort('W', element.x, centerY, -0.5, 0);
+    }
+
+    return ports;
+}
+
+/**
+ * Finds the closest snap target (port) for a given world point.
+ * @param worldPoint The current pointer position in world coordinates.
+ * @param elements A map of all canvas elements.
+ * @param excludeElementId An optional element ID to exclude from snapping (e.g., the source element).
+ * @param snapDistance The maximum distance for snapping.
+ * @returns The closest Port if found, otherwise null.
+ */
+export function findClosestPort(
+    worldPoint: { x: number; y: number },
+    elements: Map<ElementId, CanvasElement>,
+    excludeElementId: ElementId | null,
+    snapDistance: number
+): Port | null {
+    let closestPort: Port | null = null;
+    let minDistance = snapDistance;
+
+    for (const element of elements.values()) {
+        // Exclude the source element itself
+        if (element.id === excludeElementId) {
+            continue;
+        }
+
+        // Only consider elements that can have ports (rectangular or circular)
+        if (!isRectangleElement(element) && !isCircleElement(element)) {
+            continue;
+        }
+
+        const candidatePorts = generateElementPorts(element);
+
+        for (const port of candidatePorts) {
+            const dist = Math.hypot(port.x - worldPoint.x, port.y - worldPoint.y);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestPort = port;
+            }
+        }
+    }
+
+    return closestPort;
 }

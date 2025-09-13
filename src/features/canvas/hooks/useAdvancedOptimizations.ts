@@ -26,11 +26,10 @@ import {
   memoryManager, 
   ElementWrapper 
 } from '../utils/memoryManager';
-import { 
-  stateValidator, 
-  ValidationLevel, 
-  ValidationResult 
-} from '../utils/stateValidator';
+import {
+  stateSynchronizationMonitor,
+  SynchronizationIssue
+} from '../utils/state/StateSynchronizationMonitor';
 
 interface OptimizationConfig {
   enableProgressiveRender: boolean;
@@ -38,7 +37,6 @@ interface OptimizationConfig {
   enableCircuitBreakers: boolean;
   enableMemoryManager: boolean;
   enableStateValidation: boolean;
-  validationLevel: ValidationLevel;
   maxElements: number;
   targetFPS: number;
 }
@@ -67,7 +65,7 @@ interface OptimizationStats {
       averageExecutionTime: number;
     };
   };
-  validationResult: ValidationResult | null;
+  validationIssues: SynchronizationIssue[]; // Changed from validationResult
   adaptiveSettings: AdaptiveSettings;
   performance: {
     frameRate: number;
@@ -82,7 +80,6 @@ const DEFAULT_CONFIG: OptimizationConfig = {
   enableCircuitBreakers: true,
   enableMemoryManager: true,
   enableStateValidation: true,
-  validationLevel: ValidationLevel.STANDARD,
   maxElements: 5000,
   targetFPS: 60,
 };
@@ -99,7 +96,7 @@ export function useAdvancedOptimizations(
   config: Partial<OptimizationConfig> = {}
 ) {
   const finalConfig = useMemo(() => ({ ...DEFAULT_CONFIG, ...config }), [config]);
-  const lastValidationRef = useRef<ValidationResult | null>(null);
+  const lastValidationIssuesRef = useRef<SynchronizationIssue[]>([]);
   const elementWrappersRef = useRef<Map<ElementId, ElementWrapper<CanvasElement>>>(new Map());
 
   // Memory pressure monitoring with adaptive settings
@@ -151,37 +148,43 @@ export function useAdvancedOptimizations(
   useEffect(() => {
     if (!finalConfig.enableStateValidation || !canvasState) return;
 
-    const validateState = () => {
-      stateValidator.setLevel(finalConfig.validationLevel);
-      // Create a compatible CanvasState object for validation, filtering out sections
-      const elementsOnly = Array.from(canvasState.elements.entries()).filter(([key, value]) => value.type !== 'section');
-      const validationState = {
-        elements: new Map(elementsOnly.map(([key, value]) => [value.id as ElementId, value])),
-        selectedElementIds: canvasState.selectedElementIds,
-        groups: new Map(), // Empty for now
-        elementToGroupMap: new Map(), // Empty for now  
-        elementOrder: elementsOnly.map(([key, value]) => value.id as ElementId)
-      };
-      const result = stateValidator.validate(validationState);
-      
-      if (!result.isValid) {
-        console.warn('🔍 Canvas state validation failed:', {
-          errors: result.errors.length,
-          warnings: result.warnings.length,
-          fixed: result.fixed.length,
-          stats: result.stats
-        });
+    const monitorState = () => {
+      // Record current state for monitoring
+      stateSynchronizationMonitor.recordStateSnapshot(
+        canvasState.selectedTool as any, // Assuming CanvasTool is compatible
+        {
+          isDrawingSection: canvasState.selectedTool === 'section',
+          isDrawingConnector: canvasState.selectedTool === 'connector-line' || canvasState.selectedTool === 'connector-arrow',
+          isDrawing: canvasState.selectedTool === 'pen' || canvasState.selectedTool === 'marker' || canvasState.selectedTool === 'highlighter',
+        },
+        {
+          selectedElementIds: canvasState.selectedElementIds,
+          hoveredElementId: null, // Not directly available from canvasState
+        },
+        {
+          zoom: viewport.scale,
+          pan: { x: viewport.x, y: viewport.y },
+        }
+      );
+
+      // Perform checks and get report
+      stateSynchronizationMonitor.startMonitoring(1000); // Ensure monitoring is active
+      const report = stateSynchronizationMonitor.getHealthReport();
+      lastValidationIssuesRef.current = report.recentIssues;
+
+      if (report.recentIssues.length > 0) {
+        console.warn('🔍 Canvas state synchronization issues detected:', report.recentIssues);
       }
-      
-      lastValidationRef.current = result;
     };
 
-    // Validate immediately and on interval
-    validateState();
-    const interval = setInterval(validateState, 30000); // Every 30 seconds
+    monitorState();
+    const interval = setInterval(monitorState, 5000); // Check every 5 seconds
 
-    return () => clearInterval(interval);
-  }, [canvasState, finalConfig.enableStateValidation, finalConfig.validationLevel]);
+    return () => {
+      clearInterval(interval);
+      stateSynchronizationMonitor.stopMonitoring();
+    };
+  }, [canvasState, viewport, finalConfig.enableStateValidation]);
 
   // Adaptive performance adjustments based on memory pressure
   useEffect(() => {
@@ -241,7 +244,7 @@ export function useAdvancedOptimizations(
       batchUpdate: batchUpdateBreaker.stats || { failures: 0, state: CircuitState.CLOSED, successes: 0, lastFailure: null, lastSuccess: null, totalCalls: 0, averageExecutionTime: 0 },
       render: renderBreaker.stats || { failures: 0, state: CircuitState.CLOSED, successes: 0, lastFailure: null, lastSuccess: null, totalCalls: 0, averageExecutionTime: 0 },
     },
-    validationResult: lastValidationRef.current,
+    validationIssues: lastValidationIssuesRef.current,
     adaptiveSettings,
     performance: {
       frameRate: memoryStats.frameRate,
@@ -269,8 +272,8 @@ export function useAdvancedOptimizations(
       console.warn('⚠️ High memory usage detected:', stats.performance.memoryUsage);
     }
     
-    if (stats.validationResult && !stats.validationResult.isValid) {
-      console.warn('⚠️ State validation issues detected:', stats.validationResult.errors.length);
+    if (stats.validationIssues.length > 0) {
+      console.warn('⚠️ State synchronization issues detected:', stats.validationIssues.length);
     }
 
     return stats;
@@ -295,19 +298,11 @@ export function useAdvancedOptimizations(
       batchUpdateBreaker.reset();
       renderBreaker.reset();
     },
-    validateState: () => {
+    validateState: () => { // Renamed to reflect monitoring, not direct validation
       if (canvasState) {
-        const elementsOnly = Array.from(canvasState.elements.entries()).filter(([key, value]) => value.type !== 'section');
-        const validationState = {
-          elements: new Map(elementsOnly.map(([key, value]) => [value.id as ElementId, value])),
-          selectedElementIds: canvasState.selectedElementIds,
-          groups: new Map(),
-          elementToGroupMap: new Map(),
-          elementOrder: elementsOnly.map(([key, value]) => value.id as ElementId)
-        };
-        return stateValidator.validate(validationState);
+        return stateSynchronizationMonitor.getHealthReport().recentIssues;
       }
-      return null;
+      return [];
     },
     
     // Adaptive settings from memory pressure
@@ -350,10 +345,10 @@ export const createPerformanceMonitor = (stats: OptimizationStats) => {
     React.createElement('div', { key: 'maxel' }, `Max Elements: ${stats.adaptiveSettings.maxElements}`),
     React.createElement('div', { key: 'batch' }, `Batch Size: ${stats.adaptiveSettings.batchSize}`),
     React.createElement('div', { key: 'quality' }, `Quality: ${stats.adaptiveSettings.renderQuality}`),
-    stats.validationResult && React.createElement('div', { 
+    stats.validationIssues.length > 0 && React.createElement('div', {
       key: 'validation',
-      style: { color: stats.validationResult.isValid ? 'green' : 'red' }
-    }, `Validation: ${stats.validationResult.isValid ? 'OK' : 'FAIL'}${!stats.validationResult.isValid ? ` (${stats.validationResult.errors.length} errors)` : ''}`)
+      style: { color: stats.validationIssues.length === 0 ? 'green' : 'red' }
+    }, `Sync Issues: ${stats.validationIssues.length === 0 ? 'OK' : 'DETECTED'}${stats.validationIssues.length > 0 ? ` (${stats.validationIssues.length} issues)` : ''}`)
   ].filter(Boolean));
 };
 

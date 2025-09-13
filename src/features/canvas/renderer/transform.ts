@@ -3,7 +3,7 @@
  * Manages Konva transformer behavior, constraints, and normalization
  */
 
-import type Konva from 'konva';
+import Konva from 'konva';
 import type { ElementId, CanvasElement, TransformEvent } from './types';
 
 export interface TransformerConfig {
@@ -311,7 +311,7 @@ export class TransformerController {
   private handleCircleTransform(node: Konva.Node): void {
     // For circles, maintain center position during scaling
     const group = node as Konva.Group;
-    const ellipse = group.findOne('Ellipse');
+    const ellipse = group.findOne('Ellipse') as Konva.Ellipse | undefined; // Cast to Konva.Ellipse
     
     if (ellipse && this.lastActiveAnchor === 'bottom-right') {
       // Calculate new radius from scale
@@ -377,7 +377,7 @@ export class TransformerController {
     const anchorNode = this.transformer.getActiveAnchor();
     if (!anchorNode) return '';
     
-    return anchorNode.name() || '';
+    return (anchorNode as any).name() || ''; // Cast to any to bypass type check
   }
 
   /**

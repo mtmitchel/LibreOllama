@@ -57,6 +57,8 @@ describe('Canvas Store-First Testing Examples', () => {
         x: 50,
         y: 50,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#00ff00',
         stroke: '#000000',
         strokeWidth: 1,
@@ -162,6 +164,8 @@ describe('Canvas Store-First Testing Examples', () => {
         id: 'circle-clear' as any,
         type: 'circle',
         x: 50, y: 50, radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#green', stroke: '#black', strokeWidth: 1,
         createdAt: Date.now(), updatedAt: Date.now()
       };

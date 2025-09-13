@@ -70,16 +70,18 @@ describe('Canvas Selection Workflow', () => {
       updatedAt: Date.now() 
     };
     const circle = { 
-      id: 'circle-1' as ElementId, 
-      type: 'circle' as const, 
-      x: 200, 
-      y: 200, 
-      radius: 50, 
-      fill: '#2196F3', 
+      id: 'circle-1' as ElementId,
+      type: 'circle' as const,
+      x: 200,
+      y: 200,
+      radius: 50,
+      width: 100, // 2 * radius
+      height: 100, // 2 * radius
+      fill: '#2196F3',
       stroke: '#333333',
       strokeWidth: 2,
-      createdAt: Date.now(), 
-      updatedAt: Date.now() 
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     };
     
     actions.addElement(rect);
@@ -187,16 +189,18 @@ describe('Canvas Selection Workflow', () => {
         updatedAt: Date.now() 
       },
       { 
-        id: 'circle-test' as ElementId, 
-        type: 'circle' as const, 
-        x: 100, 
-        y: 100, 
-        radius: 50, 
-        fill: '#2196F3', 
+        id: 'circle-test' as ElementId,
+        type: 'circle' as const,
+        x: 100,
+        y: 100,
+        radius: 50,
+        width: 100, // 2 * radius
+        height: 100, // 2 * radius
+        fill: '#2196F3',
         stroke: '#333333',
         strokeWidth: 2,
-        createdAt: Date.now(), 
-        updatedAt: Date.now() 
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       },
       { 
         id: 'text-test' as ElementId, 

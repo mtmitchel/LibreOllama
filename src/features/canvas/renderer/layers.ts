@@ -280,7 +280,7 @@ export class LayerManager {
       const transformer = overlayLayer.findOne('Transformer');
       overlayLayer.destroyChildren();
       if (transformer) {
-        overlayLayer.add(transformer);
+        overlayLayer.add(transformer as Konva.Group); // Cast to Konva.Group
       }
       overlayLayer.batchDraw();
     }

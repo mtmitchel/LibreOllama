@@ -1,4 +1,3 @@
-
 import { KonvaEventObject } from 'konva/lib/Node';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { ElementId, ElementOrSectionId } from '../types/enhanced.types';

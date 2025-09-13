@@ -54,6 +54,8 @@ describe('Interaction Edge Cases', () => {
           x: 50 + i * 60,
           y: 100,
           radius: 20,
+          width: 40, // 2 * radius
+          height: 40, // 2 * radius
           groupId: childGroupId,
           parentGroupId: parentGroupId, // Nested in parent
           createdAt: Date.now(),
@@ -132,6 +134,8 @@ describe('Interaction Edge Cases', () => {
         x: 200,
         y: 50,
         radius: 40,
+        width: 80, // 2 * radius
+        height: 80, // 2 * radius
         groupId: subGroup2,
         parentGroupId: rootGroup,
         createdAt: Date.now(),
@@ -160,6 +164,8 @@ describe('Interaction Edge Cases', () => {
             newHeight = element.height * scaleFactor;
           } else if (isCircleElement(element)) {
             newRadius = element.radius * scaleFactor;
+            newWidth = element.radius * 2 * scaleFactor;
+            newHeight = element.radius * 2 * scaleFactor;
           }
 
           store.getState().updateElement(id, {
@@ -320,6 +326,8 @@ describe('Interaction Edge Cases', () => {
         x: 100.5, // Sub-pixel position
         y: 100.5,
         radius: 30,
+        width: 60, // 2 * radius
+        height: 60, // 2 * radius
       } as CanvasElement);
 
       // Simulate rapid sub-pixel movements

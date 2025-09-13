@@ -43,6 +43,8 @@ describe('Canvas Store Save/Load Operations', () => {
         x: 100,
         y: 100,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#00ff00',
         stroke: '#000000',
         strokeWidth: 1,
@@ -103,6 +105,8 @@ describe('Canvas Store Save/Load Operations', () => {
           x: 200,
           y: 200,
           radius: 50,
+          width: 100, // 2 * radius
+          height: 100, // 2 * radius
           fill: '#ffff00',
           stroke: '#ff00ff',
           strokeWidth: 3,
@@ -176,6 +180,8 @@ describe('Canvas Store Save/Load Operations', () => {
         x: 50,
         y: 50,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 1,
@@ -257,6 +263,8 @@ describe('Canvas Store Save/Load Operations', () => {
         x: 150,
         y: 150,
         radius: 50,
+        width: 100, // 2 * radius
+        height: 100, // 2 * radius
         fill: '#ff0000',
         stroke: '#000000',
         strokeWidth: 1,
@@ -360,6 +368,8 @@ describe('Canvas Store Save/Load Operations', () => {
         x: 50,
         y: 50,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#00ff00',
         stroke: '#000000',
         strokeWidth: 1,
@@ -389,6 +399,8 @@ describe('Canvas Store Save/Load Operations', () => {
           id: createElementId('concurrent-2'),
           type: 'circle' as const,
           x: 50, y: 50, radius: 25,
+          width: 50, // 2 * radius
+          height: 50, // 2 * radius
           fill: '#ff0000', stroke: '#000000', strokeWidth: 1,
           createdAt: Date.now(), updatedAt: Date.now()
         }),

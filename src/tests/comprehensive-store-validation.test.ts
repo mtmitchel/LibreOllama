@@ -64,7 +64,7 @@ describe('Comprehensive Store Validation Tests', () => {
     it('should validate batch operations', () => {
       const elements = [
         { id: 'batch-1' as any, type: 'rectangle' as const, x: 0, y: 0, width: 50, height: 50 },
-        { id: 'batch-2' as any, type: 'circle' as const, x: 100, y: 100, radius: 25 },
+        { id: 'batch-2' as any, type: 'circle' as const, x: 100, y: 100, radius: 25, width: 50, height: 50 },
         { id: 'batch-3' as any, type: 'text' as const, x: 200, y: 200, text: 'Test' }
       ].map(base => ({
         ...base,
@@ -106,7 +106,7 @@ describe('Comprehensive Store Validation Tests', () => {
     it('should validate element ordering', () => {
       const elements = [
         { id: 'order-1' as any, type: 'rectangle' as const, x: 0, y: 0, width: 50, height: 50 },
-        { id: 'order-2' as any, type: 'circle' as const, x: 100, y: 100, radius: 25 },
+        { id: 'order-2' as any, type: 'circle' as const, x: 100, y: 100, radius: 25, width: 50, height: 50 },
         { id: 'order-3' as any, type: 'text' as const, x: 200, y: 200, text: 'Test' }
       ].map(base => ({
         ...base,
@@ -141,6 +141,8 @@ describe('Comprehensive Store Validation Tests', () => {
         x: 50,
         y: 50,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#blue',
         stroke: '#black',
         strokeWidth: 1,
@@ -412,6 +414,8 @@ describe('Comprehensive Store Validation Tests', () => {
         x: 50,
         y: 50,
         radius: 25,
+        width: 50, // 2 * radius
+        height: 50, // 2 * radius
         fill: '#yellow',
         stroke: '#black',
         strokeWidth: 1,
@@ -506,7 +510,7 @@ describe('Comprehensive Store Validation Tests', () => {
     it('should validate multi-element operations with viewport', () => {
       const elements = [
         { id: 'viewport-1' as any, type: 'rectangle' as const, x: 0, y: 0, width: 100, height: 100 },
-        { id: 'viewport-2' as any, type: 'circle' as const, x: 200, y: 200, radius: 50 }
+        { id: 'viewport-2' as any, type: 'circle' as const, x: 200, y: 200, radius: 50, width: 100, height: 100 }
       ].map(base => ({
         ...base,
         fill: '#orange',

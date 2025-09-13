@@ -11,7 +11,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
 import Konva from 'konva';
-// Removed unused import: logger
+import { canvasLog } from '../utils/canvasLogger';
 import {
   CanvasElement,
   ElementId,

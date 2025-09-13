@@ -105,8 +105,8 @@ const shouldCacheShape = (element: CanvasElement, config: CacheConfig): boolean 
   if (complexTypes.includes(element.type)) return true;
 
   // Cache large shapes (use type-safe property access)
-  const width = 'width' in element ? element.width : ('radius' in element ? element.radius * 2 : 0);
-  const height = 'height' in element ? element.height : ('radius' in element ? element.radius * 2 : 0);
+  const width = 'width' in element ? element.width : 0;
+  const height = 'height' in element ? element.height : 0;
   const size = (width || 0) * (height || 0);
   if (size > config.sizeThreshold) return true;
   
@@ -133,8 +133,8 @@ const shouldCacheShape = (element: CanvasElement, config: CacheConfig): boolean 
 const generateCacheKey = (element: CanvasElement, dependencies: any[] = []): string => {
   const visualProps = {
     type: element.type,
-    width: 'width' in element ? element.width : ('radius' in element ? element.radius * 2 : undefined),
-    height: 'height' in element ? element.height : ('radius' in element ? element.radius * 2 : undefined),
+    width: 'width' in element ? element.width : undefined,
+    height: 'height' in element ? element.height : undefined,
     fill: 'fill' in element ? element.fill : undefined,
     stroke: 'stroke' in element ? element.stroke : undefined,
     strokeWidth: 'strokeWidth' in element ? element.strokeWidth : undefined,
@@ -221,7 +221,7 @@ export const useShapeCaching = ({
         
         console.log(`🗂️ [CACHE] Applied caching to ${element.type} element:`, {
           elementId: element.id,
-          size: `${('width' in element ? element.width : ('radius' in element ? element.radius * 2 : 0))}x${('height' in element ? element.height : ('radius' in element ? element.radius * 2 : 0))}`,
+          size: `${'width' in element ? element.width : 0}x${'height' in element ? element.height : 0}`,
           cacheKey: currentCacheKey.slice(0, 12) + '...',
           hashMethod: 'murmurhash3'
         });

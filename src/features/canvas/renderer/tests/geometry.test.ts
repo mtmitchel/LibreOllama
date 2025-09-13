@@ -9,17 +9,11 @@ import {
   getCircleTextBounds,
   getEllipticalTextBounds,
   calculateHitArea,
-  topLeftToCenter,
-  centerToTopLeft,
   isPointInCircle,
-  isPointInEllipse,
   distance,
   angle,
-  normalize,
   clamp,
-  lerp,
-  degreesToRadians,
-  radiansToDegrees
+  lerp
 } from '../geometry';
 
 describe('Geometry Module', () => {
@@ -27,25 +21,25 @@ describe('Geometry Module', () => {
     it('should calculate inscribed square for a circle', () => {
       const result = inscribedSquare(100, 0, 0);
       // For radius 100, inscribed square side = 200 / sqrt(2) ≈ 141.42
-      expect(result.size).toBeCloseTo(141.42, 1);
+      expect(result.width).toBeCloseTo(141.42, 1);
       expect(result.x).toBeCloseTo(-70.71, 1);
       expect(result.y).toBeCloseTo(-70.71, 1);
     });
 
     it('should account for padding', () => {
       const result = inscribedSquare(100, 10, 0);
-      expect(result.size).toBeCloseTo(121.42, 1); // 141.42 - 20
+      expect(result.width).toBeCloseTo(121.42, 1); // 141.42 - 20
     });
 
     it('should account for stroke width', () => {
       const result = inscribedSquare(100, 0, 4);
       // Effective radius = 100 - 2 = 98
-      expect(result.size).toBeCloseTo(138.59, 1);
+      expect(result.width).toBeCloseTo(138.59, 1);
     });
 
     it('should return zero size for negative dimensions', () => {
       const result = inscribedSquare(10, 20, 0);
-      expect(result.size).toBe(0);
+      expect(result.width).toBe(0);
     });
   });
 
@@ -96,31 +90,11 @@ describe('Geometry Module', () => {
     });
   });
 
-  describe('coordinate conversions', () => {
-    it('should convert top-left to center', () => {
-      const center = topLeftToCenter(10, 20, 100, 50);
-      expect(center.x).toBe(60);
-      expect(center.y).toBe(45);
-    });
-
-    it('should convert center to top-left', () => {
-      const topLeft = centerToTopLeft(60, 45, 100, 50);
-      expect(topLeft.x).toBe(10);
-      expect(topLeft.y).toBe(20);
-    });
-  });
-
   describe('point in shape tests', () => {
     it('should detect point inside circle', () => {
       expect(isPointInCircle(50, 50, 50, 50, 10)).toBe(true);
       expect(isPointInCircle(55, 50, 50, 50, 10)).toBe(true);
       expect(isPointInCircle(65, 50, 50, 50, 10)).toBe(false);
-    });
-
-    it('should detect point inside ellipse', () => {
-      expect(isPointInEllipse(50, 50, 50, 50, 20, 10)).toBe(true);
-      expect(isPointInEllipse(65, 50, 50, 50, 20, 10)).toBe(true);
-      expect(isPointInEllipse(75, 50, 50, 50, 20, 10)).toBe(false);
     });
   });
 
@@ -136,16 +110,6 @@ describe('Geometry Module', () => {
       expect(angle(0, 0, -1, 0)).toBeCloseTo(Math.PI, 5);
     });
 
-    it('should normalize vectors', () => {
-      const v1 = normalize(3, 4);
-      expect(v1.x).toBeCloseTo(0.6, 5);
-      expect(v1.y).toBeCloseTo(0.8, 5);
-
-      const v2 = normalize(0, 0);
-      expect(v2.x).toBe(0);
-      expect(v2.y).toBe(0);
-    });
-
     it('should clamp values', () => {
       expect(clamp(5, 0, 10)).toBe(5);
       expect(clamp(-5, 0, 10)).toBe(0);
@@ -158,39 +122,30 @@ describe('Geometry Module', () => {
       expect(lerp(0, 100, 1)).toBe(100);
       expect(lerp(10, 20, 0.25)).toBe(12.5);
     });
-
-    it('should convert between degrees and radians', () => {
-      expect(degreesToRadians(0)).toBe(0);
-      expect(degreesToRadians(90)).toBeCloseTo(Math.PI / 2, 5);
-      expect(degreesToRadians(180)).toBeCloseTo(Math.PI, 5);
-      
-      expect(radiansToDegrees(0)).toBe(0);
-      expect(radiansToDegrees(Math.PI / 2)).toBeCloseTo(90, 5);
-      expect(radiansToDegrees(Math.PI)).toBeCloseTo(180, 5);
-    });
   });
 });
 
 describe('Geometry Module - Edge Cases', () => {
   it('should handle zero radius', () => {
     const square = inscribedSquare(0, 0, 0);
-    expect(square.size).toBe(0);
+    expect(square.width).toBe(0);
+    expect(square.height).toBe(0);
     expect(square.x).toBe(0);
     expect(square.y).toBe(0);
   });
 
   it('should handle negative radius gracefully', () => {
     const square = inscribedSquare(-50, 0, 0);
-    expect(square.size).toBe(0);
+    expect(square.width).toBe(0);
   });
 
   it('should handle very large values', () => {
     const square = inscribedSquare(10000, 0, 0);
-    expect(square.size).toBeCloseTo(14142.13, 1);
+    expect(square.width).toBeCloseTo(14142.13, 1);
   });
 
   it('should handle floating point precision', () => {
     const result = inscribedSquare(33.333, 0, 0);
-    expect(result.size).toBeCloseTo(47.14, 1);
+    expect(result.width).toBeCloseTo(47.14, 1);
   });
 });

@@ -61,7 +61,7 @@ export class CircleTextSync {
   ): SyncResult {
     // Get world-space values
     const rWorld = element.radius;
-    const padWorld = element.padding || this.config.defaultPadding;
+    const padWorld = element.padding ?? this.config.defaultPadding ?? 0; // Use nullish coalescing and a final fallback to 0
     const indentWorld = this.config.defaultIndent || 0;
     const strokeWidth = element.strokeWidth || 2;
 

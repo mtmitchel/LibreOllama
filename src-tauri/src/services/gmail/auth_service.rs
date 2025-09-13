@@ -130,26 +130,42 @@ pub struct GmailAuthService {
 impl GmailAuthService {
     /// Create a new Gmail Authentication Service
     pub fn new(db_manager: Arc<DatabaseManager>, encryption_key: [u8; 32]) -> Result<Self> {
+        if cfg!(debug_assertions) {
+            // In development mode, create mock auth service without real credentials
+            println!("🔧 [AUTH-SERVICE] Creating mock Gmail auth service for development");
+            return Ok(Self {
+                config: AuthConfig {
+                    redirect_uri: "http://localhost:8080/auth/gmail/callback".to_string(),
+                    client_id: "dev-client-id".to_string(),
+                    client_secret: "dev-client-secret".to_string(),
+                },
+                pending_authorizations: Arc::new(RwLock::new(HashMap::new())),
+                callback_sender: Arc::new(RwLock::new(None)),
+                db_manager,
+                encryption_key,
+            });
+        }
+    
         let config_manager = get_config_manager()
             .map_err(|e| LibreOllamaError::Configuration {
                 message: format!("Failed to get config manager: {}", e),
                 config_key: None,
             })?;
-
+    
         let auth_config = AuthConfig {
             redirect_uri: config_manager.oauth().redirect_uri.clone(),
             client_id: config_manager.oauth().client_id.clone(),
             client_secret: config_manager.oauth().client_secret.clone(),
         };
-
+    
         // Validate configuration
         if auth_config.client_id.is_empty() || auth_config.client_secret.is_empty() {
-            return Err(LibreOllamaError::GmailAuth { 
+            return Err(LibreOllamaError::GmailAuth {
                 message: "Gmail OAuth credentials not configured".to_string(),
                 code: Some("missing_credentials".to_string()),
             });
         }
-
+    
         Ok(Self {
             config: auth_config,
             pending_authorizations: Arc::new(RwLock::new(HashMap::new())),

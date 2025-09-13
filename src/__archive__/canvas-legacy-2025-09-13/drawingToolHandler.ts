@@ -1,4 +1,3 @@
-
 import { KonvaEventObject } from 'konva/lib/Node';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { ToolEventHandler } from '../utils/CanvasEventManager';

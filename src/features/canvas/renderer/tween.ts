@@ -74,8 +74,8 @@ export class TweenManager {
         this.activeTweens.delete(id);
         config.onComplete?.();
       },
-      onUpdate: () => {
-        const progress = tween.getPosition();
+      onUpdate: (frame: any) => {
+        const progress = frame.progress;
         const currentRadius = startRadius + (endRadius - startRadius) * progress;
         config.onUpdate?.(currentRadius);
       }
@@ -120,8 +120,8 @@ export class TweenManager {
         this.activeTweens.delete(id);
         config.onComplete?.();
       },
-      onUpdate: () => {
-        const progress = tween.getPosition();
+      onUpdate: (frame: any) => {
+        const progress = frame.progress;
         const currentX = startPos.x + (endPos.x - startPos.x) * progress;
         const currentY = startPos.y + (endPos.y - startPos.y) * progress;
         config.onUpdate?.(progress);
@@ -237,8 +237,8 @@ export class TweenManager {
         this.activeTweens.delete(id);
         config.onComplete?.();
       },
-      onUpdate: () => {
-        const progress = tween.getPosition();
+      onUpdate: (frame: any) => {
+        const progress = frame.progress;
         config.onUpdate?.(progress);
       }
     });

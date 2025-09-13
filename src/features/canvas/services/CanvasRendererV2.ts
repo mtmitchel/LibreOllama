@@ -1,53 +1,8 @@
 import Konva from 'konva';
-import { fitFontSizeToSquare } from '../utils/textFit';
-import { requiredRadiusForText } from '../utils/circleAutoGrow';
 import { CanvasElement, ElementId, isRectangleElement } from '../types/enhanced.types';
-// Geometry functions are now in the new modular renderer
-// import { getCircleTextBounds, getEllipticalTextBounds } from '../renderer/geometry';
-
-// Temporary inline implementations until full migration
-const getCircleTextBounds = (radius: number, padding: number = 8) => {
-  // Ensure radius is a valid positive number
-  const safeRadius = Math.max(1, isFinite(radius) ? radius : 40);
-  
-  // Inscribed square in circle with padding
-  let side = (safeRadius * 2) / Math.sqrt(2) - padding * 2;
-  
-  // Ensure side is finite and positive
-  side = isFinite(side) && side > 0 ? side : 50;
-  
-  return {
-    width: side,
-    height: side,
-    x: -side / 2,
-    y: -side / 2,
-    padding
-  };
-};
-
-const getEllipticalTextBounds = (radiusX: number, radiusY: number, padding: number = 8, strokeWidth: number = 2) => {
-  // Ensure radii are valid positive numbers
-  const safeRadiusX = Math.max(1, isFinite(radiusX) ? radiusX : 40);
-  const safeRadiusY = Math.max(1, isFinite(radiusY) ? radiusY : 40);
-  
-  const effectiveRadiusX = Math.max(1, safeRadiusX - strokeWidth / 2);
-  const effectiveRadiusY = Math.max(1, safeRadiusY - strokeWidth / 2);
-  
-  // Calculate inscribed rectangle dimensions
-  let width = (effectiveRadiusX * 2) / Math.sqrt(2) - padding * 2;
-  let height = (effectiveRadiusY * 2) / Math.sqrt(2) - padding * 2;
-  
-  // Ensure dimensions are finite and positive
-  width = isFinite(width) && width > 0 ? width : 50;
-  height = isFinite(height) && height > 0 ? height : 50;
-  
-  return {
-    width,
-    height,
-    x: -width / 2,
-    y: -height / 2
-  };
-};
+import { ShapesModule, RendererLayers as ShapesModuleLayers } from './modules/ShapesModule'; // Import ShapesModule
+import { requiredRadiusForText } from '../utils/circleAutoGrow'; // Still needed for auto-grow logic in openTextareaEditor
+import { getEllipticalTextBounds } from '../renderer/geometry'; // Import from geometry
 
 export interface RendererLayers {
   background: Konva.Layer;
@@ -56,42 +11,11 @@ export interface RendererLayers {
   overlay: Konva.Layer;
 }
 
-// Manual text wrapping function as fallback for Konva's unreliable wrap
-function wrapTextManually(text: string, maxWidth: number, fontSize: number, fontFamily: string): string[] {
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-  
-  // Create temporary canvas for measurement
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return [text]; // Fallback if canvas context fails
-  
-  ctx.font = `${fontSize}px ${fontFamily}`;
-  
-  for (const word of words) {
-    const testLine = currentLine + (currentLine ? ' ' : '') + word;
-    const metrics = ctx.measureText(testLine);
-    
-    if (metrics.width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
-    }
-  }
-  
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-  
-  return lines.length > 0 ? lines : [''];
-}
-
 export class CanvasRendererV2 {
   private shiftPressed: boolean = false;
   private autoFitDuringTyping: boolean = false; // off by default (FigJam-style)
   private editorClipEnabled: boolean = true;    // enabled by default for simplified FigJam-style
+  private shapesModule: ShapesModule | null = null; // New ShapesModule instance
   
   // TAURI-SPECIFIC TEXT RENDERING FIX
   static {
@@ -168,7 +92,7 @@ export class CanvasRendererV2 {
   private currentEditorWrapper?: HTMLDivElement;
   private currentEditorPad?: HTMLDivElement;
   private currentEditingId: string | null = null;
-  private radiusTweens: Map<string, { cancel: () => void }> = new Map();
+  // private radiusTweens: Map<string, { cancel: () => void }> = new Map(); // Moved to ShapesModule
 
   // Cache for baseline offset per font signature
   private baselineCache: Map<string, number> = new Map();
@@ -238,10 +162,6 @@ export class CanvasRendererV2 {
     return t.point(localPos);
   }
 
-  // (removed duplicate helpers; canonical implementations exist below)
-
-  
-
   // RAF batching system to avoid double batchDraw (blueprint requirement)
   private scheduleDraw(layer: 'main' | 'overlay' | 'preview') {
     if (layer === 'main') this.dirtyMain = true;
@@ -288,7 +208,7 @@ export class CanvasRendererV2 {
       const node = this.nodeMap.get(elementId);
       if (node && node.getClassName() === 'Group') {
         const element = { id: elementId, text, isEditing: true };
-        this.updateTextWhileEditing(node as Konva.Group, element);
+        // this.updateTextWhileEditing(node as Konva.Group, element); // Moved to TextModule
       }
     });
     
@@ -300,1267 +220,13 @@ export class CanvasRendererV2 {
     this.textUpdateQueue.clear();
   }
 
-  // Smoothly tween a circle's radius; updates store and keeps DOM overlay square in sync
-  private tweenCircleRadius(elId: string, rStart: number, rTarget: number, padWorld: number, strokeWidth: number, durationMs: number = 150) {
-    // Cancel existing tween for this element
-    const prev = this.radiusTweens.get(elId);
-    try { prev?.cancel(); } catch {}
-
-    let raf = 0;
-    const start = performance.now();
-    const easeOut = (t: number) => 1 - Math.pow(1 - t, 2);
-    const tick = () => {
-      const now = performance.now();
-      const t = Math.min(1, (now - start) / durationMs);
-      const e = easeOut(t);
-      const r = rStart + (rTarget - rStart) * e;
-
-      // Commit to store
-      this.updateElementCallback?.(elId, { radius: r, radiusX: r, radiusY: r, width: r * 2, height: r * 2 });
-
-      // Update DOM overlay square if this element is being edited
-      if (this.currentEditingId === elId && this.currentEditorWrapper && this.stage) {
-        try {
-          const node = this.nodeMap.get(elId) as Konva.Node | undefined;
-          const group = node as Konva.Group;
-          const rect = (group as any)?.getClientRect?.({ skipTransform: false }) ?? group?.getClientRect?.();
-          const containerRect = this.stage.container().getBoundingClientRect();
-          // Use per-axis scale limit and DPR-snapped sizing to avoid sag/drift
-          const absT = group.getAbsoluteTransform();
-          const p0 = absT.point({ x: 0, y: 0 });
-          const px = absT.point({ x: 1, y: 0 });
-          const py = absT.point({ x: 0, y: 1 });
-          const sx = Math.abs(px.x - p0.x);
-          const sy = Math.abs(py.y - p0.y);
-          const sLim = Math.min(Math.max(sx, 1e-6), Math.max(sy, 1e-6));
-          const minR = Math.max(1, r - padWorld - strokeWidth / 2);
-          const sidePx = Math.max(4, Math.SQRT2 * minR * sLim);
-          const centerX = containerRect.left + rect.x + rect.width / 2;
-          const centerY = containerRect.top + rect.y + rect.height / 2;
-          const dpr = (window.devicePixelRatio || 1);
-          const roundPx = (v: number) => Math.round(v * dpr) / dpr;
-          const ceilPx = (v: number) => Math.ceil(v * dpr) / dpr;
-          const l = roundPx(centerX - sidePx / 2);
-          const tt = roundPx(centerY - sidePx / 2);
-          const w = ceilPx(sidePx);
-          Object.assign(this.currentEditorWrapper.style, { left: `${l}px`, top: `${tt}px`, width: `${w}px`, height: `${w}px`, transform: 'translate(-50%, -50%)', outline: this.getDebug().outlineOverlay ? '1px solid red' : '' });
-
-          // Debug parity logging (same RAF): DOM content px vs Konva world
-          if (this.getDebug().log) {
-            try {
-              const padPx = padWorld * sLim;
-              const contentWPx = Math.max(0, w - 2 * padPx);
-              const t = group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text') || group.findOne<Konva.Text>('Text.text');
-              const tw = t ? (t as any).width?.() || 0 : 0;
-              const twPx = tw * sxDbg;
-              const sxDbg = sx;
-              const syDbg = sy;
-              const ff = (t as any)?.fontFamily?.() || 'Inter, system-ui, sans-serif';
-              const fsPx = (t as any)?.fontSize?.() ? ((t as any).fontSize() * sy) : 14 * sy;
-              const lh = (t as any)?.lineHeight?.() ?? 1.3;
-              const baselinePx = this.getBaselineOffsetPx(ff, fsPx, lh);
-              const zBaseline = this.getDebug().zeroBaseline ? 0 : baselinePx;
-              console.log('[TextParityDBG] tween', { contentWPx, textNodeWidthWorld: tw, textNodeWidthPx: twPx, sx: sxDbg, sy: syDbg, baselinePx, usedBaselinePx: zBaseline });
-            } catch {}
-          }
-        } catch {}
-      }
-
-      if (t < 1) {
-        raf = requestAnimationFrame(tick);
-      } else {
-        this.refreshTransformer(elId);
-        this.radiusTweens.delete(elId);
-      }
-    };
-    raf = requestAnimationFrame(tick);
-    const cancel = () => { try { cancelAnimationFrame(raf); } catch {} };
-    this.radiusTweens.set(elId, { cancel });
-  }
-  
-  private updateTextWhileEditing(group: Konva.Group, element: any) {
-    // Update text node visibility and prepare for auto-sizing
-    const textNode = group.findOne<Konva.Text>('Text.label') || 
-                     group.findOne<Konva.Text>('.text');
-    if (textNode) {
-      textNode.text(element.text);
-      textNode.visible(false); // Hide during editing
-    }
-  }
-  
-  // Enhanced text measurement for accurate auto-sizing
-  private measureTextInCircle(text: string, fontSize: number, fontFamily: string): any {
-    // Create temporary canvas for accurate measurement
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return { lines: [], totalHeight: 0, maxWidth: 0 };
-    
-    ctx.font = `${fontSize}px ${fontFamily}`;
-    
-    const lines = text.split('\n');
-    const measurements = lines.map(line => ({
-      text: line,
-      width: ctx.measureText(line).width,
-      height: fontSize
-    }));
-    
-    return {
-      lines: measurements,
-      totalHeight: measurements.length * fontSize * 1.2, // line height
-      maxWidth: Math.max(...measurements.map(m => m.width))
-    };
-  }
-  
-  
-  
-  // Helper for consistent stage scale
-  private getConsistentStageScale(): number {
-    const absScale = this.stage?.getAbsoluteScale?.();
-    return (absScale && typeof absScale.x === 'number') ? absScale.x : 1;
-  }
-  
-  // Calculate optimal radius for text content with pre-calculation
-  private calculateOptimalRadius(textMetrics: any, padding: number): number {
-    const lineHeight = 1.2;
-    const totalHeight = textMetrics.totalHeight;
-    
-    // Calculate radius needed for text height
-    const heightRadius = (totalHeight / 2) + padding;
-    
-    // Calculate radius needed for longest line
-    const longestLineWidth = textMetrics.maxWidth;
-    const widthRadius = (longestLineWidth / 2) + padding;
-    
-    // Return the larger of the two, with a minimum of 30px
-    return Math.max(heightRadius, widthRadius, 30);
-  }
-  
-  private calculateOptimalRadiusBeforeLayout(el: any): number {
-    if (!el.text) return el.radius || 40;
-    
-    // Pre-calculate text dimensions
-    const textMetrics = this.measureTextInCircle(
-      el.text, 
-      el.fontSize || 14, 
-      el.fontFamily || 'Inter, system-ui, sans-serif'
-    );
-    
-    const bounds = getCircleTextBounds(40, el.padding); // Use default radius for bounds calculation
-    const requiredRadius = Math.max(
-      (textMetrics.totalHeight / 2) + bounds.padding,
-      (textMetrics.maxWidth / 2) + bounds.padding,
-      30 // Minimum radius
-    );
-    
-    return requiredRadius;
-  }
-  
-  // Utility: build a group with a hit-area rect sized to width/height
-  private createGroupWithHitArea(id: string, width: number, height: number, draggable: boolean = true): Konva.Group {
-    const group = new Konva.Group({ id, listening: true, draggable });
-    const hitArea = new Konva.Rect({
-      x: 0, y: 0, width, height,
-      // Important: tiny alpha so it participates in hit graph (opacity must remain > 0)
-      fill: 'rgba(0,0,0,0.001)',
-      stroke: undefined,
-      strokeWidth: 0,
-      listening: true,
-      hitStrokeWidth: 0,
-      name: 'hit-area',
-      opacity: 1
-    });
-    group.add(hitArea);
-    return group;
-  }
-
-  private ensureHitAreaSize(group: Konva.Group, width: number, height: number) {
-    
-    // First, clean up any duplicate hit-areas (there should only be one)
-    const allHitAreas = group.find('.hit-area');
-    if (allHitAreas.length > 1) {
-      for (let i = 1; i < allHitAreas.length; i++) {
-        allHitAreas[i].destroy();
-      }
-    }
-    
-    // Find hit-area by name attribute (not class selector)
-    const hit = group.findOne((node: Konva.Node) => node.name() === 'hit-area') as Konva.Rect | undefined;
-    
-    if (hit) {
-      // Ensure hit area is positioned at origin and sized correctly
-      hit.position({ x: 0, y: 0 });
-      hit.width(width);
-      hit.height(height);
-      // keep tiny alpha so Konva hit graph detects it
-      hit.fill('rgba(0,0,0,0.001)');
-      hit.stroke(undefined); // ensure no stroke
-      hit.strokeWidth(0);
-      hit.opacity(1);
-      // Move hit area to back so it doesn't cover visual elements
-      hit.moveToBottom();
-    } else {
-      const newHit = new Konva.Rect({ 
-        x: 0, 
-        y: 0, 
-        width, 
-        height, 
-        fill: 'rgba(0,0,0,0.001)', // tiny alpha for hit detection
-        stroke: undefined, // explicitly no stroke
-        strokeWidth: 0,
-        listening: true, 
-        hitStrokeWidth: 0, 
-        name: 'hit-area',
-        opacity: 1
-      });
-      group.add(newHit);
-      newHit.moveToBottom();
-    }
-  }
-
-  // Rectangle
-  private createRectangle(el: any): Konva.Group {
-    const id = String(el.id);
-    const w = Math.max(1, el.width || 1);
-    let h = Math.max(1, el.height || 1);
-    const group = this.createGroupWithHitArea(id, w, h);
-    group.name('rectangle');
-    group.position({ x: el.x || 0, y: el.y || 0 });
-
-    const rect = new Konva.Rect({
-      x: 0, y: 0, width: w, height: h,
-      fill: el.fill || '#ffffff',
-      stroke: el.stroke || 'transparent',
-      strokeWidth: el.strokeWidth ?? 0,
-      cornerRadius: (el as any).cornerRadius ?? 0,
-      listening: false,
-      perfectDrawEnabled: false,
-      name: 'bg'
-    });
-    group.add(rect);
-
-    if (el.text !== undefined) {
-      const pad = (el as any).padding ?? 12;
-      // Create a content group that clips inner text area to avoid overflow affecting bounds
-      let content = group.findOne<Konva.Group>('Group.content');
-      if (!content) {
-        content = new Konva.Group({ name: 'content', listening: false });
-        group.add(content);
-      }
-      try { (content as any).clip({ x: pad, y: pad, width: Math.max(1, w - pad * 2), height: Math.max(1, h - pad * 2) }); } catch {}
-
-      let text = content.findOne<Konva.Text>('Text.label');
-      if (!text) {
-        text = new Konva.Text({ name: 'label', listening: false });
-        content.add(text);
-      }
-      text.x(pad);
-      text.y(pad);
-      text.width(Math.max(1, w - pad * 2));
-      text.text(el.text);
-      text.fontSize(el.fontSize || 14);
-      text.fontFamily(el.fontFamily || 'Inter, system-ui, sans-serif');
-      text.fill(el.textColor || '#111827');
-      ;(text as any).wrap('word');
-      ;(text as any).align(((el as any).style?.align ?? (el as any).align) || 'left');
-      ;(text as any).lineHeight(((el as any).style?.lineHeight ?? (el as any).lineHeight) || 1.25);
-      try { text.visible(!((el as any).isEditing)); } catch {}
-
-      // Adjust rect height to fit text if needed
-      const desiredHeight = Math.max(h, Math.ceil(text.height()) + pad * 2);
-      // Clamp to maxHeight if provided
-      const maxH = (el as any).maxHeight ? Math.max(1, (el as any).maxHeight) : undefined;
-      const clamped = maxH ? Math.min(desiredHeight, maxH) : desiredHeight;
-      if (clamped !== h) {
-        h = clamped;
-        rect.height(h);
-        // Clip group and content to its rect bounds so overflow doesn't paint past background
-        try { (group as any).clip({ x: 0, y: 0, width: w, height: h }); } catch {}
-        try { (content as any).clip({ x: pad, y: pad, width: Math.max(1, w - pad * 2), height: Math.max(1, h - pad * 2) }); } catch {}
-        try { text.visible(!((el as any).isEditing)); } catch {}
-        this.ensureHitAreaSize(group, w, h);
-
-        // Report height change to the store so element can be updated
-        if (this.updateElementCallback) {
-          this.updateElementCallback(id, { height: h });
-        }
-      }
-    }
-
-    return group;
-  }
-
-  // Circle
-  private createCircle(el: any): Konva.Group {
-    const id = String(el.id);
-    // Use a center-origin group.
-    const group = new Konva.Group({ id, name: 'circle', listening: true, draggable: true });
-    group.position({ x: el.x || 0, y: el.y || 0 });
-
-    // The ellipse is positioned at (0,0) within the group.
-    const ellipse = new Konva.Ellipse({
-      x: 0,
-      y: 0,
-      radiusX: el.radiusX || el.radius || 40,
-      radiusY: el.radiusY || el.radius || 40,
-      name: 'shape',
-      listening: false,
-      perfectDrawEnabled: false,
-      strokeScaleEnabled: false,
-    });
-    group.add(ellipse);
-
-    // The content group for text also uses the center-origin.
-    const content = new Konva.Group({ name: 'content', listening: false, x: 0, y: 0 });
-    group.add(content);
-
-    const text = new Konva.Text({
-        name: 'label',
-        listening: false,
-        align: 'left',
-    });
-    content.add(text);
-
-    // A hit area rectangle, centered on the origin.
-    const hitArea = new Konva.Rect({ name: 'hit-area', listening: true });
-    group.add(hitArea);
-    hitArea.moveToBottom();
-
-    // Delegate final attribute setting to the unified update function.
-    this.updateCircle(group, el);
-    return group;
-  }
-
-  // Circle-Text: centered text with auto-fit font size
-  private createCircleText(el: any): Konva.Group {
-    const id = String(el.id);
-    let r = (el.radius ?? (Math.min(el.width || 0, el.height || 0) / 2));
-    if (!r || r <= 0) r = 40;
-    const group = new Konva.Group({ id, name: 'circle-text', listening: true, draggable: true });
-    // Center-origin: group at element center
-    group.position({ x: el.x || 0, y: el.y || 0 });
-
-    // Circle node at origin
-    let circle = new Konva.Circle({ name: 'Circle', listening: true });
-    group.add(circle);
-
-    // Text node aligned to center-origin
-    let textNode = new Konva.Text({ name: 'Text', listening: false, align: 'left' });
-    group.add(textNode);
-
-    // Hit area centered
-    const hit = new Konva.Rect({ name: 'hit-area', listening: true, x: -r, y: -r, width: r * 2, height: r * 2, fill: 'rgba(0,0,0,0.001)' });
-    group.add(hit);
-
-    // Let sync method lay out nodes fully
-    this.syncCircleText(el as any, group);
-    return group;
-  }
-
-  private updateCircleTextElement(group: Konva.Group, el: any) {
-    // Replaced by syncCircleText to use center-origin and utils
-    this.syncCircleText(el as any, group);
-  }
-
-  // Binary search font-size fitter using the provided Konva.Text node and box
-  private fitTextFontSize(textNode: Konva.Text, boxW: number, boxH: number, minFont: number, maxFont: number, mode: 'scale' | 'wrap' | 'ellipsis'): number {
-    // Configure wrap per mode
-    if (mode === 'scale' || mode === 'ellipsis') {
-      (textNode as any).wrap('none');
-    } else {
-      (textNode as any).wrap('word');
-    }
-    let lo = minFont, hi = maxFont, best = minFont;
-    while (lo <= hi) {
-      const mid = Math.floor((lo + hi) / 2);
-      textNode.fontSize(mid);
-      try { (textNode as any)._clearCache?.(); } catch {}
-      const w = (textNode as any).getTextWidth?.() || boxW + 1; // fallback
-      const h = (textNode as any).getTextHeight?.() || boxH + 1;
-      const fits = (mode === 'scale' || mode === 'ellipsis') ? (w <= boxW && h <= boxH) : (h <= boxH);
-      if (fits) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
-    }
-    // If ellipsis and it still overflows width, you may post-process string; skip for minimal patch
-    return best;
-  }
-
-  // New: unified circle-text sync using center-origin and inscribed-square layout
-  private syncCircleText(el: any, group: Konva.Group) {
-    const id = String(el.id);
-    // Center-origin
-    group.position({ x: el.x || 0, y: el.y || 0 });
-    group.rotation(el.rotation || 0);
-    group.scale({ x: 1, y: 1 });
-
-    // Nodes
-    let circle = group.findOne<Konva.Circle>('Circle');
-    if (!circle) { circle = new Konva.Circle({ name: 'Circle', listening: true }); group.add(circle); }
-    let textNode = group.findOne<Konva.Text>('Text');
-    if (!textNode) { textNode = new Konva.Text({ name: 'Text', listening: false, align: 'left', verticalAlign: 'middle' as any }); group.add(textNode); }
-    let hit = group.findOne<Konva.Rect>('Rect.hit-area') as Konva.Rect | null;
-    if (!hit) { hit = new Konva.Rect({ name: 'hit-area', listening: true, fill: 'rgba(0,0,0,0.001)' }); group.add(hit); }
-
-    // Handle both circular and elliptical shapes
-    let radiusX = el.radiusX || el.radius || (el.width ? el.width / 2 : 40);
-    let radiusY = el.radiusY || el.radius || (el.height ? el.height / 2 : 40);
-    if (radiusX <= 0) radiusX = 40;
-    if (radiusY <= 0) radiusY = 40;
-    
-    // Effective padding uses declared padding; stroke is handled separately
-    const pad = Math.max(0, (el.padding ?? 12));
-    // Use aspect-ratio aware bounds calculation to prevent text spillover
-    const strokeWidth = el.strokeWidth ?? 1;
-    let textBounds = getEllipticalTextBounds(radiusX, radiusY, pad, strokeWidth);
-    // For perfect circles, use a prominent inscribed SQUARE for text area
-    let textAreaWidth = textBounds.width;
-    let textAreaHeight = textBounds.height;
-    if (Math.abs(radiusX - radiusY) < 0.001) {
-      const rClip = Math.max(1, radiusX - pad - strokeWidth / 2);
-      const side = Math.SQRT2 * rClip; // inscribed square side
-      textAreaWidth = side;
-      textAreaHeight = side;
-    }
-    
-    // DEBUGGING: Log dimensions before validation
-    console.log('[Circle Text Debug] Initial dimensions:', {
-      textAreaWidth,
-      textAreaHeight,
-      radiusX,
-      radiusY,
-      padding: pad,
-      text: el.text,
-      fontSize
-    });
-    
-    // Ensure we never have invalid dimensions
-    // Also ensure minimum size for text wrapping to work properly
-    if (!isFinite(textAreaWidth) || textAreaWidth <= 0) {
-      console.warn('[Circle Text] Invalid textAreaWidth:', textAreaWidth, '- using fallback');
-      textAreaWidth = Math.max(100, fontSize * 4); // Dynamic fallback based on font size
-    } else if (textAreaWidth < 30) {
-      console.warn('[Circle Text] textAreaWidth too small:', textAreaWidth, '- increasing to minimum');
-      textAreaWidth = 30; // Minimum width for text to wrap
-    }
-    
-    if (!isFinite(textAreaHeight) || textAreaHeight <= 0) {
-      console.warn('[Circle Text] Invalid textAreaHeight:', textAreaHeight, '- using fallback');
-      textAreaHeight = Math.max(100, fontSize * 3); // Dynamic fallback based on font size
-    } else if (textAreaHeight < 30) {
-      console.warn('[Circle Text] textAreaHeight too small:', textAreaHeight, '- increasing to minimum');
-      textAreaHeight = 30; // Minimum height
-    }
-    
-    console.log('[Circle Text Debug] Validated dimensions:', {
-      textAreaWidth,
-      textAreaHeight
-    });
-
-    // Handle both circle and ellipse visuals at origin
-    if (radiusX === radiusY) {
-      // Perfect circle
-      circle.setAttrs({ x: 0, y: 0, radius: radiusX, fill: el.fill || '#ffffff', stroke: el.stroke || '#d1d5db', strokeWidth: el.strokeWidth ?? 1 });
-    } else {
-      // Need to convert to ellipse or create ellipse
-      if (circle.getClassName() === 'Circle') {
-        // Replace circle with ellipse
-        const ellipse = new Konva.Ellipse({
-          x: 0, y: 0,
-          radiusX, radiusY,
-          fill: el.fill || '#ffffff', 
-          stroke: el.stroke || '#d1d5db', 
-          strokeWidth: el.strokeWidth ?? 1,
-          name: 'Circle'
-        });
-        try { (ellipse as any).strokeScaleEnabled(false); } catch {}
-        circle.destroy();
-        group.add(ellipse);
-        // Update reference for later use
-        circle = ellipse as any;
-      } else {
-        // Already an ellipse, update it
-        (circle as any).radiusX?.(radiusX);
-        (circle as any).radiusY?.(radiusY);
-        circle.setAttrs({ fill: el.fill || '#ffffff', stroke: el.stroke || '#d1d5db', strokeWidth: el.strokeWidth ?? 1 });
-      }
-    }
-    try { (circle as any).strokeScaleEnabled(false); } catch {}
-
-    // Hit area centered on origin, using max radius for interaction area
-    const maxRadius = Math.max(radiusX, radiusY);
-    hit.setAttrs({ x: -maxRadius, y: -maxRadius, width: 2 * maxRadius, height: 2 * maxRadius });
-
-    // Font sizing
-    const minFont = Math.max(1, el.minFont ?? 10);
-    const maxFont = Math.max(minFont, el.maxFont ?? 240);
-    const lineHeight = el.lineHeight ?? 1.3;
-    const wrapMode: 'scale' | 'wrap' | 'ellipsis' = el.textFit ?? 'wrap';
-
-    // FigJam-style: do not auto-scale font on resize; use explicit fontSize only
-    const fontSize: number = el.fontSize || 14;
-
-    // Create content group with elliptical clipping for safety net
-    let content = group.findOne<Konva.Group>('Group.text-content');
-    if (!content) {
-      content = new Konva.Group({ name: 'text-content', listening: false });
-      group.add(content);
-      textNode.moveTo(content);
-    }
-    
-    // Apply elliptical clipping as safety net using exact pad + stroke/2 reduction
-    const rxClip = Math.max(1, radiusX - pad - strokeWidth / 2);
-    const ryClip = Math.max(1, radiusY - pad - strokeWidth / 2);
-    try {
-      (content as any).clipFunc((ctx: CanvasRenderingContext2D) => {
-        ctx.beginPath();
-        ctx.ellipse(0, 0, rxClip, ryClip, 0, 0, Math.PI * 2);
-      });
-    } catch {}
-
-    // If actively editing via DOM overlay, keep Konva text hidden (relayout continues for auto-grow parity)
-    const editingActive = (this.currentEditingId === id) && !!el.isEditing;
-    if (editingActive) {
-      try { textNode.visible(false); } catch {}
-    }
-
-    // CRITICAL: Set dimensions and wrap FIRST (before text and positioning)
-    // This is required for Konva text wrapping to work properly
-    textNode.setAttrs({
-      width: textAreaWidth,
-      height: textAreaHeight,
-      wrap: 'word',
-      ellipsis: false,
-    } as any);
-    
-    // MANUAL TEXT WRAPPING FALLBACK - Use our own wrapping if Konva fails
-    const useManualWrapping = true; // Enable manual wrapping as primary strategy
-    
-    if (useManualWrapping && el.text) {
-      const lines = wrapTextManually(
-        el.text,
-        textAreaWidth,
-        fontSize,
-        el.fontFamily || 'Inter, system-ui, sans-serif'
-      );
-      const wrappedText = lines.join('\n');
-      console.log('[Circle Text Debug] Manual wrapping result:', {
-        originalText: el.text.substring(0, 50),
-        lines: lines.length,
-        wrappedText: wrappedText.substring(0, 100)
-      });
-      textNode.text(wrappedText);
-      // Disable Konva wrapping since we're doing it manually
-      (textNode as any).wrap('none');
-    } else {
-      // Fallback to Konva wrapping
-      textNode.text('');
-      textNode.text(el.text || '');
-    }
-    
-    // NOW set positioning and styling after wrapping is configured
-    textNode.setAttrs({
-      x: -textAreaWidth / 2,
-      y: -textAreaHeight / 2,
-      fontFamily: el.fontFamily || 'Inter, system-ui, sans-serif',
-      fontStyle: el.fontStyle || 'normal',
-      fontSize,
-      lineHeight,
-      fill: el.textColor || '#111827',
-      align: 'left',
-      listening: false,
-    } as any);
-    
-    // FORCE TEXT REMEASUREMENT - Clear any existing cache that might interfere
-    try {
-      textNode.clearCache();
-      (textNode as any).getTextWidth = null; // Clear internal cache
-      (textNode as any)._clearCache?.(); // Additional cache clear
-      (textNode as any)._requestDraw?.(); // Force redraw
-    } catch (e) {
-      console.warn('[Circle Text] Cache clear error:', e);
-    }
-    
-    // Debug: Log text node state after configuration
-    console.log('[Circle Text Debug] Text node state:', {
-      width: textNode.width(),
-      height: textNode.height(),
-      wrap: (textNode as any).wrap?.(),
-      text: textNode.text()?.substring(0, 50), // First 50 chars
-      fontSize: textNode.fontSize(),
-      actualTextWidth: (textNode as any).getTextWidth?.(),
-      actualTextHeight: (textNode as any).getTextHeight?.()
-    });
-    
-    try { (textNode as any).letterSpacing?.((el as any).letterSpacing ?? 0); } catch {}
-    
-    // Force layer redraw to ensure text changes are visible
-    if (group.getLayer()) {
-      group.getLayer().batchDraw();
-    }
-
-    // Top-aligned contract with non-uniform scale mapping and baseline compensation
-    const absT = group.getAbsoluteTransform();
-    const p0 = absT.point({ x: 0, y: 0 });
-    const px1 = absT.point({ x: 1, y: 0 });
-    const py1 = absT.point({ x: 0, y: 1 });
-    const sx = Math.max(1e-6, Math.abs(px1.x - p0.x));
-    const sy = Math.max(1e-6, Math.abs(py1.y - p0.y));
-    const sLim = Math.min(sx, sy);
-    // Fixed on-screen padding per contract (in CSS px)
-    const padPx = this.getCirclePadPx(el);
-    // Compute overlay content size in px using limiting axis, then map per-axis to world
-    const nearlyCircle = Math.abs(radiusX - radiusY) < 0.5;
-    if (nearlyCircle) {
-      // Inscribed square (screen px) then map to world using per-axis scale
-      const rClip = Math.max(1, Math.min(radiusX, radiusY) - strokeWidth / 2);
-      const sidePx = Math.SQRT2 * rClip * sLim;
-      const contentPx = Math.max(1, sidePx - 2 * padPx);
-      // FIXED: Use the original textAreaWidth which was calculated correctly
-      // Don't recalculate with transforms - that was causing the width to be too large
-      const widthToUse = textAreaWidth;
-      const heightToUse = textAreaHeight;
-      
-      // Debug: ALWAYS log to understand the wrapping issue
-      console.warn('Circle text dimensions (DEBUGGING WRAP ISSUE):', {
-          radiusX, radiusY,
-          rClip,
-          sidePx,
-          contentPx,
-          sx, sy,
-          calculatedWidthWorld: contentPx / sx,
-          calculatedHeightWorld: contentPx / sy,
-          actualWidthUsed: widthToUse,
-          actualHeightUsed: heightToUse,
-          textAreaWidth,
-          textAreaHeight,
-          text: el.text
-        });
-      
-      textNode.width(Math.max(1, widthToUse));
-      textNode.height(Math.max(1, heightToUse));
-      // Position based on the actual width/height we're using
-      const xWorld = -widthToUse / 2;
-      const yWorld = -heightToUse / 2;
-      textNode.position({ x: xWorld, y: yWorld });
-      
-      // Don't re-apply wrap here - it's already configured above
-      // Just clear cache if needed
-      try { 
-        (textNode as any)._clearCache?.();
-        (textNode as any).clearCache?.();
-      } catch {}
-    } else {
-      const innerW = Math.max(1, textAreaWidth - innerPad * 2);
-      const innerH = Math.max(1, textAreaHeight - innerPad * 2);
-      // Map to px using axis scales, then convert back to world using same axes to keep parity explicit
-      const innerWPx = innerW * sLim; // using limiting axis for overlay parity
-      const innerHPx = innerH * sLim;
-      const widthWorld = innerWPx / sx;
-      const heightWorld = innerHPx / sy;
-      textNode.width(Math.max(1, widthWorld));
-      textNode.height(Math.max(1, heightWorld));
-      const fontPx = fontSize * sy;
-      let baselinePx = this.getBaselineOffsetPx(textNode.fontFamily?.() || (el.fontFamily || 'Inter, system-ui, sans-serif'), fontPx, lineHeight);
-      if (this.getDebug().zeroBaseline) baselinePx = 0;
-      const baselineWorld = baselinePx / sy;
-      const xWorld = -(innerWPx / 2) / sx;
-      const yWorld = -(innerHPx / 2) / sy - baselineWorld;
-      textNode.position({ x: xWorld, y: yWorld });
-      
-      // Don't re-apply wrap here - it's already configured above
-      // Just clear cache if needed
-      try { 
-        (textNode as any)._clearCache?.();
-        (textNode as any).clearCache?.();
-      } catch {}
-    }
-
-    // Auto-grow while typing for perfect circles (font size fixed, expand radius only)
-    try {
-      const nearlyCircle = Math.abs(radiusX - radiusY) < 0.5;
-      if (nearlyCircle && el.isEditing) {
-        const fontSize = textNode.fontSize();
-        const family = textNode.fontFamily();
-        const style = (textNode as any).fontStyle?.() ?? 'normal';
-        const currentR = Math.max(radiusX, radiusY);
-        const requiredR = requiredRadiusForText({
-          text: textNode.text() || '',
-          family,
-          style,
-          lineHeight,
-          fontSize,
-          padding: innerPad,
-          strokeWidth: strokeWidth || 0,
-        });
-        if (requiredR > currentR + 0.5) {
-          // SNAP ONCE (WORLD)
-          const dpr = (window.devicePixelRatio || 1);
-          const snapWorld = (v: number) => Math.ceil(v * dpr) / dpr;
-          const rWorld = snapWorld(requiredR);
-
-          radiusX = rWorld;
-          radiusY = rWorld;
-          if (circle && circle.getClassName() === 'Circle') {
-            (circle as any).radius(rWorld);
-          } else if (circle) {
-            (circle as any).radiusX?.(rWorld);
-            (circle as any).radiusY?.(rWorld);
-          }
-          hit.setAttrs({ x: -rWorld, y: -rWorld, width: 2 * rWorld, height: 2 * rWorld });
-          // Inscribed square for perfect circles
-          const rClip = Math.max(1, rWorld - (strokeWidth || 0) / 2);
-          const side = Math.SQRT2 * rClip;
-          const innerPad2 = innerPad;
-          const innerSide = Math.max(1, side - innerPad2 * 2);
-          // Map to world under non-uniform scale
-          const abs2 = group.getAbsoluteTransform();
-          const p02 = abs2.point({ x: 0, y: 0 });
-          const px2 = abs2.point({ x: 1, y: 0 });
-          const py2 = abs2.point({ x: 0, y: 1 });
-          const sx2 = Math.max(1e-6, Math.abs(px2.x - p02.x));
-          const sy2 = Math.max(1e-6, Math.abs(py2.y - p02.y));
-          const widthWorld2 = innerSide / sx2;
-          const heightWorld2 = innerSide / sy2;
-          textNode.width(Math.max(1, widthWorld2));
-          textNode.height(Math.max(1, heightWorld2));
-          const fontPx2 = (textNode.fontSize?.() || fontSize) * sy2;
-          let baselinePx2 = this.getBaselineOffsetPx(textNode.fontFamily?.() || (el.fontFamily || 'Inter, system-ui, sans-serif'), fontPx2, (textNode as any).lineHeight?.() ?? 1.3);
-          if (this.getDebug().zeroBaseline) baselinePx2 = 0;
-          const baselineWorld2 = baselinePx2 / sy2;
-          const xWorld2 = -(innerSide / 2) / sx2;
-          const yWorld2 = -(innerSide / 2) / sy2 - baselineWorld2;
-          textNode.position({ x: xWorld2, y: yWorld2 });
-          // SAME-FRAME: Sync DOM overlay square if editing this element
-          if (this.currentEditingId === id && this.currentEditorWrapper && this.stage) {
-            try {
-              const absT = group.getAbsoluteTransform();
-              const p0 = absT.point({ x: 0, y: 0 });
-              const px = absT.point({ x: 1, y: 0 });
-              const py = absT.point({ x: 0, y: 1 });
-              const sx = Math.abs(px.x - p0.x);
-              const sy = Math.abs(py.y - p0.y);
-              const sLim = Math.min(Math.max(sx, 1e-6), Math.max(sy, 1e-6));
-              const dpr = (window.devicePixelRatio || 1);
-              const sidePx = Math.ceil((Math.SQRT2 * (rWorld - (strokeWidth || 0) / 2) * sLim) * dpr) / dpr;
-              const cRect = this.stage.container().getBoundingClientRect();
-              const center = group.getAbsoluteTransform().point({ x: 0, y: 0 });
-              const cx = cRect.left + center.x;
-              const cy = cRect.top + center.y;
-              Object.assign(this.currentEditorWrapper.style, { left: `${Math.round(cx)}px`, top: `${Math.round(cy)}px`, width: `${Math.round(sidePx)}px`, height: `${Math.round(sidePx)}px`, transform: 'translate(-50%, -50%)' });
-              // Fixed inner pad (screen px)
-              if (this.currentEditorPad) {
-                const px = this.getCirclePadPx(el);
-                this.currentEditorPad.style.padding = `${px}px`;
-              }
-            } catch {}
-          }
-          (this.updateElementCallback as any)?.(id, { radius: rWorld, radiusX: rWorld, radiusY: rWorld, width: 2 * rWorld, height: 2 * rWorld });
-          this.refreshTransformer(id);
-          this.scheduleDraw('main');
-        }
-      }
-    } catch {}
-
-    // Visibility during editing
-    try { textNode.visible(!el.isEditing); } catch {}
-  }
-
-
-  private updateCircle(group: Konva.Group, el: any) {
-    const radiusX = Math.max(20, el.radiusX || el.radius || 20);
-    const radiusY = Math.max(20, el.radiusY || el.radius || 20);
-    const strokeWidth = el.strokeWidth ?? 1;
-
-    group.position({ x: el.x || 0, y: el.y || 0 });
-    group.rotation(el.rotation || 0);
-
-    let ellipse = group.findOne<Konva.Ellipse>('.shape');
-    if (!ellipse || (radiusX !== radiusY && ellipse.getClassName() === 'Circle')) {
-        const oldShape = ellipse;
-        ellipse = new Konva.Ellipse({ name: 'shape', listening: false, radiusX, radiusY });
-        group.add(ellipse);
-        if (oldShape) {
-            ellipse.moveUp();
-            oldShape.destroy();
-        }
-    }
-
-    ellipse.setAttrs({
-        x: 0, 
-        y: 0,
-        radiusX,
-        radiusY,
-        fill: el.fill || '#ffffff',
-        stroke: el.stroke || '#d1d5db',
-        strokeWidth,
-        strokeScaleEnabled: false,
-        perfectDrawEnabled: false,
-    });
-
-    this.updateCircleShadow(ellipse, el.isEditing);
-
-    const hitArea = group.findOne<Konva.Rect>('.hit-area');
-    if (hitArea) {
-        hitArea.setAttrs({ x: -radiusX, y: -radiusY, width: radiusX * 2, height: radiusY * 2 });
-    }
-
-    if (typeof el.text === 'string' || el.isEditing) {
-        const pad = el.padding ?? 16;
-        const content = group.findOne<Konva.Group>('.content');
-        const textNode = content?.findOne<Konva.Text>('.label');
-
-        if (content && textNode) {
-            const clipRx = Math.max(1, radiusX - strokeWidth / 2);
-            const clipRy = Math.max(1, radiusY - strokeWidth / 2);
-            content.clipFunc((ctx: CanvasRenderingContext2D) => {
-                ctx.ellipse(0, 0, clipRx, clipRy, 0, 0, Math.PI * 2);
-            });
-
-            // CRITICAL FIX: Apply proper text wrapping sequence for circles
-            console.log('[Circle updateCircle Debug] Starting text configuration:', {
-                text: el.text?.substring(0, 50),
-                radiusX,
-                radiusY,
-                fontSize: el.fontSize || 14
-            });
-            
-            // First clear any existing text to reset state
-            textNode.text('');
-            
-            // Set basic properties without text
-            textNode.setAttrs({
-                fontSize: el.fontSize || 14,
-                fontFamily: el.fontFamily || 'Inter, system-ui, sans-serif',
-                fill: el.textColor || '#374151',
-                lineHeight: 1.3,
-                align: 'left',
-            });
-            try { (textNode as any).letterSpacing?.(((el as any).letterSpacing) ?? 0); } catch {}
-
-            // Size text area: use inscribed square for perfect circles, top-aligned with uniform padding
-            const nearlyCircle = Math.abs(radiusX - radiusY) < 0.5;
-            const padding = el.padding ?? 16;  // Use element padding or default
-            
-            // Calculate text area dimensions BEFORE setting text
-            let textAreaWidth: number;
-            let textAreaHeight: number;
-            
-            if (nearlyCircle) {
-              // For circles, use inscribed square
-              const rClip = Math.max(1, Math.min(radiusX, radiusY) - strokeWidth / 2);
-              const side = Math.SQRT2 * rClip - padding * 2;
-              
-              // Critical fix: Ensure dimensions are NEVER Infinity or NaN
-              if (!isFinite(side) || side <= 0) {
-                textAreaWidth = 30;
-                textAreaHeight = 30;
-                console.warn('[Circle updateCircle] Invalid side calculation:', { rClip, padding, side });
-              } else {
-                textAreaWidth = Math.max(30, side);
-                textAreaHeight = Math.max(30, side);
-              }
-              
-              console.log('[Circle updateCircle Debug] Inscribed square dimensions:', {
-                radiusX,
-                radiusY,
-                strokeWidth,
-                rClip,
-                padding,
-                side,
-                textAreaWidth,
-                textAreaHeight
-              });
-              
-              // CRITICAL DEBUG: Check for Infinity before setting
-              if (!isFinite(textAreaWidth) || !isFinite(textAreaHeight)) {
-                console.error('[Circle updateCircle] INFINITY DETECTED!', { textAreaWidth, textAreaHeight });
-                textAreaWidth = 30;
-                textAreaHeight = 30;
-              }
-              
-              // Set dimensions and wrap FIRST (critical for Konva wrapping to work)
-              textNode.setAttrs({
-                width: textAreaWidth,
-                height: textAreaHeight,
-                wrap: 'word',
-                ellipsis: false
-              });
-              
-              // Now apply manual text wrapping
-              if (el.text) {
-                const lines = wrapTextManually(
-                  el.text,
-                  textAreaWidth,
-                  el.fontSize || 14,
-                  el.fontFamily || 'Inter, system-ui, sans-serif'
-                );
-                const wrappedText = lines.join('\n');
-                console.log('[Circle updateCircle Debug] Manual wrapping result:', {
-                  originalText: el.text.substring(0, 50),
-                  lines: lines.length,
-                  wrappedText: wrappedText.substring(0, 100)
-                });
-                textNode.text(wrappedText);
-                // Disable Konva wrapping since we're doing it manually
-                (textNode as any).wrap('none');
-              } else {
-                textNode.text('');
-              }
-              
-              // Clear cache to force remeasurement
-              try {
-                textNode.clearCache();
-                (textNode as any)._clearCache?.();
-                (textNode as any).getTextWidth = null;
-              } catch (e) {
-                console.warn('[Circle updateCircle] Cache clear error:', e);
-              }
-              
-              // Position text centered
-              const xWorld = -textAreaWidth / 2;
-              const yWorld = -textAreaHeight / 2;
-              textNode.position({ x: xWorld, y: yWorld });
-            } else {
-              // For ellipses, use aspect-aware inscribed rectangle
-              const tb = getEllipticalTextBounds(radiusX, radiusY, padding, strokeWidth);
-              textAreaWidth = Math.max(30, tb.width);
-              textAreaHeight = Math.max(30, tb.height);
-              
-              console.log('[Circle updateCircle Debug] Ellipse dimensions:', {
-                radiusX,
-                radiusY,
-                textAreaWidth,
-                textAreaHeight
-              });
-              
-              // Set dimensions and wrap FIRST
-              textNode.setAttrs({
-                width: textAreaWidth,
-                height: textAreaHeight,
-                wrap: 'word',
-                ellipsis: false
-              });
-              
-              // Apply manual text wrapping for ellipses too
-              if (el.text) {
-                const lines = wrapTextManually(
-                  el.text,
-                  textAreaWidth,
-                  el.fontSize || 14,
-                  el.fontFamily || 'Inter, system-ui, sans-serif'
-                );
-                const wrappedText = lines.join('\n');
-                console.log('[Circle updateCircle Debug] Ellipse manual wrapping:', {
-                  lines: lines.length,
-                  wrappedText: wrappedText.substring(0, 100)
-                });
-                textNode.text(wrappedText);
-                (textNode as any).wrap('none');
-              } else {
-                textNode.text('');
-              }
-              
-              // Clear cache
-              try {
-                textNode.clearCache();
-                (textNode as any)._clearCache?.();
-              } catch {}
-              
-              const xWorld = -textAreaWidth / 2;
-              const yWorld = -textAreaHeight / 2;
-              textNode.position({ x: xWorld, y: yWorld });
-            }
-            
-            // Force layer redraw to ensure text changes are visible
-            if (group.getLayer()) {
-              group.getLayer().batchDraw();
-            }
-
-            textNode.visible(!el.isEditing);
-
-            // Auto-grow while typing for perfect circles (font size fixed, expand radius only)
-            // Check if text needs more space and grow the circle if needed
-            try {
-              if (nearlyCircle && el.isEditing) {
-                console.log(`[AUTO-GROW] Checking circle ${el.id} for auto-grow, text: "${textNode.text()}"`);
-                const fontSize = textNode.fontSize();
-                const lineHeight = (textNode as any).lineHeight?.() ?? 1.3;
-                const family = textNode.fontFamily();
-                const style = (textNode as any).fontStyle?.() ?? 'normal';
-                const currentR = Math.max(radiusX, radiusY);
-                // Compute required radius to contain the text inside inscribed square at fixed font size
-                const requiredR = requiredRadiusForText({
-                  text: textNode.text() || '',
-                  family,
-                  style,
-                  lineHeight,
-                  fontSize,
-                  padding: padding,
-                  strokeWidth: strokeWidth || 0,
-                });
-                
-                console.log(`[AUTO-GROW] Current radius: ${currentR}, Required radius: ${requiredR}, Growth needed: ${requiredR > currentR + 0.5}`);
-
-                if (requiredR > currentR + 0.5) {
-                  console.log(`[AUTO-GROW] Growing circle from ${currentR} to ${requiredR}`);
-                  // Update ellipse radii uniformly
-                  if (ellipse.getClassName() === 'Circle') {
-                    (ellipse as any).radius(requiredR);
-                  } else {
-                    (ellipse as any).radiusX?.(requiredR);
-                    (ellipse as any).radiusY?.(requiredR);
-                  }
-
-                  // Update hit-area
-                  const sideR = requiredR;
-                  const hitArea = group.findOne<Konva.Rect>('.hit-area');
-                  if (hitArea) {
-                    hitArea.setAttrs({ x: -sideR, y: -sideR, width: 2 * sideR, height: 2 * sideR });
-                  }
-
-                  // Update text area to new inscribed square
-                  const rClip = Math.max(1, requiredR - (strokeWidth || 0) / 2);
-                  const sideWorld = Math.SQRT2 * rClip;
-                  const innerWorld = Math.max(1, sideWorld - padding * 2);
-                  const absT = group.getAbsoluteTransform();
-                  const p0 = absT.point({ x: 0, y: 0 });
-                  const px1 = absT.point({ x: 1, y: 0 });
-                  const py1 = absT.point({ x: 0, y: 1 });
-                  const sx = Math.max(1e-6, Math.abs(px1.x - p0.x));
-                  const sy = Math.max(1e-6, Math.abs(py1.y - p0.y));
-                  const sLim = Math.min(sx, sy);
-                  const innerPx = innerWorld * sLim;
-                  const widthWorld = innerPx / sx;
-                  const heightWorld = innerPx / sy;
-                  textNode.width(Math.max(1, widthWorld));
-                  textNode.height(Math.max(1, heightWorld));
-                  const xWorld = -(innerPx / 2) / sx;
-                  const yWorld = -(innerPx / 2) / sy;
-                  textNode.position({ x: xWorld, y: yWorld });
-
-                  // SAME-FRAME: Sync DOM overlay square if editing this element
-                  if (this.currentEditingId === String(el.id) && this.currentEditorWrapper && this.stage) {
-                    try {
-                      const abs = group.getAbsoluteTransform().decompose();
-                      const scale = Math.max(abs.scaleX || 1, abs.scaleY || 1);
-                      const sidePx = Math.max(4, Math.SQRT2 * rClip * scale);
-                      const center = group.getAbsoluteTransform().point({ x: 0, y: 0 });
-                      const cRect = this.stage.container().getBoundingClientRect();
-                      const cx = cRect.left + center.x;
-                      const cy = cRect.top + center.y;
-                      Object.assign(this.currentEditorWrapper.style, { left: `${Math.round(cx)}px`, top: `${Math.round(cy)}px`, width: `${Math.round(sidePx)}px`, height: `${Math.round(sidePx)}px`, transform: 'translate(-50%, -50%)' });
-                    } catch {}
-                  }
-
-                  // Persist size to store and refresh transformer
-                  this.updateElementCallback?.(String(el.id), {
-                    radius: requiredR,
-                    radiusX: requiredR,
-                    radiusY: requiredR,
-                    width: 2 * requiredR,
-                    height: 2 * requiredR,
-                  });
-                  this.refreshTransformer(String(el.id));
-                  this.scheduleDraw('main');
-                }
-              }
-            } catch {}
-        }
-    }
-  }
-  
-  // Consistent shadow management
-  private updateCircleShadow(ellipse: Konva.Ellipse, isEditing: boolean) {
-    if (!isEditing) {
-      // Standard shadow for display mode
-      ellipse.shadowColor('#000');
-      ellipse.shadowOpacity(0.08);
-      ellipse.shadowBlur(8);
-      ellipse.shadowOffset({ x: 0, y: 1 });
-    } else {
-      // Subtle shadow during editing to maintain visual reference
-      ellipse.shadowColor('#007ACC');
-      ellipse.shadowOpacity(0.03);
-      ellipse.shadowBlur(2);
-      ellipse.shadowOffset({ x: 0, y: 0 });
-    }
-  }
-  
-  
-    
-
-  // Triangle
-  private createTriangle(el: any): Konva.Group {
-    const id = String(el.id);
-    const w = Math.max(1, el.width || 180);
-    const h = Math.max(1, el.height || 180);
-    const group = this.createGroupWithHitArea(id, w, h);
-    group.name('triangle');
-    group.position({ x: el.x || 0, y: el.y || 0 });
-
-    const points = [
-      Math.round(w / 2), 0,
-      w, h,
-      0, h,
-    ];
-
-    const tri = new Konva.Line({
-      points,
-      closed: true,
-      fill: el.fill || '#ffffff',
-      stroke: el.stroke || '#d1d5db',
-      strokeWidth: el.strokeWidth ?? 1,
-      listening: false,
-      perfectDrawEnabled: false,
-      name: 'shape'
-    });
-    try { (tri as any).strokeScaleEnabled(false); } catch {}
-    tri.shadowColor('#000');
-    tri.shadowOpacity(0.08);
-    tri.shadowBlur(8);
-    tri.shadowOffset({ x: 0, y: 1 });
-    group.add(tri);
-
-    // Optional centered text (clipped to triangle)
-    if (typeof el.text === 'string') {
-      const pad = (el as any).padding ?? 12;
-      let content = group.findOne<Konva.Group>('Group.content');
-      if (!content) {
-        content = new Konva.Group({ name: 'content', listening: false });
-        // Clip to triangle shape
-        try {
-          (content as any).clipFunc((ctx: CanvasRenderingContext2D) => {
-            ctx.beginPath();
-            ctx.moveTo(w / 2, 0);
-            ctx.lineTo(w, h);
-            ctx.lineTo(0, h);
-            ctx.closePath();
-          });
-        } catch {}
-        group.add(content);
-      }
-      let text = group.findOne<Konva.Text>('Text.label');
-      if (!text) {
-        text = new Konva.Text({ name: 'label', listening: false });
-        (content as Konva.Group).add(text);
-      }
-      text.text(el.text || '');
-      text.fontSize(el.fontSize || 14);
-      text.fontFamily(el.fontFamily || 'Inter, system-ui, sans-serif');
-      text.fill(el.textColor || '#111827');
-      ;(text as any).wrap('word');
-      ;(text as any).align('center');
-      // Position text lower for a wider area and center it
-      const y0 = Math.max(pad, Math.floor(h * 0.55)); // ~55% down from top for better width
-      const topWidth = Math.max(1, Math.floor((w * y0) / Math.max(1, h))); // linear width along sides
-      const innerW = Math.max(1, topWidth - pad * 2);
-      text.width(innerW);
-      text.x(Math.max(0, Math.floor((w - innerW) / 2)));
-      text.y(y0);
-      try { text.moveToTop(); text.visible(!((el as any).isEditing)); } catch {}
-      const measuredH = Math.ceil(text.height());
-      const innerH = Math.max(1, h - y0 - pad);
-      if (measuredH > innerH) {
-        const newH = measuredH + pad * 2;
-        tri.points([Math.round(w / 2), 0, w, newH, 0, newH]);
-        this.ensureHitAreaSize(group, w, newH);
-        if (this.updateElementCallback) {
-          this.updateElementCallback(id, { height: newH });
-        }
-      }
-    }
-    return group;
-  }
-
-  private updateTriangle(group: Konva.Group, el: any) {
-    const w = Math.max(1, el.width || 1);
-    const h = Math.max(1, el.height || 1);
-    group.position({ x: el.x || 0, y: el.y || 0 });
-    this.ensureHitAreaSize(group, w, h);
-
-    // Find existing triangle shape or create one
-    let tri = group.findOne<Konva.Line>((node: any) => node.name() === 'shape' && node.getClassName() === 'Line');
-    if (!tri) {
-      // Remove any duplicate shapes before creating new one
-      const existingShapes = group.find((node: any) => node.name() === 'shape');
-      existingShapes.forEach(shape => shape.destroy());
-      
-      tri = new Konva.Line({ name: 'shape', listening: false, closed: true });
-      group.add(tri);
-    }
-    const points = [
-      Math.round(w / 2), 0,
-      w, h,
-      0, h,
-    ];
-    tri.points(points);
-    tri.closed(true);
-    tri.fill(el.fill || '#ffffff');
-    tri.stroke(el.stroke || '#d1d5db');
-    tri.strokeWidth(el.strokeWidth ?? 1);
-    // Ensure no duplicate rendering
-    tri.perfectDrawEnabled(false);
-    try { (tri as any).strokeScaleEnabled(false); } catch {}
-    tri.shadowColor('#000');
-    tri.shadowOpacity(0.08);
-    tri.shadowBlur(8);
-    tri.shadowOffset({ x: 0, y: 1 });
-
-    if (typeof el.text === 'string') {
-      const pad = (el as any).padding ?? 12;
-      let content = group.findOne<Konva.Group>('Group.content');
-      if (!content) {
-        content = new Konva.Group({ name: 'content', listening: false });
-        group.add(content);
-      }
-      // Refresh clip to triangle shape
-      try {
-        (content as any).clipFunc((ctx: CanvasRenderingContext2D) => {
-          ctx.beginPath();
-          ctx.moveTo(w / 2, 0);
-          ctx.lineTo(w, h);
-          ctx.lineTo(0, h);
-          ctx.closePath();
-        });
-      } catch {}
-      let text = group.findOne<Konva.Text>('Text.label');
-      if (!text) {
-        text = new Konva.Text({ name: 'label', listening: false });
-        (content as Konva.Group).add(text);
-      }
-      // Compute a centered inner rectangle inside triangle
-      const innerWmax = Math.max(1, w - pad * 2);
-      text.text(el.text || '');
-      text.fontSize(el.fontSize || 14);
-      text.fontFamily(el.fontFamily || 'Inter, system-ui, sans-serif');
-      text.fill(el.textColor || '#111827');
-      ;(text as any).wrap('word');
-      ;(text as any).align('center');
-      const y0 = Math.max(pad, Math.floor(h * 0.55));
-      const topWidth = Math.max(1, Math.floor((w * y0) / Math.max(1, h)));
-      const innerW = Math.min(innerWmax, Math.max(1, topWidth - pad * 2));
-      text.width(innerW);
-      text.x(Math.max(0, Math.floor((w - innerW) / 2)));
-      text.y(y0);
-      try { text.moveToTop(); text.visible(!((el as any).isEditing)); } catch {}
-      const measuredH = Math.ceil(text.height());
-      const innerH = Math.max(1, h - y0 - pad);
-      if (measuredH > innerH) {
-        const newH = measuredH + pad * 2;
-        tri.points([Math.round(w / 2), 0, w, newH, 0, newH]);
-        this.ensureHitAreaSize(group, w, newH);
-        if (this.updateElementCallback) {
-          this.updateElementCallback(String(el.id), { height: newH });
-        }
-      }
-    }
-  }
-
   // Text
   private createText(el: any): Konva.Group {
     const id = String(el.id);
     const w = Math.max(1, el.width || 1);
     const h = Math.max(1, el.height || 1);
 
-    const group = this.createGroupWithHitArea(id, w, h);
+    const group = this.shapesModule!.createGroupWithHitArea(id, w, h);
     group.name('text');
     // TEST 4: Snap to integer positions
     group.position({ x: Math.round(el.x || 0), y: Math.round(el.y || 0) });
@@ -1592,69 +258,9 @@ export class CanvasRendererV2 {
       const targetH = Math.max(minClickableH, measuredH || 0);
       const minClickableW = Math.max(60, Math.ceil((el.fontSize || 14) * 3));
       const targetW = Math.max(minClickableW, w || 1);
-      this.ensureHitAreaSize(group, targetW, targetH);
+      this.shapesModule!.ensureHitAreaSize(group, targetW, targetH);
     } catch {}
     return group;
-  }
-
-  private updateRectangle(group: Konva.Group, el: any) {
-    const w = Math.max(1, el.width || 1);
-    let h = Math.max(1, el.height || 1);
-    
-    group.position({ x: el.x || 0, y: el.y || 0 });
-    this.ensureHitAreaSize(group, w, h);
-
-    const rect = group.findOne<Konva.Rect>('Rect.bg');
-    if (rect) {
-      rect.width(w);
-      rect.height(h);
-      rect.fill(el.fill || '#ffffff');
-      rect.stroke(el.stroke || 'transparent');
-      rect.strokeWidth(el.strokeWidth ?? 0);
-      rect.cornerRadius((el as any).cornerRadius ?? 0);
-    }
-
-    if (el.text) {
-      // Use proportional padding for circles to better utilize circular space
-      const basePad = (el as any).padding ?? 12;
-      const pad = basePad;
-      const content = group.findOne<Konva.Group>('Group.content');
-      const text = content?.findOne<Konva.Text>('Text.label');
-      
-      if (content && text) {
-        text.x(pad);
-        text.y(pad);
-        text.width(Math.max(1, w - pad * 2));
-        text.text(el.text);
-        text.fontSize(el.fontSize || 14);
-        text.fontFamily(el.fontFamily || 'Inter, system-ui, sans-serif');
-        text.fill(el.textColor || '#111827');
-        ;(text as any).wrap('word');
-        ;(text as any).align(((el as any).style?.align ?? (el as any).align) || 'left');
-        ;(text as any).lineHeight(((el as any).style?.lineHeight ?? (el as any).lineHeight) || 1.25);
-        try { text.visible(!((el as any).isEditing)); } catch {}
-
-        // Auto-height logic
-        const desiredHeight = Math.max(h, Math.ceil(text.height()) + pad * 2);
-        const maxH = (el as any).maxHeight ? Math.max(1, (el as any).maxHeight) : undefined;
-        const clamped = maxH ? Math.min(desiredHeight, maxH) : desiredHeight;
-        
-        if (clamped !== h) {
-          h = clamped;
-          rect?.height(h);
-          try { (group as any).clip({ x: 0, y: 0, width: w, height: h }); } catch {}
-          try { (content as any).clip({ x: pad, y: pad, width: Math.max(1, w - pad * 2), height: Math.max(1, h - pad * 2) }); } catch {}
-          try { text.visible(!((el as any).isEditing)); } catch {}
-          this.ensureHitAreaSize(group, w, h);
-
-          if (this.updateElementCallback) {
-            this.updateElementCallback(String(el.id), { height: h });
-          }
-        }
-
-        try { (content as any).clip({ x: pad, y: pad, width: Math.max(1, w - pad * 2), height: Math.max(1, h - pad * 2) }); } catch {}
-      }
-    }
   }
 
   private updateText(group: Konva.Group, el: any) {
@@ -1687,14 +293,14 @@ export class CanvasRendererV2 {
         const targetH = Math.max(minClickableH, measuredH || 0);
         const minClickableW = Math.max(60, Math.ceil((el.fontSize || 14) * 3));
         const targetW = Math.max(minClickableW, measuredW || w || 1);
-        this.ensureHitAreaSize(group, targetW, targetH);
+        this.shapesModule!.ensureHitAreaSize(group, targetW, targetH);
       } catch {}
     } else {
       // Fallback: at least ensure hit-area matches element width
       const minClickableH = Math.max(24, Math.ceil((el.fontSize || 14) * 1.1));
       const minClickableW = Math.max(60, Math.ceil((el.fontSize || 14) * 3));
       const targetW = Math.max(minClickableW, w || 1);
-      this.ensureHitAreaSize(group, targetW, Math.max(minClickableH, Math.max(1, el.height || 1)));
+      this.shapesModule!.ensureHitAreaSize(group, targetW, Math.max(minClickableH, Math.max(1, el.height || 1)));
     }
   }
 
@@ -1936,13 +542,13 @@ export class CanvasRendererV2 {
   private createTable(el: any): Konva.Group {
     const id = String(el.id);
     const rows = Math.max(1, el.rows || (el.enhancedTableData?.rows?.length || 1));
-    const cols = Math.max(1, el.cols || (el.enhancedTableData?.columns?.length || 1));
+    const cols = Math.max(1, el.enhancedTableData?.columns?.length || 1);
 
     // Compute width/height
     let w = Math.max(1, el.width || (cols * (el.cellWidth || 120)));
     let h = Math.max(1, el.height || (rows * (el.cellHeight || 36)));
 
-    const group = this.createGroupWithHitArea(id, w, h, true);
+    const group = this.shapesModule!.createGroupWithHitArea(id, w, h, true);
     group.name('table');
     group.position({ x: el.x || 0, y: el.y || 0 });
 
@@ -2004,7 +610,7 @@ export class CanvasRendererV2 {
     this.layoutTable(group, el);
 
     // Update hit area
-    this.ensureHitAreaSize(group, w, h);
+    this.shapesModule!.ensureHitAreaSize(group, w, h);
     this.scheduleDraw('main');
     // Ensure any open overlay/menu remains consistent with updated layout
     this.clearTableOverlay();
@@ -2092,7 +698,7 @@ export class CanvasRendererV2 {
     }
 
     // Ensure hit area reflects current size
-    this.ensureHitAreaSize(group, Math.max(w, innerW), Math.max(h, innerH));
+    this.shapesModule!.ensureHitAreaSize(group, Math.max(w, innerW), Math.max(h, innerH));
     this.scheduleDraw('main');
   }
 
@@ -2102,7 +708,7 @@ export class CanvasRendererV2 {
     const w = Math.max(1, el.width || 100);
     const h = Math.max(1, el.height || 100);
     
-    const group = this.createGroupWithHitArea(id, w, h);
+    const group = this.shapesModule!.createGroupWithHitArea(id, w, h);
     group.name('image');
     group.position({ x: el.x || 0, y: el.y || 0 });
     
@@ -2131,7 +737,7 @@ export class CanvasRendererV2 {
     const h = Math.max(1, el.height || 100);
     
     group.position({ x: el.x || 0, y: el.y || 0 });
-    this.ensureHitAreaSize(group, w, h);
+    this.shapesModule!.ensureHitAreaSize(group, w, h);
     
     const imageNode = group.findOne<Konva.Image>('.image-content');
     if (imageNode) {
@@ -2157,7 +763,7 @@ export class CanvasRendererV2 {
     const h = Math.max(1, el.height || 150);
 
     // Use the standard group creation utility to ensure a reliable hit area.
-    const group = this.createGroupWithHitArea(id, w, h, true);
+    const group = this.shapesModule!.createGroupWithHitArea(id, w, h, true);
     group.name('sticky-note');
     // TEST 4: Snap to integer positions
     group.position({ x: Math.round(el.x || 0), y: Math.round(el.y || 0) });
@@ -2221,7 +827,7 @@ export class CanvasRendererV2 {
     // Real bounds come from frame.width/height + ensureHitAreaSize
     try { (group as any).width?.(w); (group as any).height?.(h); } catch {}
     try { group.setAttr('__layoutW', w); group.setAttr('__layoutH', h); } catch {}
-    this.ensureHitAreaSize(group, w, h);
+    this.shapesModule!.ensureHitAreaSize(group, w, h);
 
     // Update background per style
     const bg = group.findOne<Konva.Rect>('.frame');
@@ -2359,6 +965,21 @@ export class CanvasRendererV2 {
     this.layers.overlay.add(this.transformer);
     try { this.transformer.moveToTop(); } catch {}
 
+    // Initialize ShapesModule
+    this.shapesModule = new ShapesModule(
+      this.nodeMap,
+      this.layers as ShapesModuleLayers,
+      this.updateElementCallback,
+      this.scheduleDraw.bind(this),
+      this.refreshTransformer.bind(this),
+      this.currentEditingId,
+      this.currentEditorWrapper,
+      this.currentEditorPad,
+      this.stage,
+      this.getCirclePadPx.bind(this),
+      this.getBaselineOffsetPx.bind(this),
+      this.getDebug.bind(this)
+    );
 
     // Shift-constrain & Capture anchor and pre-rects at transform start for precise commit positioning
     this.transformer.on('transformstart.renderer', () => {
@@ -2432,7 +1053,7 @@ export class CanvasRendererV2 {
               const finalH = Math.max(MIN_H, rect2 && typeof rect2.height === 'number' ? rect2.height : (baseH || MIN_H));
 
               // Ensure hit area matches
-              this.ensureHitAreaSize(group, targetW, finalH);
+              this.shapesModule!.ensureHitAreaSize(group, targetW, finalH);
 
               // Persist
               this.updateElementCallback?.(id, {
@@ -2484,7 +1105,7 @@ export class CanvasRendererV2 {
               } catch {}
 
               // Update hit area and persist
-              this.ensureHitAreaSize(group, targetW, targetH);
+              this.shapesModule!.ensureHitAreaSize(group, targetW, targetH);
               this.updateElementCallback?.(id, {
                 width: targetW,
                 height: targetH,
@@ -2517,7 +1138,7 @@ export class CanvasRendererV2 {
               imageNode.height(targetH);
 
               // Update hit area and persist
-              this.ensureHitAreaSize(group, targetW, targetH);
+              this.shapesModule!.ensureHitAreaSize(group, targetW, targetH);
               this.updateElementCallback?.(id, {
                 width: targetW,
                 height: targetH,
@@ -2575,7 +1196,7 @@ export class CanvasRendererV2 {
               textNode.fontSize(targetFont);
 
               // Hit-area must match new frame
-              this.ensureHitAreaSize(group, targetW, targetH);
+              this.shapesModule!.ensureHitAreaSize(group, targetW, targetH);
 
               // Persist to store
               this.updateElementCallback?.(id, {
@@ -2723,7 +1344,7 @@ export class CanvasRendererV2 {
         const isTextElement = group.name() === 'text';
         if (!isTextElement) {
           try { 
-            this.ensureHitAreaSize(group, nextW, nextH); 
+            this.shapesModule!.ensureHitAreaSize(group, nextW, nextH); 
             // Force the group's cached bounds to update
             group.clearCache();
             (group as any)._clearSelfAndDescendantCache?.('bounds');
@@ -2943,7 +1564,7 @@ export class CanvasRendererV2 {
       let node = this.getElementNodeFromEvent(e.target);
       if ((!node || !node.id()) && (e.target?.getClassName?.() === 'Transformer' || e.target?.getParent?.()?.getClassName?.() === 'Transformer')) {
         // If transformer is clicked, prefer the single selected node (expected flow for edit-on-dblclick)
-        const selected = this.transformer?.nodes?.() || [];
+        const selected = this.transformer?.nodes() || [];
         if (selected.length === 1) {
           node = selected[0];
         }
@@ -3055,11 +1676,6 @@ export class CanvasRendererV2 {
     // Close previous editor if any
     this.closeCurrentEditor();
     
-    // The issue is confirmed to be in the complex textarea setup below
-    // The simple test proved that basic textareas work fine
-
-    
-
     if (!this.stage) return;
 
     // Pull latest element snapshot (read-only)
@@ -3213,7 +1829,7 @@ export class CanvasRendererV2 {
         contentLeft = leftPx + Math.max(0, Math.floor((widthPx - topWidthPx) / 2)) + padPx;
         contentTop = topPx + triangleOffsetPx;
         contentWidth = Math.max(4, topWidthPx - padPx * 2);
-        contentHeight = Math.max(4, heightPx - triangleOffsetPx - padPx);
+        contentHeight = Math.max(4, heightPx - triangleTextOffsetWorld - padPx);
     }
 
     // Rotation (absolute)
@@ -3439,9 +2055,13 @@ export class CanvasRendererV2 {
     const focusTextarea = (evt: Event) => {
       try {
         if (document.activeElement !== ta) {
-          (ta as any).focus({ preventScroll: true });
-          const len = ta.value?.length ?? 0;
-          ta.setSelectionRange(len, len);
+          if (ta instanceof HTMLTextAreaElement) {
+            (ta as HTMLTextAreaElement).focus({ preventScroll: true });
+            const len = (ta as HTMLTextAreaElement).value?.length ?? 0;
+            (ta as HTMLTextAreaElement).setSelectionRange(len, len);
+          } else {
+            (ta as HTMLDivElement).focus({ preventScroll: true });
+          }
         }
       } catch {}
     };
@@ -3477,17 +2097,17 @@ export class CanvasRendererV2 {
     
     // Try immediate focus first
     try {
-      (ta as any).focus({ preventScroll: true });
-      if (isCircle) {
+      if (ta instanceof HTMLTextAreaElement) {
+        (ta as HTMLTextAreaElement).focus({ preventScroll: true });
+        const len = (ta as HTMLTextAreaElement).value?.length ?? 0;
+        (ta as HTMLTextAreaElement).setSelectionRange(len, len);
+      } else {
         const sel = window.getSelection();
         const range = document.createRange();
         range.selectNodeContents(ta as Node);
         range.collapse(false);
         sel?.removeAllRanges();
         sel?.addRange(range);
-      } else {
-        const len = (ta as HTMLTextAreaElement).value?.length ?? 0;
-        (ta as HTMLTextAreaElement).setSelectionRange(len, len);
       }
     } catch {}
     
@@ -3495,17 +2115,18 @@ export class CanvasRendererV2 {
     const tryFocus = () => {
       try {
         if (document.activeElement !== ta) {
-          (ta as any).focus({ preventScroll: true });
-          if (isCircle) {
+          if (ta instanceof HTMLTextAreaElement) {
+            (ta as HTMLTextAreaElement).focus({ preventScroll: true });
+            const len = (ta as HTMLTextAreaElement).value?.length ?? 0;
+            (ta as HTMLTextAreaElement).setSelectionRange(len, len);
+          } else {
+            (ta as HTMLDivElement).focus({ preventScroll: true });
             const sel = window.getSelection();
             const range = document.createRange();
             range.selectNodeContents(ta as Node);
             range.collapse(false);
             sel?.removeAllRanges();
             sel?.addRange(range);
-          } else {
-            const len = (ta as HTMLTextAreaElement).value?.length ?? 0;
-            (ta as HTMLTextAreaElement).setSelectionRange(len, len);
           }
         }
       } catch {}
@@ -3595,7 +2216,7 @@ export class CanvasRendererV2 {
           const basePadWorld = padWorld;
           const ellipse = group.findOne<Konva.Ellipse>('Ellipse.shape') || group.findOne<Konva.Circle>('Circle.shape');
           if (ellipse) {
-            const currentScale = this.getConsistentStageScale();
+            const currentScale = this.shapesModule!.getConsistentStageScale();
             let currentRadiusX = (ellipse as any).radiusX?.() || (ellipse as any).radius?.() || 65;
             let currentRadiusY = (ellipse as any).radiusY?.() || (ellipse as any).radius?.() || 65;
             
@@ -3604,19 +2225,21 @@ export class CanvasRendererV2 {
             
             // No real-time expansion while typing (simplified FigJam-style)
             if (false) {
-              const currentText = ta.value;
+              const currentText = (ta as HTMLTextAreaElement).value;
               const currentFontSize = parseInt(ta.style.fontSize) || 14;
               const lineHeight = parseFloat(ta.style.lineHeight) || 1.2;
               const padding = Math.max(12, currentRadiusX * 0.15);
+              const strokeWidth = (el as any).strokeWidth ?? 1;
               
               if (currentText.trim()) {
-                const requiredR = requiredRadiusForText({ 
-                  text: currentText, 
-                  family: el.fontFamily || 'Inter, system-ui, sans-serif', 
-                  style: el.fontStyle, 
-                  lineHeight, 
-                  fontSize: currentFontSize, 
-                  padding 
+                const requiredR = (this.shapesModule as ShapesModule).calculateOptimalRadiusBeforeLayout({
+                  text: currentText,
+                  fontSize: currentFontSize,
+                  family: el.fontFamily || 'Inter, system-ui, sans-serif',
+                  padding: padding,
+                  style: (el as any).fontStyle || 'normal',
+                  lineHeight: lineHeight,
+                  strokeWidth: strokeWidth,
                 });
                 
                 if (requiredR > currentRadiusX && requiredR !== currentRadiusY) {
@@ -3625,19 +2248,21 @@ export class CanvasRendererV2 {
                   currentRadiusY = requiredR;
                   
                   // Update the ellipse immediately
-                  if ((ellipse as any).radiusX) {
-                    (ellipse as any).radiusX(requiredR);
-                    (ellipse as any).radiusY(requiredR);
-                    ellipse.position({ x: 0, y: 0 });
-                  } else {
-                    (ellipse as any).radius(requiredR);
-                    ellipse.position({ x: 0, y: 0 });
+                  if (ellipse) {
+                    if ((ellipse as any).radiusX) {
+                      (ellipse as any).radiusX(requiredR);
+                      (ellipse as any).radiusY(requiredR);
+                      ellipse!.position({ x: 0, y: 0 });
+                    } else {
+                      (ellipse as any).radius(requiredR);
+                      ellipse!.position({ x: 0, y: 0 });
+                    }
                   }
                   
                   // Update hit area
                   const hit = group.findOne<Konva.Rect>('Rect.hit-area');
                   if (hit) {
-                    hit.setAttrs({ x: -requiredR, y: -requiredR, width: 2 * requiredR, height: 2 * requiredR });
+                    hit!.setAttrs({ x: -requiredR, y: -requiredR, width: 2 * requiredR, height: 2 * requiredR });
                   }
                   
                   // Update store
@@ -3660,8 +2285,9 @@ export class CanvasRendererV2 {
                   const containerRect = this.stage?.container()?.getBoundingClientRect();
                   if (!containerRect) return;
                   const rect = (group as any).getClientRect?.({ skipTransform: false }) ?? group.getClientRect();
-                  const centerX = containerRect.left + rect.x + rect.width / 2;
-                  const centerY = containerRect.top + rect.y + rect.height / 2;
+                  if (!containerRect) return;
+                  const centerX = containerRect!.left + rect.x + rect.width / 2;
+                  const centerY = containerRect!.top + rect.y + rect.height / 2;
                   
                   const contentLeft = Math.round(centerX - (rectWidthPx + textareaPadding * 2) / 2);
                   const contentTop = Math.round(centerY - (rectHeightPx + textareaPadding * 2) / 2);
@@ -3737,7 +2363,7 @@ export class CanvasRendererV2 {
               currentRadiusY = finalRadiusY;
               
               // Update hit area
-              this.ensureHitAreaSize(group, newWidth, newHeight);
+              this.shapesModule!.ensureHitAreaSize(group, newWidth, newHeight);
               
               // Don't apply clipping - let text expand naturally
               const content = group.findOne<Konva.Group>('Group.content');
@@ -3822,7 +2448,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
               (textNode as any).height?.(Math.max(1, finalElementHeightWorld - pad * 2));
               (textNode as any).y?.(pad);
             }
-            this.ensureHitAreaSize(group, baseW, Math.max(1, finalElementHeightWorld));
+            this.shapesModule!.ensureHitAreaSize(group, baseW, Math.max(1, finalElementHeightWorld));
             this.updateElementCallback?.(elId, { height: Math.max(1, finalElementHeightWorld) });
             this.scheduleDraw('main');
             this.transformer?.forceUpdate?.();
@@ -3874,12 +2500,12 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         const group = node as Konva.Group;
         const textNode = group.findOne<Konva.Text>('Text.text') || group.findOne<Konva.Text>('Text') || group.findOne<Konva.Text>('.text');
         if (textNode) {
-          textNode.text(ta.value);
+          textNode.text((ta as HTMLTextAreaElement).value);
           try { (textNode as any).width(undefined); (textNode as any)._clearCache?.(); } catch {}
           const measuredW = Math.max(1, Math.ceil(((textNode as any).getTextWidth?.() || nextWpx) as number));
           const worldW = Math.max(1, measuredW / stageScale);
           const worldH = Math.max(10, Math.ceil(fsWorld * lh));
-          this.ensureHitAreaSize(group, worldW, worldH);
+          this.shapesModule!.ensureHitAreaSize(group, worldW, worldH);
           this.scheduleDraw('main');
           this.transformer?.forceUpdate?.();
           this.scheduleDraw('overlay');
@@ -3911,7 +2537,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         opacity: ta.style.opacity,
         visibility: ta.style.visibility,
         background: ta.style.background,
-        value: ta.value
+        value: (ta as HTMLTextAreaElement).value
       });
       
       // Force text to be visible immediately, not in next frame
@@ -3926,7 +2552,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     ta.addEventListener('input', (e) => {
       const computed = window.getComputedStyle(ta);
       console.log('[DEBUG] input event fired:', {
-        value: ta.value,
+        value: (ta as HTMLTextAreaElement).value,
         color: ta.style.color,
         webkitTextFillColor: (ta.style as any).webkitTextFillColor,
         opacity: ta.style.opacity,
@@ -3958,7 +2584,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
         // Sync text to store for undo/redo and renderer state
         try {
           const store = (window as any).__UNIFIED_CANVAS_STORE__;
-          const val = (ta as any).innerText ?? '';
+          const val = (ta as HTMLDivElement).innerText ?? '';
           store?.getState()?.updateElement?.(elId, { text: val }, { skipHistory: true });
         } catch {}
 
@@ -3997,7 +2623,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
                 fontSize: base.fontSize, fontFamily: base.fontFamily, lineHeight: base.lineHeight, letterSpacing: base.letterSpacing,
                 width: `${Math.max(4, Math.round(contentPx))}px`,
               } as CSSStyleDeclaration as any);
-              ghost.innerText = ((ta as any).innerText ?? '').length ? (ta as any).innerText : ' ';
+              ghost.innerText = ((ta as HTMLDivElement).innerText ?? '').length ? (ta as HTMLDivElement).innerText : ' ';
               document.body.appendChild(ghost);
               const h = ghost.scrollHeight;
               const w = ghost.scrollWidth;
@@ -4056,7 +2682,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
                 shapeCircle.radius(targetR);
                 shapeCircle.position({ x: 0, y: 0 });
               }
-              this.ensureHitAreaSize(group, targetR * 2, targetR * 2);
+              this.shapesModule!.ensureHitAreaSize(group, targetR * 2, targetR * 2);
               this.scheduleDraw('main');
 
               this.updateElementCallback?.(elId, { radius: targetR, radiusX: targetR, radiusY: targetR, width: targetR * 2, height: targetR * 2 });
@@ -4065,15 +2691,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
           } catch { /* swallow */ }
           pendingGrowRAF = 0;
         });
-      });
-    } else if (isCircle) {
-      // Circles: keep store in sync; Konva syncCircleText handles auto-grow & layout
-      ta.addEventListener('input', () => {
-        if (composing) return;
-        try {
-          const store = (window as any).__UNIFIED_CANVAS_STORE__;
-          store?.getState()?.updateElement?.(elId, { text: (ta as any).innerText ?? '' }, { skipHistory: true });
-        } catch {}
       });
     } else if (isSticky || isShapeLike) {
       ta.addEventListener('input', () => {
@@ -4094,7 +2711,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     const commit = () => {
       // Use safe closer if available to avoid temporal dead zone
       try { const closer = (this as any)._closeEditor as undefined | (() => void); closer && closer(); } catch {}
-      const nextText = (isCircle ? ((ta as any).innerText ?? '') : (ta as HTMLTextAreaElement).value);
+      const nextText = (isCircle ? ((ta as HTMLDivElement).innerText ?? '') : (ta as HTMLTextAreaElement).value);
       // Persist text + exit editing
       if (isSticky || isShapeLike) {
         // Circles/ellipses and other shapes: keep size fixed; commit text only
@@ -4265,7 +2882,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
 
     const cleanup = () => {
       console.info('[RendererV2] cleanup editor');
-      ta.removeEventListener('keydown', onKeyDown);
+      ta.removeEventListener('keydown', onKeyDown as EventListener);
       if (isSticky) ta.removeEventListener('input', measureStickyConsistent); else ta.removeEventListener('input', measurePlain);
       ta.removeEventListener('blur', onBlur);
       this.stage?.container()?.removeEventListener('wheel', onWheel);
@@ -4344,9 +2961,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     }
   }
 
-  // (removed duplicate destroy implementation; see comprehensive destroy() later)
-  
-
   /** Create or update nodes for elements, remove stale nodes, and batch draw */
   syncElements(input: Map<ElementId, CanvasElement> | CanvasElement[] | any) {
     if (!this.layers) return;
@@ -4401,9 +3015,9 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       if (el.type === 'rectangle') {
         const node = this.nodeMap.get(id) as Konva.Group | undefined;
         if (node && node.getClassName() === 'Group') {
-          this.updateRectangle(node as Konva.Group, el as any);
+          this.shapesModule!.updateRectangle(node as Konva.Group, el as any);
         } else {
-          const group = this.createRectangle(el as any);
+          const group = this.shapesModule!.createRectangle(el as any);
           main.add(group);
           this.nodeMap.set(id, group);
           // Auto-open editor for newly created rectangles
@@ -4420,9 +3034,9 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       if (el.type === 'circle') {
         const node = this.nodeMap.get(id) as Konva.Group | undefined;
         if (node && node.getClassName() === 'Group' && node.name() === 'circle') {
-          this.updateCircle(node as Konva.Group, el as any);
+          this.shapesModule!.updateCircle(node as Konva.Group, el as any);
         } else {
-          const group = this.createCircle(el as any);
+          const group = this.shapesModule!.createCircle(el as any);
           main.add(group);
           this.nodeMap.set(id, group);
           if ((el as any).newlyCreated) {
@@ -4438,9 +3052,9 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       if (el.type === 'triangle') {
         const node = this.nodeMap.get(id) as Konva.Group | undefined;
         if (node && node.getClassName() === 'Group' && node.name() === 'triangle') {
-          this.updateTriangle(node as Konva.Group, el as any);
+          this.shapesModule!.updateTriangle(node as Konva.Group, el as any);
         } else {
-          const group = this.createTriangle(el as any);
+          const group = this.shapesModule!.createTriangle(el as any);
           main.add(group);
           this.nodeMap.set(id, group);
           if ((el as any).newlyCreated) {
@@ -4464,7 +3078,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
           this.nodeMap.set(id, group);
         }
 
-        this.syncCircleText(el as any, group);
+        this.shapesModule!.syncCircleText(el as any, group);
 
         if ((el as any).newlyCreated) {
           // Delay editor opening to ensure circle is properly rendered and positioned first
@@ -4499,9 +3113,9 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
             // Keep hit-area but hide text node if present
             const t = (node as Konva.Group).findOne<Konva.Text>('Text.text');
             if (t) t.visible(false);
-            this.ensureHitAreaSize(node as Konva.Group, Math.max(1, el.width || 1), Math.max(1, el.height || 1));
+            this.shapesModule!.ensureHitAreaSize(node as Konva.Group, Math.max(1, el.width || 1), Math.max(1, el.height || 1));
           } else {
-            const group = this.createGroupWithHitArea(id, Math.max(1, el.width || 1), Math.max(1, el.height || 1));
+            const group = this.shapesModule!.createGroupWithHitArea(id, Math.max(1, el.width || 1), Math.max(1, el.height || 1));
             group.name('text');
             group.position({ x: el.x || 0, y: el.y || 0 });
             this.nodeMap.set(id, group);
@@ -5175,7 +3789,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
           this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right']);
         } else if (this.transformer) {
           this.transformer.keepRatio(false);
-          this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','top-center','bottom-center','middle-left','middle-right']);
+          this.transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-center','middle-left','middle-right']);
           try { (this.transformer as any).centeredScaling?.(false); } catch {}
         }
         if (this.transformer) this.transformer.anchorSize(8);
@@ -5254,7 +3868,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
   // EdgeHandles rendering logic for selected connectors
   private renderConnectorHandles(connectorIds: string[]) {
     // If there is an active edge draft and it matches selection, prefer draft points for overlay
-
+ 
     if (!this.layers) return;
     
     console.log(`[CanvasRenderer] Rendering handles for ${connectorIds.length} connectors`);
@@ -5493,96 +4107,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     let cachedRects: Konva.Rect[] = [];
     let lastScale = { x: 1, y: 1 };
 
-    const onTransform = () => {
-      // Read scale values (fastest possible)
-      const sx = groupNode.scaleX();
-      const sy = groupNode.scaleY();
-
-      // Bail early if no meaningful change (reduce flickering)
-      if (!sx || !sy || (sx === 1 && sy === 1)) return;
-      if (Math.abs(sx - lastScale.x) < 0.01 && Math.abs(sy - lastScale.y) < 0.01) return;
-
-      lastScale.x = sx;
-      lastScale.y = sy;
-
-      // Determine active anchor in case it changed mid-gesture
-      let anchor = activeAnchorName;
-      try {
-        {
-          const aa = transformer.getActiveAnchor?.();
-          anchor = (aa && (typeof (aa as any).name === 'function' ? (aa as any).name() : (aa as any).getName?.())) || anchor;
-        }
-      } catch {}
-
-      // Compute new width/font based on anchor semantics
-      // Anchor-aware resize
-      const clampWidth = (v: number) => (v < 20 ? 20 : v);
-      const clampFont = (v: number) => (v < 8 ? 8 : v > 512 ? 512 : v);
-
-      let nextFont = base.fontSize;
-      let nextWidth = base.width;
-
-      const isH = anchor.includes('left') || anchor.includes('right');
-      const isV = anchor.includes('top') || anchor.includes('bottom');
-
-      if (isH && !isV) {
-        // Horizontal edge: width only
-        nextWidth = clampWidth(base.width * sx);
-        nextFont = base.fontSize;
-      } else if (isV && !isH) {
-        // Vertical edge: font only
-        nextFont = clampFont(base.fontSize * sy);
-        nextWidth = base.width;
-      } else {
-        // Corner: scale font proportionally, width by sx
-        const s = Math.sqrt(sx * sy);
-        nextFont = clampFont(base.fontSize * s);
-        nextWidth = clampWidth(base.width * sx);
-      }
-
-      // Apply to text node (minimal calls)
-      if (textNode.fontSize() !== nextFont) textNode.fontSize(nextFont);
-      if (textNode.width() !== nextWidth) textNode.width(nextWidth);
-      // Force text at (0,0) inside group to avoid padding-induced misalignment
-      if (textNode.x() !== 0) textNode.x(0);
-      if (textNode.y() !== 0) textNode.y(0);
-
-      // Keep the opposite edge stable when dragging from left anchors
-      if (anchor.includes('left')) {
-        const dx = base.width - nextWidth;
-        groupNode.x(base.x + dx);
-      }
-
-      // Measure actual rendered height to avoid trailing whitespace
-      let renderedTextH = nextFont * 1.2; // fallback
-      try {
-        textNode._clearCache?.();
-        const rect = textNode.getClientRect({ skipTransform: true });
-        if (rect && rect.height) {
-          renderedTextH = Math.ceil(rect.height + nextFont * DESCENDER_GUARD);
-        }
-      } catch {}
-
-      // Update frame/hit rect live so transformer "hugs" the text
-      if (!hitRect) hitRect = groupNode.findOne<Konva.Rect>('Rect.hit-area') || null;
-      if (hitRect) {
-        hitRect.width(nextWidth);
-        hitRect.height(Math.max(1, renderedTextH));
-        hitRect.x(0);
-        hitRect.y(0);
-      }
-
-      // Reset scale (single call)
-      groupNode.scale({ x: 1, y: 1 });
-
-      // Schedule draws via renderer's scheduler to coalesce frames
-      try {
-        this.scheduleDraw('main');
-        this.scheduleDraw('overlay');
-      } catch {
-        requestAnimationFrame(() => { try { groupNode.getLayer()?.batchDraw?.(); } catch {} });
-      }
-    };
 
     const onTransformEnd = () => {
       // Get final values; measure height to avoid whitespace
@@ -5608,7 +4132,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       }
 
       // Ensure hit area matches (fallback)
-      try { this.ensureHitAreaSize(groupNode, finalFrameWidth, finalFrameHeight); } catch {}
+      try { this.shapesModule!.ensureHitAreaSize(groupNode, finalFrameWidth, finalFrameHeight); } catch {}
 
       // Single transformer update (no immediate batchDraw to reduce flickering)
       transformer.forceUpdate();
@@ -5647,7 +4171,6 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
     // Clear and attach handlers
     groupNode.off('.textscale');
     groupNode.on('transformstart.textscale', onTransformStart);
-    groupNode.on('transform.textscale', onTransform);
     groupNode.on('transformend.textscale', onTransformEnd);
   }
 
@@ -5755,7 +4278,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
 
     const makeBtn = (x: number, y: number, label: string, onClick: () => void) => {
       const g = new Konva.Group({ x, y, listening: true });
-      const bg = new Konva.Rect({ width: 18, height: 18, fill: '#111827', cornerRadius: 4, opacity: 0.85 });
+      const bg = new Konva.Rect({ width: 18, height: 18, fill: '#111827', cornerRadius: 4, opacity: 0.9 });
       const txt = new Konva.Text({ x: 5, y: -1, text: label, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', fill: '#ffffff', listening: false });
       g.add(bg); g.add(txt);
       g.on('mouseenter', () => {
@@ -5774,7 +4297,7 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
             const cont = stage.container();
             if (cont) cont.style.cursor = '';
           }
-        } catch {}
+        } catch (e) { console.warn('Error setting cursor style:', e); }
       });
       g.on('click', (e) => { e.cancelBubble = true; onClick(); });
       this.tableControlsGroup!.add(g);
@@ -5803,110 +4326,9 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       return out;
     };
 
-    const addRow = () => {
-      const current = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
-      const newRows = (current?.rows || rows) + 1;
-      const newCols = current?.cols || cols;
-      const cells = current?.enhancedTableData?.cells || [];
-      const nextCells = cloneCells(cells, newRows, newCols);
-      updateStore({ rows: newRows, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } });
-      try { this.layoutTable(node, { ...current, rows: newRows, cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } }); } catch {}
-      this.scheduleDraw('main');
-      this.renderTableControls(elId);
-    };
-    const delRow = () => {
-      const current = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
-      const newRows = Math.max(1, (current?.rows || rows) - 1);
-      const newCols = current?.cols || cols;
-      const cells = current?.enhancedTableData?.cells || [];
-      const nextCells = cloneCells(cells, newRows, newCols);
-      updateStore({ rows: newRows, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } });
-      try { this.layoutTable(node, { ...current, rows: newRows, cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } }); } catch {}
-      this.scheduleDraw('main');
-      this.renderTableControls(elId);
-    };
-    const addCol = () => {
-      const current = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
-      const newRows = current?.rows || rows;
-      const newCols = (current?.cols || cols) + 1;
-      const cells = current?.enhancedTableData?.cells || [];
-      const nextCells = cloneCells(cells, newRows, newCols);
-      updateStore({ cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } });
-      try { this.layoutTable(node, { ...current, rows: newRows, cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } }); } catch {}
-      this.scheduleDraw('main');
-      this.renderTableControls(elId);
-    };
-    const delCol = () => {
-      const current = (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
-      const newRows = current?.rows || rows;
-      const newCols = Math.max(1, (current?.cols || cols) - 1);
-      const cells = current?.enhancedTableData?.cells || [];
-      const nextCells = cloneCells(cells, newRows, newCols);
-      updateStore({ cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } });
-      try { this.layoutTable(node, { ...current, rows: newRows, cols: newCols, enhancedTableData: { ...(current?.enhancedTableData || {}), cells: nextCells } }); } catch {}
-      this.scheduleDraw('main');
-      this.renderTableControls(elId);
-    };
-
-    const hoverShow = (zone: Konva.Rect, label: string, x: number, y: number, onClick: () => void) => {
-      let btn: Konva.Group | null = null;
-      const onEnter = () => {
-        if (btn) return;
-        const g = new Konva.Group({ x, y, listening: true });
-        const bg = new Konva.Rect({ width: 18, height: 18, fill: '#111827', cornerRadius: 4, opacity: 0.9 });
-        const tx = new Konva.Text({ x: 5, y: -1, text: label, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', fill: '#ffffff', listening: false });
-        g.add(bg); g.add(tx);
-        // Inverse-scale so controls stay ~18px regardless of zoom
-        try {
-          const s = this.stage?.getAbsoluteScale?.().x || 1;
-          g.scale({ x: 1 / s, y: 1 / s });
-        } catch {}
-        g.on('mouseenter', () => {
-          try {
-            const stage = this.stage;
-            if (stage) {
-              const cont = stage.container();
-              if (cont) cont.style.cursor = 'pointer';
-            }
-          } catch {}
-        });
-        g.on('mouseleave', () => {
-          try {
-            const stage = this.stage;
-            if (stage) {
-              const cont = stage.container();
-              if (cont) cont.style.cursor = '';
-            }
-          } catch {}
-        });
-        g.on('click', (e) => { e.cancelBubble = true; onClick(); });
-        this.tableControlsGroup!.add(g);
-        btn = g;
-        this.layers?.overlay?.batchDraw?.();
-      };
-      const onLeave = () => {
-        if (btn) { try { btn.destroy(); } catch {} btn = null; this.layers?.overlay?.batchDraw?.(); }
-      };
-      zone.on('mouseenter', onEnter);
-      zone.on('mouseleave', onLeave);
-    };
-
-    // Helpers to update store with index-aware ops
     const getEl = () => (window as any).__UNIFIED_CANVAS_STORE__?.getState()?.elements?.get(elId);
     const setEl = (updates: any) => this.updateElementCallback?.(elId, updates);
-    const cloneCellsAt = (cells: any[][], newRows: number, newCols: number, insertRowAt?: number, insertColAt?: number) => {
-      const out: any[][] = [];
-      for (let r = 0; r < newRows; r++) {
-        const srcR = insertRowAt !== undefined && r > insertRowAt ? r - 1 : r;
-        out[r] = [];
-        for (let c = 0; c < newCols; c++) {
-          const srcC = insertColAt !== undefined && c > insertColAt ? c - 1 : c;
-          const src = (cells && cells[srcR] && cells[srcR][srcC]) ? { ...cells[srcR][srcC] } : { content: '' };
-          out[r][c] = src;
-        }
-      }
-      return out;
-    };
+
     const addColAt = (idx: number) => {
       const current = getEl(); if (!current) return;
       const rowsN = current.rows || rows; const colsN = (current.cols || cols) + 1;
@@ -5978,6 +4400,49 @@ ta.style.height = `${Math.max(Math.round(textHeight), minLinePx2)}px`;
       setEl({ rows: rowsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
       this.layoutTable(node, { ...current, rows: rowsN, enhancedTableData: { ...(current.enhancedTableData || {}), cells: nextCells } });
       this.scheduleDraw('main'); this.renderTableControls(elId);
+    };
+
+    const hoverShow = (zone: Konva.Rect, label: string, x: number, y: number, onClick: () => void) => {
+      let btn: Konva.Group | null = null;
+      const onEnter = () => {
+        if (btn) return;
+        const g = new Konva.Group({ x, y, listening: true });
+        const bg = new Konva.Rect({ width: 18, height: 18, fill: '#111827', cornerRadius: 4, opacity: 0.9 });
+        const tx = new Konva.Text({ x: 5, y: -1, text: label, fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', fill: '#ffffff', listening: false });
+        g.add(bg); g.add(tx);
+        // Inverse-scale so controls stay ~18px regardless of zoom
+        try {
+          const s = this.stage?.getAbsoluteScale?.().x || 1;
+          g.scale({ x: 1 / s, y: 1 / s });
+        } catch {}
+        g.on('mouseenter', () => {
+          try {
+            const stage = this.stage;
+            if (stage) {
+              const cont = stage.container();
+              if (cont) cont.style.cursor = 'pointer';
+            }
+          } catch {}
+        });
+        g.on('mouseleave', () => {
+          try {
+            const stage = this.stage;
+            if (stage) {
+              const cont = stage.container();
+              if (cont) cont.style.cursor = '';
+            }
+          } catch {}
+        });
+        g.on('click', (e) => { e.cancelBubble = true; onClick(); });
+        this.tableControlsGroup!.add(g);
+        btn = g;
+        this.layers?.overlay?.batchDraw?.();
+      };
+      const onLeave = () => {
+        if (btn) { try { btn.destroy(); } catch {} btn = null; this.layers?.overlay?.batchDraw?.(); }
+      };
+      zone.on('mouseenter', onEnter);
+      zone.on('mouseleave', onLeave);
     };
 
     // Column add zones between cols (including extremes 0..cols)

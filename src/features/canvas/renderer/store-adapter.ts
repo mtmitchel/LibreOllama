@@ -247,7 +247,7 @@ export function createMockStore(initialState?: Partial<StoreState>): StoreApi<St
     ...initialState
   };
 
-  const listeners = new Set<(state: Store) => void>();
+  const listeners = new Set<(state: Store, prevState: Store) => void>();
 
   const actions: StoreActions = {
     updateElement: (id, updates) => {
@@ -284,9 +284,12 @@ export function createMockStore(initialState?: Partial<StoreState>): StoreApi<St
     }
   };
 
+  let prevState: Store = { ...state, ...actions }; // Initialize prevState after actions
+
   const notifyListeners = () => {
     const fullState = { ...state, ...actions };
-    listeners.forEach(listener => listener(fullState));
+    listeners.forEach(listener => listener(fullState, prevState)); // Pass both state and prevState
+    prevState = fullState; // Update prevState after notifying
   };
 
   return {
@@ -295,12 +298,13 @@ export function createMockStore(initialState?: Partial<StoreState>): StoreApi<St
       Object.assign(state, partial);
       notifyListeners();
     },
-    subscribe: (listener) => {
+    subscribe: (listener: (state: Store, prevState: Store) => void) => { // Update listener signature
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
     destroy: () => {
       listeners.clear();
-    }
+    },
+    getInitialState: () => ({ ...initialState, ...actions }) // Add getInitialState
   } as StoreApi<Store>;
 }

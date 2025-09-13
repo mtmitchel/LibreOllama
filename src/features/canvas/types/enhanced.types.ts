@@ -101,11 +101,9 @@ export interface RectangleElement extends BaseElement {
 
 export interface CircleElement extends BaseElement {
   type: 'circle';
-  radius?: number; // For backwards compatibility - circular shape
-  radiusX?: number; // Horizontal radius for elliptical shape
-  radiusY?: number; // Vertical radius for elliptical shape  
-  width: number;  // Always 2 * radiusX (or radius)
-  height: number; // Always 2 * radiusY (or radius)
+  radius: number; // Circle radius is now required
+  width: number;  // Always 2 * radius
+  height: number; // Always 2 * radius
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
@@ -114,7 +112,7 @@ export interface CircleElement extends BaseElement {
   fontFamily?: string;
   textColor?: string;
   textAlign?: 'left' | 'center' | 'right';
-  padding?: number; // Padding for text inside circle/ellipse
+  padding?: number; // Padding for text inside circle
   // Optional auto-size behavior while editing
   sizeMode?: 'fitText' | 'growCircle';
   // Flags for editing state

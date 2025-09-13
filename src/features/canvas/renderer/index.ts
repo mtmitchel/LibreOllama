@@ -166,7 +166,7 @@ export class CanvasRenderer {
       } else {
         // Create new node
         const newNode = this.nodes.create(element);
-        mainLayer.add(newNode);
+        mainLayer.add(newNode as Konva.Group); // Cast to Konva.Group
         
         // Apply circle text sync if it's a circle
         if (element.type === 'circle' && newNode instanceof Konva.Group) {

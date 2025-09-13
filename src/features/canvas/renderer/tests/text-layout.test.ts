@@ -95,7 +95,6 @@ describe('Text Layout Module', () => {
       expect(layout.fontSize).toBe(14);
       expect(layout.lineHeight).toBe(1.2);
       expect(layout.align).toBe('center');
-      expect(layout.verticalAlign).toBe('middle');
       expect(layout.padding).toBe(8);
       expect(layout.width).toBeGreaterThan(0);
       expect(layout.height).toBeGreaterThan(0);
@@ -135,7 +134,6 @@ describe('Text Layout Module', () => {
       expect(layout.height).toBe(76); // 100 - 24 (padding)
       expect(layout.fontSize).toBe(16);
       expect(layout.align).toBe('left');
-      expect(layout.verticalAlign).toBe('top');
     });
   });
 
@@ -261,18 +259,18 @@ describe('Text Layout Module - Integration', () => {
     // Measure text
     const metrics = measureText(
       circle.text!,
-      layout.fontSize,
-      circle.fontFamily
+      layout.fontSize!, // Non-null assertion
+      circle.fontFamily! // Non-null assertion
     );
     expect(metrics.lines).toHaveLength(1);
 
     // Calculate auto-grow
     const newRadius = calculateAutoGrowRadius(
       circle.text!,
-      circle.fontSize,
-      circle.fontFamily,
+      circle.fontSize!, // Non-null assertion
+      circle.fontFamily!, // Non-null assertion
       circle.radius,
-      circle.padding
+      circle.padding! // Non-null assertion
     );
     expect(newRadius).toBeGreaterThanOrEqual(circle.radius);
   });

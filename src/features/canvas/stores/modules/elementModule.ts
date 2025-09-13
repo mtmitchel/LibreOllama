@@ -144,6 +144,44 @@ export const createElementModule = (
     };
   };
 
+  const ensureEnhancedTableDataConsistency = (table: any) => {
+    if (!table.enhancedTableData) {
+      table.enhancedTableData = {
+        rows: [],
+        columns: [],
+        cells: []
+      };
+    }
+
+    // Ensure rows array matches table.rows
+    while (table.enhancedTableData.rows.length < table.rows) {
+      table.enhancedTableData.rows.push({ height: 40, id: `row-${nanoid()}` });
+    }
+    while (table.enhancedTableData.rows.length > table.rows) {
+      table.enhancedTableData.rows.pop();
+    }
+
+    // Ensure columns array matches table.cols
+    while (table.enhancedTableData.columns.length < table.cols) {
+      table.enhancedTableData.columns.push({ width: 120, id: `col-${nanoid()}` });
+    }
+    while (table.enhancedTableData.columns.length > table.cols) {
+      table.enhancedTableData.columns.pop();
+    }
+
+    // Ensure cells array dimensions match table.rows and table.cols
+    // Create a new cells array to avoid direct mutation issues and ensure reactivity
+    const newCells: TableCell[][] = [];
+    for (let r = 0; r < table.rows; r++) {
+      newCells[r] = [];
+      for (let c = 0; c < table.cols; c++) {
+        // Preserve existing cell content if available, otherwise create empty cell
+        newCells[r][c] = table.enhancedTableData.cells[r]?.[c] || { content: '', text: '' };
+      }
+    }
+    table.enhancedTableData.cells = newCells;
+  };
+
   return {
     state: {
       stickyNoteDefaults: {
@@ -176,7 +214,6 @@ export const createElementModule = (
         });
         getState().addToHistory('addElement');
       },
-
       addElementFast: (element) => {
         setState((state: any) => {
           // Defensive checks even in fast path
@@ -232,8 +269,10 @@ export const createElementModule = (
             if (updatedElement.sectionId) {
               const section = state.sections?.get(updatedElement.sectionId);
               if (section) {
-                updatedElement.x = Math.max(section.x, Math.min(updatedElement.x, section.x + section.width - (updatedElement.width ?? 0)));
-                updatedElement.y = Math.max(section.y, Math.min(updatedElement.y, section.y + section.height - (updatedElement.height ?? 0)));
+                const elementWidth = hasDimensions(updatedElement) ? updatedElement.width : 0;
+                const elementHeight = hasDimensions(updatedElement) ? updatedElement.height : 0;
+                updatedElement.x = Math.max(section.x, Math.min(updatedElement.x, section.x + section.width - elementWidth));
+                updatedElement.y = Math.max(section.y, Math.min(updatedElement.y, section.y + section.height - elementHeight));
               }
             }
 
@@ -277,8 +316,9 @@ export const createElementModule = (
             }
             
             // If position/size changed, trigger edge reflow
-            if (updates.x !== undefined || updates.y !== undefined || 
-                updates.width !== undefined || updates.height !== undefined ||
+            if (updates.x !== undefined || updates.y !== undefined ||
+                ('width' in updates && updates.width !== undefined) ||
+                ('height' in updates && updates.height !== undefined) ||
                 updates.rotation !== undefined) {
               // Mark connected edges as dirty for reflow
               try {
@@ -385,7 +425,8 @@ export const createElementModule = (
               if (element) {
                 // Track if this element moved/resized
                 if (elementUpdates.x !== undefined || elementUpdates.y !== undefined ||
-                    elementUpdates.width !== undefined || elementUpdates.height !== undefined ||
+                    ('width' in elementUpdates && elementUpdates.width !== undefined) ||
+                    ('height' in elementUpdates && elementUpdates.height !== undefined) ||
                     elementUpdates.rotation !== undefined) {
                   movedElements.push(id as ElementId);
                 }
@@ -672,34 +713,26 @@ export const createElementModule = (
         setState((state: any) => {
           const table = state.elements.get(tableId);
           if (table && (table as any).type === 'table') {
-            if (!(table as any).enhancedTableData) {
-              (table as any).enhancedTableData = {
-                rows: Array((table as any).rows).fill(null).map((_: any, i: number) => ({ height: 40, id: `row-${i}` })),
-                columns: Array((table as any).cols).fill(null).map((_: any, i: number) => ({ width: 120, id: `col-${i}` })),
-                cells: Array((table as any).rows).fill(null).map(() => Array((table as any).cols).fill(null).map(() => ({ content: '', text: '' })))
-              };
-            }
-            if (!(table as any).enhancedTableData.cells ||
-                (table as any).enhancedTableData.cells.length !== (table as any).rows ||
-                (table as any).enhancedTableData.cells[0]?.length !== (table as any).cols) {
-              (table as any).enhancedTableData.cells = Array((table as any).rows).fill(null).map((_: any, r: number) =>
-                Array((table as any).cols).fill(null).map((_: any, c: number) => (table as any).enhancedTableData?.cells?.[r]?.[c] || { content: '', text: '' })
-              );
-            }
-            if ((table as any).enhancedTableData.cells[row] && (table as any).enhancedTableData.cells[row][col]) {
+            ensureEnhancedTableDataConsistency(table);
+
+            if (table.enhancedTableData.cells[row] && table.enhancedTableData.cells[row][col]) {
+              // Create new cell object
               const newCell = { content: value, text: value };
-              const newRow = [...(table as any).enhancedTableData.cells[row]];
-              newRow[col] = newCell;
-              const newCells = [...(table as any).enhancedTableData.cells];
-              newCells[row] = newRow;
-              const newEnhancedData = { ...(table as any).enhancedTableData, cells: newCells };
-              const newTable = { ...(table as any), enhancedTableData: newEnhancedData, updatedAt: Date.now() };
-              const newElements = new Map(state.elements);
-              newElements.set(tableId, newTable);
-              state.elements = newElements;
-              return;
+              // Create new row array with updated cell
+              const updatedRow = [...table.enhancedTableData.cells[row]];
+              updatedRow[col] = newCell;
+              // Create new cells array with updated row
+              const updatedCells = [...table.enhancedTableData.cells];
+              updatedCells[row] = updatedRow;
+
+              // Create new enhancedTableData object
+              const newEnhancedData = { ...table.enhancedTableData, cells: updatedCells };
+              // Create new table object to trigger reactivity
+              const newTable = { ...table, enhancedTableData: newEnhancedData, updatedAt: Date.now() };
+
+              state.elements.set(tableId, newTable);
+              state.elements = new Map(state.elements); // Trigger map update
             }
-            (table as any).updatedAt = Date.now();
           }
         });
         getState().addToHistory('updateTableCell');
@@ -709,23 +742,23 @@ export const createElementModule = (
         setState((state: any) => {
           const table = state.elements.get(tableId);
           if (table && (table as any).type === 'table') {
-            const insertIndex = position === -1 ? (table as any).rows : Math.max(0, Math.min(position, (table as any).rows));
-            (table as any).rows += 1;
-            (table as any).height += 40;
-            if (!(table as any).enhancedTableData) {
-              (table as any).enhancedTableData = {
-                rows: Array((table as any).rows).fill(null).map((_: any, i: number) => ({ height: 40, id: `row-${i}` })),
-                columns: Array((table as any).cols).fill(null).map((_: any, i: number) => ({ width: 120, id: `col-${i}` })),
-                cells: Array((table as any).rows).fill(null).map(() => Array((table as any).cols).fill(null).map(() => ({ content: '', text: '' })))
-              };
-            } else {
-              (table as any).enhancedTableData.rows.splice(insertIndex, 0, { height: 40, id: `row-${Date.now()}` });
-              const newRow = Array((table as any).cols).fill(null).map(() => ({ content: '', text: '' }));
-              (table as any).enhancedTableData.cells.splice(insertIndex, 0, newRow);
-            }
-            (table as any).updatedAt = Date.now();
-            // Force subscriber updates by replacing Map reference
-            state.elements = new Map(state.elements);
+            ensureEnhancedTableDataConsistency(table);
+
+            const insertIndex = position === -1 ? table.rows : Math.max(0, Math.min(position, table.rows));
+            
+            // Update table dimensions
+            table.rows += 1;
+            table.height += 40; // Assuming default row height
+
+            // Add new row to enhancedTableData.rows
+            table.enhancedTableData.rows.splice(insertIndex, 0, { height: 40, id: `row-${nanoid()}` });
+
+            // Add new row of empty cells to enhancedTableData.cells
+            const newRowCells = Array(table.cols).fill(null).map(() => ({ content: '', text: '' }));
+            table.enhancedTableData.cells.splice(insertIndex, 0, newRowCells);
+            
+            table.updatedAt = Date.now();
+            state.elements = new Map(state.elements); // Force subscriber updates by replacing Map reference
             // Trigger transformer refresh for real-time resize frame adjustment
             setTimeout(() => {
               try {
@@ -745,15 +778,20 @@ export const createElementModule = (
       removeTableRow: (tableId, rowIndex) => {
         setState((state: any) => {
           const table = state.elements.get(tableId);
-          if (table && (table as any).type === 'table' && (table as any).rows > 1 && rowIndex >= 0 && rowIndex < (table as any).rows) {
-            (table as any).rows -= 1;
-            (table as any).height -= (table as any).enhancedTableData?.rows?.[rowIndex]?.height || 40;
-            if ((table as any).enhancedTableData) {
-              (table as any).enhancedTableData.rows.splice(rowIndex, 1);
-              (table as any).enhancedTableData.cells.splice(rowIndex, 1);
-            }
-            (table as any).updatedAt = Date.now();
-            state.elements = new Map(state.elements);
+          if (table && (table as any).type === 'table' && table.rows > 1 && rowIndex >= 0 && rowIndex < table.rows) {
+            ensureEnhancedTableDataConsistency(table);
+
+            // Update table dimensions
+            table.rows -= 1;
+            table.height -= table.enhancedTableData.rows[rowIndex]?.height || 40; // Use actual row height if available
+
+            // Remove row from enhancedTableData.rows
+            table.enhancedTableData.rows.splice(rowIndex, 1);
+            // Remove row of cells from enhancedTableData.cells
+            table.enhancedTableData.cells.splice(rowIndex, 1);
+            
+            table.updatedAt = Date.now();
+            state.elements = new Map(state.elements); // Force subscriber updates by replacing Map reference
             // Trigger transformer refresh for real-time resize frame adjustment
             setTimeout(() => {
               try {
@@ -774,23 +812,24 @@ export const createElementModule = (
         setState((state: any) => {
           const table = state.elements.get(tableId);
           if (table && (table as any).type === 'table') {
-            const insertIndex = position === -1 ? (table as any).cols : Math.max(0, Math.min(position, (table as any).cols));
-            (table as any).cols += 1;
-            (table as any).width += 120;
-            if (!(table as any).enhancedTableData) {
-              (table as any).enhancedTableData = {
-                rows: Array((table as any).rows).fill(null).map((_: any, i: number) => ({ height: 40, id: `row-${i}` })),
-                columns: Array((table as any).cols).fill(null).map((_: any, i: number) => ({ width: 120, id: `col-${i}` })),
-                cells: Array((table as any).rows).fill(null).map(() => Array((table as any).cols).fill(null).map(() => ({ content: '', text: '' })))
-              };
-            } else {
-              (table as any).enhancedTableData.columns.splice(insertIndex, 0, { width: 120, id: `col-${Date.now()}` });
-              (table as any).enhancedTableData.cells.forEach((row: any[]) => {
-                row.splice(insertIndex, 0, { content: '', text: '' });
-              });
-            }
-            (table as any).updatedAt = Date.now();
-            state.elements = new Map(state.elements);
+            ensureEnhancedTableDataConsistency(table);
+
+            const insertIndex = position === -1 ? table.cols : Math.max(0, Math.min(position, table.cols));
+            
+            // Update table dimensions
+            table.cols += 1;
+            table.width += 120; // Assuming default column width
+
+            // Add new column to enhancedTableData.columns
+            table.enhancedTableData.columns.splice(insertIndex, 0, { width: 120, id: `col-${nanoid()}` });
+
+            // Add new cell to each row in enhancedTableData.cells
+            table.enhancedTableData.cells.forEach((row: TableCell[]) => {
+              row.splice(insertIndex, 0, { content: '', text: '' });
+            });
+            
+            table.updatedAt = Date.now();
+            state.elements = new Map(state.elements); // Force subscriber updates by replacing Map reference
             // Trigger transformer refresh for real-time resize frame adjustment
             setTimeout(() => {
               try {
@@ -810,17 +849,22 @@ export const createElementModule = (
       removeTableColumn: (tableId, colIndex) => {
         setState((state: any) => {
           const table = state.elements.get(tableId);
-          if (table && (table as any).type === 'table' && (table as any).cols > 1 && colIndex >= 0 && colIndex < (table as any).cols) {
-            (table as any).cols -= 1;
-            (table as any).width -= (table as any).enhancedTableData?.columns?.[colIndex]?.width || 120;
-            if ((table as any).enhancedTableData) {
-              (table as any).enhancedTableData.columns.splice(colIndex, 1);
-              (table as any).enhancedTableData.cells.forEach((row: any[]) => {
-                row.splice(colIndex, 1);
-              });
-            }
-            (table as any).updatedAt = Date.now();
-            state.elements = new Map(state.elements);
+          if (table && (table as any).type === 'table' && table.cols > 1 && colIndex >= 0 && colIndex < table.cols) {
+            ensureEnhancedTableDataConsistency(table);
+
+            // Update table dimensions
+            table.cols -= 1;
+            table.width -= table.enhancedTableData.columns[colIndex]?.width || 120; // Use actual column width if available
+
+            // Remove column from enhancedTableData.columns
+            table.enhancedTableData.columns.splice(colIndex, 1);
+            // Remove cell from each row in enhancedTableData.cells
+            table.enhancedTableData.cells.forEach((row: TableCell[]) => {
+              row.splice(colIndex, 1);
+            });
+            
+            table.updatedAt = Date.now();
+            state.elements = new Map(state.elements); // Force subscriber updates by replacing Map reference
             // Trigger transformer refresh for real-time resize frame adjustment
             setTimeout(() => {
               try {
@@ -840,18 +884,20 @@ export const createElementModule = (
       resizeTableCell: (tableId, rowIndex, colIndex, width, height) => {
         setState((state: any) => {
           const table = state.elements.get(tableId);
-          if (table && (table as any).type === 'table' && (table as any).enhancedTableData) {
-            if (width !== undefined && (table as any).enhancedTableData.columns[colIndex]) {
-              const oldWidth = (table as any).enhancedTableData.columns[colIndex].width || 120;
-              (table as any).enhancedTableData.columns[colIndex].width = Math.max(60, width);
-              (table as any).width += ((table as any).enhancedTableData.columns[colIndex].width - oldWidth);
+          if (table && (table as any).type === 'table') {
+            ensureEnhancedTableDataConsistency(table);
+
+            if (width !== undefined && table.enhancedTableData.columns[colIndex]) {
+              const oldWidth = table.enhancedTableData.columns[colIndex].width || 120;
+              table.enhancedTableData.columns[colIndex].width = Math.max(60, width);
+              table.width += (table.enhancedTableData.columns[colIndex].width - oldWidth);
             }
-            if (height !== undefined && (table as any).enhancedTableData.rows[rowIndex]) {
-              const oldHeight = (table as any).enhancedTableData.rows[rowIndex].height || 40;
-              (table as any).enhancedTableData.rows[rowIndex].height = Math.max(30, height);
-              (table as any).height += ((table as any).enhancedTableData.rows[rowIndex].height - oldHeight);
+            if (height !== undefined && table.enhancedTableData.rows[rowIndex]) {
+              const oldHeight = table.enhancedTableData.rows[rowIndex].height || 40;
+              table.enhancedTableData.rows[rowIndex].height = Math.max(30, height);
+              table.height += (table.enhancedTableData.rows[rowIndex].height - oldHeight);
             }
-            (table as any).updatedAt = Date.now();
+            table.updatedAt = Date.now();
             state.elements = new Map(state.elements);
           }
         });
