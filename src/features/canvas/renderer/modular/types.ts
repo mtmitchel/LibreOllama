@@ -17,6 +17,8 @@ export interface ViewportState {
   x: number;
   y: number;
   scale: number;
+  width?: number;
+  height?: number;
 }
 
 export interface HistoryState {
@@ -35,6 +37,7 @@ export interface CanvasSnapshot {
   viewport: ViewportState;
   history: HistoryState;
   edges?: Map<string, any>;
+  draft?: any;
 }
 
 export interface FeatureFlags {
@@ -45,6 +48,13 @@ export interface StoreAdapter {
   subscribe(listener: () => void): () => void;
   getSnapshot(): CanvasSnapshot;
   selectElement(id: ElementId | null, multi?: boolean): void;
+  eraseAtPoint(x: number, y: number, eraserSize: number): void;
+  eraseInPath(path: number[], eraserSize: number): void;
+  startDrawing(tool: 'pen' | 'pencil' | 'marker' | 'highlighter' | 'eraser', point: { x: number; y: number }): void;
+  updateDrawing(point: { x: number; y: number }): void;
+  finishDrawing(): void;
+  addElementDrawing?(element: CanvasElement): void;
+  strokeConfig?: any;
 }
 
 export interface KonvaAdapter {
@@ -71,7 +81,7 @@ export interface ModuleContext {
 export type CanvasEvent = { type: string; [key: string]: any };
 
 export interface RendererModule {
-  init(ctx: ModuleContext): void;
+  init(ctx: ModuleContext): void | Promise<void>;
   sync(snapshot: CanvasSnapshot): void;
   onEvent?(evt: CanvasEvent, snapshot: CanvasSnapshot): boolean;
   destroy(): void;

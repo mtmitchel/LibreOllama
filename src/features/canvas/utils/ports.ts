@@ -112,6 +112,11 @@ export function generateElementPorts(element: CanvasElement): Port[] {
     return ports;
 }
 
+export interface SnapPortResult {
+    port: Port;
+    distance: number;
+}
+
 /**
  * Finds the closest snap target (port) for a given world point.
  * @param worldPoint The current pointer position in world coordinates.
@@ -125,7 +130,7 @@ export function findClosestPort(
     elements: Map<ElementId, CanvasElement>,
     excludeElementId: ElementId | null,
     snapDistance: number
-): Port | null {
+): SnapPortResult | null {
     let closestPort: Port | null = null;
     let minDistance = snapDistance;
 
@@ -151,5 +156,9 @@ export function findClosestPort(
         }
     }
 
-    return closestPort;
+    if (closestPort) {
+      return { port: closestPort, distance: minDistance };
+    }
+
+    return null;
 }

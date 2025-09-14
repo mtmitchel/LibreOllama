@@ -1,24 +1,24 @@
 // src/features/canvas/tests/ports.world-coords.test.ts
 import { describe, it, expect } from 'vitest';
-import { getDefaultPortsFor, toWorldPort } from '../utils/ports';
-import { NodeElement, ElementId } from '../types/canvas-elements';
+import { generateElementPorts, getPortWorldCoordinates, PortKind } from '../utils/ports';
+import { RectangleElement, ElementId, CanvasElement, CircleElement } from '../types/enhanced.types';
 
-describe('Ports API - World Coordinates', () => {
-  const createTestElement = (overrides?: Partial<NodeElement>): NodeElement => ({
-    id: 'test-element' as ElementId,
-    type: 'shape',
-    x: 100,
-    y: 100, 
-    width: 200,
-    height: 100,
-    rotation: 0,
+describe('Port World Coordinates', () => {
+  const createTestElement = (overrides?: Partial<RectangleElement>): RectangleElement => ({
+    id: 'test-rectangle-id' as ElementId, // Replaced createId() with a static string ID
+    type: 'rectangle',
+    x: 0, y: 0, width: 100, height: 100,
+    fill: 'red', stroke: 'black', strokeWidth: 1, rotation: 0,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    // ... other properties
     ...overrides,
   });
 
   describe('getDefaultPortsFor', () => {
     it('should generate standard ports (N, S, E, W, corners, CENTER)', () => {
       const element = createTestElement();
-      const ports = getDefaultPortsFor(element);
+      const ports = generateElementPorts(element);
       
       expect(ports).toHaveLength(9);
       
@@ -36,7 +36,7 @@ describe('Ports API - World Coordinates', () => {
 
     it('should use normalized coordinates in [-0.5, 0.5] range', () => {
       const element = createTestElement();
-      const ports = getDefaultPortsFor(element);
+      const ports = generateElementPorts(element);
       
       for (const port of ports) {
         expect(port.nx).toBeGreaterThanOrEqual(-0.5);
@@ -48,139 +48,148 @@ describe('Ports API - World Coordinates', () => {
   });
 
   describe('toWorldPort - No Rotation', () => {
-    it('should convert normalized coords to world space correctly', () => {
-      const element = createTestElement({
-        x: 100, y: 100,  // Element position
-        width: 200, height: 100  // Element size
-      });
+    it('should return correct world coordinates for a rectangular element', () => {
+      const element = createTestElement();
+      const ports = generateElementPorts(element);
       
-      const ports = getDefaultPortsFor(element);
-      const northPort = ports.find(p => p.kind === 'N')!;
-      const worldPos = toWorldPort(element, northPort);
-      
-      // North port should be at (x + width/2, y) in world coords
-      // Element center is at (100 + 200/2, 100 + 100/2) = (200, 150)
-      // North port offset: (0, -0.5) * (200, 100) = (0, -50) 
-      // Final world pos: (200, 150) + (0, -50) = (200, 100)
-      expect(worldPos.x).toBeCloseTo(200);
-      expect(worldPos.y).toBeCloseTo(100);
+      expect(ports).toHaveLength(5);
+      const portKinds = ports.map((p: { kind: PortKind }) => p.kind);
+      expect(portKinds).toEqual(['CENTER', 'N', 'S', 'E', 'W']);
+
+      // Test CENTER port
+      const centerPort = ports.find((p: { kind: PortKind }) => p.kind === 'CENTER')!;
+      expect(getPortWorldCoordinates(element, centerPort.kind)).toEqual({ x: 50, y: 50 });
+
+      // Test NORTH port
+      const northPort = ports.find((p: { kind: PortKind }) => p.kind === 'N')!;
+      expect(getPortWorldCoordinates(element, northPort.kind)).toEqual({ x: 50, y: 0 });
+
+      // Test SOUTH port
+      const southPort = ports.find((p: { kind: PortKind }) => p.kind === 'S')!;
+      expect(getPortWorldCoordinates(element, southPort.kind)).toEqual({ x: 50, y: 100 });
+
+      // Test EAST port
+      const eastPort = ports.find((p: { kind: PortKind }) => p.kind === 'E')!;
+      expect(getPortWorldCoordinates(element, eastPort.kind)).toEqual({ x: 100, y: 50 });
+
+      // Test WEST port
+      const westPort = ports.find((p: { kind: PortKind }) => p.kind === 'W')!;
+      expect(getPortWorldCoordinates(element, westPort.kind)).toEqual({ x: 0, y: 50 });
     });
 
-    it('should handle all cardinal directions correctly', () => {
-      const element = createTestElement({
-        x: 0, y: 0, width: 100, height: 100
-      });
-      
-      const ports = getDefaultPortsFor(element);
-      
-      // Element center at (50, 50)
-      const north = toWorldPort(element, ports.find(p => p.kind === 'N')!);
-      const south = toWorldPort(element, ports.find(p => p.kind === 'S')!);  
-      const east = toWorldPort(element, ports.find(p => p.kind === 'E')!);
-      const west = toWorldPort(element, ports.find(p => p.kind === 'W')!);
-      const center = toWorldPort(element, ports.find(p => p.kind === 'CENTER')!);
-      
-      expect(north).toEqual({ x: 50, y: 0 });   // Top middle
-      expect(south).toEqual({ x: 50, y: 100 }); // Bottom middle  
-      expect(east).toEqual({ x: 100, y: 50 });  // Right middle
-      expect(west).toEqual({ x: 0, y: 50 });    // Left middle
-      expect(center).toEqual({ x: 50, y: 50 }); // Center
-    });
+    it('should return correct world coordinates for a circular element', () => {
+      const element: CircleElement = {
+        id: 'test-circle-id' as ElementId, // Replaced createId() with a static string ID
+        type: 'circle',
+        x: 0, y: 0, radius: 50,
+        width: 100, // Added width for CircleElement
+        height: 100, // Added height for CircleElement
+        fill: 'blue', stroke: 'black', strokeWidth: 1, rotation: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        // ... other properties
+      };
+      const ports = generateElementPorts(element);
 
-    it('should handle corner ports correctly', () => {
-      const element = createTestElement({
-        x: 0, y: 0, width: 100, height: 100
-      });
-      
-      const ports = getDefaultPortsFor(element);
-      
-      const ne = toWorldPort(element, ports.find(p => p.kind === 'NE')!);
-      const nw = toWorldPort(element, ports.find(p => p.kind === 'NW')!);
-      const se = toWorldPort(element, ports.find(p => p.kind === 'SE')!);
-      const sw = toWorldPort(element, ports.find(p => p.kind === 'SW')!);
-      
-      expect(ne).toEqual({ x: 100, y: 0 });   // Top-right
-      expect(nw).toEqual({ x: 0, y: 0 });     // Top-left
-      expect(se).toEqual({ x: 100, y: 100 }); // Bottom-right  
-      expect(sw).toEqual({ x: 0, y: 100 });   // Bottom-left
-    });
-  });
+      expect(ports).toHaveLength(5);
+      const portKinds = ports.map((p: { kind: PortKind }) => p.kind);
+      expect(portKinds).toEqual(['CENTER', 'N', 'S', 'E', 'W']);
 
-  describe('toWorldPort - With Rotation', () => {
-    it('should respect 90-degree rotation', () => {
-      const element = createTestElement({
-        x: 0, y: 0, width: 100, height: 100,
-        rotation: 90  // 90 degrees clockwise
-      });
-      
-      const ports = getDefaultPortsFor(element);
-      const north = toWorldPort(element, ports.find(p => p.kind === 'N')!);
-      
-      // After 90° rotation, original north should point east
-      // Original north: (0, -50) relative to center
-      // After rotation: (50, 0) relative to center
-      // World pos: (50, 50) + (50, 0) = (100, 50)
-      expect(north.x).toBeCloseTo(100);
-      expect(north.y).toBeCloseTo(50);
-    });
+      // Test CENTER port
+      const centerPort = ports.find((p: { kind: PortKind }) => p.kind === 'CENTER')!;
+      expect(getPortWorldCoordinates(element, centerPort.kind)).toEqual({ x: 50, y: 50 });
 
-    it('should respect 45-degree rotation', () => {
-      const element = createTestElement({
-        x: 0, y: 0, width: 100, height: 100,
-        rotation: 45
-      });
-      
-      const ports = getDefaultPortsFor(element);
-      const north = toWorldPort(element, ports.find(p => p.kind === 'N')!);
-      
-      // 45° rotation of (0, -50):
-      // x = 0 * cos(45°) - (-50) * sin(45°) = 50 * sin(45°) ≈ 35.36
-      // y = 0 * sin(45°) + (-50) * cos(45°) = -50 * cos(45°) ≈ -35.36
-      // World: (50, 50) + (35.36, -35.36) ≈ (85.36, 14.64)
-      expect(north.x).toBeCloseTo(85.36, 1);
-      expect(north.y).toBeCloseTo(14.64, 1);
-    });
+      // Test NORTH port
+      const northPort = ports.find((p: { kind: PortKind }) => p.kind === 'N')!;
+      expect(getPortWorldCoordinates(element, northPort.kind)).toEqual({ x: 50, y: 0 });
 
-    it('should handle 180-degree rotation', () => {
-      const element = createTestElement({
-        x: 0, y: 0, width: 100, height: 100, 
-        rotation: 180
-      });
-      
-      const ports = getDefaultPortsFor(element);
-      const north = toWorldPort(element, ports.find(p => p.kind === 'N')!);
-      
-      // 180° rotation flips north to south
-      // Original: (0, -50), after rotation: (0, 50)
-      // World: (50, 50) + (0, 50) = (50, 100)
-      expect(north.x).toBeCloseTo(50);
-      expect(north.y).toBeCloseTo(100);
+      // Test SOUTH port
+      const southPort = ports.find((p: { kind: PortKind }) => p.kind === 'S')!;
+      expect(getPortWorldCoordinates(element, southPort.kind)).toEqual({ x: 50, y: 100 });
+
+      // Test EAST port
+      const eastPort = ports.find((p: { kind: PortKind }) => p.kind === 'E')!;
+      expect(getPortWorldCoordinates(element, eastPort.kind)).toEqual({ x: 100, y: 50 });
+
+      // Test WEST port
+      const westPort = ports.find((p: { kind: PortKind }) => p.kind === 'W')!;
+      expect(getPortWorldCoordinates(element, westPort.kind)).toEqual({ x: 0, y: 50 });
     });
   });
 
-  describe('toWorldPort - Different Element Sizes', () => {
-    it('should scale port positions with element dimensions', () => {
-      const smallElement = createTestElement({
-        x: 0, y: 0, width: 50, height: 30
-      });
+  describe('generateElementPorts for Rotated Element', () => {
+    it('should return ports in correct world coordinates after 90 degree rotation', () => {
+      const element = createTestElement({ rotation: 90 });
+      const ports = generateElementPorts(element);
       
-      const largeElement = createTestElement({
-        x: 0, y: 0, width: 200, height: 120  
-      });
+      const north = getPortWorldCoordinates(element, ports.find((p: { kind: PortKind }) => p.kind === 'N')!.kind);
+      const south = getPortWorldCoordinates(element, ports.find((p: { kind: PortKind }) => p.kind === 'S')!.kind);  
+      const east = getPortWorldCoordinates(element, ports.find((p: { kind: PortKind }) => p.kind === 'E')!.kind);
+      const west = getPortWorldCoordinates(element, ports.find((p: { kind: PortKind }) => p.kind === 'W')!.kind);
+      const center = getPortWorldCoordinates(element, ports.find((p: { kind: PortKind }) => p.kind === 'CENTER')!.kind);
       
-      const ports = getDefaultPortsFor(smallElement);
-      const eastPort = ports.find(p => p.kind === 'E')!;
+      // With 90 deg rotation, original North (0, -50) becomes East (50, 0) relative to center
+      expect(north).toEqual({ x: 100, y: 50 });   // Top middle rotated to right middle
+      expect(south).toEqual({ x: 0, y: 50 });     // Bottom middle rotated to left middle
+      expect(east).toEqual({ x: 50, y: 100 });    // Right middle rotated to bottom middle
+      expect(west).toEqual({ x: 50, y: 0 });     // Left middle rotated to top middle
+      expect(center).toEqual({ x: 50, y: 50 }); // Center remains center
+    });
+
+    it('should return ports in correct world coordinates after 45 degree rotation', () => {
+      const element = createTestElement({ rotation: 45 });
+      const ports = generateElementPorts(element);
+
+      const north = getPortWorldCoordinates(element, ports.find((p: { kind: PortKind }) => p.kind === 'N')!.kind);
       
-      const smallEast = toWorldPort(smallElement, eastPort);
-      const largeEast = toWorldPort(largeElement, eastPort);
+      // Expected coordinates for north port after 45 degree rotation around (50,50)
+      // Original relative: (0, -50). Rotated: (0*cos(45) - (-50)*sin(45), 0*sin(45) + (-50)*cos(45))
+      // = (50 * sqrt(2)/2, -50 * sqrt(2)/2) = (35.35, -35.35)
+      // World: (50 + 35.35, 50 - 35.35) = (85.35, 14.65)
+      expect(north!.x).toBeCloseTo(85.355);
+      expect(north!.y).toBeCloseTo(14.645);
+    });
+
+    it('should return ports in correct world coordinates after 180 degree rotation', () => {
+      const element = createTestElement({ rotation: 180 });
+      const ports = generateElementPorts(element);
+
+      const north = getPortWorldCoordinates(element, ports.find((p: { kind: PortKind }) => p.kind === 'N')!.kind);
       
-      // East port should be at right edge for both
-      expect(smallEast.x).toBe(50);   // small width
-      expect(largeEast.x).toBe(200);  // large width
-      
-      // Y should be at vertical center for both
-      expect(smallEast.y).toBe(15);   // small height / 2
-      expect(largeEast.y).toBe(60);   // large height / 2
+      // 180 deg rotation, original North (0, -50) becomes South (0, 50) relative to center
+      expect(north).toEqual({ x: 50, y: 100 }); // Top middle rotated to bottom middle
+    });
+  });
+
+  describe('Port Coordinates and Element Size', () => {
+    it('should return correct world coordinates regardless of element size', () => {
+      const smallElement: RectangleElement = {
+        id: 'test-small-rectangle-id' as ElementId, // Replaced createId() with a static string ID
+        type: 'rectangle',
+        x: 0, y: 0, width: 20, height: 20, 
+        fill: 'red', stroke: 'black', strokeWidth: 1, rotation: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      const largeElement: RectangleElement = {
+        id: 'test-large-rectangle-id' as ElementId, // Replaced createId() with a static string ID
+        type: 'rectangle',
+        x: 0, y: 0, width: 200, height: 200,
+        fill: 'green', stroke: 'black', strokeWidth: 1, rotation: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      const portsSmall = generateElementPorts(smallElement);
+      const eastPortSmall = portsSmall.find((p: { kind: PortKind }) => p.kind === 'E')!;
+      const smallEast = getPortWorldCoordinates(smallElement, eastPortSmall.kind);
+
+      const portsLarge = generateElementPorts(largeElement);
+      const eastPortLarge = portsLarge.find((p: { kind: PortKind }) => p.kind === 'E')!;
+      const largeEast = getPortWorldCoordinates(largeElement, eastPortLarge.kind);
+
+      expect(smallEast).toEqual({ x: 20, y: 10 });
+      expect(largeEast).toEqual({ x: 200, y: 100 });
     });
   });
 });

@@ -294,19 +294,48 @@ export const createDrawingModule = (
       updateSpatialIndex: () => {
         setState((state: any) => {
           if (!state.spatialIndex) {
+            console.log('[DrawingModule] Creating new SimpleEraserIndex');
             state.spatialIndex = new SimpleEraserIndex();
           }
-          
+
           // Rebuild index with erasable elements only
           const erasableElements: CanvasElement[] = [];
-          
-          state.elements.forEach((element: CanvasElement) => {
+
+          console.log('[DrawingModule] Total elements to check:', state.elements.size);
+          console.log('[DrawingModule] Elements Map contents:');
+          let elementCount = 0;
+          state.elements.forEach((element: CanvasElement, id: any) => {
+            elementCount++;
+            console.log(`[DrawingModule] Element ${elementCount}:`, {
+              id: element.id,
+              type: element.type,
+              hasPoints: !!(element as any).points,
+              pointsLength: (element as any).points?.length,
+              erasable: getState().isElementErasable(element),
+              x: element.x,
+              y: element.y
+            });
             if (getState().isElementErasable(element)) {
               erasableElements.push(element);
             }
           });
-          
+
+          console.log('[DrawingModule] Indexing', erasableElements.length, 'erasable elements out of', elementCount, 'total elements');
+
+          if (erasableElements.length > 0) {
+            console.log('[DrawingModule] Sample erasable element:', erasableElements[0]);
+          }
+
           state.spatialIndex.rebuild(erasableElements);
+          console.log('[DrawingModule] Spatial index size after rebuild:', state.spatialIndex.size());
+
+          // Test the spatial index with a simple query
+          if (erasableElements.length > 0) {
+            const testBounds = { x: 0, y: 0, width: 1000, height: 1000 };
+            const testResults = state.spatialIndex.findIntersections(testBounds);
+            console.log('[DrawingModule] Test query results:', testResults.length, 'candidates for large bounds');
+          }
+
           state.spatialIndexDirty = false;
         });
       },
@@ -321,13 +350,24 @@ export const createDrawingModule = (
       },
 
       eraseAtPoint: (x: number, y: number, eraserSize: number) => {
-        const { spatialIndex, spatialIndexDirty } = getState();
-        
+        console.log('[DrawingModule] eraseAtPoint called:', { x, y, eraserSize });
+
+        const { spatialIndex, spatialIndexDirty, elements } = getState();
+        console.log('[DrawingModule] Current state:', {
+          spatialIndexExists: !!spatialIndex,
+          spatialIndexDirty,
+          totalElements: elements?.size || 0
+        });
+
         // Update spatial index if needed
+        console.log('[DrawingModule] Spatial index check:', { spatialIndexDirty, spatialIndexExists: !!spatialIndex });
         if (spatialIndexDirty || !spatialIndex) {
+          console.log('[DrawingModule] Updating spatial index...');
           getState().updateSpatialIndex();
+        } else {
+          console.log('[DrawingModule] Using existing spatial index, size:', spatialIndex.size());
         }
-        
+
         const halfSize = eraserSize / 2;
         const eraserBounds = {
           x: x - halfSize,
@@ -335,26 +375,42 @@ export const createDrawingModule = (
           width: eraserSize,
           height: eraserSize
         };
-        
+        console.log('[DrawingModule] Eraser bounds:', eraserBounds);
+
         // Find candidate elements using spatial index
         const candidateIds = getState().spatialIndex!.findIntersections(eraserBounds);
+        console.log('[DrawingModule] Candidate elements from spatial index:', candidateIds);
         const deletedIds: ElementId[] = [];
-        
+
         setState((state: any) => {
           candidateIds.forEach((id: ElementId | import('../../types/enhanced.types').SectionId) => {
             const element = state.elements.get(id);
-            
-            if (!element || !getState().isElementErasable(element)) return;
-            
+            console.log('[DrawingModule] Checking element:', { id, element: !!element });
+
+            if (!element) {
+              console.log('[DrawingModule] Element not found:', id);
+              return;
+            }
+
+            if (!getState().isElementErasable(element)) {
+              console.log('[DrawingModule] Element not erasable:', id, element.type);
+              return;
+            }
+
             // Check if any point is within eraser radius
             const points = (element as { points?: number[] }).points;
+            console.log('[DrawingModule] Element points:', { id, hasPoints: !!points, pointsLength: points?.length });
+
             if (points && Array.isArray(points)) {
               for (let i = 0; i < points.length; i += 2) {
                 const px = points[i];
                 const py = points[i + 1];
                 const dist = Math.hypot(px - x, py - y);
-                
+
+                console.log('[DrawingModule] Point check:', { px, py, dist, halfSize, willErase: dist <= halfSize });
+
                 if (dist <= halfSize) {
+                  console.log('[DrawingModule] ERASING ELEMENT:', id);
                   deletedIds.push(id as ElementId);
                   state.elements.delete(id);
                   state.elementOrder = state.elementOrder.filter((elId: ElementId) => elId !== id);
@@ -362,14 +418,19 @@ export const createDrawingModule = (
                   break;
                 }
               }
+            } else {
+              console.log('[DrawingModule] Element has no points array:', element);
             }
           });
         });
-        
+
+        console.log('[DrawingModule] Final result - deleted IDs:', deletedIds);
+
         if (deletedIds.length > 0) {
+          console.log('[DrawingModule] Adding to history');
           getState().addToHistory('Erase strokes');
         }
-        
+
         return deletedIds;
       },
 

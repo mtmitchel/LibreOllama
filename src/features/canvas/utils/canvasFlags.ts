@@ -6,6 +6,7 @@ const LS_KEY = 'USE_NEW_CANVAS';
 export function readNewCanvasFlag(): boolean {
   try {
     const ls = localStorage.getItem(LS_KEY);
+    console.log('[CANVAS_FLAGS] localStorage value:', ls);
     if (ls === 'true') return true;
     if (ls === 'false') return false;
   } catch {}
@@ -13,11 +14,13 @@ export function readNewCanvasFlag(): boolean {
   try {
     // @ts-ignore
     const envVal = (import.meta as any)?.env?.VITE_USE_NEW_CANVAS;
+    console.log('[CANVAS_FLAGS] env value:', envVal);
     if (envVal === 'true') return true;
     if (envVal === 'false') return false;
   } catch {}
-  // Safety-first default: use legacy (false)
-  return false;
+  // New default: use modular canvas (true)
+  console.log('[CANVAS_FLAGS] Using default: true');
+  return true;
 }
 
 export function setNewCanvasFlag(value: boolean): void {

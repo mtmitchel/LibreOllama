@@ -35,15 +35,13 @@ export class SimpleEraserIndex {
    */
   findIntersections(bounds: BoundingBox): (ElementId | SectionId)[] {
     const intersections: (ElementId | SectionId)[] = [];
-    
+
     for (const [elementId, elementBounds] of this.elements) {
       if (this.boundsIntersect(elementBounds, bounds)) {
         intersections.push(elementId);
       }
     }
-    
 
-    
     return intersections;
   }
 

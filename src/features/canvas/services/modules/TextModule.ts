@@ -451,8 +451,12 @@ export class TextModule {
       }
     } catch {}
 
-    // Visibility during editing
-    try { textNode.visible(!el.isEditing); } catch {}
+    // Visibility during editing - only hide if actively editing, not just because text is empty
+    try { 
+      // Only hide text node if we're currently editing this specific element
+      const editingActive = (this.currentEditingId === el.id) && !!el.isEditing;
+      textNode.visible(!editingActive); 
+    } catch {}
   }
 
 

@@ -42,7 +42,7 @@ export const ConnectorTool: React.FC<ToolProps> = React.memo(({ stageRef, isActi
         const snapDistance = 20; // pixels
         const closestPort = findClosestPort(pointerPosition, elements as Map<ElementId, any>, null, snapDistance);
         if (closestPort) {
-          startEdgeDraft({ elementId: closestPort.elementId, portKind: closestPort.kind });
+          startEdgeDraft({ elementId: closestPort.port.elementId, portKind: closestPort.port.kind });
         } else {
           // No port found, start draft with dummy for free-floating
           startEdgeDraft({ elementId: createElementId('dummy-source-id'), portKind: 'CENTER' });
@@ -61,7 +61,7 @@ export const ConnectorTool: React.FC<ToolProps> = React.memo(({ stageRef, isActi
         // Find closest port for snapping, excluding the source element
         const snapDistance = 20; // pixels
         const closestPort = findClosestPort(pointerPosition, elements as Map<ElementId, any>, draftRef.current.from.elementId, snapDistance);
-        updateEdgeDraftSnap(closestPort ? { elementId: closestPort.elementId, portKind: closestPort.kind } : null);
+        updateEdgeDraftSnap(closestPort ? { elementId: closestPort.port.elementId, portKind: closestPort.port.kind } : null);
       }
     }
   }, [isDrawingConnector, stageRef, updateEdgeDraftPointer, updateEdgeDraftSnap, elements]);

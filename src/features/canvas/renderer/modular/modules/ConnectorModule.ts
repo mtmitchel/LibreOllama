@@ -51,7 +51,10 @@ export class ConnectorModule implements RendererModule {
         });
 
         // Update draft line
-        this.updateDraftLine(this.store.draft);
+        this.updateDraftLine(snapshot.draft);
+
+        // Update snap indicator
+        this.updateSnapIndicator(snapshot.draft);
 
         this.ctx.konva.getLayers().main?.batchDraw();
         this.ctx.konva.getLayers().overlay?.batchDraw();
@@ -59,20 +62,19 @@ export class ConnectorModule implements RendererModule {
 
     private createDraftLine(): Konva.Line {
         this.draftLine = new Konva.Line({
-            points: [0, 0, 0, 0],
             stroke: '#6b7280',
             strokeWidth: 2,
-            dash: [6, 4],
             lineCap: 'round',
-            listening: false,
-            name: 'draft-line',
+            lineJoin: 'round',
+            dash: [5, 5],
             visible: false,
+            listening: false,
             perfectDrawEnabled: false,
         });
         return this.draftLine;
     }
 
-    private updateDraftLine(draft: UnifiedCanvasStore['draft']) {
+    private updateDraftLine(draft: any) {
         if (!this.draftLine) return;
 
         if (draft && draft.from && draft.pointer) {
@@ -97,26 +99,27 @@ export class ConnectorModule implements RendererModule {
                     case 'text':
                     case 'rich-text':
                         return { width: element.width ?? 0, height: element.height ?? 0 };
-                    default:
                         return { width: 0, height: 0 };
                 }
             };
 
             const sourceDims = getElementDimensions(sourceElement);
-            const sourceWorldPos = {
-                x: sourceElement.x + sourceDims.width / 2,
-                y: sourceElement.y + sourceDims.height / 2,
-            };
+            const sourceWorldPos = getPortWorldCoordinates(
+                sourceElement,
+                draft.from.portKind,
+                this.store.viewport.scale
+            )!;
 
             let targetPos = draft.pointer;
             if (draft.snapTarget) {
                 const targetElement = this.store.elements.get(draft.snapTarget.elementId);
                 if (targetElement) {
                     const targetDims = getElementDimensions(targetElement);
-                    targetPos = {
-                        x: targetElement.x + targetDims.width / 2,
-                        y: targetElement.y + targetDims.height / 2,
-                    };
+                    targetPos = getPortWorldCoordinates(
+                        targetElement,
+                        draft.snapTarget.portKind,
+                        this.store.viewport.scale
+                    )!;
                 }
             }
 
@@ -133,31 +136,22 @@ export class ConnectorModule implements RendererModule {
 
         const konvaEdge = isArrow
             ? new Konva.Arrow({
-                name: edge.id,
                 points: edge.points,
-                stroke: edge.stroke,
-                strokeWidth: edge.strokeWidth,
+                stroke: edge.stroke || '#374151',
+                strokeWidth: edge.strokeWidth || 2,
                 lineCap: 'round',
                 lineJoin: 'round',
-                pointerLength: 12, // Default from requirements
-                pointerWidth: 10,  // Default from requirements
-                fill: edge.stroke, // Arrowhead fill matches stroke
-                hitStrokeWidth: Math.max(40, (edge.strokeWidth || 1) * 4), // Enhanced hit area
-                strokeScaleEnabled: false,
-                draggable: false, // Prevent direct dragging
-                // dragBoundFunc: () => ({ x: edge.x, y: edge.y }), // Prevent movement
+                listening: false,
+                perfectDrawEnabled: false,
             })
             : new Konva.Line({
-                name: edge.id,
                 points: edge.points,
-                stroke: edge.stroke,
-                strokeWidth: edge.strokeWidth,
+                stroke: edge.stroke || '#374151',
+                strokeWidth: edge.strokeWidth || 2,
                 lineCap: 'round',
                 lineJoin: 'round',
-                hitStrokeWidth: Math.max(40, (edge.strokeWidth || 1) * 4), // Enhanced hit area
-                strokeScaleEnabled: false,
-                draggable: false, // Prevent direct dragging
-                // dragBoundFunc: () => ({ x: edge.x, y: edge.y }), // Prevent movement
+                listening: false,
+                perfectDrawEnabled: false,
             });
 
         this.edgeMap.set(edge.id, konvaEdge);
@@ -173,21 +167,11 @@ export class ConnectorModule implements RendererModule {
 
     private createSnapIndicator(): Konva.Rect {
         this.snapIndicator = new Konva.Rect({
-            width: 8,
-            height: 8,
-            stroke: 'gray',
-            strokeWidth: 1,
-            fill: 'white',
-            cornerRadius: 2,
-            visible: false,
-            listening: false,
-            perfectDrawEnabled: false,
-            offset: { x: 4, y: 4 }, // Center the square on the port
         });
         return this.snapIndicator;
     }
 
-    private updateSnapIndicator(draft: UnifiedCanvasStore['draft']) {
+    private updateSnapIndicator(draft: any) {
         if (!this.snapIndicator) return;
 
         if (draft?.snapTarget) {

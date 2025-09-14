@@ -9,13 +9,27 @@ export class RendererCore {
     this.modules.push(mod);
   }
 
-  init(ctx: ModuleContext): void {
+  async init(ctx: ModuleContext): Promise<void> {
     this.ctx = ctx;
-    for (const m of this.modules) m.init(ctx);
+    for (const m of this.modules) {
+      await m.init(ctx);
+    }
   }
 
   sync(snapshot: CanvasSnapshot): void {
-    for (const m of this.modules) m.sync(snapshot);
+    if (this.modules.length === 0) {
+      console.error('[RendererCore] CRITICAL: No modules registered!');
+      return;
+    }
+
+    // Sync all modules with current snapshot
+    for (const module of this.modules) {
+      try {
+        module.sync(snapshot);
+      } catch (error) {
+        console.error(`[RendererCore] ERROR in ${module.constructor.name}:`, error);
+      }
+    }
   }
 
   destroy(): void {

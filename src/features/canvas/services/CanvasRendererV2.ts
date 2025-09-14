@@ -1574,6 +1574,37 @@ export class CanvasRendererV2 {
 
       const isTextLike = node.name() === 'sticky-note' || node.name() === 'text' || node.name() === 'rectangle' || node.name() === 'circle' || node.name() === 'triangle' || node.name() === 'circle-text';
       if (isTextLike) {
+        // Check if modular TextModule is handling this to prevent dual text editing
+        if ((window as any).__MODULAR_TEXT_EDITING__) {
+          console.info('[RendererV2] Modular TextModule is handling text editing, skipping monolithic handler');
+          return;
+        }
+
+        // Check if modular system is enabled via main feature flag
+        const isModularSystemEnabled = (() => {
+          try {
+            // Use the same flag reading logic as canvasFlags.ts for consistency
+            const v = localStorage.getItem('USE_NEW_CANVAS');
+            if (v === 'true') return true;
+            if (v === 'false') return false;
+
+            // Fallback to environment variable
+            const envFlag = (import.meta as any)?.env?.VITE_USE_NEW_CANVAS;
+            if (envFlag === 'true') return true;
+            if (envFlag === 'false') return false;
+
+            // Safety-first default: disabled
+            return false;
+          } catch {
+            return false;
+          }
+        })();
+
+        if (isModularSystemEnabled) {
+          console.info('[RendererV2] Modular system is enabled, deferring text editing to modular TextModule');
+          return;
+        }
+
         e.cancelBubble = true;
         this.openTextareaEditor(node.id(), node);
         return;
@@ -1673,9 +1704,22 @@ export class CanvasRendererV2 {
 
   private openTextareaEditor(elId: string, node: Konva.Node) {
     console.info('[RendererV2] openTextareaEditor called', { elId, nodeName: node?.name?.(), nodeId: node?.id?.() });
+
+    // Check for existing modular text editors to prevent dual editing
+    if (document.querySelector('[data-role="modular-canvas-text-editor"]') || (window as any).__MODULAR_TEXT_EDITING__) {
+      console.info('[RendererV2] Modular text editor active, aborting monolithic editor');
+      return;
+    }
+
+    // Check if monolithic text editor already exists
+    if (document.querySelector('[data-role="canvas-text-editor"]')) {
+      console.info('[RendererV2] Monolithic text editor already active');
+      return;
+    }
+
     // Close previous editor if any
     this.closeCurrentEditor();
-    
+
     if (!this.stage) return;
 
     // Pull latest element snapshot (read-only)

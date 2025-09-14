@@ -9,9 +9,9 @@ import { StickyNoteTool } from './tools/creation/StickyNoteTool';
 import { ConnectorTool } from './tools/creation/ConnectorTool';
 import { ElementId, CanvasElement, createElementId, ConnectorElement, createGroupId, GroupId } from '../types/enhanced.types';
 import { performanceLogger } from '../utils/performance/PerformanceLogger';
-import { CanvasRendererV2 } from '../services/CanvasRendererV2';
 import { getContentPointer } from '../utils/pointer-to-content';
 import { nanoid } from 'nanoid';
+import { readNewCanvasFlag } from '../utils/canvasFlags';
 
 interface NonReactCanvasStageProps {
   stageRef?: React.RefObject<Konva.Stage | null>;
@@ -93,6 +93,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
   };
 
   const selectedTool = selectedToolProp || useUnifiedCanvasStore(s => s.selectedTool);
+  const isModularSystemActive = useMemo(() => readNewCanvasFlag(), []);
   const viewport = useUnifiedCanvasStore(s => s.viewport);
   const elements = useUnifiedCanvasStore(s => s.elements);
   const zoomViewport = useUnifiedCanvasStore(s => s.zoomViewport);
@@ -162,6 +163,9 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     stage.add(overlayLayer);
 
     stageRef.current = stage;
+    // Expose Zustand store globally for modular renderer modules (TextModule, etc.)
+    // This is required so modules can read selectedTool and dispatch add/update actions
+    try { (window as any).__UNIFIED_CANVAS_STORE__ = useUnifiedCanvasStore; } catch {}
 
     // Initialize viewport size (do not offset position to avoid misalignment)
     try {
@@ -171,6 +175,124 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     // Mark init end and start a frame loop for FPS
     performanceLogger.initEnd();
     performanceLogger.startFrameLoop();
+
+    // Initialize modular system IMMEDIATELY after stage is ready (if enabled)
+    if (isModularSystemActive) {
+      console.log('[MODULAR] Initializing modular renderer system...');
+
+      // Use dynamic imports but make the initialization synchronous
+      Promise.all([
+        import('../renderer/modular/RendererCore'),
+        import('../renderer/modular/modules/SelectionModule'),
+        import('../renderer/modular/modules/ViewportModule'),
+        import('../renderer/modular/modules/EraserModule'),
+        import('../renderer/modular/modules/TextModule'),
+        import('../renderer/modular/modules/ConnectorModule'),
+        import('../renderer/modular/modules/DrawingModule'),
+        import('../renderer/modular/modules/ImageModule'),
+        import('../renderer/modular/modules/StickyNoteModule'),
+        import('../renderer/modular/modules/ShapeModule'),
+        import('../renderer/modular/modules/TableModule'),
+        import('../renderer/modular/adapters/StoreAdapterUnified'),
+        import('../renderer/modular/adapters/KonvaAdapterStage')
+      ]).then(async ([
+        { RendererCore },
+        { SelectionModule },
+        { ViewportModule },
+        { EraserModule },
+        { TextModule },
+        { ConnectorModule },
+        { DrawingModule },
+        { ImageModule },
+        { StickyNoteModule },
+        { ShapeModule },
+        { TableModule },
+        { StoreAdapterUnified },
+        { KonvaAdapterStage }
+      ]) => {
+        console.log('[MODULAR] All modules loaded, initializing RendererCore...');
+
+        const core = new RendererCore();
+        core.register(new SelectionModule());
+        core.register(new ViewportModule());
+        core.register(new EraserModule());
+        core.register(new TextModule());
+        core.register(new ConnectorModule());
+        core.register(new DrawingModule());
+        core.register(new ImageModule());
+        core.register(new StickyNoteModule());
+        core.register(new ShapeModule());
+        core.register(new TableModule());
+        console.log('[MODULAR] Registered 11 modules:', (core as any).modules.map((m: any) => m.constructor.name));
+
+        const store = new StoreAdapterUnified();
+        const layers = {
+          background: backgroundLayer,
+          main: mainLayer,
+          preview: previewLayer,
+          overlay: overlayLayer
+        };
+        const konva = new KonvaAdapterStage(stage, layers);
+
+        await core.init({ store, konva, overlay: {} });
+        // Setting up store subscription
+
+        // Store subscription - sync to renderer
+        const sync = () => {
+          const snapshot = store.getSnapshot();
+          try {
+            core.sync(snapshot);
+          } catch (error) {
+            console.error('[MODULAR] ERROR in core.sync():', error);
+          }
+        };
+
+        // Subscribe directly to Zustand store for modular renderer
+        const unsub = useUnifiedCanvasStore.subscribe(sync);
+
+        sync(); // Initial sync
+
+        // Store core and cleanup function on stage
+        (stage as any).__mod_core__ = { core, unsub };
+        // RendererCore initialized successfully
+
+        // QA DEBUG: Test subscription by adding a dummy element
+        console.log('// Testing store subscription with dummy element...');
+        setTimeout(() => {
+          try {
+            const testElement = {
+              id: 'test-debug-' + Date.now(),
+              type: 'text',
+              x: 100,
+              y: 100,
+              width: 60,
+              height: 24,
+              text: 'DEBUG TEST',
+              fontSize: 16,
+              fontFamily: 'Arial',
+              fill: '#000000',
+              isLocked: false,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              isHidden: false
+            };
+
+            const unifiedStore = (window as any).__UNIFIED_CANVAS_STORE__;
+            if (unifiedStore) {
+              console.log('// Adding test element to trigger subscription...');
+              unifiedStore.getState().addElement(testElement);
+              console.log('// Test element added - subscription should trigger');
+            } else {
+              console.error('// __UNIFIED_CANVAS_STORE__ not found on window');
+            }
+          } catch (error) {
+            console.error('// Error adding test element:', error);
+          }
+        }, 1000);
+      }).catch(e => {
+        console.error('[MODULAR] Failed to initialize modular renderer:', e);
+      });
+    }
 
     // Wheel zoom (simple, centralized)
     const onWheel = (e: WheelEvent) => {
@@ -219,85 +341,41 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       performanceLogger.stopFrameLoop();
       clearTimeout(resizeTimeout);
       try { resizeObserver.disconnect(); } catch {}
-      try { 
-        // Clean up renderer before destroying stage
-        const renderer = (window as any).__CANVAS_RENDERER_V2__;
-        if (renderer) {
-          delete (window as any).__CANVAS_RENDERER_V2__;
-        }
-        stage.destroy(); 
-      } catch {}
+      try { stage.destroy(); } catch {}
       stageRef.current = null;
     };
   }, [stageRef, setViewport, zoomViewport]);
 
-  // Sync stage transform with store viewport
+  // Sync stage transform with store viewport (only for legacy system)
   useEffect(() => {
     const stage = stageRef.current; if (!stage) return;
+
+    // Skip viewport sync if modular system is active (it handles viewport internally)
+    if (isModularSystemActive) {
+      console.log('[NonReactCanvasStage] Skipping legacy viewport sync - modular system active');
+      return;
+    }
+
     stage.scale({ x: viewport.scale, y: viewport.scale });
     stage.position({ x: viewport.x, y: viewport.y });
     stage.batchDraw();
     try { (window as any).CANVAS_PERF?.incBatchDraw?.('stage'); } catch {}
-  }, [viewport.scale, viewport.x, viewport.y]);
+  }, [viewport.scale, viewport.x, viewport.y, isModularSystemActive]);
 
-  // Initialize renderer once when stage is ready
-  useEffect(() => {
-    const stage = stageRef.current; if (!stage) return;
-    const layers = requireLayers(stage);
-    if (!layers) return;
-
-    // Expose store to window for renderer access
-    (window as any).__UNIFIED_CANVAS_STORE__ = useUnifiedCanvasStore;
-    
-    // Only create and initialize renderer if it doesn't exist
-    if (!(window as any).__CANVAS_RENDERER_V2__) {
-      const renderer = new CanvasRendererV2();
-      (window as any).__CANVAS_RENDERER_V2__ = renderer;
-      renderer.init(stage, { background: layers.background, main: layers.main, preview: layers.preview || layers.main, overlay: layers.overlay }, {
-        onUpdateElement: (id, updates) => useUnifiedCanvasStore.getState().updateElement(id as any, updates)
-      });
-      
-      // Store the refreshTransformer function globally for table operations
-      // Since Zustand stores are frozen, we can't add properties dynamically
-      // Instead, store it on the window object alongside the renderer
-      (window as any).__REFRESH_TRANSFORMER__ = (elementId?: string) => {
-        renderer.refreshTransformer(elementId);
-      };
-    }
-  }, [stageRef.current]); // Only depend on stage existence
-
-  // Sync elements to renderer when they change
-  useEffect(() => {
-    const stage = stageRef.current; if (!stage) return;
-    const renderer: InstanceType<typeof CanvasRendererV2> | undefined = (window as any).__CANVAS_RENDERER_V2__;
-    if (!renderer) return;
-    
-    // Render from a unified list containing elements and edges
-    const combined: any[] = [
-      ...Array.from((useUnifiedCanvasStore.getState().elements as any).values()),
-      ...Array.from((useUnifiedCanvasStore.getState().edges as any).values()),
-    ];
-    renderer.syncElements(combined);
-  }, [elements, useUnifiedCanvasStore(s => s.edges), useUnifiedCanvasStore(s => s.selectedElementIds)]);
-
-  // Wire selection state to Konva.Transformer
-  const [lastSelectedElementId, selectionSize] = useUnifiedCanvasStore(
-    useShallow((s) => [s.lastSelectedElementId, s.selectedElementIds.size])
-  );
-  useEffect(() => {
-    const stage = stageRef.current; if (!stage) return;
-    const renderer: InstanceType<typeof CanvasRendererV2> | undefined = (window as any).__CANVAS_RENDERER_V2__;
-    if (!renderer) return;
-    // Read the latest selection from the store and pass a fresh Set to renderer
-    const sel = (useUnifiedCanvasStore.getState() as any).selectedElementIds;
-    const ids = sel instanceof Set ? new Set(sel as Set<ElementId>) : new Set<ElementId>();
-    renderer.syncSelection(ids as any);
-  }, [lastSelectedElementId, selectionSize]);
+  // Monolithic CanvasRendererV2 has been retired. All rendering is handled by the modular system.
 
   // Pure Konva Text Tool Implementation - Watch for selectedTool changes
   const currentSelectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
   useEffect(() => {
+    // When the modular system is active, TextModule handles creation + editing.
+    // Avoid binding legacy text tool handlers to prevent duplicate editors and
+    // incorrect coordinate math (stage transform vs layer transform).
+    if (isModularSystemActive) {
+      console.log('[TEXT-DEBUG] Modular system active — skipping legacy text tool');
+      return;
+    }
+
     const s = stageRef.current;
     if (!s) return;
     const stage: Konva.Stage = s;
@@ -318,9 +396,16 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       console.error('[TEXT-DEBUG] Missing required layers, cannot initialize text tool');
       return;
     }
-    
-    let tool: 'select' | 'text' = 'select';
+
+    // Check if modular system should be active
+    let modularEnabled = false;
+    try {
+      const canvasFlags = require('../utils/canvasFlags');
+      modularEnabled = canvasFlags.readNewCanvasFlag();
+    } catch {}
+
     let cursorGhost: Konva.Group | null = null;
+    let tool: "select" | "text" = "select";
     let textarea: HTMLTextAreaElement | null = null;
     
     // Coordinate transformation helpers (using stage transform since no viewport group)
@@ -414,6 +499,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       if (!p) return;
       
       const world = stageToWorld(p);
+      console.log('[TEXT-DEBUG] Pointer position (stage): ', p);
+      console.log('[TEXT-DEBUG] World coordinates (after stageToWorld): ', world);
       
       // 1) Create text element in store
       const textElement = {
@@ -421,9 +508,9 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         type: 'text' as const,
         x: world.x,
         y: world.y,
-        width: 60,  // Small initial width that will expand
-        height: BASE_FONT,  // Exact font height - no padding
-        text: '',
+        width: 150,  // A reasonable default width
+        height: BASE_FONT * 1.5,  // A reasonable default height for one line of text
+        text: 'New Text', // Start with placeholder text
         fontSize: BASE_FONT,
         fontFamily: 'Inter, system-ui, Arial',
         fill: '#111827',
@@ -445,7 +532,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       // Wait for renderer to create the node, then start editing (retry a few frames)
       let tries = 0;
       const tryOpen = () => {
-        const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
+        const renderer = (window as any).__CANVAS_RENDERER_V2__ as any;
         if (!renderer) { if (tries++ < 10) return requestAnimationFrame(tryOpen); else return; }
         const node = (renderer as any).nodeMap.get(textElement.id) as Konva.Group | undefined;
         if (!node) { if (tries++ < 10) return requestAnimationFrame(tryOpen); else return; }
@@ -631,28 +718,48 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         useUnifiedCanvasStore.getState().selectElement(elementId as ElementId, false);
         
         // Attach transformer to the GROUP and set up proper resize handling
-        const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
-        const transformer = (window as any).__CANVAS_TRANSFORMER__ as Konva.Transformer;
-        if (renderer && transformer && group && frame) {
-          console.log('[RESIZE] Setting up transformer for text element', elementId);
-          
-          // Make the group draggable
-          group.draggable(true);
-          
-          // Attach transformer to the GROUP
-          transformer.nodes([group]);
-          transformer.visible(true);
-          transformer.keepRatio(false); // keepRatio is false to allow separate vertical/horizontal scaling
-          transformer.enabledAnchors(['top-left','top-right','bottom-left','bottom-right','middle-left','middle-right','top-center','bottom-center']);
-          transformer.anchorSize(8);
-          transformer.borderStroke('#3B82F6');
-          transformer.borderStrokeWidth(1);
-          
-          // Delegate resize behavior to CanvasRendererV2 to avoid duplicate handlers
-          try {
-            renderer.syncSelection(new Set([elementId] as any));
-          } catch {}
+        // Only use monolithic transformer if modular system is NOT active
+        if (!isModularSystemActive) {
+          const renderer = (window as any).__CANVAS_RENDERER_V2__ as any;
+          const transformer = (window as any).__CANVAS_TRANSFORMER__ as Konva.Transformer;
+          if (renderer && transformer && group && frame) {
+            console.log('[RESIZE] Setting up monolithic transformer for text element', elementId);
 
+            // Make the group draggable
+            group.draggable(true);
+
+            // Attach transformer to the GROUP
+            transformer.nodes([group]);
+            transformer.visible(true);
+            transformer.keepRatio(false);
+            // Disable resizing for text for now: keep border but no anchors
+            transformer.enabledAnchors([]);
+            transformer.rotateEnabled(false);
+            transformer.anchorSize(8);
+            transformer.borderStroke('#3B82F6');
+            transformer.borderStrokeWidth(1);
+
+            // Delegate resize behavior to CanvasRendererV2 to avoid duplicate handlers
+            try {
+              renderer.syncSelection(new Set([elementId] as any));
+            } catch {}
+
+            group.on('dragend', () => {
+              useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
+                x: group.x(),
+                y: group.y(),
+              });
+            });
+
+            overlayLayer?.batchDraw();
+          }
+        } else {
+          console.log('[RESIZE] Modular system active - letting SelectionModule handle transformer for element', elementId);
+
+          // Make the group draggable for modular system as well
+          group.draggable(true);
+
+          // Set up drag handler for modular system
           group.on('dragend', () => {
             useUnifiedCanvasStore.getState().updateElement(elementId as ElementId, {
               x: group.x(),
@@ -660,7 +767,8 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
             });
           });
 
-          overlayLayer?.batchDraw();
+          // The modular SelectionModule will handle the transformer automatically
+          // through its sync() method when the element is selected
         }
 
         // DEV: parity probe for text commit
@@ -704,58 +812,62 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     
     // Initialize based on current tool
     // Note: Text CREATION is handled here, text EDITING is handled by CanvasRendererV2
-    // Shadow modular renderer (selection only) behind flag
-    try {
-      const { readNewCanvasFlag } = require('../utils/canvasFlags');
-      if (readNewCanvasFlag?.()) {
-        const { RendererCore } = require('../renderer/modular/RendererCore');
-        const { SelectionModule } = require('../renderer/modular/modules/SelectionModule');
-        const { StoreAdapterUnified } = require('../renderer/modular/adapters/StoreAdapterUnified');
-        const { KonvaAdapterStage } = require('../renderer/modular/adapters/KonvaAdapterStage');
-        const core = new RendererCore();
-        core.register(new SelectionModule());
-        const store = new StoreAdapterUnified();
-        const layers = requireLayers(stage);
-        const konva = new KonvaAdapterStage(stage, { background: layers?.background || null, main: layers?.main || null, preview: layers?.preview || null, overlay: layers?.overlay || null });
-        core.init({ store, konva, overlay: {} });
-        const sync = () => core.sync(store.getSnapshot());
-        const unsub = store.subscribe(sync);
-        sync();
-        // Keep core around via closure; clean up on unmount
-        (stage as any).__mod_core__ = { core, unsub };
-      }
-    } catch {}
-    if (currentSelectedTool === 'text') {
+    // (Modular renderer initialization moved to earlier in the effect)
+    // IMPORTANT: Only use monolithic text tool if modular system is NOT active
+    if (currentSelectedTool === 'text' && !isModularSystemActive) {
       useTextTool();
     }
     
     return () => {
-      // Cleanup modular shadow renderer if present
-      try {
-        const mod = (stage as any).__mod_core__;
-        if (mod) { mod.unsub?.(); mod.core?.destroy?.(); (stage as any).__mod_core__ = null; }
-      } catch {}
       leaveTextTool();
       textarea?.remove();
     };
   }, [currentSelectedTool]); // Re-run when selectedTool changes
 
+  // Separate effect for modular system cleanup - only runs on unmount
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    return () => {
+      // Cleanup modular renderer if present (only on component unmount)
+      try {
+        const mod = (stage as any).__mod_core__;
+        if (mod) {
+          console.log('[MODULAR] Cleaning up on unmount');
+          mod.unsub?.();
+          mod.core?.destroy?.();
+          (stage as any).__mod_core__ = null;
+        }
+      } catch (e) {
+        console.warn('[MODULAR] Error during cleanup:', e);
+      }
+    };
+  }, []); // Empty deps - only run on mount/unmount
+
   // Optional: click-hit selection wiring (imperative) and double-click to edit
+  // IMPORTANT: Only bind monolithic selection handlers when modular system is NOT active
   useEffect(() => {
     const stage = stageRef.current; if (!stage) return;
+
+    // Only bind monolithic selection handlers if modular system is not active
+    if (isModularSystemActive) {
+      console.log('[SELECTION] Modular system active - skipping monolithic selection handlers');
+      return;
+    }
 
     const onMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
       const target = e.target as Konva.Node;
       const currentTool = useUnifiedCanvasStore.getState().selectedTool;
-      
+
       // Text tool is handled in its own effect above
       if (currentTool === 'text') return;
-      
+
       // If clicked on empty stage or layer with select tool, clear selection
       // BUT only if the event wasn't cancelled by a child element (e.cancelBubble = true)
       if ((target === stage || target.getClassName() === 'Layer') && currentTool === 'select' && !e.cancelBubble) {
         useUnifiedCanvasStore.getState().clearSelection();
-        
+
         // Hide the transformer
         const transformer = (window as any).__CANVAS_TRANSFORMER__ as Konva.Transformer;
         if (transformer) {
@@ -795,7 +907,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       try { stage.off('mousedown.select', onMouseDown); } catch {}
       stage.off('.inlineEdit'); // Clean up on unmount
     };
-  }, [stageRef]);
+  }, [stageRef, isModularSystemActive]);
 
   // Text edit overlay for non-React path - DISABLED: Renderer handles all text editing
   // Bridge: when store requests edit, delegate to RendererV2.openTextareaEditor
@@ -834,7 +946,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
     // DISABLED: All text editing is now handled by CanvasRendererV2
     return;
 
-    const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
+    const renderer = (window as any).__CANVAS_RENDERER_V2__ as any;
     if (!renderer) return;
 
     let cancelled = false;
@@ -1019,7 +1131,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         const PADDING = 12;
         const MIN_W = 120;
         const MIN_H = 80;
-        const LINE_HEIGHT = 1.25; // Match the lineHeight used in CanvasRendererV2
+        const LINE_HEIGHT = 1.25; // Match the lineHeight used in legacy renderer
         const DESCENDER_GUARD = 0.15; // ~15% of font size helps prevent caret clipping
 
         const { x: vx, y: vy, scale } = viewportState;
@@ -1081,7 +1193,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
         textarea.style.visibility = 'hidden';
 
         // Initial setup - prepare Konva text for measurement with consistent padding
-        // Match the exact logic from CanvasRendererV2.createStickyNote
+        // Match the exact logic from the legacy renderer's createStickyNote
         ktext.width(w - 2 * PADDING);
         ktext.position({ x: PADDING, y: PADDING });
         
@@ -1437,7 +1549,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
 
     // placeTextarea - Position and size relative to viewport
     const PADDING = 12;
-    const renderer = (window as any).__CANVAS_RENDERER_V2__ as CanvasRendererV2;
+    const renderer = (window as any).__CANVAS_RENDERER_V2__ as any;
     if (!renderer) return;
     const node = (renderer as any).nodeMap.get(elId) as Konva.Group | undefined;
     if (!node) return;
@@ -1462,7 +1574,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
           await (document as any).fonts.ready;
           if (cancelled) return;
           const stage = stageRef.current; if (!stage) return;
-          const renderer: InstanceType<typeof CanvasRendererV2> | undefined = (window as any).__CANVAS_RENDERER_V2__;
+          const renderer: any = (window as any).__CANVAS_RENDERER_V2__;
           if (!renderer) return;
           renderer.syncElements(useUnifiedCanvasStore.getState().elements as any);
         }
@@ -1840,7 +1952,7 @@ export const NonReactCanvasStage: React.FC<NonReactCanvasStageProps> = ({ stageR
       {stageRef && selectedTool === 'sticky-note' && (
         <StickyNoteTool stageRef={stageRef} isActive={true} />
       )}
-      {stageRef && (selectedTool === 'connector-line' || selectedTool === 'connector-arrow') && (
+      {stageRef && (selectedTool === 'connector-line' || selectedTool === 'connector-arrow') && !isModularSystemActive && (
         <ConnectorTool stageRef={stageRef} isActive={true} connectorType={selectedTool === 'connector-line' ? 'line' : 'arrow'} />
       )}
       {/* Table creation is handled imperatively via stage click when tool is active */}

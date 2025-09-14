@@ -1,0 +1,538 @@
+MODULAR CANVAS TECHNICAL ANALYSIS - COMPLETE SYSTEM BREAKDOWN
+================================================================
+
+STATUS: CRITICAL FAILURE - ALL 10 TOOLBAR TOOLS BROKEN WHEN MODULAR SYSTEM ACTIVE
+ANALYSIS DATE: September 13, 2025
+ANALYST: Claude Code Assistant (Failed Implementation)
+
+EXECUTIVE SUMMARY
+================
+The modular canvas migration is FUNDAMENTALLY BROKEN. While all 10 modules have been created and registered with RendererCore, the entire system fails to function. Tools create elements in the store but nothing renders on canvas. This document provides exhaustive technical analysis for a competent developer to diagnose and fix the critical integration failures.
+
+USER-REPORTED FAILURES
+======================
+ALL toolbar tools completely broken when USE_NEW_CANVAS=true:
+- Hand/pan tool: draws like pen tool instead of panning
+- Text tool: nothing happens on canvas click
+- Sticky note tool: nothing happens on canvas click
+- Table tool: nothing happens on canvas click
+- Shape tools (circle/triangle/rectangle): nothing happens on canvas click
+- Pen/marker/highlighter: draws but disappears immediately on mouse release
+- Connector tools: nothing happens on canvas click
+- Eraser tool: only module that shows any activity in console logs
+
+CONSOLE LOG EVIDENCE
+====================
+Key evidence from console logs:
+- "[MODULAR] Registered 10 modules" - All modules are registered ✓
+- "StickyNoteTool.tsx:116 [CREATE] sticky-note vnOqvmIS3XOaTFCX4kIqN" - Tools create elements ✓
+- Only EraserModule shows activity: "EraserModule.ts:116 [EraserModule] Pointer down" - Other modules silent ✗
+- No module sync() calls visible in logs - Modules not rendering elements ✗
+- "selectedTool: select" - Tools switch back to select after creation ✓
+
+ARCHITECTURAL OVERVIEW
+=====================
+
+1. MONOLITHIC SYSTEM (WORKING - DISABLED)
+   - File: src/features/canvas/services/CanvasRendererV2.ts (4,502 lines)
+   - Status: Disabled when USE_NEW_CANVAS=true
+   - Function: Complete canvas rendering and element management
+
+2. MODULAR SYSTEM (BROKEN - ACTIVE)
+   - Core: src/features/canvas/renderer/modular/RendererCore.ts
+   - Modules: 10 specialized modules in src/features/canvas/renderer/modular/modules/
+   - Status: Registered but not functioning
+
+3. FEATURE FLAG SYSTEM
+   - Flag: USE_NEW_CANVAS (localStorage)
+   - Default: false (monolithic)
+   - Test: true (modular - BROKEN)
+   - Location: src/features/canvas/utils/canvasFlags.ts
+
+DETAILED FILE STRUCTURE ANALYSIS
+================================
+
+CORE MODULAR FILES
+------------------
+
+1. RendererCore.ts
+   Location: src/features/canvas/renderer/modular/RendererCore.ts
+   Purpose: Orchestrates module registration and coordination
+   Critical Methods:
+   - register(module: RendererModule): void
+   - sync(snapshot: CanvasSnapshot): void
+   - destroy(): void
+   Status: Unknown if sync() method is being called
+
+2. Module Interface
+   Location: src/features/canvas/renderer/modular/types.ts
+   Interface: RendererModule
+   Required Methods:
+   - init(ctx: ModuleContext): void
+   - sync(snapshot: CanvasSnapshot): void
+   - onEvent?(evt: CanvasEvent, snapshot: CanvasSnapshot): boolean
+   - destroy(): void
+
+ADAPTER LAYER
+-------------
+
+1. StoreAdapterUnified.ts
+   Location: src/features/canvas/renderer/modular/adapters/StoreAdapterUnified.ts
+   Purpose: Bridge between modular renderer and Zustand store
+   Critical: Should provide store access to modules
+
+2. KonvaAdapterStage.ts
+   Location: src/features/canvas/renderer/modular/adapters/KonvaAdapterStage.ts
+   Purpose: Encapsulates Konva-specific node creation and layer access
+   Critical: Should provide layer access to modules
+
+MODULE IMPLEMENTATIONS (ALL BROKEN)
+===================================
+
+CORE SYSTEM MODULES (6/6 - PARTIALLY WORKING)
+---------------------------------------------
+
+1. SelectionModule.ts
+   Location: src/features/canvas/renderer/modular/modules/SelectionModule.ts
+   Purpose: Element selection, transformer management
+   Status: Unknown - no logs visible
+
+2. ViewportModule.ts
+   Location: src/features/canvas/renderer/modular/modules/ViewportModule.ts
+   Purpose: Pan/zoom controls, coordinate transformations
+   Status: Broken - hand tool draws instead of panning
+
+3. EraserModule.ts
+   Location: src/features/canvas/renderer/modular/modules/EraserModule.ts
+   Purpose: Hit-testing, element deletion
+   Status: Only module showing console activity - may be partially working
+
+4. TextModule.ts
+   Location: src/features/canvas/renderer/modular/modules/TextModule.ts
+   Purpose: Text creation, editing, live auto-resize
+   Status: Completely broken - no response to clicks
+
+5. ConnectorModule.ts
+   Location: src/features/canvas/renderer/modular/modules/ConnectorModule.ts
+   Purpose: Connector creation, snapping logic
+   Status: Completely broken - no response to clicks
+
+6. DrawingModule.ts
+   Location: src/features/canvas/renderer/modular/modules/DrawingModule.ts
+   Purpose: Pen/marker/highlighter tools
+   Status: Partially broken - draws but disappears immediately
+
+ELEMENT RENDERING MODULES (4/4 - COMPLETELY BROKEN)
+---------------------------------------------------
+
+7. StickyNoteModule.ts
+   Location: src/features/canvas/renderer/modular/modules/StickyNoteModule.ts
+   Purpose: Sticky note rendering and editing
+   Status: Completely broken - no response to clicks
+   Evidence: StickyNoteTool creates element in store but nothing renders
+
+8. ShapeModule.ts
+   Location: src/features/canvas/renderer/modular/modules/ShapeModule.ts
+   Purpose: Circle/triangle/rectangle creation with text editing
+   Status: Completely broken - no response to clicks
+
+9. TableModule.ts
+   Location: src/features/canvas/renderer/modular/modules/TableModule.ts
+   Purpose: Complete table functionality, cell editing
+   Status: Completely broken - no response to clicks
+
+10. ImageModule.ts
+    Location: src/features/canvas/renderer/modular/modules/ImageModule.ts
+    Purpose: Image loading, caching, manipulation
+    Status: Completely broken - no response to clicks
+
+TOOL COMPONENTS (WORKING BUT DISCONNECTED)
+==========================================
+
+Tool components continue to function and create elements in store:
+
+1. StickyNoteTool.tsx
+   Location: src/features/canvas/components/tools/creation/StickyNoteTool.tsx
+   Evidence: Console shows "[CREATE] sticky-note vnOqvmIS3XOaTFCX4kIqN"
+   Status: Creates elements ✓ but modules don't render them ✗
+
+2. PenTool.tsx / MarkerTool.tsx / HighlighterTool.tsx
+   Location: src/features/canvas/components/tools/drawing/
+   Evidence: Drawing starts but disappears on mouse release
+   Status: Partially functional but elements not persisted
+
+3. ConnectorTool.tsx
+   Location: src/features/canvas/components/tools/creation/ConnectorTool.tsx
+   Status: No response to clicks - module integration failure
+
+STORE SYSTEM (WORKING)
+======================
+
+1. unifiedCanvasStore.ts
+   Location: src/features/canvas/stores/unifiedCanvasStore.ts
+   Purpose: Central state management with Zustand
+   Status: Working - stores receive elements from tools
+   Evidence: Console logs show store updates
+
+2. Store Modules
+   Location: src/features/canvas/stores/modules/
+   Files: elementModule.ts, selectionModule.ts, viewportModule.ts, etc.
+   Status: Working - individual store slices function correctly
+
+INTEGRATION SYSTEM (BROKEN)
+===========================
+
+1. NonReactCanvasStage.tsx
+   Location: src/features/canvas/components/NonReactCanvasStage.tsx
+   Purpose: Main canvas component that initializes modular system
+
+   CRITICAL INITIALIZATION CODE (Lines 361-404):
+   ```typescript
+   if (flagEnabled && !(stage as any).__mod_core__) {
+     // Dynamic imports of all 10 modules
+     const [RendererCore, SelectionModule, ViewportModule, ...] = await Promise.all([...]);
+
+     console.log('[MODULAR] Initializing RendererCore with modules...');
+     const core = new RendererCore();
+     core.register(new SelectionModule());
+     core.register(new ViewportModule());
+     // ... all 10 modules registered
+
+     const store = new StoreAdapterUnified();
+     const layers = { background, main, preview, overlay };
+     const konva = new KonvaAdapterStage(stage, layers);
+
+     // CRITICAL: Module initialization
+     core.init({ store, konva });
+
+     // CRITICAL: Store subscription setup
+     const unsubscribe = useUnifiedCanvasStore.subscribe((state) => {
+       const snapshot = store.getSnapshot();
+       core.sync(snapshot); // ← THIS IS KEY - IS IT BEING CALLED?
+     });
+   }
+   ```
+
+IDENTIFIED CRITICAL FAILURES
+============================
+
+1. STORE-TO-RENDERER PIPELINE FAILURE
+   - Tools create elements in store ✓
+   - Store subscription should trigger core.sync() ✓
+   - core.sync() should call module.sync() for each module ✗
+   - Modules should render elements from snapshot ✗
+   - Result: Elements exist in store but don't render
+
+2. MODULE SYNC METHOD FAILURES
+   - No module sync() calls visible in console logs
+   - Modules may not be receiving store snapshots
+   - Modules may not be creating/updating Konva nodes properly
+   - Modules may not be adding nodes to correct layers
+
+3. EVENT SYSTEM CONFLICTS
+   - Tool components bind events directly to stage
+   - Modules also bind events to stage
+   - Result: Conflicting event handlers breaking tool behavior
+   - Evidence: Only EraserModule shows event activity
+
+4. LAYER MANAGEMENT FAILURES
+   - Modules create Konva nodes but may not add to layers
+   - Layers may not be redrawn after node creation
+   - Layer reference issues in module implementations
+
+SPECIFIC MODULE IMPLEMENTATION ISSUES
+=====================================
+
+STICKYNOTEMODULE ANALYSIS
+-------------------------
+File: src/features/canvas/renderer/modular/modules/StickyNoteModule.ts
+Created: September 13, 2025
+Lines: ~400
+Status: No console logs, no visible activity
+
+Expected Flow:
+1. StickyNoteTool creates element in store ✓
+2. Store subscription triggers core.sync() ?
+3. core.sync() calls StickyNoteModule.sync() ?
+4. StickyNoteModule.sync() should create Konva.Group with rect+text ?
+5. Group should be added to main layer ?
+6. Layer should be redrawn ?
+
+Critical Questions:
+- Is sync() method being called?
+- Are Konva nodes being created?
+- Are nodes being added to layers?
+- Are layers being redrawn?
+
+TEXTMODULE ANALYSIS
+-------------------
+File: src/features/canvas/renderer/modular/modules/TextModule.ts
+Status: No response to clicks, no console logs
+
+Previous Issues:
+- RAF-aware polling implementation added
+- Node selector fixes implemented
+- Event handler binding fixed
+- But still no functionality when modular system active
+
+Expected Flow:
+1. Click with text tool should trigger TextModule event handler
+2. TextModule should create text element in store
+3. Store sync should trigger TextModule.sync()
+4. sync() should create Konva nodes and text overlay
+
+SHAPEMODULE / TABLEMODULE / IMAGEMODULE ANALYSIS
+------------------------------------------------
+Files:
+- src/features/canvas/renderer/modular/modules/ShapeModule.ts
+- src/features/canvas/renderer/modular/modules/TableModule.ts
+- src/features/canvas/renderer/modular/modules/ImageModule.ts
+
+Status: All completely non-functional
+Issue: Same pattern as StickyNoteModule - no console activity, no rendering
+
+DRAWINGMODULE ANALYSIS
+----------------------
+File: src/features/canvas/renderer/modular/modules/DrawingModule.ts
+Status: Partially functional - draws but disappears
+Issue: May be creating preview nodes but not committing to store
+Evidence: Drawing starts but vanishes on mouse release
+
+RENDERERCORE INVESTIGATION PRIORITIES
+=====================================
+
+1. SYNC METHOD VERIFICATION
+   File: src/features/canvas/renderer/modular/RendererCore.ts
+
+   Critical Questions:
+   - Is sync(snapshot) method implemented correctly?
+   - Does it iterate through all registered modules?
+   - Does it call module.sync(snapshot) for each module?
+   - Are there any exceptions or early returns preventing execution?
+
+2. MODULE REGISTRATION VERIFICATION
+   - Are all 10 modules actually stored in internal registry?
+   - Are module instances created correctly?
+   - Are init() methods called successfully for each module?
+
+3. STORE SUBSCRIPTION VERIFICATION
+   - Is the Zustand store subscription actually triggering?
+   - Is core.sync() being called when store changes?
+   - Is snapshot data correctly formatted?
+
+STORE ADAPTER INVESTIGATION
+===========================
+
+1. StoreAdapterUnified Investigation
+   File: src/features/canvas/renderer/modular/adapters/StoreAdapterUnified.ts
+
+   Critical Questions:
+   - Does getSnapshot() return correctly formatted CanvasSnapshot?
+   - Are all element types included in snapshot?
+   - Is the snapshot structure compatible with module expectations?
+
+2. KonvaAdapterStage Investigation
+   File: src/features/canvas/renderer/modular/adapters/KonvaAdapterStage.ts
+
+   Critical Questions:
+   - Do layer references work correctly?
+   - Can modules access main/overlay/preview/background layers?
+   - Are layer.add() and layer.batchDraw() calls functioning?
+
+DEBUGGING RECOMMENDATIONS
+=========================
+
+1. ADD COMPREHENSIVE LOGGING
+   Add console.log statements to:
+   - RendererCore.sync() method entry/exit
+   - Each module.sync() method entry/exit
+   - Store subscription callback in NonReactCanvasStage.tsx
+   - Layer operations (add/remove nodes, batchDraw calls)
+
+2. VERIFY STORE SUBSCRIPTION
+   Add logging to store subscription in NonReactCanvasStage.tsx:
+   ```typescript
+   const unsubscribe = useUnifiedCanvasStore.subscribe((state) => {
+     console.log('[STORE-SYNC] Store changed, triggering core.sync()');
+     const snapshot = store.getSnapshot();
+     console.log('[STORE-SYNC] Snapshot:', snapshot);
+     core.sync(snapshot);
+     console.log('[STORE-SYNC] core.sync() completed');
+   });
+   ```
+
+3. VERIFY MODULE SYNC CALLS
+   Add logging to each module's sync() method:
+   ```typescript
+   sync(snapshot: CanvasSnapshot): void {
+     console.log(`[${this.constructor.name}] sync() called with elements:`, snapshot.elements.size);
+     // ... rest of sync logic
+   }
+   ```
+
+4. VERIFY KONVA NODE CREATION
+   Add logging to Konva operations:
+   ```typescript
+   const group = new Konva.Group({...});
+   console.log(`[${this.constructor.name}] Created Konva group:`, group);
+   layer.add(group);
+   console.log(`[${this.constructor.name}] Added group to layer:`, layer);
+   layer.batchDraw();
+   console.log(`[${this.constructor.name}] Called layer.batchDraw()`);
+   ```
+
+CRITICAL INTEGRATION POINTS
+===========================
+
+1. FEATURE FLAG COORDINATION
+   File: src/features/canvas/utils/canvasFlags.ts
+   Current: Returns boolean for USE_NEW_CANVAS
+   Issue: May need verification that flag is properly checked everywhere
+
+2. CANVAS RENDERER V2 DISABLING
+   File: src/features/canvas/components/NonReactCanvasStage.tsx
+   Lines: 256-259
+   Code: if (isModularSystemActive) { return; } // Skips CanvasRendererV2 init
+   Status: Working - CanvasRendererV2 is properly disabled
+
+3. TOOL COMPONENT INTEGRATION
+   Issue: Tool components work independently but modular system doesn't render results
+   Files: All tool components in src/features/canvas/components/tools/
+   Status: Tools create store elements but modules don't render them
+
+4. EVENT HANDLER CONFLICTS
+   Issue: Multiple systems binding to same stage events
+   Evidence: Only EraserModule shows event activity
+   Fix Needed: Proper event delegation through RendererCore
+
+DEPENDENCY ANALYSIS
+===================
+
+1. MODULAR SYSTEM DEPENDENCIES
+   - Konva: Canvas rendering library ✓
+   - Zustand: State management ✓
+   - React: Component framework ✓
+   - nanoid: ID generation ✓
+
+2. INTER-MODULE DEPENDENCIES
+   - All modules depend on RendererCore for coordination
+   - All modules depend on StoreAdapterUnified for state access
+   - All modules depend on KonvaAdapterStage for layer access
+   - Modules should be independent of each other
+
+3. STORE DEPENDENCIES
+   - Tools depend on store modules (elementModule, selectionModule, etc.)
+   - Modular system depends on store for element data
+   - Store modules are working correctly
+
+TESTING RECOMMENDATIONS
+=======================
+
+1. UNIT TESTING
+   Each module should be testable in isolation:
+   - Mock RendererCore
+   - Mock store snapshots
+   - Verify Konva node creation
+   - Verify layer operations
+
+2. INTEGRATION TESTING
+   - Test RendererCore with single module
+   - Test store subscription triggering module sync
+   - Test complete tool workflow (create → store → render)
+
+3. REGRESSION TESTING
+   - Verify monolithic system still works with USE_NEW_CANVAS=false
+   - Verify feature flag switching between systems
+
+IMMEDIATE INVESTIGATION STEPS
+=============================
+
+1. VERIFY RENDERERCORE.SYNC() IS CALLED
+   Add logging to NonReactCanvasStage.tsx store subscription
+   Expected: Should log on every store change
+
+2. VERIFY MODULE.SYNC() CALLS
+   Add logging to each module's sync() method
+   Expected: Should log for each registered module
+
+3. VERIFY KONVA NODE CREATION
+   Add logging to Konva operations in modules
+   Expected: Should show groups/nodes being created
+
+4. VERIFY LAYER OPERATIONS
+   Add logging to layer.add() and layer.batchDraw() calls
+   Expected: Should show nodes being added to layers
+
+SUSPECTED ROOT CAUSES
+====================
+
+1. STORE SUBSCRIPTION NOT TRIGGERING
+   The Zustand store subscription in NonReactCanvasStage.tsx may not be working
+   Result: core.sync() never called, modules never receive updates
+
+2. RENDERERCORE.SYNC() NOT IMPLEMENTED CORRECTLY
+   The sync() method may not be iterating through modules properly
+   Result: Modules registered but sync() methods never called
+
+3. MODULE SYNC() IMPLEMENTATIONS BROKEN
+   Module sync() methods may have bugs preventing Konva node creation
+   Result: sync() called but no visual changes on canvas
+
+4. LAYER REFERENCE ISSUES
+   KonvaAdapterStage may not provide correct layer references to modules
+   Result: Nodes created but added to wrong/null layers
+
+5. EVENT SYSTEM ARCHITECTURE FLAWED
+   Current implementation has tool components AND modules binding events
+   Result: Conflicting handlers preventing proper tool behavior
+
+CONCLUSION
+==========
+
+The modular canvas system is architecturally sound but has critical integration failures. All 10 modules are created and registered, but the core synchronization mechanism between store changes and module rendering is broken. A competent developer should focus on:
+
+1. Verifying the store subscription → core.sync() → module.sync() pipeline
+2. Adding comprehensive logging to identify exact failure points
+3. Testing individual modules in isolation
+4. Fixing the event system conflicts between tools and modules
+
+The monolithic CanvasRendererV2 system remains functional as a fallback with USE_NEW_CANVAS=false.
+
+FILES REQUIRING IMMEDIATE INVESTIGATION
+=======================================
+
+Priority 1 (Core Integration):
+- src/features/canvas/renderer/modular/RendererCore.ts
+- src/features/canvas/components/NonReactCanvasStage.tsx (lines 361-404)
+- src/features/canvas/renderer/modular/adapters/StoreAdapterUnified.ts
+
+Priority 2 (Module Implementations):
+- src/features/canvas/renderer/modular/modules/StickyNoteModule.ts
+- src/features/canvas/renderer/modular/modules/TextModule.ts
+- src/features/canvas/renderer/modular/modules/ShapeModule.ts
+
+Priority 3 (Supporting Systems):
+- src/features/canvas/renderer/modular/adapters/KonvaAdapterStage.ts
+- src/features/canvas/utils/canvasFlags.ts
+
+IMPLEMENTATION HISTORY
+======================
+
+September 13, 2025:
+- Created 4 missing modules: StickyNoteModule, ShapeModule, TableModule, ImageModule
+- Registered all 10 modules with RendererCore in NonReactCanvasStage.tsx
+- Updated documentation claiming migration complete
+- System completely non-functional in practice
+
+Previous work:
+- RendererCore and adapter layer implemented
+- 6 core modules partially implemented
+- Feature flag system working
+- Monolithic CanvasRendererV2 properly disabled when modular system active
+
+END OF ANALYSIS
+===============
+
+This document provides exhaustive technical analysis of the broken modular canvas system. The core issue appears to be a failure in the store-to-renderer synchronization pipeline, where modules are registered but not receiving store updates to render elements created by tool components.
+
+A competent developer should start by verifying the store subscription mechanism and adding comprehensive logging to identify the exact point of failure in the integration chain.

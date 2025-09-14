@@ -99,7 +99,7 @@ export const createEventModule = (
           case 'highlighter':
             startDrawing(selectedTool, pos);
             break;
-            
+
           case 'rectangle':
           case 'circle':
           case 'triangle':
@@ -107,7 +107,7 @@ export const createEventModule = (
           case 'sticky-note':
             createElement(selectedTool, pos);
             break;
-            
+
           case 'select':
             // Enhanced hit-testing: resolve target to nearest ancestor with ID
             const elementId = resolveElementFromTarget(e?.target);
@@ -117,7 +117,13 @@ export const createEventModule = (
               clearSelection();
             }
             break;
-            
+
+          case 'eraser':
+            // Eraser events are handled by EraserModule through RendererCore
+            // No direct store action needed as EraserModule manages its own state
+            logger.debug('[EventModule] Eraser tool active - handled by EraserModule');
+            break;
+
           default:
             logger.debug('[EventModule] Unhandled tool in mouseDown:', selectedTool);
             break;
@@ -126,23 +132,35 @@ export const createEventModule = (
 
       handleMouseMove: (e, pos) => {
         const { selectedTool, isDrawing, updateDrawing } = get();
-        
+
         if (!pos) return;
-        
+
         // Handle drawing tools
         if (isDrawing && (selectedTool === 'pen' || selectedTool === 'pencil' || selectedTool === 'marker' || selectedTool === 'highlighter')) {
           updateDrawing(pos);
+        }
+
+        // Eraser mouse move is handled by EraserModule
+        if (selectedTool === 'eraser') {
+          // EraserModule manages its own hover and erasing state
+          return;
         }
       },
 
       handleMouseUp: (e, pos) => {
         const { selectedTool, isDrawing, finishDrawing } = get();
-        
+
         logger.debug('[EventModule] handleMouseUp', { tool: selectedTool, isDrawing });
-        
+
         // Handle drawing tools
         if (isDrawing && (selectedTool === 'pen' || selectedTool === 'pencil' || selectedTool === 'marker' || selectedTool === 'highlighter')) {
           finishDrawing();
+        }
+
+        // Eraser mouse up is handled by EraserModule
+        if (selectedTool === 'eraser') {
+          // EraserModule manages its own erasing completion
+          return;
         }
       },
 

@@ -211,6 +211,9 @@ export const createElementModule = (
           newElements.set(element.id, element);
           state.elements = newElements;
           state.elementOrder.push(element.id);
+
+          // Invalidate spatial index for eraser functionality
+          state.spatialIndexDirty = true;
         });
         getState().addToHistory('addElement');
       },
@@ -226,6 +229,9 @@ export const createElementModule = (
           // Direct map insertion without creating new Map reference for performance
           state.elements.set(element.id, element);
           state.elementOrder.push(element.id);
+
+          // Invalidate spatial index for eraser functionality
+          state.spatialIndexDirty = true;
         });
       },
 
@@ -235,12 +241,15 @@ export const createElementModule = (
           // Minimal checks for maximum performance
           if (!state.elements || !(state.elements instanceof Map)) state.elements = new Map();
           if (!state.elementOrder || !Array.isArray(state.elementOrder)) state.elementOrder = [];
-          
+
           // Create a new Map reference ONCE per stroke to trigger subscribers
           const newElements = new Map(state.elements);
           newElements.set(element.id, element);
           state.elements = newElements;
           state.elementOrder = [...state.elementOrder, element.id];
+
+          // Invalidate spatial index for eraser functionality
+          state.spatialIndexDirty = true;
         });
         
         // Keep history disabled for drawing commits
@@ -489,7 +498,7 @@ export const createElementModule = (
       deleteElement: (id) => {
         setState((state: any) => {
           if (!state.elements.has(id)) return;
-      
+
           const elementToDelete = state.elements.get(id);
           if (elementToDelete?.sectionId) {
             const section = state.sections?.get(elementToDelete.sectionId);
@@ -497,10 +506,13 @@ export const createElementModule = (
               section.childElementIds = section.childElementIds.filter((childId: ElementId) => childId !== id);
             }
           }
-      
+
           state.elements.delete(id);
           state.elementOrder = state.elementOrder.filter((elementId: ElementId) => elementId !== id);
           state.selectedElementIds?.delete(id as ElementId);
+
+          // Invalidate spatial index for eraser functionality
+          state.spatialIndexDirty = true;
         });
         getState().addToHistory('deleteElement');
       },

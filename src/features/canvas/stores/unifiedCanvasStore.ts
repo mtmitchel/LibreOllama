@@ -334,3 +334,8 @@ export const useUnifiedCanvasStore = create<UnifiedCanvasStore>()(
 // Debug loop detection disabled for performance
 
 // Store initialized
+
+// Expose store to window for debugging (QA Lead requirement)
+if (typeof window !== 'undefined') {
+  (window as any).__UNIFIED_CANVAS_STORE__ = useUnifiedCanvasStore;
+}
