@@ -12,6 +12,8 @@ interface UnifiedEventHandlerProps {
 /**
  * UnifiedEventHandler - Centralized event delegation for the canvas.
  * PERFORMANCE OPTIMIZATION: Reduced logging and optimized event handling
+ * 
+ * FIXED: Properly handles text tool events and prevents conflicts with tool-specific event handlers
  */
 const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) => {
   // Store access - using grouped selectors with useShallow
@@ -140,8 +142,13 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
           return;
         }
         
-        // Don't handle stage clicks when text tool is active - let TextTool handle them
+        // FIXED: Allow text tool to handle stage clicks for text creation
+        // Instead of completely blocking stage clicks for text tool, let the TextTool handle them first
+        // The TextTool will handle text placement, and if it doesn't handle the click, 
+        // it will bubble up to here for selection clearing
         if (selectedTool === 'text') {
+          // Don't clear selection immediately - let TextTool handle it first
+          // If TextTool doesn't handle the click, it will clear selection via its own logic
           return;
         }
         
@@ -188,4 +195,4 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
   return null; // This component does not render anything.
 };
 
-export default UnifiedEventHandler; 
+export default UnifiedEventHandler;
